@@ -1,0 +1,18 @@
+# Enforces feat -> staging -> master: a PR into master must come from staging.
+# Branch protection on master requires this check to pass.
+name: branch-flow
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  source-is-staging:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require head branch to be staging
+        run: |
+          if [ "${{ github.head_ref }}" != "staging" ]; then
+            echo "::error::PRs into master must come from staging (this one is from '${{ github.head_ref }}'). Open it against staging instead."
+            exit 1
+          fi

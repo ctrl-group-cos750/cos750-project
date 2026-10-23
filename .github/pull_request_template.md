@@ -15,4 +15,3 @@
 - [ ] Targets `staging` (or is `staging` → `master`)
 - [ ] Runs locally without errors
 - [ ] No secrets, personal details or large unused files
-- [ ] If GenAI produced content or code here: prompt and tool added to `docs/id/genai-log.md`

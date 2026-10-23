@@ -1,0 +1,40 @@
+# The app's stack isn't chosen yet; this covers the usual web/Node/Python suspects.
+# Add stack-specific entries when it is.
+
+# Secrets and local config
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Dependencies
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Build output and caches
+dist/
+build/
+out/
+.next/
+.cache/
+coverage/
+*.log
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editors and OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Office lock files (when editing docs/)
+~$*
+.~lock.*#

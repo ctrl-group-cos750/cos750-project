@@ -13,7 +13,9 @@ map \$cookie_ctrl_staging \$ctrl_gate_ok {
     "~^$token\$" 1;
     default 0;
 }
+# volatile: re-evaluate after the 401 redirects internally to /__gate/, instead of reusing "blocked".
 map "\$ctrl_gate_ok:\$uri" \$ctrl_gate_block {
+    volatile;
     "~^1:" 0;
     "~^0:/(healthz|favicon\\.svg|favicon\\.ico)\$" 0;
     "~^0:/__gate/" 0;

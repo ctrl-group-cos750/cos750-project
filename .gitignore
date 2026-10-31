@@ -1,5 +1,4 @@
-# The app's stack isn't chosen yet; this covers the usual web/Node/Python suspects.
-# Add stack-specific entries when it is.
+# Stack: React + Vite (web/), FastAPI (api/), Postgres. Deployed by Coolify from docker-compose.yml.
 
 # Secrets and local config
 .env
@@ -38,3 +37,6 @@ Thumbs.db
 # Office lock files (when editing docs/)
 ~$*
 .~lock.*#
+
+# Python tooling
+.pytest_cache/

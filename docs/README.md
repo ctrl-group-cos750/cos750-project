@@ -4,6 +4,7 @@
 |---|---|
 | `spec/` | The examination specification, as issued |
 | `references/` | Works cited by the spec or by our SE and ID documents |
+| `deploy/` | How the app is hosted (Coolify, DNS) |
 
 ## Naming
 

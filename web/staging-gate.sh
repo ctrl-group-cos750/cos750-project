@@ -8,8 +8,9 @@ server=/etc/nginx/gate-server.conf
 if [ -n "${STAGING_PASSWORD:-}" ]; then
   token=$(printf '%s' "ctrl-academy-staging:$STAGING_PASSWORD" | sha256sum | cut -d' ' -f1)
   cat > "$http" <<CONF
+# A regex key, because a 64-character literal overflows nginx's default map_hash_bucket_size.
 map \$cookie_ctrl_staging \$ctrl_gate_ok {
-    "$token" 1;
+    "~^$token\$" 1;
     default 0;
 }
 map "\$ctrl_gate_ok:\$uri" \$ctrl_gate_block {

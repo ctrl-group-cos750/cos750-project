@@ -54,6 +54,13 @@ curl https://ctrlacademy.co.za/api/health
 
 The home page also shows the API status line.
 
+## Staging login
+
+Staging asks for a username and password on every page, the API included. The web container turns
+basic auth on when `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` are both set; they are set in Coolify
+on the staging resource only, so production and local runs have no login. Change the password there
+and redeploy. `/healthz` stays open for the container healthcheck.
+
 ## Backups
 
 Each resource has a Coolify scheduled task, `postgres-backup`, that runs in the `db` container:

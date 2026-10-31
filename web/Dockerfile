@@ -7,6 +7,7 @@ RUN npm run build
 
 FROM nginx:1.29-alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --chmod=755 basic-auth.sh /docker-entrypoint.d/40-basic-auth.sh
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80
-HEALTHCHECK CMD wget -qO- http://127.0.0.1/ >/dev/null || exit 1
+HEALTHCHECK CMD wget -qO- http://127.0.0.1/healthz >/dev/null || exit 1

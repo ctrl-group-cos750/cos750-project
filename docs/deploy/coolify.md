@@ -54,6 +54,26 @@ curl https://ctrlacademy.co.za/api/health
 
 The home page also shows the API status line.
 
+## Backups
+
+Each resource has a Coolify scheduled task, `postgres-backup`, that runs in the `db` container:
+staging at 01:00 UTC, production at 01:30 UTC. It writes a `pg_dump -Fc` file to
+`/var/lib/postgresql/backups/` on the database volume and keeps 14 days.
+
+These dumps survive redeploys and container rebuilds, but not the loss of the volume or the server.
+
+Restore one (Coolify → resource → Terminal → `db`):
+
+```
+pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists /var/lib/postgresql/backups/<file>.dump
+```
+
+## Migrations
+
+The API container runs `alembic upgrade head` before it starts serving. A migration that fails stops
+the container, so the deploy fails and the previous one keeps serving. `/api/health` reports the
+schema revision each environment is on.
+
 ## How the pieces fit
 
 ```

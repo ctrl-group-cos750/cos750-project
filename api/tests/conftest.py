@@ -3,6 +3,7 @@ from collections.abc import Iterator
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine
+from sqlalchemy.pool import StaticPool
 
 import app.main
 from app.main import app as fastapi_app
@@ -17,7 +18,9 @@ def client() -> Iterator[TestClient]:
 @pytest.fixture
 def working_db(monkeypatch: pytest.MonkeyPatch) -> Engine:
     """An in-memory SQLite engine, so tests never depend on a running Postgres."""
-    engine = create_engine("sqlite://")
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
     monkeypatch.setattr(app.main, "engine", engine)
     return engine
 

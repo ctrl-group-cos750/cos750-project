@@ -57,6 +57,41 @@ Coverage: `cd web && npm run coverage`.
 
 Dependabot opens weekly update PRs into `staging`.
 
+## Database
+
+Postgres, through SQLAlchemy 2 models and Alembic migrations. Each environment (local, staging,
+production) has its own database. **Migrations run automatically when the API starts**, so a merged
+migration reaches staging on its deploy. `/api/health` reports the schema revision it is on.
+
+Add a table:
+
+1. Write the model in `api/app/models/<thing>.py`, subclassing `Base` from `app.db`, and import it in
+   `api/app/models/__init__.py`.
+2. With the local database running (`docker compose -f docker-compose.yml -f docker-compose.local.yml up -d db`):
+   ```
+   cd api
+   .venv/bin/alembic upgrade head
+   .venv/bin/alembic revision --autogenerate -m "add <thing>"
+   ```
+   Read the generated file in `api/migrations/versions/` and fix anything autogenerate got wrong.
+3. Commit the model and the migration together. CI fails if a model changes without a migration,
+   or if two branches both added one (`alembic merge heads` fixes that).
+
+Use the database in a route:
+
+```python
+from app.db import DbSession
+
+@app.post("/api/things")
+def create_thing(body: ThingIn, session: DbSession) -> ThingOut:
+    thing = Thing(name=body.name)
+    session.add(thing)
+    session.commit()
+    return ThingOut.model_validate(thing, from_attributes=True)
+```
+
+Tests never need Postgres: the `working_db` fixture in `api/tests/conftest.py` swaps in SQLite.
+
 ## Branches and deploys
 
 `feature/*` → PR into `staging` → PR from `staging` into `master`. A PR into `master` from any

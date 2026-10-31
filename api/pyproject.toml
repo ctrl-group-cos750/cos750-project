@@ -1,0 +1,38 @@
+# Tool config for the API. Dependencies stay in requirements*.txt, which the Dockerfile and CI install.
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+  "E", "W",   # pycodestyle
+  "F",        # pyflakes
+  "I",        # import order
+  "B",        # bugbear
+  "UP",       # pyupgrade
+  "SIM",      # simplify
+  "C4",       # comprehensions
+  "PT",       # pytest style
+  "RUF",      # ruff-specific
+  "FAST",     # FastAPI
+  "S",        # bandit security checks
+]
+ignore = ["E501"]  # the formatter owns line length
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]  # assert is how pytest checks things
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["app", "tests"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+filterwarnings = ["error"]

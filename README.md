@@ -33,12 +33,29 @@ cd web && npm install && npm run dev               # http://localhost:5173, prox
 
 ## Checks
 
-CI runs these on every PR. Run them before you push:
+CI runs these on every PR and on every push to `staging` and `master`. Run them before you push:
 
 ```
-cd web && npm run lint && npm run build
-cd api && .venv/bin/pytest
+scripts/check.sh          # everything below
+scripts/check.sh --fix    # format and auto-fix first
 ```
+
+| Where | Check | Command |
+|---|---|---|
+| `web/` | Format (Prettier) | `npm run format:check`, fix with `npm run format` |
+| `web/` | Lint (oxlint, warnings fail) | `npm run lint` |
+| `web/` | Tests (Vitest + Testing Library) | `npm test`, or `npm run test:watch` while you work |
+| `web/` | Types and build | `npm run build` |
+| `api/` | Format and lint (ruff) | `.venv/bin/ruff format --check .` and `.venv/bin/ruff check .` |
+| `api/` | Types (mypy, strict) | `.venv/bin/mypy` |
+| `api/` | Tests (pytest, warnings fail) | `.venv/bin/pytest` |
+| repo | Docker images build | `POSTGRES_PASSWORD=x docker compose build` (in CI, not in `check.sh`) |
+
+Tests sit next to the code: `web/src/**/*.test.tsx` and `api/tests/test_*.py`. API tests swap the
+database for in-memory SQLite (`api/tests/conftest.py`), so they don't need Postgres running.
+Coverage: `cd web && npm run coverage`.
+
+Dependabot opens weekly update PRs into `staging`.
 
 ## Branches and deploys
 

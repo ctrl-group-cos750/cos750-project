@@ -56,10 +56,14 @@ The home page also shows the API status line.
 
 ## Staging login
 
-Staging asks for a username and password on every page, the API included. The web container turns
-basic auth on when `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` are both set; they are set in Coolify
-on the staging resource only, so production and local runs have no login. Change the password there
-and redeploy. `/healthz` stays open for the container healthcheck.
+Staging shows a Ctrl Group login page (`web/gate/index.html`) until the visitor enters the team
+password; the API is closed too. It is on when `STAGING_PASSWORD` is set, which it is in Coolify on
+the staging resource only, so production and local runs have no login. To change the password, edit
+it there and redeploy; everyone then logs in again. `/healthz` stays open for the container healthcheck.
+
+The page stores `sha256("ctrl-academy-staging:" + password)` in a `ctrl_staging` cookie for 30 days,
+and nginx compares it on every request (`web/staging-gate.sh`). It keeps the public out; it is not
+per-user security, so never put real personal data on staging.
 
 ## Backups
 

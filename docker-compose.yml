@@ -7,9 +7,8 @@ services:
     expose:
       - "80"
     environment:
-      # Set both (in Coolify, staging only) to put the site behind a login. Unset means no auth.
-      BASIC_AUTH_USER: ${BASIC_AUTH_USER:-}
-      BASIC_AUTH_PASSWORD: ${BASIC_AUTH_PASSWORD:-}
+      # Set in Coolify for staging only: the whole site then sits behind a team-password page.
+      STAGING_PASSWORD: ${STAGING_PASSWORD:-}
     depends_on:
       api:
         condition: service_healthy

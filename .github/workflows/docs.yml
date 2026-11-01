@@ -3,8 +3,8 @@ name: docs
 # Builds the SE and ID documents into PDFs whenever they change. Download them from the run's
 # "documents" artifact. On staging, the PDFs are also published as the "docs-latest" release,
 # whose download links never change:
-#   https://github.com/MatthewEls/cos750-project/releases/download/docs-latest/ctrl-group-se-document.pdf
-#   https://github.com/MatthewEls/cos750-project/releases/download/docs-latest/ctrl-group-id-document.pdf
+#   https://github.com/ctrl-group-cos750/cos750-project/releases/download/docs-latest/ctrl-group-se-document.pdf
+#   https://github.com/ctrl-group-cos750/cos750-project/releases/download/docs-latest/ctrl-group-id-document.pdf
 on:
   pull_request:
     branches: [staging, master]

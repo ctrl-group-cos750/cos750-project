@@ -25,13 +25,15 @@ certificate once the name resolves to the server.
 
 ## 2. Connect the repo
 
-In Coolify, add the GitHub App as a source (Sources → GitHub App) with access to
-`MatthewEls/cos750-project`. This gives private-repo access and push-to-deploy webhooks.
+In Coolify, add the GitHub App as a source (Sources → GitHub App), installed on the `ctrl-group-cos750`
+organisation with access to `ctrl-group-cos750/cos750-project`. This gives private-repo access and
+push-to-deploy webhooks. (The repo moved from `MatthewEls` to the organisation on 1 November 2026; the
+app has to be installed where the repo lives.)
 
 ## 3. Create the production resource
 
 1. Project → Environment `production` → New Resource → Private Repository (with GitHub App).
-2. Repository `MatthewEls/cos750-project`, branch `master`, build pack **Docker Compose**,
+2. Repository `ctrl-group-cos750/cos750-project`, branch `master`, build pack **Docker Compose**,
    compose file `/docker-compose.yml`.
 3. Under the `web` service, set Domains to `https://ctrlacademy.co.za,https://www.ctrlacademy.co.za`.
    Leave `api` and `db` without a domain: they are only reachable on the internal network.

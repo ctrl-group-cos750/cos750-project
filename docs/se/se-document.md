@@ -8,25 +8,30 @@ version: Draft 2
 
 > **Scope of this document:** Software engineering only. Instructional-design content (learning theories, learning styles, motivation, pedagogy) is deliberately excluded and lives in the separate ID document.
 
-> **DRAFT 2.** Scope is intentionally open. Sections or decisions that are provisional and expected to change are tagged **[PROVISIONAL]**. Items requiring a decision are collected in §14.
+> **DRAFT 2.** Sections or decisions that are still provisional are tagged **[PROVISIONAL]**. Decisions, risks and future work are collected in §14.
 
 ## Purpose
-The COS212 app is a pre-lecture, tutor-style learning application that teaches **one data structure (Graphs)** and **one algorithm (Breadth-First Search)**. It is used by a student **before** attending the corresponding lecture and assumes **zero prior knowledge** of the topic.
+The COS212 app, Ctrl Academy, is a pre-lecture, tutor-style learning application that teaches **one data structure (Graphs)** and **one algorithm (Breadth-First Search)**. It is used by a student **before** attending the corresponding lecture and assumes **zero prior knowledge** of the topic.
+
+What the app teaches, in what order, and how it assesses the student is designed in the ID document: seven short modules (0 to 6), seven learning objectives, a four-level hint ladder, and a mastery check that reports each objective separately. This document specifies the software that delivers that design.
 
 From an engineering standpoint, the system is a web application composed of:
-- a **Python backend** that computes BFS traversals, serves content, manages user accounts, tracks scoring/progress, and exposes a REST API;
-- a **TypeScript + React frontend** that renders interactive video, interactive graph visualizations, assessments, and a leaderboard;
-- a **persistent data store** holding users, content, progress events, scores, and assessment results.
+- a **TypeScript + React frontend** that plays narrated videos, renders interactive activities, a code editor and the BFS visualiser, and shows each student their progress, points and mastery report;
+- a **Python backend** that serves content, manages accounts, checks answers, computes BFS traversals, records every attempt, and decides mastery and scaffolding;
+- a **code runner**, an isolated service that executes student Python against test cases;
+- a **PostgreSQL database** holding users, content, attempts, progress and results.
 
 ## Engineering goals
-- Deterministic, inspectable BFS step generation suitable for front-end animation.
-- Clear client/server separation over a documented REST API.
-- Persistent user accounts and progress to support gamification (points + leaderboard).
-- A content system that can deliver the same lesson concept in multiple modes (video, text, interactive) without code changes per lesson.
-- An assessment subsystem whose branching (adaptive scaffolding) is driven by data/config rather than hard-coded logic where practical.
+- Every activity type in the ID document can be expressed as **data**, so the ID team adds or changes content without code changes.
+- Answers, mastery and points are decided **on the server**; the browser only reports what the student did.
+- Student code runs in a **sandbox** that cannot reach the network, the database or any secret.
+- Deterministic, inspectable BFS step generation, so animations, predictions and trace tables all agree with what the lessons teach.
+- Every attempt and hint is **logged**, so the ID team's pilot and evaluation have the data they need.
 
 ## Primary user & session shape
-A single primary role for Draft 1: **Student**. A secondary **Content author/admin** role is noted but out of scope for Draft 1 (§3.2). A typical session: authenticate → work through a lesson (video + text + interactive) → answer embedded questions → step through a BFS visualization → take an assessment → receive scaffolding if needed → see points and leaderboard position.
+The primary role is **Student**. Team members also have a **staff** flag, used only to export evaluation data (FR-10); there is no authoring interface.
+
+A typical session: register or log in → module 0 (warm-up and diagnostic, which picks the refreshers this student needs) → modules 1 to 5 (narrated segments, activities and code tasks, with hints on demand) → module 6 (mastery check) → mastery report per objective → review path for any objective marked "not yet". Progress is saved after every module, so the student can stop and return.
 
 # Software engineering approach
 
@@ -89,8 +94,8 @@ learning outcomes. The Product Owner's duties are shared instead:
 | Sprint | Dates | Goal |
 |---|---|---|
 | Sprint 0 | 22 Oct – 1 Nov | Foundation. Spec issued 22 Oct, group registered 23 Oct, topic chosen (graphs + BFS), repository and branch flow, CI, hosting on staging and production, database layer with migrations, backups, staging login. |
-| Sprint 1 | 2 – 8 Nov | **A complete path through the app.** A student can register, open a lesson, answer a checkpoint question in a video, step through BFS on a predefined graph, take the assessment and be sent to scaffolding when below the threshold, all with placeholder content, deployed to staging. |
-| Sprint 2 | 9 – 15 Nov | **Real content and the full feature set.** The ID team's content, questions and scaffolds loaded; points and leaderboard; text, video and interactive modes; usability test with students; end-to-end tests; accessibility pass. |
+| Sprint 1 | 2 – 8 Nov | **A complete path through the app.** A student can register, open a lesson, answer a checkpoint question in a video, step through BFS on a predefined graph, write and submit BFS through the code runner, take the mastery check, and be sent to the review path for any objective marked "not yet", all with placeholder content, deployed to staging. |
+| Sprint 2 | 9 – 15 Nov | **Real content and the full feature set.** The ID team's content, questions and scaffolds loaded; all activity kinds, hints, points and badges; narrated videos; usability test with students; end-to-end tests; accessibility pass. |
 | Release | 12 – 16 Nov | Feature freeze **Thu 12 Nov**. `staging` → `master` (production) **Fri 13 Nov**. Demo rehearsals on production 14–15 Nov. SE and ID documents submitted before **08:00 on Mon 16 Nov**. Presentation and demo on 16 or 17 Nov. |
 
 ## Artefacts
@@ -153,31 +158,31 @@ TODO: Add the GitHub Project board link once the board exists.
 
 # Scope
 
-## In scope for Draft 1
-1. User accounts with authentication.
-2. Interactive video player that pauses at defined timestamps and gates progression on answering questions.
-3. Gamification: point system + leaderboard backed by persistent storage.
-4. Adaptive-scaffolding assessment component (branching support based on performance).
-5. BFS visualization: backend-computed traversal steps animated node-by-node on the frontend, with step controls.
-6. Multi-mode content delivery (video / text / interactive) as a content-system capability.
-7. REST API connecting frontend and backend.
-8. GitHub repository with build/run/deploy instructions.
-9. Placeholder lesson/content (videos, text, questions, graph scenarios) seeded via fixtures; real content is substituted later.
+## In scope
+1. Accounts: register and log in with email and password.
+2. The seven modules of the ID document (0 to 6), in order, with progress saved after each one.
+3. Narrated videos (screen recordings with voice-over, no presenter) that pause at checkpoints for an activity.
+4. Every activity type in the ID document, with immediate feedback and a four-level hint ladder.
+5. Code activities that run student Python against test cases in a sandboxed code runner.
+6. The BFS visualiser, with step controls, next-vertex prediction and trace tables.
+7. The mastery check, a per-objective report, and a review path for objectives marked "not yet".
+8. The module 0 diagnostic that picks refreshers, skippable worked examples, and optional bonus quests.
+9. Private points and badges.
+10. An event log and CSV export for the ID team's pilot and evaluation.
+11. Seed content: the ID team's modules, activities and graph scenarios, loaded from version-controlled fixtures.
 
-## Out of scope for Draft 1 **[PROVISIONAL]**
-- Content authoring UI / admin dashboard (content seeded via fixtures/config initially).
-- Topics beyond Graphs + BFS (e.g. DFS, Dijkstra, trees).
-- Multi-course or multi-tenant support.
-- Mobile-native apps (responsive web only).
-- Social features beyond the leaderboard (comments, friends, chat).
-- Offline mode / PWA installability.
-- Production-grade analytics pipeline.
+## Out of scope
+- An authoring interface: content is edited as fixture files in the repository and loaded by a seed command.
+- A public leaderboard (see FR-9 for why).
+- Topics beyond graphs and BFS (DFS, Dijkstra, trees), and programming languages other than Python.
+- Password reset, refresh tokens, and sign-in with the university account (future work, §14).
+- Native mobile apps and offline use.
 
-## Success criteria (engineering) **[PROVISIONAL]**
-- A student can complete the full flow end-to-end in a deployed environment.
-- BFS steps returned by the backend render a correct, repeatable animation.
-- Points and leaderboard persist across sessions and reflect recorded events.
-- Assessment branches to a scaffolding path when performance is below a configurable threshold.
+## Success criteria (engineering)
+- A new student can complete all seven modules and receive a mastery report on the deployed production site.
+- A student with a "not yet" objective is sent to that objective's review path, and can reach "ready for the lecture" after it.
+- Student code that loops forever, uses too much memory, or tries to reach the network fails safely within the time limit and affects no one else.
+- The ID team can export the pilot's attempts and results as CSV without help from an engineer.
 
 # System Architecture
 
@@ -191,28 +196,54 @@ Coolify's Traefik proxy (on our server; Let's Encrypt certificates, Cloudflare D
   ▼
 web container: nginx
   ├─ /            React + TypeScript SPA (Vite build)
-  ├─ /media/      lesson videos (static files, served with range requests)
+  ├─ /media/      narrated videos and captions (static files, served with range requests)
   └─ /api/*  ──►  api container: FastAPI on Uvicorn
                     routers → services → SQLAlchemy models
-                    BfsEngine (pure Python module)
-                      ▼
-                  db container: PostgreSQL 18 (persistent volume, nightly pg_dump)
+                    BfsEngine, answer checkers, mastery rules
+                      │                         │
+                      ▼                         ▼  internal network only
+                  db container:             runner container: executes student
+                  PostgreSQL 18             Python against tests; no internet,
+                  (persistent volume,       no database, no secrets
+                  nightly pg_dump)
 ```
 
-The three containers are defined in `docker-compose.yml`, and Coolify deploys that file as it is.
+The four containers are defined in `docker-compose.yml`, and Coolify deploys that file as it is.
 nginx serves the SPA and forwards `/api` to the API, so the browser only ever talks to one origin.
-That removes the need for CORS and for an API base URL in the frontend.
+That removes the need for CORS and for an API base URL in the frontend. The runner is reachable
+only from the API, over a Docker network marked `internal`, which has no route to the internet.
+
+```mermaid
+sequenceDiagram
+    actor S as Student
+    participant W as Browser (SPA)
+    participant A as API
+    participant R as Runner
+    participant D as Database
+    S->>W: Writes BFS, presses Submit
+    W->>A: POST /api/activities/{id}/attempts {code}
+    A->>D: Load the activity's hidden tests
+    A->>R: Run code + tests (time and memory limits)
+    R-->>A: Result per test, output (truncated)
+    A->>D: Save the attempt, update objective result and points
+    A-->>W: Pass/fail per test, feedback, next hint level
+    W-->>S: Shows which tests failed and why
+```
+
+Figure: Submitting a code activity. The browser never sees the hidden tests, and the API never runs student code itself.
 
 ## Tier responsibilities
-- **Frontend (client tier):** presentation, interaction, animation, client-side validation. Holds no business authority over scores — it reports events; the backend decides and persists.
-- **Backend (application tier):** authoritative logic — authentication, BFS computation, scoring rules, assessment branching, content retrieval, persistence orchestration.
-- **Data tier:** durable storage of structured data; media served from a static/object store rather than the database.
+- **Frontend (client tier):** presentation, interaction, animation and video playback. It holds no authority over answers, mastery or points: it reports what the student did, and the backend decides and persists.
+- **Backend (application tier):** authentication, content delivery, answer checking, BFS computation, hint and attempt logging, mastery and review-path rules, points and badges, and the evaluation export.
+- **Code runner:** executes untrusted student code against tests and returns the results. It stores nothing and knows nothing about users.
+- **Data tier:** durable storage of structured data. Media is served by nginx from a volume, not stored in the database.
 
 ## Key architectural decisions
-- **Thin client for authority-bearing logic.** Score/assessment decisions are server-side to prevent client tampering and keep rules in one place.
-- **BFS computed server-side.** Guarantees a single correct implementation (the canonical algorithm being taught) and keeps the frontend a pure renderer of returned steps.
-- **Stateless API with token auth.** Enables horizontal scaling and simple deployment. The token travels in an httpOnly cookie (§5).
-- **Content as data.** Lessons, questions, and graph scenarios are stored/configured as data so new content does not require frontend code changes.
+- **Thin client for authority-bearing logic.** Answers, mastery and points are decided server-side, so the rules live in one place and the browser can't award itself a result.
+- **Student code runs in a separate, locked-down container.** Isolating it in its own service, rather than in the API process, means a hostile or broken submission can at worst crash the runner, which holds no data and has no network. See NFR-S7.
+- **BFS computed server-side.** One tested implementation produces the animation steps and checks predictions and trace tables, so they can never disagree.
+- **Stateless API with token auth.** The token travels in an httpOnly cookie (§5).
+- **Content as data.** Modules, activities, hints, tests and graph scenarios are fixture files the ID team can edit; adding content needs no frontend or API change.
 
 # Technology stack
 
@@ -224,17 +255,20 @@ That removes the need for CORS and for an API base URL in the frontend.
 | Validation | **Pydantic v2** | Comes with FastAPI. Validates every request at the API boundary. |
 | ORM and migrations | **SQLAlchemy 2.1** + **Alembic** | Typed models. Migrations are applied automatically when the API container starts (`alembic upgrade head`), so a migration that fails stops the deploy instead of running against the wrong schema. Baseline revision `0001` is in place. |
 | Database | **PostgreSQL 18** in every environment | Local development runs the same Postgres in Docker. Tests use in-memory SQLite, so they run without a database server. Using one database engine everywhere avoids JSON and enum behaviour differing between dev and production. |
-| Auth | **JWT** (PyJWT) in an **httpOnly, Secure, SameSite=Lax cookie**; passwords hashed with **Argon2** (pwdlib) | JWT as in Draft 1. Because the SPA and API share one origin, a cookie is simpler than an `Authorization: Bearer` header, and JavaScript can't read it, so an XSS bug can't steal the token. pwdlib replaces passlib: passlib is no longer maintained and breaks with current bcrypt releases, and FastAPI's own documentation now uses pwdlib. Email is required. Password reset and refresh tokens are future work. |
+| Auth | **JWT** (PyJWT) in an **httpOnly, Secure, SameSite=Lax cookie**; passwords hashed with **Argon2** (pwdlib) | Because the SPA and API share one origin, a cookie is simpler than an `Authorization: Bearer` header, and JavaScript can't read it, so an XSS bug can't steal the token. pwdlib replaces passlib: passlib is no longer maintained and breaks with current bcrypt releases, and FastAPI's own documentation now uses pwdlib. Email is required. Password reset and refresh tokens are future work. |
 | Frontend language | **TypeScript 7** | Team decision. Type safety across the UI and the API client. |
 | Frontend framework | **React 19** | Team decision, and what the scaffold already uses. |
 | Build tool | **Vite 8** | Fast dev server with hot reload; the dev server proxies `/api` to the local API, so dev also uses one origin. |
 | Routing | **React Router** | Client-side routing for the multi-view SPA. nginx already serves `index.html` for unknown paths. |
 | Server state | **TanStack Query** | Data fetching and caching against the REST API. |
-| Graph rendering | **SVG via D3** | As Draft 1: for graphs of up to about 50 nodes, SVG is simpler than Canvas (one DOM element per node and edge, easy per-element transitions, highlighting and click handling). |
-| Video | **HTML5 `<video>`**, self-hosted MP4 (H.264) with WebVTT captions | The player needs full control to pause at checkpoints and block seeking past them. An embedded YouTube player would add adverts, recommendations and a dependency outside our control during the demo. Captions also provide the `text` mode for each video. |
+| Graph rendering | **SVG via D3** | For graphs of up to about 50 vertices, SVG is simpler than Canvas (one DOM element per node and edge, easy per-element transitions, highlighting and click handling). |
+| Video | **HTML5 `<video>`**, self-hosted MP4 (H.264) with WebVTT captions; narrated screen recordings, no presenter | The player needs full control to pause at checkpoints and block seeking past them. An embedded YouTube player would add adverts, recommendations and a dependency outside our control during the demo. Captions also provide the `text` mode for each video. |
+| Code editor | **CodeMirror 6** with the Python language package | Small, accessible and keyboard-friendly, unlike heavier editors built for IDEs. Used by every code activity. |
+| Drag and drop | **dnd-kit** | Parsons problems; supports keyboard dragging, which NFR-A1 requires. |
+| Code runner | **Python 3.12** in its own container, a minimal FastAPI service, each submission in a separate process with `resource` limits | Runs untrusted student code away from the API, the database and the internet (NFR-S7). |
 | Testing (backend) | **pytest** with FastAPI `TestClient`, warnings treated as errors | Unit tests for the BfsEngine and services, plus API tests against a fresh SQLite database that every migration has been applied to. |
 | Testing (frontend) | **Vitest** + **React Testing Library** | Native fit with Vite; component and logic tests, with coverage reported in CI. |
-| End-to-end testing | **Playwright** | Walks through the full student flow (log in, lesson, checkpoint, BFS, assessment, scaffold) in a real browser against a running stack. |
+| End-to-end testing | **Playwright** | Walks through the full student flow (register, a module, a video checkpoint, a code submission, the mastery report, a review path) in a real browser against a running stack. |
 | Lint and format (Python) | **ruff** (format + lint, including the bandit security rules and the FastAPI rules) and **mypy --strict** | Enforced in CI. |
 | Lint and format (TypeScript) | **oxlint** (correctness, suspicious and perf rules plus the React, import, jsx-a11y and Vitest plugins; warnings fail the build) and **Prettier** | oxlint replaces ESLint: it is already configured and runs in under a second. The `jsx-a11y` plugin enforces part of the accessibility requirements (NFR-A). |
 | CI | **GitHub Actions** | On every PR and on every push to `staging` and `master`: format, lint, types, tests and builds for both apps, and a build of the Docker images. A `branch-flow` check rejects PRs into `master` that don't come from `staging`. Dependabot opens weekly update PRs into `staging`. |
@@ -242,184 +276,268 @@ That removes the need for CORS and for an API base URL in the frontend.
 
 # Functional Requirements
 
-Each feature is broken into concrete, testable capabilities. IDs (FR-x.y) are for traceability in later drafts.
+Each feature is broken into concrete, testable capabilities with IDs (FR-x.y) for traceability. The table at the end of this section links each requirement to the part of the ID document it delivers.
 
-## Interactive Video (FR-1)
-- **FR-1.1** Play a lesson video with standard controls (play/pause/seek within allowed bounds).
-- **FR-1.2** Pause automatically at configured timestamps ("checkpoints") defined per video.
-- **FR-1.3** At a checkpoint, present one or more questions tied to that checkpoint.
-- **FR-1.4** At a checkpoint the student submits an answer and receives **immediate feedback**. A wrong answer does **not** hard-block or lock the student out: they may **retry**. Playback does not resume until the checkpoint question is answered **correctly** (gate policy = `retry_until_correct`). There is no permanent lockout.
-- **FR-1.5** Record **each attempt** (correct and incorrect) at a checkpoint as a progress event and route it to scoring (scoring distinguishes first-attempt-correct from retry-correct — see FR-2).
-- **FR-1.6** Resume playback from the checkpoint once the question has been answered correctly.
-- **FR-1.7** Prevent seeking past an unanswered (not-yet-correct) checkpoint.
+## Accounts (FR-1)
+- **FR-1.1** Register with an email address, a password and a display name. The display name is shown only to the student.
+- **FR-1.2** Log in and out. A session lasts until logout or 14 days, whichever is first.
+- **FR-1.3** A student sees and changes only their own progress, attempts and results.
+- **FR-1.4** Seeded demo accounts exist at different points in the course (new, mid-course, finished with a "not yet" objective, ready for the lecture), so the demo can show any stage without working through 75 minutes of content.
 
-## Gamification: Points + Leaderboard (FR-2)
-- **FR-2.1** Award points for defined actions per a server-side rules table. **Draft 1 default rules (tunable, stored server-side):**
+## Modules and progress (FR-2)
+- **FR-2.1** Present the seven modules of the ID document (0 to 6) in order. A module opens once the one before it is complete; module 0 is always open.
+- **FR-2.2** Each module is an ordered sequence of segments: narrated video, text, worked example, activity, or code activity.
+- **FR-2.3** Each module starts by stating its objectives in plain words ("By the end of this module you can …"), taken from the content.
+- **FR-2.4** Each module from module 2 onwards opens with one or two retrieval questions on earlier modules.
+- **FR-2.5** Save progress after every segment. A student who returns resumes at the segment they left.
+- **FR-2.6** Show a module map with each module's state (locked, open, in progress, complete) and estimated duration.
 
-  | Action | Points |
-  |---|---|
-  | Correct checkpoint answer (first attempt) | 10 |
-  | Correct checkpoint answer on retry (not first attempt) | 5 |
-  | Completing a lesson | 25 |
-  | Passing an assessment | 50 |
-  | Completing the scaffolding path | 15 |
+## Narrated video with checkpoints (FR-3)
+- **FR-3.1** Play narrated videos (screen recordings with a voice-over, no presenter) with play, pause and seek.
+- **FR-3.2** Show captions, on by default, and a transcript below the video. The transcript is the text version of the segment.
+- **FR-3.3** Pause automatically at each configured checkpoint and show its activity.
+- **FR-3.4** At a checkpoint, give immediate feedback. A wrong answer can be retried, with the hint ladder available (FR-4.4). Playback resumes once the activity is answered correctly.
+- **FR-3.5** Prevent seeking past a checkpoint that has not been answered correctly. Seeking backwards is always allowed.
 
-  These values are the Draft-1 defaults and are intended to be tuned; they live in a server-side rules table/config, not in the client.
-- **FR-2.2** Persist per-user cumulative score and the underlying scoring events.
-- **FR-2.3** Expose the current user's score and breakdown.
-- **FR-2.4** Provide a leaderboard ranking users by score (top-N + the current user's rank).
-- **FR-2.5** Scoring is computed/validated server-side; client reports events only.
-- **FR-2.6** Leaderboard identity/privacy: each student chooses a **display name / handle** at signup, shown on the public leaderboard. A student may opt to appear **anonymised** on the public leaderboard (`is_anonymous_on_leaderboard` flag); when set, their handle is replaced with an anonymised label while their own rank remains visible to them.
+## Activities, feedback and hints (FR-4)
+- **FR-4.1** Support these activity kinds, each defined entirely by content data:
+  multiple choice; matching; labelling vertices and edges on a diagram; classifying graphs (directed or undirected); building a graph by adding vertices and edges; predicting the next BFS vertex; filling in a BFS trace table (current vertex, queue, visited set, order); Parsons problems (ordering shuffled lines of code); completing code; writing code; fixing a faulty implementation; writing test cases.
+- **FR-4.2** Check every answer on the server and return feedback straight away. Feedback says why an answer is wrong, not only that it is wrong.
+- **FR-4.3** Tag every activity with the learning objective it gives evidence for (1 to 7) and its purpose: practice, diagnostic, retrieval, mastery, review or bonus.
+- **FR-4.4** Offer a four-level hint ladder on every activity, one level at a time. Level 4 is the worked solution.
+- **FR-4.5** Record every attempt with the answer, the result and the highest hint level used. Hint levels 3 and 4 make a later correct answer count as "with support" (FR-7.2).
 
-## Adaptive-Scaffolding Assessment (FR-3)
-- **FR-3.1** Deliver an assessment (set of questions) on Graphs + BFS.
-- **FR-3.2** Evaluate answers server-side and compute a performance measure.
-- **FR-3.3** If performance is below a **single, configurable pass/fail threshold**, branch the student into a **scaffolding path** (additional/alternative content or easier guided questions) before the lecture.
-- **FR-3.4** If performance meets the threshold, mark the topic ready and record completion.
-- **FR-3.5** Persist assessment attempts and results for scoring and progress.
-- **FR-3.6** Draft 1 uses a **single global pass/fail threshold** only (configurable). The `scaffold_rules` JSON shape is retained for forward-compatibility, but Draft 1 exercises only the global-threshold branch. **Per-concept weakness detection (mapping specific weaknesses to targeted scaffolds) is explicitly deferred to Draft 2.**
+## Code activities (FR-5)
+- **FR-5.1** Provide a code editor with Python syntax highlighting, indentation and line numbers.
+- **FR-5.2** **Run** executes the student's code against the activity's visible example tests and shows the output. Runs are practice and are not graded.
+- **FR-5.3** **Submit** executes the code against the activity's hidden tests and records a graded attempt. The student sees which tests failed and a message for each, but not the hidden test code.
+- **FR-5.4** Parsons problems are checked by the order of the lines; completing and writing code are checked by tests.
+- **FR-5.5** For "write tests" activities, run the student's tests against the correct implementation (they must all pass) and against each faulty implementation (each must fail at least one test), as the ID document's objective 7 criterion requires.
+- **FR-5.6** All student code runs in the code runner under the limits of NFR-S7. A run that exceeds them returns a clear message ("Your code took longer than 5 seconds — check for a loop that never ends"), not an error page.
 
-> *Note:* The pedagogical justification for scaffolding is intentionally out of scope here; this section specifies only the engineering mechanism (thresholded branching over content).
+## BFS visualiser (FR-6)
+- **FR-6.1** Load a graph scenario (vertices, edges, directed or not, start vertex) and its BFS steps from the backend.
+- **FR-6.2** Draw the graph and animate BFS step by step, showing the current vertex, the queue, the visited set and the traversal order side by side.
+- **FR-6.3** Provide controls: step forward, step back, play and pause, reset, and speed.
+- **FR-6.4** In prediction mode, pause before each step and ask the student to pick the next vertex; the animation then confirms or corrects the prediction.
+- **FR-6.5** Neighbours are visited in alphabetical order of their labels, the convention the lessons teach, so a correct prediction is always marked correct.
+- **FR-6.6** Trace-table activities are checked step by step against the engine's steps.
 
-## BFS Visualization (FR-4)
-- **FR-4.1** Load a graph scenario (nodes, edges, directedness, start node) from the backend.
-- **FR-4.2** Request a computed BFS traversal from the backend for a given scenario + start node.
-- **FR-4.3** Render the graph (nodes + edges) in the browser.
-- **FR-4.4** Animate the BFS step-by-step: current node, visited set, queue state, and newly discovered neighbours per step.
-- **FR-4.5** Provide playback controls: step forward, step back, play/pause, reset, and speed control. (Back-stepping is supported in Draft 1 — enabled cheaply by local playback over precomputed steps.)
-- **FR-4.6** Display auxiliary state (queue contents, visited order) alongside the animation.
-- **FR-4.7** Support a small library of **predefined** graph scenarios for Draft 1. **Custom student-input graphs are deferred to Draft 2+** (noted future item; see §14).
+## Mastery check and scaffolding (FR-7)
+- **FR-7.1** Module 6 is a mastery check: unseen activities on every objective, checked against the success criteria in the ID document's Table 1.
+- **FR-7.2** Give each objective one of three results: **met independently** (criterion met without hint level 3 or 4), **met with support** (met after using level 3 or 4), or **not yet** (criterion not met).
+- **FR-7.3** Show a mastery report: each objective's result in plain words, with next steps.
+- **FR-7.4** A student is **ready for the lecture** when no objective is "not yet".
+- **FR-7.5** For each "not yet" objective, open a review path: that objective's review segments and activities, followed by fresh mastery items for it. The objective's result updates when they are completed.
+- **FR-7.6** Results are computed on the server from recorded attempts, and recomputed if the rules change.
 
-## Multi-Mode Content Delivery (FR-5)
-- **FR-5.1** Represent a lesson as a set of content items each tagged with a mode: `video`, `text`, or `interactive`.
-- **FR-5.2** Serve the content items for a lesson so the frontend can present available modes.
-- **FR-5.3** Allow the student to switch between available modes for the same concept.
-- **FR-5.4** Track which modes/items a student has engaged with (for progress/scoring). **[PROVISIONAL]**
+## Diagnostic, fading and challenge (FR-8)
+- **FR-8.1** Module 0's diagnostic quiz (queues and basic Python) selects which refreshers the student sees; refreshers the student doesn't need are skipped.
+- **FR-8.2** A worked example can be skipped after the student passes a short check, as the ID document's fading design requires.
+- **FR-8.3** Offer optional bonus quests after modules for students who want more challenge. They give points but never affect mastery.
+
+## Points and badges (FR-9)
+- **FR-9.1** Award points for completed modules, correct activities and objectives met, from a server-side rules table.
+- **FR-9.2** Award fewer points for a correct answer reached after hint level 3 or 4, matching "met with support".
+- **FR-9.3** Award badges for milestones (first module, every objective met, all bonus quests).
+- **FR-9.4** Points and badges are **private**: each student sees only their own. There is no public leaderboard, because public ranking discourages the students who most need the app (those motivated by avoiding failure, L05).
+
+Default rules **[PROVISIONAL]** until the ID document's motivation section is written:
+
+| Event | Points |
+|---|---|
+| Activity correct without hint level 3 or 4 | 10 |
+| Activity correct after hint level 3 or 4 | 4 |
+| Module completed | 25 |
+| Objective met independently / with support | 30 / 15 |
+| Bonus quest completed | 20 |
+
+Table: Default points rules, stored on the server and tunable without a code change.
+
+## Evaluation data (FR-10)
+- **FR-10.1** Log every event (segment viewed, video checkpoint reached, attempt, hint requested, module completed, result changed) with the user and time.
+- **FR-10.2** Staff can download the log, attempts and objective results as CSV, for the ID team's pilot and evaluation.
+- **FR-10.3** The export identifies students by an internal ID, not by email or display name.
+
+## Traceability to the ID document
+
+| Requirement | Delivers (ID document) |
+|---|---|
+| FR-2 Modules and progress | Lesson sequence, modules 0–6 (§4.4, Table 4); Gagné events 2 and 9 (Table 3); retrieval practice (§5.4) |
+| FR-3 Narrated video | Gagné event 4, present the content (Table 3); interactive video (§5.1) |
+| FR-4 Activities, feedback, hints | Gagné events 5–7 (Table 3); active learning (§5.1); hint ladder and scaffolding (§5.3) |
+| FR-5 Code activities | Objectives 6 and 7 (§3.1, Table 1); Parsons problems (§5.3) |
+| FR-6 BFS visualiser | Objectives 4 and 5; signalling and segmenting (§5.2); prediction before animation (§5.4) |
+| FR-7 Mastery and scaffolding | Three result states and readiness rule (§3.2); review path (§7); the specification's requirement for extra scaffolding |
+| FR-8 Diagnostic and fading | Warm-up and refreshers (module 0); fading support and bonus quests (§5.2) |
+| FR-9 Points and badges | Motivation and gamification (§7, still to be written) |
+| FR-10 Evaluation data | ADDIE Implement and Evaluate phases (§4.2, Table 2); evaluation (§8) |
+
+Table: Which part of the ID document each functional requirement delivers.
 
 # Non-Functional Requirements
 
 ## Performance
-- **NFR-P1** BFS computation for Draft 1 scenario sizes (≤ ~50 nodes) returns in well under 200 ms server-side.
-- **NFR-P2** API p95 latency target < 300 ms for non-media endpoints under light load. **[PROVISIONAL target]**
-- **NFR-P3** Frontend BFS animation sustains a smooth frame rate for Draft 1 graph sizes; animation is driven by precomputed steps (no per-frame server calls).
-- **NFR-P4** Video media served from a static/CDN-style host, not proxied through the API.
+- **NFR-P1** BFS computation for scenario sizes up to about 50 vertices returns in well under 200 ms server-side.
+- **NFR-P2** Answer checks for non-code activities return in under 300 ms under light load. **[PROVISIONAL target]**
+- **NFR-P3** A code submission returns its results within 6 seconds, including the runner's 5-second limit.
+- **NFR-P4** The BFS animation runs from precomputed steps, with no server calls per frame.
+- **NFR-P5** Videos are served by nginx from a volume with range requests, so seeking doesn't download the whole file and video never passes through the API.
 
 ## Usability
-- **NFR-U1** Responsive layout for desktop and tablet widths.
-- **NFR-U2** Clear, consistent controls for video, BFS stepping, and assessment navigation.
-- **NFR-U3** Visible feedback for scoring events and assessment outcomes.
+- **NFR-U1** Laptop and desktop are the primary devices, because modules 2, 4 and 5 need a keyboard for code. Every other module also works on a tablet and a phone (from 360 px wide).
+- **NFR-U2** Clear, consistent controls for video, BFS stepping, activities and hints across all modules.
+- **NFR-U3** Every answer gets visible feedback within the activity; errors from the system are written for students, never as stack traces.
+- **NFR-U4** Before the demo, at least five students from outside the group complete a usability test of modules 0 to 3 (the pilot, §2.1).
 
 ## Security & Authentication
 - **NFR-S1** Passwords stored only as salted hashes (Argon2, via pwdlib).
-- **NFR-S2** Authenticated endpoints require a valid **JWT in the session cookie**; authorization checks tie resources to the owning user. Email is required as account identity (used for recovery in later drafts). Password reset and refresh tokens are **deferred to Draft 2**.
+- **NFR-S2** Authenticated endpoints require a valid **JWT in the session cookie**; every query is scoped to the logged-in user, so one student can never read another's data. Password reset and refresh tokens are future work (§14).
 - **NFR-S3** All traffic over HTTPS in deployed environments.
-- **NFR-S4** Server-side validation of all inputs (Pydantic schemas); never trust client-reported scores/results.
+- **NFR-S4** Server-side validation of all inputs (Pydantic schemas); answers, results and points are never accepted from the client.
 - **NFR-S5** No secrets in the repository; configuration via environment variables.
-- **NFR-S6** Standard protections: the session cookie is httpOnly, Secure and SameSite=Lax; state-changing requests require JSON bodies (blocking cross-site form posts); parameterised queries via the ORM; rate limiting on auth endpoints **[PROVISIONAL]**. The app and the API share one origin, so no CORS is configured.
+- **NFR-S6** Standard protections: the session cookie is httpOnly, Secure and SameSite=Lax; state-changing requests require JSON bodies (blocking cross-site form posts); parameterised queries via the ORM; rate limiting on login, registration and code submission. The app and the API share one origin, so no CORS is configured.
+- **NFR-S7** **Code runner isolation.** Student code is untrusted and runs only in the runner container, which:
+  - is on an internal Docker network with no route to the internet, reachable only from the API;
+  - has no database credentials, no secrets and no volumes;
+  - runs as an unprivileged user, with a read-only filesystem except a small temporary directory, all Linux capabilities dropped and `no-new-privileges` set;
+  - is capped by Docker at 0.5 CPU, 256 MB of memory and 64 processes;
+  - runs each submission in a fresh temporary directory, as a separate Python process (`python -I`) with its own limits: 5 seconds of CPU, 10 seconds wall time, 128 MB of memory, 1 MB of output; the whole process group is killed when a limit is reached;
+  - runs at most four submissions at a time; further requests get "busy, try again in a moment".
+- **NFR-S8** **Privacy (POPIA).** The app stores only what it needs: email (to log in), a display name, and learning data. It shows no student's data to another student, exports only internal IDs (FR-10.3), and states what is collected and why on the registration page. Test and demo data never uses real students' details.
 
 ## Maintainability
-- **NFR-M1** Layered backend (routers → services → data) with the BfsEngine isolated from web concerns and unit-testable in isolation.
-- **NFR-M2** Typed boundaries both sides (Pydantic + TypeScript); API types kept in sync (consider generating a TS client from OpenAPI **[PROVISIONAL]**).
+- **NFR-M1** Layered backend (routers → services → data) with the BfsEngine, the answer checkers and the mastery rules isolated from web concerns and unit-testable in isolation.
+- **NFR-M2** Typed boundaries on both sides (Pydantic + TypeScript); the TypeScript API types are generated from the OpenAPI schema. **[PROVISIONAL]**
 - **NFR-M3** ruff, mypy --strict, oxlint and Prettier enforced in CI on every PR.
 - **NFR-M4** Database migrations tracked with Alembic.
+- **NFR-M5** Content (modules, activities, hints, tests, scenarios) lives in fixture files validated by a schema in CI, so a broken content edit fails its PR instead of the app.
 
-## Accessibility **[PROVISIONAL]**
-- **NFR-A1** Keyboard operability for primary controls (video, stepping, assessment).
-- **NFR-A2** Sufficient colour contrast; BFS state not conveyed by colour alone (also labels/shapes).
-- **NFR-A3** Semantic HTML and ARIA roles for custom controls.
-- **NFR-A4** Captions/transcripts for videos (ties into the `text` content mode).
+## Accessibility
+- **NFR-A1** Every activity, the video player and the BFS controls can be operated with the keyboard alone, including Parsons problems (move lines with arrow keys as well as by dragging).
+- **NFR-A2** Text and controls meet WCAG 2.1 AA contrast; BFS state is never shown by colour alone (vertices also carry labels and a marker for current, queued and visited).
+- **NFR-A3** Semantic HTML and ARIA roles for custom controls; oxlint's jsx-a11y rules enforce part of this in CI.
+- **NFR-A4** Every video has captions and a transcript.
 
 # Data Model
 
-## Entities (conceptual)
+```mermaid
+erDiagram
+    USER ||--o{ ATTEMPT : makes
+    USER ||--o{ EVENT : generates
+    USER ||--o{ MODULE_PROGRESS : has
+    USER ||--o{ OBJECTIVE_RESULT : has
+    USER ||--o{ POINTS_ENTRY : earns
+    USER ||--o{ USER_BADGE : earns
+    MODULE ||--|{ SEGMENT : contains
+    MODULE ||--o{ MODULE_PROGRESS : tracked_by
+    SEGMENT |o--o| VIDEO : plays
+    VIDEO ||--o{ CHECKPOINT : pauses_at
+    CHECKPOINT ||--|| ACTIVITY : asks
+    SEGMENT |o--o| ACTIVITY : presents
+    OBJECTIVE ||--o{ ACTIVITY : evidenced_by
+    OBJECTIVE ||--o{ OBJECTIVE_RESULT : judged_in
+    ACTIVITY ||--|{ HINT : offers
+    ACTIVITY ||--o{ ATTEMPT : receives
+    ACTIVITY |o--o| GRAPH_SCENARIO : uses
+    BADGE ||--o{ USER_BADGE : awarded_as
+```
 
-**User**
-- `id` (PK), `username`, `email` (**required** — account identity/recovery), `display_name` (**required** — shown on the leaderboard), `is_anonymous_on_leaderboard` (bool, default `false` — when `true`, the public leaderboard shows an anonymised label instead of `display_name`), `password_hash`, `created_at`.
+Figure: Entities and relationships.
 
-**Lesson**
-- `id` (PK), `topic` (e.g. "Graphs+BFS"), `title`, `description`, `order`.
+## Entities
 
-**ContentItem** (multi-mode content)
-- `id` (PK), `lesson_id` (FK→Lesson), `mode` (`video`|`text`|`interactive`), `title`, `body_ref` (text body or asset reference), `order`.
+**User**: `id`, `email` (unique, required), `display_name`, `password_hash`, `is_staff` (team members; may export evaluation data), `created_at`.
 
-**Video** (specialisation of/linked to a `video` ContentItem)
-- `id` (PK), `content_item_id` (FK→ContentItem), `media_url`, `duration_seconds`.
+**Objective**: `id` (1 to 7, as numbered in the ID document), `text`, `bloom_level`, `criterion` (the success criterion from the ID document's Table 1, as a rule the mastery service evaluates, e.g. "at least 4 of 5 correct").
 
-**VideoCheckpoint**
-- `id` (PK), `video_id` (FK→Video), `timestamp_seconds`, `gate_policy` (Draft 1 value: `retry_until_correct` — student may retry; playback resumes only after a correct answer; no permanent lockout. Enum retained for future policies such as `submit`).
+**Module**: `id`, `number` (0 to 6), `slug`, `title`, `goals` (the "By the end of this module you can …" text), `estimated_minutes`, `position`.
 
-**Question**
-- `id` (PK), `type` (`mcq`|`truefalse`|`short`) , `prompt`, `options` (JSON for choices), `correct_answer`/`answer_key` (JSON), `difficulty` **[PROVISIONAL]**, optional `checkpoint_id` (FK→VideoCheckpoint), optional `assessment_id` (FK→Assessment).
+**Segment**: `id`, `module_id`, `position`, `kind` (`video` | `text` | `worked_example` | `activity` | `refresher`), `title`, `body` (Markdown for text and worked examples), `skip_check_activity_id` (optional: passing this activity lets the student skip the segment, FR-8.2), `refresher_for` (optional: the diagnostic topic that makes a refresher required, FR-8.1).
 
-**ProgressEvent**
-- `id` (PK), `user_id` (FK→User), `event_type` (`checkpoint_answer`|`lesson_complete`|`mode_viewed`|`assessment_submitted`), `ref_id` (polymorphic reference), `payload` (JSON), `created_at`.
-- *Design note:* ProgressEvent is the append-only source of truth; `Score` is derived/aggregated from events. **Every** checkpoint attempt (correct and incorrect) is recorded as a `checkpoint_answer` event; the `payload` captures correctness and whether it was the first attempt vs a retry, which drives the first-attempt (10 pts) vs retry (5 pts) scoring rule.
+**Video**: `id`, `segment_id`, `media_path`, `captions_path`, `transcript` (Markdown), `duration_seconds`.
 
-**Score**
-- `user_id` (FK→User, PK), `total_points`, `updated_at`. (Aggregate projection; may be recomputed from ProgressEvent.)
+**Checkpoint**: `id`, `video_id`, `at_seconds`, `activity_id`.
 
-**Leaderboard**
-- Not necessarily a stored table — Draft 1 may compute it as a query over `Score`/`ProgressEvent` (ranking). A materialised leaderboard table is **[PROVISIONAL]** if performance requires it.
+**Activity**: `id`, `module_id`, `objective_id` (nullable for diagnostic items), `purpose` (`practice` | `diagnostic` | `retrieval` | `mastery` | `review` | `bonus`), `kind` (one of the kinds in FR-4.1), `prompt` (Markdown), `config` (JSON, shape depends on the kind: options, diagram, starter code, line order, scenario ID …), `answer` (JSON, never sent to the browser: correct options, expected order, or hidden tests and faulty implementations for code kinds), `feedback` (JSON: messages for common wrong answers).
 
-**Assessment**
-- `id` (PK), `lesson_id` (FK→Lesson), `title`, `pass_threshold` (the single global threshold used in Draft 1), `scaffold_rules` (JSON). *Draft 1 uses only the global pass/fail branch of `scaffold_rules`; the JSON shape is retained so per-concept weakness→scaffold mappings can be added in Draft 2 without a schema change.*
+**Hint**: `activity_id`, `level` (1 to 4), `body` (Markdown). Level 4 is the worked solution.
 
-**AssessmentResult**
-- `id` (PK), `user_id` (FK→User), `assessment_id` (FK→Assessment), `score`, `passed` (bool), `branch_taken` (`none`|`scaffold`), `answers` (JSON), `created_at`.
+**GraphScenario**: `id`, `name`, `directed`, `vertices` (JSON), `edges` (JSON), `start_vertex`. Neighbours are always taken in alphabetical order of their labels (FR-6.5).
 
-**GraphScenario** (BFS scenario)
-- `id` (PK), `name`, `directed` (bool), `nodes` (JSON: list of node ids/labels), `edges` (JSON: list of `{source, target, weight?}`), `default_start_node`.
+**Attempt** (append-only): `id`, `user_id`, `activity_id`, `submitted` (JSON: the answer, or the code), `correct`, `score` (0 to 1, for partial results such as trace tables), `hint_level` (highest level shown before this attempt), `detail` (JSON: per-test results for code), `created_at`.
 
-## Key relationships
-- Lesson 1—* ContentItem; ContentItem 0..1—1 Video (for `video` mode).
-- Video 1—* VideoCheckpoint; VideoCheckpoint 1—* Question.
-- Assessment 1—* Question; Assessment 1—* AssessmentResult.
-- User 1—* ProgressEvent; User 1—1 Score; User 1—* AssessmentResult.
-- GraphScenario is standalone content consumed by the BFS feature (optionally linkable to a Lesson **[PROVISIONAL]**).
+**Event** (append-only): `id`, `user_id`, `type` (`segment_viewed` | `checkpoint_reached` | `hint_shown` | `module_completed` | `result_changed` …), `ref` (the segment, activity, module or objective), `payload` (JSON), `created_at`.
+
+**ModuleProgress**: `user_id`, `module_id`, `status` (`open` | `in_progress` | `complete`), `current_segment_id`, `completed_at`.
+
+**ObjectiveResult**: `user_id`, `objective_id`, `state` (`not_attempted` | `met_independently` | `met_with_support` | `not_yet`), `evidence` (IDs of the attempts the decision was based on), `updated_at`.
+
+**PointsEntry** (append-only): `user_id`, `points`, `reason`, `ref`, `created_at`. A student's total is the sum.
+
+**Badge** and **UserBadge**: `badge.id`, `name`, `description`, `rule`; `user_badge.user_id`, `badge_id`, `awarded_at`.
 
 ## Notes
-- JSON columns are used for flexible/evolving shapes (options, answers, edges, scaffold rules) in Draft 1; some may be normalised into tables in later drafts.
-- Scoring authority lives in ProgressEvent + server rules, never in client submissions.
+- **Attempts and events are the source of truth.** Module progress, objective results, points and badges are derived from them by the services, and can be recomputed if a rule changes (FR-7.6).
+- **Answers never leave the server.** The API strips `answer` from every activity it sends; hidden tests go only to the runner.
+- **JSON columns** hold the parts that differ by activity kind (`config`, `answer`, `feedback`, `submitted`, `detail`). Each kind has a Pydantic schema, so the JSON is still validated when fixtures load and when attempts arrive.
+- **Content is loaded from fixtures** (`api/app/seed/`), versioned in the repository and validated in CI (NFR-M5). Re-running the seed updates content without touching users' attempts.
 
 # API Design (REST)
 
-Base path: `/api`. JSON over HTTPS. Auth via the session cookie set by `/api/auth/login`, except where noted. Response/request bodies validated by Pydantic. Endpoint list is **[PROVISIONAL]** and will firm up with the OpenAPI schema.
+Base path: `/api`. JSON over HTTPS. Auth via the session cookie set by `/api/auth/login`, except where noted. Request and response bodies are validated by Pydantic, and the OpenAPI schema at `/api/docs` is the contract the frontend is built against. The endpoint list is **[PROVISIONAL]** until it is implemented.
 
 ## Auth
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| POST | `/api/auth/register` | public | Create a user account. |
+| POST | `/api/auth/register` | public | Create an account (email, password, display name). |
 | POST | `/api/auth/login` | public | Check credentials and set the session cookie. |
 | POST | `/api/auth/logout` | user | Clear the session cookie. |
-| GET | `/api/auth/me` | user | Current user profile. |
+| GET | `/api/auth/me` | user | The logged-in user. |
 
-## Lessons & Content
+## Modules and content
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/api/lessons` | user | List lessons. |
-| GET | `/api/lessons/{lessonId}` | user | Lesson detail. |
-| GET | `/api/lessons/{lessonId}/content` | user | Content items (all modes) for a lesson. |
-| GET | `/api/videos/{videoId}` | user | Video metadata + checkpoints (not the media bytes). |
+| GET | `/api/modules` | user | All modules with this student's state (locked, open, in progress, complete). |
+| GET | `/api/modules/{moduleId}` | user | The module's segments, in order, with this student's position. Refreshers the diagnostic ruled out are left out. Activities come without answers. |
+| POST | `/api/modules/{moduleId}/position` | user | Save the segment the student is on (FR-2.5). |
+| GET | `/api/videos/{videoId}` | user | Video metadata, captions and transcript paths, and checkpoints. The media itself comes from `/media/`. |
 
-## Interactive Question Answering
+## Activities, hints and code
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/api/checkpoints/{checkpointId}/questions` | user | Questions for a video checkpoint. |
-| POST | `/api/questions/{questionId}/answer` | user | Submit an answer; returns correctness + gate decision; records a ProgressEvent. |
+| POST | `/api/activities/{activityId}/hints` | user | Reveal the next hint level and record it. Returns the hint. |
+| POST | `/api/activities/{activityId}/run` | user | Code kinds only: run the code against the visible example tests. Not graded (FR-5.2). |
+| POST | `/api/activities/{activityId}/attempts` | user | Submit an answer or code. The server checks it (code goes to the runner with the hidden tests), records the attempt, updates progress, results and points, and returns the outcome. |
 
-## BFS Computation / Stepping
-| Method | Path | Auth | Purpose |
-|---|---|---|---|
-| GET | `/api/graphs` | user | List available graph scenarios. |
-| GET | `/api/graphs/{scenarioId}` | user | Scenario detail (nodes/edges). |
-| POST | `/api/graphs/{scenarioId}/bfs` | user | Compute BFS from a given `startNode`; returns ordered steps for animation. |
-
-Example `POST /api/graphs/{scenarioId}/bfs` request/response:
+Example `POST /api/activities/{activityId}/attempts` for a code activity:
 ```json
 // request
-{ "startNode": "A" }
+{ "code": "def bfs(graph, start):\n    ..." }
 
 // response
+{
+  "correct": false,
+  "score": 0.6,
+  "tests": [
+    { "name": "visits every vertex of a connected graph", "passed": true },
+    { "name": "handles a cycle", "passed": false,
+      "message": "Vertex B was visited twice. Is it marked as visited when it is added to the queue?" }
+  ],
+  "feedback": "3 of 5 tests passed.",
+  "nextHintLevel": 2,
+  "pointsAwarded": 0
+}
+```
+
+## BFS
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| GET | `/api/graphs/{scenarioId}` | user | Scenario detail (vertices, edges, start). |
+| GET | `/api/graphs/{scenarioId}/bfs` | user | BFS steps from the scenario's start vertex, for animation. |
+
+Example `GET /api/graphs/{scenarioId}/bfs` response:
+```json
 {
   "scenarioId": 1,
   "startNode": "A",
@@ -440,45 +558,27 @@ Example `POST /api/graphs/{scenarioId}/bfs` request/response:
 }
 ```
 
-## Scoring
+In practice segments the browser receives the steps to animate them. In mastery and review activities it does not: predictions and trace tables are submitted as attempts and checked against the engine on the server.
+
+## Progress and results
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/api/me/score` | user | Current user's total + breakdown. |
-| GET | `/api/me/progress` | user | Progress events / completion state. |
+| GET | `/api/me/progress` | user | Module states, points total and badges. |
+| GET | `/api/me/report` | user | The mastery report: each objective's result, whether the student is ready for the lecture, and the review path for each "not yet" objective. |
 
-(Scores are mutated as a side effect of answer/assessment submissions, not by a direct client "add points" call.)
+Progress, results and points change only as a side effect of attempts and segment completion. There is no endpoint for a client to set them.
 
-## Leaderboard
+## Evaluation export (staff only)
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/api/leaderboard` | user | Top-N ranked users + the current user's rank. |
-
-## Assessment
-| Method | Path | Auth | Purpose |
-|---|---|---|---|
-| GET | `/api/lessons/{lessonId}/assessment` | user | Fetch the assessment (questions). |
-| POST | `/api/assessments/{assessmentId}/submit` | user | Submit answers; server grades, decides branch, persists AssessmentResult, returns outcome + scaffold payload if branched. |
-| GET | `/api/assessments/{assessmentId}/result` | user | Latest result for the current user. |
-
-Example `POST /api/assessments/{assessmentId}/submit` response:
-```json
-{
-  "assessmentId": 7,
-  "score": 0.55,
-  "passed": false,
-  "branchTaken": "scaffold",
-  "scaffold": {
-    "reason": "below_threshold",
-    "contentItemIds": [12, 15],
-    "guidedQuestions": [31, 32]
-  }
-}
-```
+| GET | `/api/staff/export/{table}.csv` | staff | `events`, `attempts` or `objective_results` as CSV, students identified by internal ID only (FR-10). |
 
 ## Conventions **[PROVISIONAL]**
-- Standard HTTP status codes; error bodies `{ "detail": "..." }`.
-- Pagination for list endpoints (`?limit=&offset=`) where needed (leaderboard, lessons).
+- Standard HTTP status codes; error bodies `{ "detail": "..." }`. `429` with a retry hint when the runner is busy or a rate limit is reached.
 - OpenAPI/Swagger auto-published at `/api/docs` (FastAPI) and used as the frontend contract.
+
+## Code runner (internal)
+Not reachable from outside the compose network. One endpoint, `POST /run`, takes the code, the tests and the limits, and returns per-test results, captured output (truncated at 1 MB) and whether a limit was hit. It keeps no state between requests.
 
 # BFS Engine Design
 
@@ -486,10 +586,11 @@ Example `POST /api/assessments/{assessmentId}/submit` response:
 A self-contained `BfsEngine` module in the backend, independent of web/HTTP concerns, that:
 1. Accepts a graph scenario (nodes, edges, directedness) and a start node.
 2. Produces the BFS traversal **order** and a list of **steps** rich enough for the frontend to animate without re-deriving algorithm logic.
+3. Checks next-vertex predictions and trace-table attempts against those steps (FR-6.6).
 
 ## Graph representation
 - Input (from `GraphScenario`): `nodes` as a list of ids/labels; `edges` as `{source, target, weight?}`; `directed` flag.
-- Internal: an **adjacency list** `dict[node, list[node]]`. For undirected graphs, each edge is inserted in both directions. Neighbour ordering is made **deterministic** (e.g. sorted by node id/insertion order) so animations are reproducible and testable.
+- Internal: an **adjacency list** `dict[node, list[node]]`. For undirected graphs, each edge is inserted in both directions. Neighbours are visited in **alphabetical order of their labels**, the convention the lessons teach (FR-6.5), so animations, predictions and trace tables are reproducible and testable.
 
 ## Algorithm & step emission
 Standard BFS using a FIFO queue (`collections.deque`) and a `visited` set. On each loop iteration the engine emits a **step record** capturing observable state:
@@ -513,40 +614,47 @@ The returned payload (see §9.4) contains:
 - **Deterministic** output for a given scenario + start node (reproducible animations, easy snapshot tests).
 - **Pure/stateless** computation (no DB access inside the engine; scenario data passed in).
 - **Validated inputs** (start node exists, edges reference known nodes) — malformed scenarios rejected with a clear error.
-- **Precomputed, not streamed:** the entire step list is returned in one response; the frontend controls playback locally (supports step-back and scrubbing without extra calls). This is settled for Draft 1 given the confirmed small-graph scope (≤ ~50 nodes); it may be revisited only if graphs grow substantially in a later draft.
+- **Precomputed, not streamed:** the entire step list is returned in one response; the frontend controls playback locally (supports step-back and scrubbing without extra calls). This suits graphs of up to about 50 vertices.
 
 ## Testing
 - Unit tests over known graphs with asserted `order` and `steps` (directed and undirected; disconnected graph handling; single-node; start-node validation).
+- The same graphs are used by the hidden tests of the code activities, so the engine and the reference solution can't disagree.
 
 # Frontend Component Breakdown (React + TypeScript)
 
-**[PROVISIONAL]** — component tree will evolve. Organised by feature.
+**[PROVISIONAL]**: the component tree will evolve. Organised by feature, matching `web/src/features/`.
 
 - **App shell**
-  - `AppRouter` — route definitions.
-  - `AuthProvider` — holds auth token/session; guards routes.
-  - `ApiClient` — typed REST client (fetch wrapper; consider OpenAPI-generated types).
+  - `AppRouter`: route definitions.
+  - `AuthProvider`: the logged-in user and session; guards routes.
+  - `ApiClient`: typed REST client generated from the OpenAPI schema, used through TanStack Query.
 - **Auth**
-  - `LoginPage`, `RegisterPage`, `ProtectedRoute`.
-- **Lesson & content**
-  - `LessonListPage`, `LessonPage`.
-  - `ContentModeSwitcher` — toggles between `video` / `text` / `interactive` items.
-  - `TextContentView`, `InteractiveContentView`.
-- **Interactive video**
-  - `InteractiveVideoPlayer` — wraps the HTML5 video element, enforces checkpoint pauses and seek limits.
-  - `CheckpointQuestionOverlay` — renders checkpoint question(s), gates resume.
-- **BFS visualizer**
-  - `GraphScenarioLoader` — fetches scenario + requests BFS steps.
-  - `GraphCanvas` — renders nodes/edges as **SVG via D3** (layout + transitions).
-  - `BfsAnimator` — consumes `steps`, drives highlighting.
-  - `StepControls` — forward/back/play/pause/reset/speed.
-  - `BfsStatePanel` — shows queue, visited order, current node.
-- **Assessment**
-  - `AssessmentPage`, `QuestionRenderer` (by question type), `AssessmentResultView`, `ScaffoldPanel` (renders returned scaffold content).
-- **Gamification**
-  - `ScoreBadge` / `PointsIndicator`, `LeaderboardPage`.
+  - `LoginPage`, `RegisterPage` (with the privacy notice, NFR-S8), `ProtectedRoute`.
+- **Modules**
+  - `ModuleMap`: the seven modules with their state and duration (FR-2.6), points and badges.
+  - `ModulePage`: plays a module's segments in order, saves position, shows the module's goals.
+  - `SegmentView`: picks the right view for a segment: `TextSegment`, `WorkedExample` (with "skip after a check", FR-8.2), `VideoSegment` or `ActivitySegment`.
+- **Narrated video**
+  - `NarratedVideoPlayer`: wraps the HTML5 video element with captions, enforces checkpoint pauses and the seek limit (FR-3).
+  - `CheckpointOverlay`: shows the checkpoint's activity and resumes playback once it is correct.
+  - `Transcript`: the text version below the video.
+- **Activities**
+  - `ActivityRenderer`: chooses the component for the activity's kind, and wraps every activity with `HintLadder` and `FeedbackPanel`.
+  - One component per kind: `MultipleChoice`, `Matching`, `LabelGraph`, `ClassifyGraphs`, `BuildGraph`, `PredictNextVertex`, `TraceTable`, `ParsonsProblem` (drag or arrow keys), `CodeActivity` (CodeMirror editor, Run and Submit, per-test results), `FixTheBug` and `WriteTests` (both built on `CodeActivity`).
+  - `HintLadder`: reveals hints one level at a time and warns before levels 3 and 4 that the result will count as "with support".
+  - `FeedbackPanel`: shows why an answer is wrong, and the points awarded.
+- **BFS visualiser**
+  - `GraphCanvas`: draws vertices and edges as **SVG via D3**; marks current, queued and visited vertices with labels as well as colour (NFR-A2).
+  - `BfsAnimator`: plays the engine's steps and drives the highlighting; in prediction mode it pauses for `PredictNextVertex`.
+  - `StepControls`: forward, back, play, pause, reset, speed.
+  - `BfsStatePanel`: the queue, the visited set and the traversal order.
+- **Mastery**
+  - `MasteryReport`: each objective's result in plain words, "ready for the lecture" or not, and next steps.
+  - `ReviewPath`: the review segments and fresh mastery items for each "not yet" objective.
+- **Points and badges**
+  - `PointsIndicator`, `BadgeShelf`. Private to the student; there is no leaderboard.
 - **Shared**
-  - `QuestionRenderer`, `Spinner`, `ErrorBoundary`, `Toast`/feedback components.
+  - `Markdown` (renders prompts, hints and text segments), `Spinner`, `ErrorBoundary`, `Toast`.
 
 # Repository structure
 
@@ -555,7 +663,7 @@ Repository: `MatthewEls/cos750-project`. Folders marked *(planned)* don't exist 
 ```
 cos750-project/
 ├─ README.md                    run it, checks, database, branches and deploys
-├─ docker-compose.yml           web + api + db, deployed by Coolify as it is
+├─ docker-compose.yml           web + api + db + runner, deployed by Coolify as it is
 ├─ docker-compose.local.yml     publishes ports for local use
 ├─ .env.example
 ├─ .github/
@@ -576,11 +684,12 @@ cos750-project/
 │  │  ├─ db.py                  engine, Base, DbSession dependency
 │  │  ├─ models/                SQLAlchemy models
 │  │  ├─ schemas/               Pydantic request/response models (planned)
-│  │  ├─ routers/               auth, content, questions, bfs, scoring, leaderboard, assessment (planned)
-│  │  ├─ services/              AuthService, ContentService, ScoringService, AssessmentService (planned)
+│  │  ├─ routers/               auth, modules, activities, graphs, progress, staff (planned)
+│  │  ├─ services/              content, checking (one checker per activity kind), mastery, points, runner client (planned)
 │  │  ├─ bfs/engine.py          BfsEngine: pure, tested in isolation (planned)
-│  │  └─ seed/                  lessons, questions, graph scenarios, demo accounts (planned)
+│  │  └─ seed/                  modules, activities, hints, tests, scenarios, demo accounts (planned)
 │  └─ tests/
+├─ runner/                      code runner: Dockerfile and a minimal service (planned)
 ├─ web/
 │  ├─ Dockerfile                Vite build, then nginx
 │  ├─ nginx.conf                SPA, /api proxy, /media, /healthz
@@ -591,7 +700,7 @@ cos750-project/
 │     ├─ api/                   typed API client (planned)
 │     ├─ auth/                  (planned)
 │     ├─ components/            shared components (planned)
-│     ├─ features/              lessons, video, bfs, assessment, gamification (planned)
+│     ├─ features/              modules, video, activities, bfs, mastery, points (planned)
 │     └─ test/setup.ts
 ├─ e2e/                         Playwright tests (planned)
 ├─ assets/                      Ctrl Group logo pack
@@ -622,7 +731,7 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml up -d db
 
 cd api && python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/alembic upgrade head
-.venv/bin/python -m app.seed      # placeholder content and demo accounts (planned)
+.venv/bin/python -m app.seed      # content fixtures and demo accounts (planned)
 .venv/bin/uvicorn app.main:app --reload            # http://localhost:8000/api/docs
 
 cd web && npm install && npm run dev               # http://localhost:5173, proxies /api to :8000
@@ -646,45 +755,48 @@ and auto-fixes first.
 - The API container applies pending migrations before serving, so schema changes reach each environment with its deploy.
 - Postgres is backed up nightly by a Coolify scheduled task (`pg_dump`, kept for 14 days).
 - Videos are stored in a `media` volume mounted into the web container and served by nginx at `/media/`, outside git and outside the image *(planned)*.
+- The runner is built and deployed with the rest of the stack, on an internal network with the API only, with the limits in NFR-S7 set in `docker-compose.yml` *(planned)*.
 - Secrets are environment variables set in Coolify (database password, JWT secret, `STAGING_PASSWORD`). None are committed (`.env` is gitignored; only `.env.example` is in the repo).
 
-# Assumptions, Risks, and Open Questions
+# Assumptions, Risks, Decisions and Future Work
 
 ## Assumptions
-- Single student role for Draft 1; content is seeded via **placeholder fixtures** (no authoring UI yet); real lesson videos/content are added later.
-- Graphs are small (≤ ~50 nodes), so full BFS step precomputation per request is acceptable and SVG/D3 rendering is appropriate.
-- Scoring authority is server-side; the client only reports events.
-- One topic (Graphs + BFS) with one lesson and one assessment is sufficient for Draft 1.
-- **Team size is 7.** This allows slightly more of the previously-provisional scope to be committed to Draft 1 (e.g. confirmed Postgres/Docker deployment, concrete scoring and gating), but the draft is kept honest and does not over-commit — advanced items (per-concept scaffolding, custom graphs, password reset/refresh tokens) remain deferred.
+- The ID team delivers the content for each module as fixture files (segments, activities, hints, tests, scenarios) in time for the sprint that builds it; engineers load placeholders until then.
+- Graphs stay small (up to about 50 vertices), so precomputing every BFS step per request and drawing with SVG are both fine.
+- Pilot and demo users are COS750 classmates and the panel, so a few dozen accounts and at most a handful of simultaneous code submissions.
+- Students use a laptop or desktop for the code modules (NFR-U1).
 
 ## Risks
-- **Interactive video gating** — reliably enforcing pause/seek limits and the `retry_until_correct` gate across browsers can be fiddly; may need a vetted player library.
-- **Adaptive scaffolding complexity** — rule-driven branching can balloon; Draft 1 deliberately uses a single global threshold, with per-concept weakness detection deferred to Draft 2.
-- **Media hosting** — video storage/bandwidth for real content is not yet sized (placeholders used in Draft 1); affects deploy cost once real media lands.
-- **Video production** — who records the lesson videos, and by when. Without them the interactive video feature can only be demonstrated with placeholders.
-- **Scope creep** — custom graph input, multiple topics, and an authoring UI are tempting but out of scope for Draft 1.
 
-## Resolved decisions (previously open)
-The following Draft-1 open questions have been decided and are now reflected throughout the document:
-1. **Graph rendering** → **SVG via D3** (simpler for ≤~50-node graphs; §5, §11).
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| A student submission escapes the runner or exhausts the server | Low | High | Separate container with no network, secrets or data; Docker and per-process limits; concurrency cap (NFR-S7). Tested with hostile submissions (infinite loop, fork bomb, huge output, network and file access) before the pilot. |
+| Coolify doesn't honour the `internal` network, giving the runner internet access | Medium | High | Checked on staging with a submission that tries to reach the internet; if it can, the runner drops all network access and the API reaches it another way. |
+| Content arrives late: seven modules, about 75 minutes of activities, hints and tests | High | High | Engineers build against placeholder fixtures from Sprint 1; content is a tracked backlog item per module; the demo path needs modules 0, 3 and 6 first. |
+| Narrated videos not recorded in time | Medium | Medium | Videos are screen recordings of our own visualiser with a voice-over, so no filming; every video also has a transcript, so a segment works as text if the video is late. |
+| Video gating behaves differently across browsers | Medium | Low | The player enforces checkpoints itself from `timeupdate` and `seeking` events and is tested in Chromium, Firefox and WebKit with Playwright. |
+| Too much scope for two sprints | Medium | High | Backlog ordered so the specification's hard requirement (assessment with scaffolding) and the demo path are built first; bonus quests and badges come last. |
+
+Table: Risk register.
+
+## Decisions
+
+1. **Graph rendering** → **SVG via D3** (§5, §11).
 2. **Database** → **PostgreSQL** in every environment, including local development; SQLite only inside the tests (§4, §5, §13).
 3. **Deployment** → **Docker Compose on Coolify**, already live: staging.ctrlacademy.co.za and ctrlacademy.co.za, with Traefik terminating HTTPS and nginx serving the app and proxying `/api` (§13.4).
-4. **Video gating policy** → **`retry_until_correct`**: wrong answers give feedback and allow retry, no hard-block/lockout; each attempt recorded (FR-1, §8).
-5. **Scaffolding granularity** → **single global pass/fail threshold** in Draft 1; per-concept weakness detection deferred to Draft 2 (FR-3, §8).
-6. **Leaderboard identity** → required **display name/handle** at signup with an **anonymised** opt-in (`is_anonymous_on_leaderboard`) (FR-2, §8).
-7. **Scoring rules** → concrete Draft-1 default rules table (10 / 5 / 25 / 50 / 15), tunable, server-side (FR-2).
-8. **Auth scope** → **email required**; JWT access tokens; password reset and refresh tokens deferred to Draft 2 (§5, §7.3, §8).
-9. **Content source** → **placeholder content** seeded via fixtures for Draft 1; real content later (§13, §14.1).
-10. **Team size** → confirmed **7** (§14.1).
-11. **Custom graphs** → **deferred to Draft 2+**; predefined scenario library for Draft 1 (FR-4.7).
+4. **Video** → **narrated screen recordings**, no presenter on camera, with captions and a transcript; checkpoints use `retry_until_correct`: feedback and hints on a wrong answer, no lockout (FR-3).
+5. **Assessment and scaffolding** → **per objective**, three results (met independently, met with support, not yet), as the ID document defines; a review path for every "not yet" objective (FR-7).
+6. **Running student code** → **on our server, in an isolated runner container**, so hidden tests stay hidden (FR-5, NFR-S7). Running Python in the browser (Pyodide) was the alternative; it would avoid running untrusted code on the server, but every test would be visible in the browser.
+7. **Gamification** → **private points and badges, no public leaderboard** (FR-9).
+8. **Accounts** → **email and password**, JWT in an httpOnly cookie (FR-1, §5).
+9. **Content** → **fixture files in the repository**, validated in CI; no authoring interface (§3, NFR-M5).
+10. **BFS neighbour order** → **alphabetical by label**, matching the lessons (FR-6.5).
 
-## Open questions remaining for Draft 2
-- **Per-concept weakness detection** for scaffolding (mapping specific weaknesses → targeted scaffolds) — the `scaffold_rules` JSON shape is ready for it.
-- **Custom student-input graphs** — UI, validation, and backend acceptance of student-authored scenarios.
-- **Auth hardening** — password reset flow and refresh-token strategy.
-- **Content authoring** — admin/author role and authoring UI to replace fixtures; sizing of real video media hosting/bandwidth.
-- **Additional topics** beyond Graphs + BFS (DFS, Dijkstra, trees) and any multi-lesson/multi-assessment structure.
-- **Materialised leaderboard** / caching if leaderboard query performance becomes a concern at larger user counts.
-- **Rate limiting** on auth endpoints and other hardening noted as provisional in §7.3.
+## Future work
+- Password reset and refresh tokens; sign-in with the university account, which needs UP's IT to register the app.
+- An authoring interface for the ID team, replacing fixture files.
+- Student-built graphs in the visualiser, and topics beyond BFS (DFS, Dijkstra, trees).
+- A stronger sandbox for the runner (gVisor or a per-submission microVM) if the app is opened to all COS212 students.
 
-*End of DRAFT 1 — Software Engineering design document. Instructional-design content is maintained separately in the ID document per the exam specification.*
+*End of the Software Engineering document, Draft 2. Instructional-design content is in the separate ID document, as the examination specification requires.*
+

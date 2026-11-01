@@ -4,6 +4,7 @@
 |---|---|
 | `spec/` | The examination specification, as issued |
 | `references/` | Works cited by the spec or by our SE and ID documents |
+| `course-material/` | The COS750 lectures and readings from ClickUP, one folder per lecture, with an index of what each gives the project |
 | `deploy/` | How the app is hosted (Coolify, DNS) |
 
 ## Naming

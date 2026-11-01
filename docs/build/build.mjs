@@ -3,14 +3,15 @@
 //   npm run pdf            every document
 //   npm run pdf -- se id   only these
 //
-// A document is a folder under docs/ with a document.json and numbered Markdown sections
-// (01-overview.md, 02-...). Each section file starts with a level-1 heading. Headings are
-// numbered here, so the Markdown never carries numbers. See docs/README.md for the conventions.
+// A document is one Markdown file, docs/<name>/<name>-document.md, that starts with a front
+// matter block giving its title, short name and version. Each top-level section is a `#`
+// heading. Headings are numbered here, so the Markdown never carries numbers. See
+// docs/README.md for the conventions.
 import { execFileSync } from 'node:child_process'
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { basename, dirname, join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import MarkdownIt from 'markdown-it'
 import { chromium } from 'playwright'
@@ -166,23 +167,42 @@ ${body}
 
 // --- Build ----------------------------------------------------------------------------------
 
+// The block between the opening `---` lines: one `key: value` per line.
+function frontMatter(source, path) {
+  const match = /^---\n([\s\S]*?)\n---\n/.exec(source)
+  if (!match) throw new Error(`${path} must start with a --- front matter block (title, short, version)`)
+  const meta = Object.fromEntries(
+    match[1]
+      .split('\n')
+      .filter((line) => line.trim())
+      .map((line) => {
+        const at = line.indexOf(':')
+        return [line.slice(0, at).trim(), line.slice(at + 1).trim()]
+      }),
+  )
+  for (const key of ['title', 'short', 'version']) {
+    if (!meta[key]) throw new Error(`${path}: front matter has no ${key}`)
+  }
+  return { meta, body: source.slice(match[0].length) }
+}
+
 async function documents(only) {
   const found = []
   for (const entry of await readdir(docsDir, { withFileTypes: true })) {
-    const config = join(docsDir, entry.name, 'document.json')
-    if (entry.isDirectory() && existsSync(config)) {
-      if (only.length && !only.includes(entry.name)) continue
-      found.push({ dir: join(docsDir, entry.name), ...JSON.parse(await readFile(config, 'utf8')) })
-    }
+    const path = join(docsDir, entry.name, `${entry.name}-document.md`)
+    if (!entry.isDirectory() || !existsSync(path)) continue
+    if (only.length && !only.includes(entry.name)) continue
+    const { meta, body } = frontMatter(await readFile(path, 'utf8'), path)
+    found.push({ name: entry.name, path, file: `ctrl-group-${entry.name}-document`, body, ...meta })
   }
-  const missing = only.filter((name) => !found.some((d) => basename(d.dir) === name))
-  if (missing.length) throw new Error(`No document folder with a document.json: ${missing.join(', ')}`)
+  const missing = only.filter((name) => !found.some((d) => d.name === name))
+  if (missing.length) throw new Error(`No docs/<name>/<name>-document.md for: ${missing.join(', ')}`)
   return found
 }
 
-function builtInfo(dir) {
-  const [hash, date] = git(['log', '-1', '--format=%h %cs', '--', dir]).split(' ')
-  const dirty = git(['status', '--porcelain', '--', dir]) !== ''
+function builtInfo(path) {
+  const [hash, date] = git(['log', '-1', '--format=%h %cs', '--', path]).split(' ')
+  const dirty = git(['status', '--porcelain', '--', path]) !== ''
   const today = new Date().toISOString().slice(0, 10)
   return {
     date: dirty || !date ? today : date,
@@ -193,15 +213,9 @@ function builtInfo(dir) {
 async function build(browser, doc, team, logo) {
   const md = markdown()
   const env = { counters: [0, 0, 0], toc: [], todos: [] }
-  const files = (await readdir(doc.dir)).filter((f) => /^\d+.*\.md$/.test(f)).sort()
-  if (!files.length) throw new Error(`${doc.dir} has no numbered .md sections`)
-  let body = ''
-  for (const file of files) {
-    const source = await readFile(join(doc.dir, file), 'utf8')
-    body += `<section class="part" data-file="${escape(file)}">\n${md.render(source, env)}</section>\n`
-  }
+  const body = md.render(doc.body, env)
 
-  const built = builtInfo(doc.dir)
+  const built = builtInfo(doc.path)
   const html = page(doc, team, body, env.toc, logo, built, md)
   const htmlPath = join(outDir, `${doc.file}.html`)
   await writeFile(htmlPath, html)

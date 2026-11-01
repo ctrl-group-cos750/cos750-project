@@ -104,12 +104,9 @@ function cover(doc, team, logo, built) {
   const members = team.members
     .map(
       (m) =>
-        `<li><span class="name">${escape(m.name)}</span><span class="number">${escape(m.studentNumber ?? '')}</span><span class="role">${escape(m.role)}</span></li>`,
+        `<li><span class="name">${escape(m.name)}</span><span class="number">${escape(m.studentNumber ?? '')}</span></li>`,
     )
     .join('')
-  const authors = doc.authors?.length
-    ? `<p class="authors">Written by ${escape(doc.authors.join(', '))}</p>`
-    : ''
   return `
 <section class="cover">
   <div class="cover-logo">${logo}</div>
@@ -120,7 +117,6 @@ function cover(doc, team, logo, built) {
   </div>
   <div class="cover-meta">
     <p class="version">${escape(doc.version)} · ${escape(built.date)}</p>
-    ${authors}
     <p class="group">${escape(team.group)}</p>
     <ul class="members">${members}</ul>
     <p class="module">${escape(team.module)}<br>${escape(team.institution)}</p>

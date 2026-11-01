@@ -7,38 +7,31 @@
   "members": [
     {
       "name": "Matthew Els",
-      "studentNumber": "u21715191",
-      "role": "Software engineering"
+      "studentNumber": "u21715191"
     },
     {
       "name": "Ayanda Juqu",
-      "studentNumber": "u21589021",
-      "role": "Software engineering"
+      "studentNumber": "u21589021"
     },
     {
       "name": "Reece Schmidt",
-      "studentNumber": "u19130539",
-      "role": "Software engineering"
+      "studentNumber": "u19130539"
     },
     {
       "name": "Joshua Wereley",
-      "studentNumber": "u21506915",
-      "role": "Instructional design"
+      "studentNumber": "u21506915"
     },
     {
       "name": "Simphiwe Nhlapo",
-      "studentNumber": "u26827965",
-      "role": "Instructional design"
+      "studentNumber": "u26827965"
     },
     {
       "name": "Mohtashim Hussain",
-      "studentNumber": "u26775582",
-      "role": "Instructional design"
+      "studentNumber": "u26775582"
     },
     {
       "name": "Jacobus Hoogenboezem",
-      "studentNumber": "u19100516",
-      "role": "Instructional design"
+      "studentNumber": "u19100516"
     }
   ],
   "groupSize": 7

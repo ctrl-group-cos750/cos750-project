@@ -94,16 +94,13 @@ body {
 }
 .members li {
   display: grid;
-  grid-template-columns: 1fr 28mm 40mm;
+  grid-template-columns: 1fr 28mm;
   gap: 4mm;
   padding: 1mm 0;
   border-bottom: 0.3pt solid var(--line);
 }
 .members .number {
   font: 400 8.5pt var(--mono);
-}
-.members .role {
-  color: var(--muted);
 }
 .cover .module {
   color: var(--muted);

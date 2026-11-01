@@ -48,7 +48,8 @@ workflow). Open the run and download the `documents` artifact.
   lists every one, so nothing unfinished is submitted by accident.
 - **References:** the ID document numbers its references (`[12]`) and lists them in its last
   section.
-- **Cover details:** title, version and authors are in each folder's `document.json`; the group
-  name and members are in `build/team.json`.
+- **Cover details:** title and version are in each folder's `document.json`; the group name and
+  members are in `build/team.json`. Every document is the whole group's, so covers name the group
+  and its members, never individual authors or roles.
 - Keep `[PROVISIONAL]` and other markers out of headings where possible; they also show in the
   contents.

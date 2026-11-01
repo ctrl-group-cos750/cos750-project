@@ -275,8 +275,11 @@ figure.diagram pre.mermaid {
   padding: 0;
   white-space: pre;
 }
+/* A diagram never splits across pages: tall ones shrink to fit. */
 figure.diagram svg {
   max-width: 100%;
+  max-height: 170mm;
+  width: auto;
   height: auto;
 }
 

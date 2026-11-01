@@ -17,6 +17,9 @@ __pycache__/
 # Build output and caches
 dist/
 build/
+# ...except the document builder, which is source. Its output is not.
+!docs/build/
+docs/build/out/
 out/
 .next/
 .cache/

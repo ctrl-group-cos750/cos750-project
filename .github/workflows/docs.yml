@@ -1,0 +1,43 @@
+name: docs
+
+# Builds the SE and ID documents into PDFs whenever they change. Download them from the run's
+# "documents" artifact.
+on:
+  pull_request:
+    branches: [staging, master]
+    paths: ["docs/**", "assets/svg/**", ".github/workflows/docs.yml"]
+  push:
+    branches: [staging, master]
+    paths: ["docs/**", "assets/svg/**", ".github/workflows/docs.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pdf:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docs/build
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # The footer names the commit each document was last changed in.
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: docs/build/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run pdf
+      - uses: actions/upload-artifact@v4
+        with:
+          name: documents
+          path: docs/build/out/*.pdf
+          if-no-files-found: error

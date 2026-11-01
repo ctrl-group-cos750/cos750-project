@@ -10,8 +10,20 @@
       "studentNumber": "u21715191"
     },
     {
+      "name": "Jacobus Hoogenboezem",
+      "studentNumber": "u19100516"
+    },
+    {
+      "name": "Mohtashim Hussain",
+      "studentNumber": "u26775582"
+    },
+    {
       "name": "Ayanda Juqu",
       "studentNumber": "u21589021"
+    },
+    {
+      "name": "Simphiwe Nhlapo",
+      "studentNumber": "u26827965"
     },
     {
       "name": "Reece Schmidt",
@@ -20,18 +32,6 @@
     {
       "name": "Joshua Wereley",
       "studentNumber": "u21506915"
-    },
-    {
-      "name": "Simphiwe Nhlapo",
-      "studentNumber": "u26827965"
-    },
-    {
-      "name": "Mohtashim Hussain",
-      "studentNumber": "u26775582"
-    },
-    {
-      "name": "Jacobus Hoogenboezem",
-      "studentNumber": "u19100516"
     }
   ],
   "groupSize": 7

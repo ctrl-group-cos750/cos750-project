@@ -100,8 +100,12 @@ function fontLinks() {
     .join('\n')
 }
 
+// Alphabetical by surname (the last word of the name), whatever order team.json lists them in.
+const surname = (name) => name.trim().split(/\s+/).at(-1)
+
 function cover(doc, team, logo, built) {
-  const members = team.members
+  const members = [...team.members]
+    .sort((a, b) => surname(a.name).localeCompare(surname(b.name), 'en-ZA'))
     .map(
       (m) =>
         `<li><span class="name">${escape(m.name)}</span><span class="number">${escape(m.studentNumber ?? '')}</span></li>`,

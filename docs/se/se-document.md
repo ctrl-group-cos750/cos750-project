@@ -91,7 +91,7 @@ four properties of this project:
 
 | Role | Who | Responsibilities |
 |---|---|---|
-| Scrum Master | Matthew Els, provisionally: the team may vote for someone else | Runs the events, removes blockers, keeps the board and the process honest, and facilitates backlog ordering. |
+| Scrum Master | Matthew Els, chosen by the team on 1 November 2026 | Runs the events, removes blockers, keeps the board and the process honest, and facilitates backlog ordering. |
 | Development team | Matthew Els, Ayanda Juqu, Reece Schmidt (software engineering); Joshua Wereley, Simphiwe Nhlapo, Mohtashim Hussain, Jacobus Hoogenboezem (content, assessment and scaffolding design) | Build the increment. ID members own content items on the same backlog. |
 
 **No Product Owner.** Standard Scrum has a Product Owner who owns the backlog and accepts work. We
@@ -116,7 +116,7 @@ learning outcomes. The Product Owner's duties are shared instead:
 
 ## Artefacts
 
-- **Product backlog:** a GitHub Project board linked to the repository. Each item is an issue
+- **Product backlog:** the GitHub Project board of the `ctrl-group-cos750` organisation, linked to the repository. Every group member is in the organisation's Ctrl Group team, which can edit the board. Each item is an issue
   written as a user story ("As a student with no graph knowledge, I want …, so that …"), with
   acceptance criteria and the requirement IDs it covers (FR-x.y, §6). ID work (videos, question
   banks, scaffold content) is on the same board with a `content` label, so dependencies between the
@@ -145,7 +145,7 @@ learning outcomes. The Product Owner's duties are shared instead:
 
 Sprints run from Monday to Sunday. The only meeting is the Thursday call; the events at the sprint boundary are asynchronous, because seven students with different timetables can't meet twice a week during exams. Discord keeps a dated record of all of them.
 
-TODO: Confirm the Scrum Master by team vote, and the time of the Thursday call.
+TODO: Agree the time of the Thursday call.
 
 ## Engineering practices that support the process
 
@@ -165,13 +165,11 @@ These are what make a working increment at the end of every week possible. Detai
 
 | Claim | Where to see it |
 |---|---|
-| Backlog, sprints, estimates, burn-up | GitHub Project board **[link to be added]** |
+| Backlog, sprints, estimates, burn-up | GitHub Project board: <https://github.com/orgs/ctrl-group-cos750/projects/1> |
 | Daily stand-ups | Discord stand-up channel (exported for the appendix) |
 | Reviews, retros and planning | `docs/se/sprints/` in the repository |
 | Code review and Definition of Done | Merged PRs and their reviews on GitHub |
 | CI and continuous delivery | GitHub Actions history; Coolify deployment log |
-
-TODO: Add the GitHub Project board link once the board exists.
 
 # Scope
 
@@ -694,7 +692,7 @@ The returned payload (see §9.4) contains:
 
 # Repository structure
 
-Repository: `MatthewEls/cos750-project`. Folders marked *(planned)* don't exist yet.
+Repository: `ctrl-group-cos750/cos750-project`. Folders marked *(planned)* don't exist yet.
 
 ```
 cos750-project/

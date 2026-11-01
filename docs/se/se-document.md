@@ -10,10 +10,12 @@ version: Draft 2
 
 > **DRAFT 2.** Sections or decisions that are still provisional are tagged **[PROVISIONAL]**. Decisions, risks and future work are collected in §15.
 
-## Purpose
-The COS212 app, Ctrl Academy, is a pre-lecture, tutor-style learning application that teaches **one data structure (Graphs)** and **one algorithm (Breadth-First Search)**. It is used by a student **before** attending the corresponding lecture and assumes **zero prior knowledge** of the topic.
+> **Use of generative AI.** Generative AI was used to help draft and revise parts of this document and to build the project's tooling and infrastructure. Every decision in it was made by the team. As the specification requires [1], the tool and the prompts are recorded in the ID document [5], §9.
 
-What the app teaches, in what order, and how it assesses the student is designed in the ID document: seven short modules (0 to 6), seven learning objectives, a four-level hint ladder, and a mastery check that reports each objective separately. This document specifies the software that delivers that design.
+## Purpose
+The COS212 app, Ctrl Academy, is a pre-lecture, tutor-style learning application that teaches **one data structure (Graphs)** and **one algorithm (Breadth-First Search)**. It is used by a student **before** attending the corresponding lecture and assumes **zero prior knowledge** of the topic. The specification asks for one core data structure and one core algorithm from CS2023 [1]; graphs and breadth-first search are both in CS2023's Algorithmic Foundations knowledge area [2].
+
+What the app teaches, in what order, and how it assesses the student is designed in the ID document [5]: seven short modules (0 to 6), seven learning objectives, a four-level hint ladder, and a mastery check that reports each objective separately. This document specifies the software that delivers that design.
 
 From an engineering standpoint, the system is a web application composed of:
 - a **TypeScript + React frontend** that plays narrated videos, renders interactive activities, a code editor and the BFS visualiser, and shows each student their progress, points and mastery report;
@@ -53,10 +55,10 @@ Figure: A student's path through the app.
 
 ## Choice: Scrum with one-week sprints
 
-We follow **Scrum**, an Agile methodology, with one-week sprints. Each sprint ends with a working
+We follow **Scrum** [6], an Agile methodology, with one-week sprints. Each sprint ends with a working
 increment deployed to staging, where the whole team, including the instructional designers, reviews it.
 
-The COS750 lifecycle lecture (L11) lists the methodologies we considered. We chose Scrum because of
+The COS750 lifecycle lecture (L11) [3] lists the methodologies we considered. We chose Scrum because of
 four properties of this project:
 
 1. **The requirements arrive while we build.** The ID team designs the content, the assessment and
@@ -138,14 +140,13 @@ learning outcomes. The Product Owner's duties are shared instead:
 | Event | When and how | Output |
 |---|---|---|
 | Daily stand-up | Asynchronous, a short message in the team's Discord stand-up channel every day: done since last time, doing next, blocked by. | Dated record of progress and blockers. |
-| Weekly check-in | Thursday team call, mid-sprint. What is done so far is shown on staging; progress against the sprint goal, blockers, and dependencies between the ID and SE work; the sprint backlog is adjusted if the goal is at risk. | Updated sprint backlog; decisions noted in Discord. |
+| Weekly check-in | Thursday team call at 19:00, mid-sprint. What is done so far is shown on staging; progress against the sprint goal, blockers, and dependencies between the ID and SE work; the sprint backlog is adjusted if the goal is at risk. | Updated sprint backlog; decisions noted in Discord. |
 | Sprint review | Sunday, asynchronous. Each engineer posts what they merged with its staging link; team members, including the ID members, check each item on staging and accept or reject it against its acceptance criteria on the board by Monday morning. | Accepted items; feedback added to the backlog. |
 | Retrospective | Sunday to Monday, a Discord thread: what went well, what to change, one concrete action for the next sprint. | Retro notes kept with the sprint (`docs/se/sprints/`). |
 | Sprint planning | Monday morning. The Scrum Master proposes the sprint goal and the items from the top of the backlog that fit; the team confirms or changes them in Discord before work starts. | Sprint goal and sprint backlog on the board. |
 
 Sprints run from Monday to Sunday. The only meeting is the Thursday call; the events at the sprint boundary are asynchronous, because seven students with different timetables can't meet twice a week during exams. Discord keeps a dated record of all of them.
 
-TODO: Agree the time of the Thursday call.
 
 ## Engineering practices that support the process
 
@@ -198,6 +199,29 @@ These are what make a working increment at the end of every week possible. Detai
 - A student with a "not yet" objective is sent to that objective's review path, and can reach "ready for the lecture" after it.
 - Student code that loops forever, uses too much memory, or tries to reach the network fails safely within the time limit and affects no one else.
 - The ID team can export the pilot's attempts and results as CSV without help from an engineer.
+
+## Stakeholders
+
+| Stakeholder | Interest | How they shape the system |
+|---|---|---|
+| COS212 lecturer (the client) | An app that prepares students for the graphs and BFS lecture | Commissioned the app through the examination specification [1], which fixes the topic area, the zero-prior-knowledge assumption and the requirement for an assessment with extra scaffolding |
+| COS212 students (the users) | Arrive at the lecture understanding graphs and BFS; know what to revise | Described by the learner profile in the ID document [5] (§2); represented in testing by the pilot (§14.5) |
+| Instructional designers (Joshua Wereley, Simphiwe Nhlapo, Mohtashim Hussain, Jacobus Hoogenboezem) | Their learning design is delivered faithfully | Own the ID document, the content fixtures and the content items on the backlog; accept content work at sprint review |
+| Software engineers (Matthew Els, Ayanda Juqu, Reece Schmidt) | A system that can be built, tested and demonstrated by 16 November | Own this document and the platform items on the backlog |
+| COS750 examination panel and peer groups | A working prototype and documents that justify it | Assess the documents, the presentation and the live demo |
+
+Table: Stakeholders.
+
+## Where the requirements come from
+
+The requirements were not written in one sitting; they were gathered from four sources and refined sprint by sprint:
+
+1. **The examination specification** [1]: the topic constraints, the target learner, and the one hard functional requirement, an assessment that gives struggling students extra scaffolding (FR-7).
+2. **The ID document** [5]: the seven modules, the learning objectives and their success criteria, the activity types, the hint ladder and the three mastery results. The traceability table in §6 maps each functional requirement to the part of the ID document it delivers.
+3. **Team decisions**, made at meetings and on the team's Discord server: the topic, languages, roles and the Thursday call at the initial meeting on 25 October; the methodology, the tech stack, the code runner, video format, gamification and accounts on 1 November. They are recorded in §15.3 and in the sprint records (`docs/se/sprints/`).
+4. **The COS750 lectures**: L11 for the lifecycle [3], L05 for motivation [4], and the course's treatment of assessment and accessibility.
+
+Each requirement becomes one or more user stories on the board, with acceptance criteria and the requirement IDs they cover (§2.4). When a requirement changes, the change is made in this document through a reviewed PR, so its history is in the repository.
 
 # System Architecture
 
@@ -374,7 +398,7 @@ Figure: Use cases. The student takes part in every use case in both groups excep
 - **FR-9.1** Award points for completed modules, correct activities and objectives met, from a server-side rules table.
 - **FR-9.2** Award fewer points for a correct answer reached after hint level 3 or 4, matching "met with support".
 - **FR-9.3** Award badges for milestones (first module, every objective met, all bonus quests).
-- **FR-9.4** Points and badges are **private**: each student sees only their own. There is no public leaderboard, because public ranking discourages the students who most need the app (those motivated by avoiding failure, L05).
+- **FR-9.4** Points and badges are **private**: each student sees only their own. There is no public leaderboard, because public ranking discourages the students who most need the app (those motivated by avoiding failure, L05 [4]).
 
 Default rules **[PROVISIONAL]** until the ID document's motivation section is written:
 
@@ -394,6 +418,8 @@ Table: Default points rules, stored on the server and tunable without a code cha
 - **FR-10.3** The export identifies students by an internal ID, not by email or display name.
 
 ## Traceability to the ID document
+
+Section and table numbers refer to the ID document [5].
 
 | Requirement | Delivers (ID document) |
 |---|---|
@@ -438,7 +464,7 @@ Table: Which part of the ID document each functional requirement delivers.
   - is capped by Docker at 0.5 CPU, 256 MB of memory and 64 processes;
   - runs each submission in a fresh temporary directory, as a separate Python process (`python -I`) with its own limits: 5 seconds of CPU, 10 seconds wall time, 128 MB of memory, 1 MB of output; the whole process group is killed when a limit is reached;
   - runs at most four submissions at a time; further requests get "busy, try again in a moment".
-- **NFR-S8** **Privacy (POPIA).** The app stores only what it needs: email (to log in), a display name, and learning data. It shows no student's data to another student, exports only internal IDs (FR-10.3), and states what is collected and why on the registration page. Test and demo data never uses real students' details.
+- **NFR-S8** **Privacy (POPIA [8]).** The app stores only what it needs: email (to log in), a display name, and learning data. It shows no student's data to another student, exports only internal IDs (FR-10.3), and states what is collected and why on the registration page. Test and demo data never uses real students' details.
 
 ## Maintainability
 - **NFR-M1** Layered backend (routers → services → data) with the BfsEngine, the answer checkers and the mastery rules isolated from web concerns and unit-testable in isolation.
@@ -449,7 +475,7 @@ Table: Which part of the ID document each functional requirement delivers.
 
 ## Accessibility
 - **NFR-A1** Every activity, the video player and the BFS controls can be operated with the keyboard alone, including Parsons problems (move lines with arrow keys as well as by dragging).
-- **NFR-A2** Text and controls meet WCAG 2.1 AA contrast; BFS state is never shown by colour alone (vertices also carry labels and a marker for current, queued and visited).
+- **NFR-A2** Text and controls meet WCAG 2.1 AA contrast [7]; BFS state is never shown by colour alone (vertices also carry labels and a marker for current, queued and visited).
 - **NFR-A3** Semantic HTML and ARIA roles for custom controls; oxlint's jsx-a11y rules enforce part of this in CI.
 - **NFR-A4** Every video has captions and a transcript.
 
@@ -690,6 +716,133 @@ The returned payload (see §9.4) contains:
 - **Shared**
   - `Markdown` (renders prompts, hints and text segments), `Spinner`, `ErrorBoundary`, `Toast`.
 
+## Main screens
+
+Low-fidelity wireframes of the main screens, drawn from the requirements and the ID document's lesson design [5]. The instructional designers review them before Sprint 1 builds the screens; screenshots of the built app replace them in Sprint 2.
+
+```
++----------------------------------------------------------------------------------------+
+| Ctrl Academy    Modules · Report                       * 240 points   Account v        |
++----------------------------------------------------------------------------------------+
+| Graphs and breadth-first search                            About 75 minutes in total   |
+|                                                                                        |
+|   + 0  Warm-up and queue refresher            5 min    complete                        |
+|   + 1  What is a graph?                      12 min    complete                        |
+|   % 2  A graph in Python                     10 min    in progress · segment 3 of 6    |
+|   - 3  Meet BFS                              12 min    opens after module 2            |
+|   - 4  Write BFS                             15 min                                    |
+|   - 5  Test and debug                        10 min                                    |
+|   - 6  Mastery check and report              10 min                                    |
+|                                                                                        |
+| Badges  * First module   * Queue master   o (2 more to earn)                           |
+|                                                                                        |
+| [ Continue module 2 > ]                                                                |
++----------------------------------------------------------------------------------------+
+```
+
+Figure: The module map: the seven modules, their state and duration, and badges (FR-2.6, FR-9).
+
+```
++----------------------------------------------------------------------------------------+
+| Ctrl Academy    Modules · Report                       * 240 points   Account v        |
++----------------------------------------------------------------------------------------+
+| Module 3 · Meet BFS                               Segment 4 of 9   ########....        |
+| By the end of this module you can trace BFS on a graph by hand.                        |
+|                                                                                        |
+| +--------------------------------------------+  +------------------------------------+ |
+| |                                            |  | Checkpoint                         | |
+| |         narrated walkthrough               |  | The queue holds B, C.              | |
+| |         (paused at a checkpoint)           |  | Which vertex comes next?           | |
+| |                                            |  |                                    | |
+| |                                            |  | (o) B   ( ) C   ( ) D              | |
+| | > 02:14 / 06:30  ====@====|====|===  CC    |  | [ Check ]   [ Hint 1 of 4 ]        | |
+| +--------------------------------------------+  +------------------------------------+ |
+|                                                                                        |
+| Transcript v  ".B was added first, so it leaves the queue first."                      |
+|                                                                                        |
+| [ < Previous ]                                     [ Next > ]  (after the check)       |
++----------------------------------------------------------------------------------------+
+```
+
+Figure: A module page with a narrated video paused at a checkpoint (FR-2, FR-3, FR-4.4).
+
+```
++----------------------------------------------------------------------------------------+
+| Ctrl Academy    Modules · Report                       * 240 points   Account v        |
++----------------------------------------------------------------------------------------+
+| Module 3 · Meet BFS · The campus graph                 Prediction mode   Step 3 of 7   |
+|                                                                                        |
+| +----------------------------------------+  +----------------------------------------+ |
+| |                                        |  | Current vertex:  A                     | |
+| |       (A)-------(B)                    |  | Queue:           B, C, D               | |
+| |        | \       |                     |  | Visited:         A                     | |
+| |        |  \      |                     |  | Order so far:    A                     | |
+| |       (C)  (D)--(E)                    |  |                                        | |
+| |               \                        |  | Which vertex comes next?               | |
+| |               (F)                      |  | [ B ] [ C ] [ D ] [ E ] [ F ]          | |
+| |                                        |  |                                        | |
+| |   @ current  % queued  o visited       |  |                                        | |
+| |   (labels shown as well as colour)     |  |                                        | |
+| +----------------------------------------+  +----------------------------------------+ |
+|                                                                                        |
+| [ | Reset ]  [ < Back ]  [ > Play ]  [ Step > ]     Speed  ==@==     [ Hint 1 of 4 ]   |
++----------------------------------------------------------------------------------------+
+```
+
+Figure: The BFS visualiser in prediction mode (FR-6).
+
+```
++----------------------------------------------------------------------------------------+
+| Ctrl Academy    Modules · Report                       * 240 points   Account v        |
++----------------------------------------------------------------------------------------+
+| Module 4 · Write BFS                                   Task 3 of 4: blank function     |
+| Write bfs(graph, start) so it returns the vertices in the order BFS visits them.       |
+|                                                                                        |
+| +----------------------------------------------+  +----------------------------------+ |
+| |  1  from collections import deque            |  | Results (submitted)              | |
+| |  2                                           |  |                                  | |
+| |  3  def bfs(graph, start):                   |  | + visits every vertex            | |
+| |  4      visited = {start}                    |  | + start vertex first             | |
+| |  5      queue = deque([start])               |  | x handles a cycle                | |
+| |  6      order = []                           |  |   B was visited twice.           | |
+| |  7      while queue:                         |  |   Is it marked as visited        | |
+| |  8          v = queue.popleft()              |  |   when it is queued?             | |
+| |  9          order.append(v)                  |  | + disconnected graph             | |
+| | 10          _                                |  |                                  | |
+| |                                              |  | 3 of 4 passed                    | |
+| | [ Run examples ]   [ Submit ]                |  |                                  | |
+| +----------------------------------------------+  +----------------------------------+ |
+|                                                                                        |
+| [ Hint 2 of 4 ]   Hints 3 and 4 mark this objective as "met with support".             |
++----------------------------------------------------------------------------------------+
+```
+
+Figure: A code activity after a submission, with per-test results and the hint ladder (FR-5, FR-4.4).
+
+```
++----------------------------------------------------------------------------------------+
+| Ctrl Academy    Modules · Report                       * 240 points   Account v        |
++----------------------------------------------------------------------------------------+
+| Your mastery report                                       Not ready yet: 1 objective   |
+|                                                                                        |
+|   Objective                                        Result                              |
+|   1  Define a data structure, algorithm, graph      + Met independently                |
+|   2  Vertices, edges, directed or undirected        + Met independently                |
+|   3  Model a real problem as a graph                + Met with support                 |
+|   4  When to use BFS, and why                       + Met independently                |
+|   5  Trace BFS by hand                              x Not yet  > [ Review path ]       |
+|   6  Implement BFS in Python                        + Met with support                 |
+|   7  Test and debug BFS                             + Met independently                |
+|                                                                                        |
+| Next step: the review path for objective 5 (about 10 minutes), then 3 fresh items.     |
+| "Met with support" means you used hint 3 or 4. That's fine for the lecture.            |
+|                                                                                        |
+| [ Start review path ]                                         [ Back to modules ]      |
++----------------------------------------------------------------------------------------+
+```
+
+Figure: The mastery report with one objective not yet met (FR-7).
+
 # Repository structure
 
 Repository: `ctrl-group-cos750/cos750-project`. Folders marked *(planned)* don't exist yet.
@@ -865,7 +1018,7 @@ Table: Risk register.
 4. **Video** → **narrated screen recordings**, no presenter on camera, with captions and a transcript; checkpoints use `retry_until_correct`: feedback and hints on a wrong answer, no lockout (FR-3).
 5. **Assessment and scaffolding** → **per objective**, three results (met independently, met with support, not yet), as the ID document defines; a review path for every "not yet" objective (FR-7).
 6. **Running student code** → **on our server, in an isolated runner container**, so hidden tests stay hidden (FR-5, NFR-S7). Running Python in the browser (Pyodide) was the alternative; it would avoid running untrusted code on the server, but every test would be visible in the browser.
-7. **Gamification** → **private points and badges, no public leaderboard** (FR-9).
+7. **Gamification** → **private points and badges, no public leaderboard** (FR-9). The initial meeting on 25 October included leaderboards; on 1 November the team replaced them with private points, because public ranking discourages students who are motivated by avoiding failure [4].
 8. **Accounts** → **email and password**, JWT in an httpOnly cookie (FR-1, §5).
 9. **Content** → **fixture files in the repository**, validated in CI; no authoring interface (§3, NFR-M5).
 10. **BFS neighbour order** → **alphabetical by label**, matching the lessons (FR-6.5).
@@ -875,6 +1028,28 @@ Table: Risk register.
 - An authoring interface for the ID team, replacing fixture files.
 - Student-built graphs in the visualiser, and topics beyond BFS (DFS, Dijkstra, trees).
 - A stronger sandbox for the runner (gVisor or a per-submission microVM) if the app is opened to all COS212 students.
+
+# References
+
+<div class="references">
+
+[1] Department of Computer Science, University of Pretoria. *COS750 Educational Software Development: Examination Specification*, 22 October 2026. In the repository at `docs/spec/cos750-exam-spec-v1.pdf`.
+
+[2] A. N. Kumar, R. K. Raj, S. G. Aly, M. D. Anderson, B. A. Becker, R. L. Blumenthal, E. Eaton, S. L. Epstein, M. Goldweber, P. Jalote, D. Lea, M. Oudshoorn, M. Pias, S. Reiser, C. Servin, R. Simha, T. Winters, and Q. Xiang. *Computer Science Curricula 2023.* Association for Computing Machinery, New York, NY, USA, 2024. <https://doi.org/10.1145/3664191>
+
+[3] L. Marshall. *L11: Educational Software Development (Lifecycles and Instructional Design).* COS750 lecture slides, University of Pretoria, 2026. In the repository at `docs/course-material/l11-lifecycles/`.
+
+[4] L. Marshall. *L05: Motivation* (based on slides by K. Malan). COS750 lecture slides, University of Pretoria, 2026. In the repository at `docs/course-material/l05-motivation/`.
+
+[5] Control Group. *Ctrl Academy: Instructional Design Document.* COS750, University of Pretoria, 2026. In the repository at `docs/id/id-document.md`.
+
+[6] K. Schwaber and J. Sutherland. *The Scrum Guide: The Definitive Guide to Scrum: The Rules of the Game.* November 2020. <https://scrumguides.org/scrum-guide.html>
+
+[7] World Wide Web Consortium. *Web Content Accessibility Guidelines (WCAG) 2.1.* W3C Recommendation, 2018, updated 2023. <https://www.w3.org/TR/WCAG21/>
+
+[8] Republic of South Africa. *Protection of Personal Information Act 4 of 2013* (POPIA). Government Gazette No. 37067, 26 November 2013.
+
+</div>
 
 *End of the Software Engineering document, Draft 2. Instructional-design content is in the separate ID document, as the examination specification requires.*
 

@@ -291,6 +291,13 @@ p.caption {
   font: 400 8.5pt/1.4 var(--sans);
   color: var(--muted);
   margin: -1mm 0 4mm;
+  break-before: avoid;
+}
+/* Keep a caption on the same page as the table, diagram or wireframe above it. */
+table:has(+ p.caption),
+pre:has(+ p.caption),
+figure:has(+ p.caption) {
+  break-after: avoid;
 }
 p.caption.table::before {
   counter-increment: table;

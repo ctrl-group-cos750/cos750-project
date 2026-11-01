@@ -230,7 +230,37 @@ TODO: Need input from the team.
 
 # Generative AI acknowledgement and prompt record
 
-TODO: Need input from the team.
+## Software engineering
+
+**Tool:** Claude Code, Anthropic's coding assistant, using the Claude Opus 5.5 model, run in the software engineers' development environment.
+
+**What it was used for:** drafting and revising the SE document; proposing options for engineering decisions, which the team then made; writing the project's tooling and infrastructure (CI checks, the database layer, deployment on Coolify, the staging login page, the "coming soon" page, the document builder and its PDF format); organising the course material in the repository; and setting up the project board and its backlog.
+
+**How its output was checked:** every change went through a pull request that a team member reviewed, and all code passes the project's automated checks (formatting, linting, type checks, tests and builds). Each decision it proposed was accepted, changed or rejected by the team; the decisions are recorded in the SE document (§2, §15.3).
+
+**Main prompts**, as typed:
+
+| Date | Prompt | Used for |
+|---|---|---|
+| 31 Oct 2026 | "is cos750 project hosted yet? has my personal coolify api been used to host and add the project" | Hosting the app on Coolify |
+| 31 Oct 2026 | "for now the master version should just have a "something great coming soon, until the next deploy to master." | The "coming soon" page on production (GUI) |
+| 31 Oct 2026 | "what about the repo now. are tests and linitng rules etc in place?" and "this needs to be enhanced then" | CI checks, tests and linting |
+| 31 Oct 2026 | "i think only users with some sort of password should be able to see what is going on in staging" | The staging login page (GUI) |
+| 1 Nov 2026 | "as a software engineer based on the spec what am i supposed to be doing" | Planning the SE work against the specification |
+| 1 Nov 2026 | "i haved dumpped all of the course material into the docs folder, orgnaize all of this. as this will be what the project is based on" | Organising the course material and its index |
+| 1 Nov 2026 | "look over it and see if we discagree on anything? or if anything is missing." | Reviewing SE document draft 1 |
+| 1 Nov 2026 | "lets get the techstack matching what weve built unless there is a good reason to do it her way." | SE document: technology stack |
+| 1 Nov 2026 | "lets start on the next missing section. what are the choices i have to make here?" | SE document: methodology options |
+| 1 Nov 2026 | "i think we need to include these docs in the repo. and md files, this is what the team will work with, but we will have a script that generates pdfs in a standard format" | The document builder and PDF format |
+| 1 Nov 2026 | "okay, for the se doc, what is the next thing we need to add/ make desisions on or correct" | SE document: alignment with this document |
+| 1 Nov 2026 | "yes lets carry on with the nes things we need to do in the se doc. ask me questions if the asnswer requires inout" | SE document: testing strategy and diagrams |
+| 1 Nov 2026 | "okay lets continue building it. ask me questions you need imput on" | SE document: stakeholders, wireframes, references; the Sprint 0 record |
+
+Table: Generative AI prompts for the software engineering work.
+
+## Instructional design
+
+TODO: The instructional design team adds the tools and prompts used for this document and for the app's content.
 
 # References and supporting evidence
 

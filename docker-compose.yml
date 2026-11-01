@@ -6,6 +6,9 @@ services:
     build: ./web
     expose:
       - "80"
+    environment:
+      # Set in Coolify for staging only: the whole site then sits behind a team-password page.
+      STAGING_PASSWORD: ${STAGING_PASSWORD:-}
     depends_on:
       api:
         condition: service_healthy

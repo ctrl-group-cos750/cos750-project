@@ -13,7 +13,11 @@ def health() -> dict[str, str]:
     try:
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
+            try:
+                schema = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
+            except SQLAlchemyError:
+                schema = None
         database = "ok"
     except SQLAlchemyError:
-        database = "unreachable"
-    return {"status": "ok", "database": database}
+        database, schema = "unreachable", None
+    return {"status": "ok", "database": database, "schema": schema or "none"}

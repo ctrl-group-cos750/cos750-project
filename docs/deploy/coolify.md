@@ -54,6 +54,37 @@ curl https://ctrlacademy.co.za/api/health
 
 The home page also shows the API status line.
 
+## Staging login
+
+Staging shows a Ctrl Group login page (`web/gate/index.html`) until the visitor enters the team
+password; the API is closed too. It is on when `STAGING_PASSWORD` is set, which it is in Coolify on
+the staging resource only, so production and local runs have no login. To change the password, edit
+it there and redeploy; everyone then logs in again. `/healthz` stays open for the container healthcheck.
+
+The page stores `sha256("ctrl-academy-staging:" + password)` in a `ctrl_staging` cookie for 30 days,
+and nginx compares it on every request (`web/staging-gate.sh`). It keeps the public out; it is not
+per-user security, so never put real personal data on staging.
+
+## Backups
+
+Each resource has a Coolify scheduled task, `postgres-backup`, that runs in the `db` container:
+staging at 01:00 UTC, production at 01:30 UTC. It writes a `pg_dump -Fc` file to
+`/var/lib/postgresql/backups/` on the database volume and keeps 14 days.
+
+These dumps survive redeploys and container rebuilds, but not the loss of the volume or the server.
+
+Restore one (Coolify → resource → Terminal → `db`):
+
+```
+pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists /var/lib/postgresql/backups/<file>.dump
+```
+
+## Migrations
+
+The API container runs `alembic upgrade head` before it starts serving. A migration that fails stops
+the container, so the deploy fails and the previous one keeps serving. `/api/health` reports the
+schema revision each environment is on.
+
 ## How the pieces fit
 
 ```

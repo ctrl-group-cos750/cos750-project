@@ -33,12 +33,64 @@ cd web && npm install && npm run dev               # http://localhost:5173, prox
 
 ## Checks
 
-CI runs these on every PR. Run them before you push:
+CI runs these on every PR and on every push to `staging` and `master`. Run them before you push:
 
 ```
-cd web && npm run lint && npm run build
-cd api && .venv/bin/pytest
+scripts/check.sh          # everything below
+scripts/check.sh --fix    # format and auto-fix first
 ```
+
+| Where | Check | Command |
+|---|---|---|
+| `web/` | Format (Prettier) | `npm run format:check`, fix with `npm run format` |
+| `web/` | Lint (oxlint, warnings fail) | `npm run lint` |
+| `web/` | Tests (Vitest + Testing Library) | `npm test`, or `npm run test:watch` while you work |
+| `web/` | Types and build | `npm run build` |
+| `api/` | Format and lint (ruff) | `.venv/bin/ruff format --check .` and `.venv/bin/ruff check .` |
+| `api/` | Types (mypy, strict) | `.venv/bin/mypy` |
+| `api/` | Tests (pytest, warnings fail) | `.venv/bin/pytest` |
+| repo | Docker images build | `POSTGRES_PASSWORD=x docker compose build` (in CI, not in `check.sh`) |
+
+Tests sit next to the code: `web/src/**/*.test.tsx` and `api/tests/test_*.py`. API tests swap the
+database for in-memory SQLite (`api/tests/conftest.py`), so they don't need Postgres running.
+Coverage: `cd web && npm run coverage`.
+
+Dependabot opens weekly update PRs into `staging`.
+
+## Database
+
+Postgres, through SQLAlchemy 2 models and Alembic migrations. Each environment (local, staging,
+production) has its own database. **Migrations run automatically when the API starts**, so a merged
+migration reaches staging on its deploy. `/api/health` reports the schema revision it is on.
+
+Add a table:
+
+1. Write the model in `api/app/models/<thing>.py`, subclassing `Base` from `app.db`, and import it in
+   `api/app/models/__init__.py`.
+2. With the local database running (`docker compose -f docker-compose.yml -f docker-compose.local.yml up -d db`):
+   ```
+   cd api
+   .venv/bin/alembic upgrade head
+   .venv/bin/alembic revision --autogenerate -m "add <thing>"
+   ```
+   Read the generated file in `api/migrations/versions/` and fix anything autogenerate got wrong.
+3. Commit the model and the migration together. CI fails if a model changes without a migration,
+   or if two branches both added one (`alembic merge heads` fixes that).
+
+Use the database in a route:
+
+```python
+from app.db import DbSession
+
+@app.post("/api/things")
+def create_thing(body: ThingIn, session: DbSession) -> ThingOut:
+    thing = Thing(name=body.name)
+    session.add(thing)
+    session.commit()
+    return ThingOut.model_validate(thing, from_attributes=True)
+```
+
+Tests never need Postgres: the `working_db` fixture in `api/tests/conftest.py` swaps in SQLite.
 
 ## Branches and deploys
 

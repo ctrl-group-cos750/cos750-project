@@ -1,0 +1,14 @@
+{
+  "group": "Control Group",
+  "product": "Ctrl Academy",
+  "tagline": "A pre-lecture app for COS212: graphs and breadth-first search",
+  "module": "COS750 Educational Software Development",
+  "institution": "Department of Computer Science, University of Pretoria",
+  "members": [
+    { "name": "Matthew Els", "role": "Software engineering" },
+    { "name": "Reece", "role": "Software engineering" },
+    { "name": "Ayanda", "role": "Software engineering" },
+    { "name": "Joshua Wereley", "role": "Instructional design" }
+  ],
+  "groupSize": 7
+}

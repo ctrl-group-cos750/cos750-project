@@ -30,8 +30,15 @@ npm run pdf                 # both documents, into docs/build/out/
 npm run pdf -- se           # only one
 ```
 
-You don't need to build locally: every PR that changes `docs/` builds both PDFs in CI (the `docs`
-workflow). Open the run and download the `documents` artifact.
+You don't need to build locally:
+
+- **Latest from `staging`:** every change to `docs/` that lands on `staging` replaces the
+  [`docs-latest` release](https://github.com/MatthewEls/cos750-project/releases/tag/docs-latest).
+  These links always give the newest PDFs:
+  - <https://github.com/MatthewEls/cos750-project/releases/download/docs-latest/ctrl-group-se-document.pdf>
+  - <https://github.com/MatthewEls/cos750-project/releases/download/docs-latest/ctrl-group-id-document.pdf>
+- **From a PR:** every PR that changes `docs/` builds both PDFs in CI (the `docs` workflow). Open
+  the run and download the `documents` artifact.
 
 ### Writing conventions
 

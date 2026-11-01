@@ -65,8 +65,8 @@ Paper 2.3 on ClickUP is the same file as 2.1, so it is not repeated.
 - `l06-user-experience-interaction.pdf` (27 Aug 2026): human senses, the information processing
   model, short- and long-term memory, user classification, dialogue styles and their desirable
   characteristics, interface types.
-- `readings/01-…` to `readings/15-…`: the interface-types papers for Assignment 2. Each group
-  presented one, so the number is the ClickUP paper number.
+- `readings/interface-types/`: the 15 papers for Assignment 2. Each group presented one, so the
+  number is the ClickUP paper number.
 - `readings/schunk-2012-…` and `readings/yu-2026-…`: the general resources. Schunk's full
   textbook (the source of the L01 readings), and Yu et al. (2026) on memory for LLM agents.
 
@@ -143,5 +143,6 @@ name and student number, so they stay on ClickUP.
 
 ## Adding material
 
-Slides go in the lecture's folder; anything handed out with them goes in its `readings/`. Name it
+Slides go in the lecture's folder; anything handed out with them goes in its `readings/`, in a
+subfolder when it belongs to one activity (like `l06-user-experience/readings/interface-types/`). Name it
 like the rest (lowercase, hyphens) and add a line here. New lectures get a new `lNN-<topic>/` folder.

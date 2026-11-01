@@ -91,18 +91,18 @@ body {
   list-style: none;
   margin: 0 0 6mm;
   padding: 0;
-  columns: 2;
-  column-gap: 10mm;
 }
 .members li {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr 28mm 40mm;
   gap: 4mm;
   padding: 1mm 0;
   border-bottom: 0.3pt solid var(--line);
-  break-inside: avoid;
 }
-.members li span:last-child {
+.members .number {
+  font: 400 8.5pt var(--mono);
+}
+.members .role {
   color: var(--muted);
 }
 .cover .module {

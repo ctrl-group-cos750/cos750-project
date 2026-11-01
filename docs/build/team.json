@@ -5,10 +5,41 @@
   "module": "COS750 Educational Software Development",
   "institution": "Department of Computer Science, University of Pretoria",
   "members": [
-    { "name": "Matthew Els", "role": "Software engineering" },
-    { "name": "Reece", "role": "Software engineering" },
-    { "name": "Ayanda", "role": "Software engineering" },
-    { "name": "Joshua Wereley", "role": "Instructional design" }
+    {
+      "name": "Matthew Els",
+      "studentNumber": "u21715191",
+      "role": "Software engineering"
+    },
+    {
+      "name": "Ayanda Juqu",
+      "studentNumber": "u21589021",
+      "role": "Software engineering"
+    },
+    {
+      "name": "Reece Schmidt",
+      "studentNumber": "u19130539",
+      "role": "Software engineering"
+    },
+    {
+      "name": "Joshua Wereley",
+      "studentNumber": "u21506915",
+      "role": "Instructional design"
+    },
+    {
+      "name": "Simphiwe Nhlapo",
+      "studentNumber": "u26827965",
+      "role": "Instructional design"
+    },
+    {
+      "name": "Mohtashim Hussain",
+      "studentNumber": "u26775582",
+      "role": "Instructional design"
+    },
+    {
+      "name": "Jacobus Hoogenboezem",
+      "studentNumber": "u19100516",
+      "role": "Instructional design"
+    }
   ],
   "groupSize": 7
 }

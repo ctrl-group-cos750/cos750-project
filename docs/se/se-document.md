@@ -8,7 +8,7 @@ version: Draft 2
 
 > **Scope of this document:** Software engineering only. Instructional-design content (learning theories, learning styles, motivation, pedagogy) is deliberately excluded and lives in the separate ID document.
 
-> **DRAFT 2.** Sections or decisions that are still provisional are tagged **[PROVISIONAL]**. Decisions, risks and future work are collected in §14.
+> **DRAFT 2.** Sections or decisions that are still provisional are tagged **[PROVISIONAL]**. Decisions, risks and future work are collected in §15.
 
 ## Purpose
 The COS212 app, Ctrl Academy, is a pre-lecture, tutor-style learning application that teaches **one data structure (Graphs)** and **one algorithm (Breadth-First Search)**. It is used by a student **before** attending the corresponding lecture and assumes **zero prior knowledge** of the topic.
@@ -32,6 +32,22 @@ From an engineering standpoint, the system is a web application composed of:
 The primary role is **Student**. Team members also have a **staff** flag, used only to export evaluation data (FR-10); there is no authoring interface.
 
 A typical session: register or log in → module 0 (warm-up and diagnostic, which picks the refreshers this student needs) → modules 1 to 5 (narrated segments, activities and code tasks, with hints on demand) → module 6 (mastery check) → mastery report per objective → review path for any objective marked "not yet". Progress is saved after every module, so the student can stop and return.
+
+```mermaid
+flowchart TD
+    start((Start)) --> m0[Log in, then module 0: warm-up and diagnostic]
+    m0 -- refreshers needed --> refresher[Refreshers the diagnostic chose] --> modules
+    m0 -- none needed --> modules[Modules 1 to 5, one segment at a time]
+    modules --> activity{Activity or checkpoint correct?}
+    activity -- no --> hint[Feedback, and a hint if asked for] --> activity
+    activity -- yes, more segments --> modules
+    activity -- yes, modules 1 to 5 done --> m6[Module 6: mastery check, then a report per objective]
+    m6 --> notyet{Any objective 'not yet'?}
+    notyet -- yes --> review[Review path, then fresh mastery items] --> m6
+    notyet -- no --> ready((Ready for the lecture))
+```
+
+Figure: A student's path through the app.
 
 # Software engineering approach
 
@@ -75,7 +91,7 @@ four properties of this project:
 
 | Role | Who | Responsibilities |
 |---|---|---|
-| Scrum Master | **[to be decided]** | Runs the events, removes blockers, keeps the board and the process honest, and facilitates backlog ordering. |
+| Scrum Master | Matthew Els, provisionally: the team may vote for someone else | Runs the events, removes blockers, keeps the board and the process honest, and facilitates backlog ordering. |
 | Development team | Matthew Els, Ayanda Juqu, Reece Schmidt (software engineering); Joshua Wereley, Simphiwe Nhlapo, Mohtashim Hussain, Jacobus Hoogenboezem (content, assessment and scaffolding design) | Build the increment. ID members own content items on the same backlog. |
 
 **No Product Owner.** Standard Scrum has a Product Owner who owns the backlog and accepts work. We
@@ -95,7 +111,7 @@ learning outcomes. The Product Owner's duties are shared instead:
 |---|---|---|
 | Sprint 0 | 22 Oct – 1 Nov | Foundation. Spec issued 22 Oct, group registered 23 Oct, topic chosen (graphs + BFS), repository and branch flow, CI, hosting on staging and production, database layer with migrations, backups, staging login. |
 | Sprint 1 | 2 – 8 Nov | **A complete path through the app.** A student can register, open a lesson, answer a checkpoint question in a video, step through BFS on a predefined graph, write and submit BFS through the code runner, take the mastery check, and be sent to the review path for any objective marked "not yet", all with placeholder content, deployed to staging. |
-| Sprint 2 | 9 – 15 Nov | **Real content and the full feature set.** The ID team's content, questions and scaffolds loaded; all activity kinds, hints, points and badges; narrated videos; usability test with students; end-to-end tests; accessibility pass. |
+| Sprint 2 | 9 – 15 Nov | **Real content and the full feature set.** The ID team's content, questions and scaffolds loaded; all activity kinds, hints, points and badges; narrated videos; pilot by team members on 10–11 Nov (§14.5); end-to-end tests; accessibility pass. |
 | Release | 12 – 16 Nov | Feature freeze **Thu 12 Nov**. `staging` → `master` (production) **Fri 13 Nov**. Demo rehearsals on production 14–15 Nov. SE and ID documents submitted before **08:00 on Mon 16 Nov**. Presentation and demo on 16 or 17 Nov. |
 
 ## Artefacts
@@ -122,13 +138,14 @@ learning outcomes. The Product Owner's duties are shared instead:
 | Event | When and how | Output |
 |---|---|---|
 | Daily stand-up | Asynchronous, a short message in the team's Discord stand-up channel every day: done since last time, doing next, blocked by. | Dated record of progress and blockers. |
-| Sprint review | Weekly team call, first part. The increment is demonstrated on staging to the whole team, including the ID members; each item is accepted or rejected against its acceptance criteria. | Accepted items; feedback added to the backlog. |
-| Retrospective | Same call, second part. What went well, what to change, one concrete action for next sprint. | Retro notes kept with the sprint (`docs/se/sprints/`). |
-| Sprint planning | Same call, last part. Pick the sprint goal and the items from the top of the backlog that fit. | Sprint goal and sprint backlog on the board. |
+| Weekly check-in | Thursday team call, mid-sprint. What is done so far is shown on staging; progress against the sprint goal, blockers, and dependencies between the ID and SE work; the sprint backlog is adjusted if the goal is at risk. | Updated sprint backlog; decisions noted in Discord. |
+| Sprint review | Sunday, asynchronous. Each engineer posts what they merged with its staging link; team members, including the ID members, check each item on staging and accept or reject it against its acceptance criteria on the board by Monday morning. | Accepted items; feedback added to the backlog. |
+| Retrospective | Sunday to Monday, a Discord thread: what went well, what to change, one concrete action for the next sprint. | Retro notes kept with the sprint (`docs/se/sprints/`). |
+| Sprint planning | Monday morning. The Scrum Master proposes the sprint goal and the items from the top of the backlog that fit; the team confirms or changes them in Discord before work starts. | Sprint goal and sprint backlog on the board. |
 
-The weekly call is on **[day and time to be agreed]**.
+Sprints run from Monday to Sunday. The only meeting is the Thursday call; the events at the sprint boundary are asynchronous, because seven students with different timetables can't meet twice a week during exams. Discord keeps a dated record of all of them.
 
-TODO: Choose the Scrum Master and the weekly call's day and time at the team meeting.
+TODO: Confirm the Scrum Master by team vote, and the time of the Thursday call.
 
 ## Engineering practices that support the process
 
@@ -175,7 +192,7 @@ TODO: Add the GitHub Project board link once the board exists.
 - An authoring interface: content is edited as fixture files in the repository and loaded by a seed command.
 - A public leaderboard (see FR-9 for why).
 - Topics beyond graphs and BFS (DFS, Dijkstra, trees), and programming languages other than Python.
-- Password reset, refresh tokens, and sign-in with the university account (future work, §14).
+- Password reset, refresh tokens, and sign-in with the university account (future work, §15).
 - Native mobile apps and offline use.
 
 ## Success criteria (engineering)
@@ -277,6 +294,25 @@ Figure: Submitting a code activity. The browser never sees the hidden tests, and
 # Functional Requirements
 
 Each feature is broken into concrete, testable capabilities with IDs (FR-x.y) for traceability. The table at the end of this section links each requirement to the part of the ID document it delivers.
+
+```mermaid
+flowchart TB
+    student[Student]
+    subgraph app[Ctrl Academy]
+        subgraph learn[Learning]
+            uc1([Register and log in · FR-1]) ~~~ uc2([Work through a module · FR-2, FR-8]) ~~~ uc3([Watch a narrated video · FR-3]) ~~~ uc4([Answer an activity · FR-4]) ~~~ uc5([Ask for a hint · FR-4.4]) ~~~ uc6([Write, run and submit code · FR-5])
+        end
+        subgraph assess[Assessment and progress]
+            uc7([Step through and predict BFS · FR-6]) ~~~ uc8([Take the mastery check · FR-7]) ~~~ uc9([Follow a review path · FR-7.5]) ~~~ uc10([See progress, points and badges · FR-2.6, FR-9]) ~~~ uc11([Export evaluation data · FR-10])
+        end
+    end
+    student --- learn
+    student --- assess
+    uc6 --- runner[Code runner]
+    uc11 --- staff[Team member with staff access]
+```
+
+Figure: Use cases. The student takes part in every use case in both groups except the export; the code runner is a system actor that runs submitted code and returns the results.
 
 ## Accounts (FR-1)
 - **FR-1.1** Register with an email address, a password and a display name. The display name is shown only to the student.
@@ -388,11 +424,11 @@ Table: Which part of the ID document each functional requirement delivers.
 - **NFR-U1** Laptop and desktop are the primary devices, because modules 2, 4 and 5 need a keyboard for code. Every other module also works on a tablet and a phone (from 360 px wide).
 - **NFR-U2** Clear, consistent controls for video, BFS stepping, activities and hints across all modules.
 - **NFR-U3** Every answer gets visible feedback within the activity; errors from the system are written for students, never as stack traces.
-- **NFR-U4** Before the demo, at least five students from outside the group complete a usability test of modules 0 to 3 (the pilot, §2.1).
+- **NFR-U4** Before the feature freeze, team members pilot every module they did not build, and the defects they find are fixed or recorded (§14.5).
 
 ## Security & Authentication
 - **NFR-S1** Passwords stored only as salted hashes (Argon2, via pwdlib).
-- **NFR-S2** Authenticated endpoints require a valid **JWT in the session cookie**; every query is scoped to the logged-in user, so one student can never read another's data. Password reset and refresh tokens are future work (§14).
+- **NFR-S2** Authenticated endpoints require a valid **JWT in the session cookie**; every query is scoped to the logged-in user, so one student can never read another's data. Password reset and refresh tokens are future work (§15).
 - **NFR-S3** All traffic over HTTPS in deployed environments.
 - **NFR-S4** Server-side validation of all inputs (Pydantic schemas); answers, results and points are never accepted from the client.
 - **NFR-S5** No secrets in the repository; configuration via environment variables.
@@ -757,6 +793,50 @@ and auto-fixes first.
 - Videos are stored in a `media` volume mounted into the web container and served by nginx at `/media/`, outside git and outside the image *(planned)*.
 - The runner is built and deployed with the rest of the stack, on an internal network with the API only, with the limits in NFR-S7 set in `docker-compose.yml` *(planned)*.
 - Secrets are environment variables set in Coolify (database password, JWT secret, `STAGING_PASSWORD`). None are committed (`.env` is gitignored; only `.env.example` is in the repo).
+
+# Testing strategy
+
+Testing follows the Definition of Done (§2.4): no item is done until it has tests and they pass in CI. The levels below go from the fastest and most numerous to the slowest and fewest.
+
+## Test levels
+
+| Level | What it covers | Tools | When it runs |
+|---|---|---|---|
+| Unit | The BFS engine, one answer checker per activity kind, the mastery rules, the points rules; React components and hooks, including every activity component | pytest; Vitest + React Testing Library | Every PR (CI) |
+| API | Every endpoint against a freshly migrated database: correct and wrong answers, hint recording, progress and result updates; that one student can never read another's data; that no response ever contains an activity's `answer` | pytest + FastAPI `TestClient`, SQLite | Every PR (CI) |
+| Migrations | Every migration applies to an empty database, the models match the migrations, and there is one head | pytest + Alembic | Every PR (CI) |
+| Content | Every fixture file matches its schema; every code activity's reference solution passes its hidden tests, and every faulty implementation fails at least one (NFR-M5) | pytest, through the runner | Every PR that touches content (CI) |
+| Runner security | Hostile submissions fail safely: an infinite loop, a fork bomb, a memory bomb, a huge output, opening a network connection, reading environment variables and files, writing outside the temporary directory (NFR-S7) | pytest against the runner container | Every PR that touches the runner (CI, Docker); and once on staging, to confirm the network is internal |
+| End-to-end | The student's path in a real browser against the full stack: register, module 0 and its diagnostic, a video checkpoint, a code submission, the mastery report and a review path; plus logging in as each demo account | Playwright, in Chromium, Firefox and WebKit | Every PR into `staging` (CI); on staging before each sprint review |
+| Accessibility | Automated checks on every page (no WCAG 2.1 AA violations); one module completed with the keyboard only | oxlint jsx-a11y; axe-core in Playwright; a manual pass | Every PR (automated); once per sprint (manual) |
+| Exploratory | The item's acceptance criteria tried by hand on staging, by someone other than its author | Staging | Every item, before it is accepted (DoD) |
+| Pilot | Usability and defects across modules 0 to 6 (§14.5) | Staging, the event export, a short survey | 10–11 Nov |
+
+Table: Test levels.
+
+## Coverage
+
+CI enforces **at least 90% line and branch coverage** on the code that decides results: the BFS engine, the answer checkers, the mastery rules, the points rules and the runner. Everywhere else, coverage is reported on every PR but not enforced, so effort goes into tests that protect results rather than into covering UI wiring. The threshold is enforced from the PR that first adds each of these modules.
+
+## Acceptance testing
+
+Every backlog item carries acceptance criteria taken from its requirements (FR-x.y). At the sprint review, each item is checked against them on staging and accepted or sent back (§2.2). Automated tests name the requirement they check (for example `test_fr_7_2_hint_level_3_counts_as_with_support`), so searching for a requirement ID finds its tests.
+
+## Defects
+
+Defects found in review, exploratory testing or the pilot are filed as issues labelled `bug`, with steps to reproduce and a severity:
+
+- **Blocker:** breaks the demo path or loses a student's data. Fixed before anything else.
+- **Major:** wrong result, feedback or mastery decision. Fixed in the current sprint.
+- **Minor:** cosmetic or rare. Fixed if time allows before the freeze on 12 Nov.
+
+Every fix comes with a test that fails without it, so the defect can't return.
+
+## Pilot
+
+Before the feature freeze, on 10 and 11 November, team members pilot the app on staging. Each member works through the modules they did not build, from a new account, thinking aloud while another member takes notes. Afterwards each completes a short survey (ease of use, clarity of feedback and hints, time per module). The ID team uses the event export (FR-10) and the survey for the Implement and Evaluate phases of ADDIE; defects go onto the board.
+
+**Limitation.** Team members are not the target learners: they already know graphs and BFS, and they know the design. The pilot can therefore show usability problems, defects, unclear feedback and timing, but not whether the app teaches a student who starts with no knowledge. Both documents report the pilot's results with this limitation.
 
 # Assumptions, Risks, Decisions and Future Work
 

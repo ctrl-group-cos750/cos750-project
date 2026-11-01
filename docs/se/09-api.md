@@ -1,12 +1,13 @@
 # API Design (REST)
 
-Base path: `/api`. JSON over HTTPS. Auth via `Authorization: Bearer <token>` except where noted. Response/request bodies validated by Pydantic. Endpoint list is **[PROVISIONAL]** and will firm up with the OpenAPI schema.
+Base path: `/api`. JSON over HTTPS. Auth via the session cookie set by `/api/auth/login`, except where noted. Response/request bodies validated by Pydantic. Endpoint list is **[PROVISIONAL]** and will firm up with the OpenAPI schema.
 
 ## Auth
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
 | POST | `/api/auth/register` | public | Create a user account. |
-| POST | `/api/auth/login` | public | Exchange credentials for an access token. |
+| POST | `/api/auth/login` | public | Check credentials and set the session cookie. |
+| POST | `/api/auth/logout` | user | Clear the session cookie. |
 | GET | `/api/auth/me` | user | Current user profile. |
 
 ## Lessons & Content
@@ -94,4 +95,4 @@ Example `POST /api/assessments/{assessmentId}/submit` response:
 ## Conventions **[PROVISIONAL]**
 - Standard HTTP status codes; error bodies `{ "detail": "..." }`.
 - Pagination for list endpoints (`?limit=&offset=`) where needed (leaderboard, lessons).
-- OpenAPI/Swagger auto-published at `/docs` (FastAPI) and used as the frontend contract.
+- OpenAPI/Swagger auto-published at `/api/docs` (FastAPI) and used as the frontend contract.

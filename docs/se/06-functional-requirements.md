@@ -46,7 +46,7 @@ Each feature is broken into concrete, testable capabilities. IDs (FR-x.y) are fo
 - **FR-4.4** Animate the BFS step-by-step: current node, visited set, queue state, and newly discovered neighbours per step.
 - **FR-4.5** Provide playback controls: step forward, step back, play/pause, reset, and speed control. (Back-stepping is supported in Draft 1 — enabled cheaply by local playback over precomputed steps.)
 - **FR-4.6** Display auxiliary state (queue contents, visited order) alongside the animation.
-- **FR-4.7** Support a small library of **predefined** graph scenarios for Draft 1. **Custom student-input graphs are deferred to Draft 2+** (noted future item; see §13).
+- **FR-4.7** Support a small library of **predefined** graph scenarios for Draft 1. **Custom student-input graphs are deferred to Draft 2+** (noted future item; see §14).
 
 ## Multi-Mode Content Delivery (FR-5)
 - **FR-5.1** Represent a lesson as a set of content items each tagged with a mode: `video`, `text`, or `interactive`.

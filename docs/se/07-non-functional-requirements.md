@@ -12,17 +12,17 @@
 - **NFR-U3** Visible feedback for scoring events and assessment outcomes.
 
 ## Security & Authentication
-- **NFR-S1** Passwords stored only as salted hashes (bcrypt).
-- **NFR-S2** Authenticated endpoints require a valid **JWT access token**; authorization checks tie resources to the owning user. Email is required as account identity (used for recovery in later drafts). Password reset and refresh tokens are **deferred to Draft 2**.
+- **NFR-S1** Passwords stored only as salted hashes (Argon2, via pwdlib).
+- **NFR-S2** Authenticated endpoints require a valid **JWT in the session cookie**; authorization checks tie resources to the owning user. Email is required as account identity (used for recovery in later drafts). Password reset and refresh tokens are **deferred to Draft 2**.
 - **NFR-S3** All traffic over HTTPS in deployed environments.
 - **NFR-S4** Server-side validation of all inputs (Pydantic schemas); never trust client-reported scores/results.
 - **NFR-S5** No secrets in the repository; configuration via environment variables.
-- **NFR-S6** Standard protections: CORS restricted to known origins, parameterised queries via the ORM, rate limiting on auth endpoints **[PROVISIONAL]**.
+- **NFR-S6** Standard protections: the session cookie is httpOnly, Secure and SameSite=Lax; state-changing requests require JSON bodies (blocking cross-site form posts); parameterised queries via the ORM; rate limiting on auth endpoints **[PROVISIONAL]**. The app and the API share one origin, so no CORS is configured.
 
 ## Maintainability
 - **NFR-M1** Layered backend (routers → services → data) with the BfsEngine isolated from web concerns and unit-testable in isolation.
 - **NFR-M2** Typed boundaries both sides (Pydantic + TypeScript); API types kept in sync (consider generating a TS client from OpenAPI **[PROVISIONAL]**).
-- **NFR-M3** Linting/formatting enforced; CI runs tests and linters.
+- **NFR-M3** ruff, mypy --strict, oxlint and Prettier enforced in CI on every PR.
 - **NFR-M4** Database migrations tracked with Alembic.
 
 ## Accessibility **[PROVISIONAL]**

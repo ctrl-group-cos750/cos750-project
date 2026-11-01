@@ -23,7 +23,7 @@ for each neighbour of current (deterministic order):
         mark discovered, enqueue
 ```
 
-The returned payload (see §8.4) contains:
+The returned payload (see §9.4) contains:
 - `order`: the final visitation order (teaching the core result),
 - `steps`: per-step snapshots (queue before/after, visited set, newly discovered nodes, edges explored) so the frontend can highlight nodes/edges and show queue state at each step.
 

@@ -1,7 +1,10 @@
 {
   "title": "Software Engineering Document",
   "short": "SE document",
-  "version": "Draft 1",
-  "authors": ["Ayanda"],
+  "version": "Draft 2",
+  "authors": [
+    "Ayanda Juqu",
+    "Matthew Els"
+  ],
   "file": "ctrl-group-se-document"
 }

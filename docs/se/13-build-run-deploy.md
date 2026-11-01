@@ -1,42 +1,44 @@
-# Build / Run / Deploy
+# Build, run and deploy
 
 ## Local development
-**Backend**
+
+The whole stack, built the same way Coolify builds it:
+
 ```bash
-cd backend
-python -m venv .venv && source .venv/bin/activate
-pip install -e .            # or: pip install -r requirements
-alembic upgrade head        # apply migrations
-python -m app.seed.load      # load placeholder fixtures (lessons, questions, graph scenarios) — real content added later
-uvicorn app.main:app --reload
-# API at http://localhost:8000 ; docs at /docs
+cp .env.example .env
+docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
+# http://localhost:8080
 ```
 
-**Frontend**
+With hot reload, Postgres in Docker and the rest on your machine:
+
 ```bash
-cd frontend
-npm install
-npm run dev                  # Vite dev server, e.g. http://localhost:5173
-# Configure API base URL via env (e.g. VITE_API_BASE_URL)
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d db
+
+cd api && python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+.venv/bin/alembic upgrade head
+.venv/bin/python -m app.seed      # placeholder content and demo accounts (planned)
+.venv/bin/uvicorn app.main:app --reload            # http://localhost:8000/api/docs
+
+cd web && npm install && npm run dev               # http://localhost:5173, proxies /api to :8000
 ```
 
-## Testing & quality
-```bash
-# backend
-cd backend && pytest -q && ruff check .
-# frontend
-cd frontend && npm test -- --silent && npm run lint
-```
+## Checks
 
-## CI (GitHub Actions) **[PROVISIONAL]**
-- On push/PR: install deps, run Ruff + pytest (backend) and ESLint + Vitest (frontend), build the frontend. Keep `main` deployable.
+`scripts/check.sh` runs everything CI runs except the Docker build: Prettier, oxlint, Vitest and
+the production build for `web`; ruff, mypy and pytest for `api`. `scripts/check.sh --fix` formats
+and auto-fixes first.
+
+## Branches, CI and review
+
+- Work happens on a feature branch, which goes into `staging` through a reviewed PR. `staging` goes into `master` through another PR.
+- CI must pass before merging. A PR into `master` from any branch other than `staging` fails the `branch-flow` check.
+- A merge into `staging` deploys to staging.ctrlacademy.co.za, where the team checks it behind the team password before it is promoted.
 
 ## Deployment
-Containerised deployment via Docker, orchestrated with Docker Compose, fronted by a reverse proxy that terminates HTTPS on the **team's domain**. Concrete but still draft-level:
 
-- **Backend:** containerised FastAPI (Uvicorn behind a process manager) as a Docker service.
-- **Database:** containerised **PostgreSQL** with a persistent volume; the backend connects via `DATABASE_URL`.
-- **Frontend:** `vite build` produces static assets served by the reverse proxy (or a lightweight static container); `VITE_API_BASE_URL` points to the backend route.
-- **Reverse proxy:** **Nginx, Caddy, or Traefik** terminates TLS on the team's domain, routes `/api/*` to the backend container and all other paths to the static frontend, and handles HTTPS certificates (e.g. automatic Let's Encrypt via Caddy/Traefik).
-- **Media:** video files served as static assets (object storage or a static mount), not proxied through the API.
-- **Secrets/config:** environment variables (DB URL, JWT secret, CORS origins, domain); never committed.
+- Coolify watches the repository and deploys on push using the Docker Compose build pack: `staging` → staging.ctrlacademy.co.za and `master` → ctrlacademy.co.za. Each environment has its own database and its own `POSTGRES_PASSWORD`.
+- The API container applies pending migrations before serving, so schema changes reach each environment with its deploy.
+- Postgres is backed up nightly by a Coolify scheduled task (`pg_dump`, kept for 14 days).
+- Videos are stored in a `media` volume mounted into the web container and served by nginx at `/media/`, outside git and outside the image *(planned)*.
+- Secrets are environment variables set in Coolify (database password, JWT secret, `STAGING_PASSWORD`). None are committed (`.env` is gitignored; only `.env.example` is in the repo).

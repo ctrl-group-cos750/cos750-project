@@ -2,8 +2,8 @@
 
 | Folder | What goes in it |
 |---|---|
-| `se/` | The SE document, one Markdown file per section |
-| `id/` | The ID document, one Markdown file per section |
+| `se/` | The SE document: `se-document.md` |
+| `id/` | The ID document: `id-document.md` |
 | `build/` | The script that turns `se/` and `id/` into branded PDFs |
 | `spec/` | The examination specification, as issued |
 | `references/` | Works cited by the spec or by our SE and ID documents |
@@ -35,8 +35,21 @@ workflow). Open the run and download the `documents` artifact.
 
 ### Writing conventions
 
-- **One file per top-level section**, named `NN-short-name.md`. Files are joined in name order.
-  Each starts with a `#` heading; use `##` and `###` inside it.
+- **One Markdown file per document:** `docs/<name>/<name>-document.md`. It starts with a front
+  matter block, then each top-level section is a `#` heading, with `##` and `###` inside it:
+
+  ```
+  ---
+  title: Software Engineering Document
+  short: SE document
+  version: Draft 2
+  ---
+
+  # Overview
+  ```
+
+  `title` goes on the cover, `short` and `version` in the running header. A new document is a
+  new folder with its own `<name>-document.md`.
 - **Don't number headings.** The build numbers them (1, 1.1, 1.1.1) and builds the contents page,
   so adding or moving a section renumbers everything. Cross-references written by hand (§4.2)
   have to be checked when sections move.
@@ -48,8 +61,8 @@ workflow). Open the run and download the `documents` artifact.
   lists every one, so nothing unfinished is submitted by accident.
 - **References:** the ID document numbers its references (`[12]`) and lists them in its last
   section.
-- **Cover details:** title and version are in each folder's `document.json`; the group name and
-  members are in `build/team.json`. Every document is the whole group's, so covers name the group
+- **Cover details:** title and version come from the front matter; the group name and members
+  are in `build/team.json`. Every document is the whole group's, so covers name the group
   and its members, never individual authors or roles.
 - Keep `[PROVISIONAL]` and other markers out of headings where possible; they also show in the
   contents.

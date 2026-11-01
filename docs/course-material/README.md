@@ -1,6 +1,7 @@
 # Course material
 
-The COS750 lectures and readings from ClickUP (2026), one folder per lecture. This is what the
+The COS750 lectures and readings from ClickUP (2026), one folder per lecture. Each folder holds
+the lecture's slides, and a `readings/` folder for everything handed out with it. This is what the
 SE document, the ID document and the app are built on: when a document makes a design choice, it
 should point back to the lecture or paper here that justifies it.
 
@@ -48,7 +49,7 @@ Paper 2.3 on ClickUP is the same file as 2.1, so it is not repeated.
 ### [L04 – Learning styles](l04-learning-styles/)
 
 - `l04-learning-styles.pdf` (13 Aug 2026): definitions, families of models, assessment methods.
-- `honey-mumford-learning-styles-questionnaire.pdf`, `vak-learning-styles-questionnaire.pdf`: the two
+- `readings/honey-mumford-learning-styles-questionnaire.pdf`, `readings/vak-learning-styles-questionnaire.pdf`: the two
   self-assessment questionnaires.
 
 ### [L05 – Motivation](l05-motivation/)
@@ -56,7 +57,7 @@ Paper 2.3 on ClickUP is the same file as 2.1, so it is not repeated.
 - `l05-motivation.pdf`: need to achieve vs need to avoid failure, intrinsic vs extrinsic
   motivation, flow (clear goals, immediate feedback, challenge matched to skill), Malone and
   Lepper's framework.
-- `malone-lepper-1987-making-learning-fun.pdf`: T. W. Malone and M. R. Lepper, "Making Learning
+- `readings/malone-lepper-1987-making-learning-fun.pdf`: T. W. Malone and M. R. Lepper, "Making Learning
   Fun: A Taxonomy of Intrinsic Motivations for Learning", 1987. A scan, so the text can't be searched.
 
 ### [L06 – User experience](l06-user-experience/)
@@ -64,10 +65,10 @@ Paper 2.3 on ClickUP is the same file as 2.1, so it is not repeated.
 - `l06-user-experience-interaction.pdf` (27 Aug 2026): human senses, the information processing
   model, short- and long-term memory, user classification, dialogue styles and their desirable
   characteristics, interface types.
-- `interface-types/`: the 15 papers for Assignment 2. Each group presented one, so the number
-  is the ClickUP paper number.
-- `general/`: Schunk's full textbook (the source of the L01 readings), and Yu et al. (2026) on
-  memory for LLM agents.
+- `readings/01-…` to `readings/15-…`: the interface-types papers for Assignment 2. Each group
+  presented one, so the number is the ClickUP paper number.
+- `readings/schunk-2012-…` and `readings/yu-2026-…`: the general resources. Schunk's full
+  textbook (the source of the L01 readings), and Yu et al. (2026) on memory for LLM agents.
 
 | # | Paper |
 |---|---|
@@ -97,8 +98,8 @@ Large Language Model Agents", ACL 2026.
   (`<action verb><topic><mastery>`, 5 to 8 of them), constructive alignment, revised Bloom,
   assessment criteria with pass and differentiated descriptors, formative vs summative,
   assessment in the age of AI.
-- `blooms-revised-taxonomy-handout.pdf`: the cognitive process dimension with verbs per level.
-- `papers/`:
+- `readings/blooms-revised-taxonomy-handout.pdf`: the cognitive process dimension with verbs per level.
+- `readings/1-…` to `readings/6-…`, the assessment papers:
 
 | # | Paper |
 |---|---|
@@ -113,7 +114,7 @@ Large Language Model Agents", ACL 2026.
 
 - `l08-computing-curricula.pdf`: the history from Curriculum 68 to CS2023, the CS2023 "sunflower"
   model (CS core and KA core), adapted Bloom skill levels, and building a curriculum in the SA context.
-- The curricula themselves: `acm-1968-curriculum-68.pdf`, `tucker-1991-computing-curricula-1991.pdf`
+- `readings/`, the curricula themselves: `acm-1968-curriculum-68.pdf`, `tucker-1991-computing-curricula-1991.pdf`
   (summary), `acm-ieee-2013-cs2013.pdf`, `cc2020-task-force-2020-computing-curricula-2020.pdf`.
   CS2023 is in `../references/`.
 
@@ -142,5 +143,5 @@ name and student number, so they stay on ClickUP.
 
 ## Adding material
 
-Put it in the lecture's folder, named like the rest (lowercase, hyphens), and add a line here.
-New lectures get a new `lNN-<topic>/` folder.
+Slides go in the lecture's folder; anything handed out with them goes in its `readings/`. Name it
+like the rest (lowercase, hyphens) and add a line here. New lectures get a new `lNN-<topic>/` folder.

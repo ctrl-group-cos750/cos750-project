@@ -714,7 +714,8 @@ The returned payload (see §9.4) contains:
 - **Points and badges**
   - `PointsIndicator`, `BadgeShelf`. Private to the student; there is no leaderboard.
 - **Shared**
-  - `Markdown` (renders prompts, hints and text segments), `Spinner`, `ErrorBoundary`, `Toast`.
+  - The UI kit in `web/src/components/` (`AppShell`, `Button`, `TextField`, `Card`, `Alert`, `Tag`, `MasteryStatus`, `ProgressBar`, `Spinner`), built on the design tokens in `web/src/styles/tokens.css`. Every screen is built from these; the live reference is `/ui-kit` and the rules are in `docs/brand/README.md`.
+  - `Markdown` (renders prompts, hints and text segments), `ErrorBoundary`, `Toast`.
 
 ## Main screens
 
@@ -886,7 +887,9 @@ cos750-project/
 │     ├─ main.tsx, App.tsx
 │     ├─ api/                   typed API client (planned)
 │     ├─ auth/                  (planned)
-│     ├─ components/            shared components (planned)
+│     ├─ components/            the shared UI kit: AppShell, Button, TextField, Card, Alert, Tag, ...
+│     ├─ styles/                tokens.css (design tokens, light and dark), base.css
+│     ├─ ui-kit/                the /ui-kit reference page
 │     ├─ features/              modules, video, activities, bfs, mastery, points (planned)
 │     └─ test/setup.ts
 ├─ e2e/                         Playwright tests (planned)
@@ -895,6 +898,7 @@ cos750-project/
    ├─ se/se-document.md         this document
    ├─ id/id-document.md         the ID document
    ├─ build/                    builds both into PDFs (npm run pdf)
+   ├─ brand/README.md           brand and UI guide: logo, colour, type, components, writing
    ├─ spec/, references/, course-material/
    └─ deploy/coolify.md
 ```

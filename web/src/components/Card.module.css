@@ -1,0 +1,22 @@
+.card {
+  padding: var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.card > :last-child {
+  margin-bottom: 0;
+}
+
+.interactive {
+  transition:
+    border-color 120ms,
+    transform 120ms;
+}
+
+.interactive:hover {
+  border-color: var(--color-accent);
+  transform: translateY(-1px);
+}

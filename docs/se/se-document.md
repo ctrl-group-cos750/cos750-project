@@ -442,6 +442,7 @@ Table: Which part of the ID document each functional requirement delivers.
 - **NFR-P2** Answer checks for non-code activities return in under 300 ms under light load. **[PROVISIONAL target]**
 - **NFR-P3** A code submission returns its results within 6 seconds, including the runner's 5-second limit.
 - **NFR-P4** The BFS animation runs from precomputed steps, with no server calls per frame.
+- **NFR-P6** Under more load than it can serve, the API stays up and answers every request, at worst with a quick "busy" (503 within 5 seconds), and recovers as soon as the load drops. It never stalls (see §14, "Load testing").
 - **NFR-P5** Videos are served by nginx from a volume with range requests, so seeking doesn't download the whole file and video never passes through the API.
 
 ## Usability
@@ -990,6 +991,36 @@ Defects found in review, exploratory testing or the pilot are filed as issues la
 - **Minor:** cosmetic or rare. Fixed if time allows before the freeze on 12 Nov.
 
 Every fix comes with a test that fails without it, so the defect can't return.
+
+## Load testing
+
+`scripts/load-test.py` loads a deployed copy with simulated users, each sending requests back to back over one connection: a ramp (more users every 15 seconds), a burst (requests released at one instant), sustained load, and a burst of logins. Staging shares its server with other applications, so load tests run only when nobody is testing or presenting, never during the pilot or the demo.
+
+**First run, 2 November (staging, before the fix).** Most of the time a request takes is the trip to the server: Cloudflare answers from Johannesburg in 5 ms, and a request through to our API takes about 190 ms.
+
+| Users | Requests per second | Median | 95th percentile | Over 0.5 s | Failed |
+|---|---|---|---|---|---|
+| 1 | 5 | 188 ms | 211 ms | 1.3% | 0 |
+| 20 | 99 | 190 ms | 214 ms | 0.1% | 0 |
+| 80 | 307 | 222 ms | 327 ms | 0% | 0 |
+| 120 | 316 | 355 ms | 457 ms | 1.1% | 0 |
+| 160 | 299 | 510 ms | 636 ms | 53.5% | 0 |
+| 240 | 38 | 545 ms | 30 s | 59.6% | **all connections timed out** |
+
+Table: Ramp on staging before the fix.
+
+At 240 users, and again for a single burst of 300 requests, **the API stalled for four to six minutes**, though nginx and the server stayed up. Reproduced locally: a request takes its database connection in one thread job and runs its handler in another, so it can hold a connection while waiting for a thread. Under a burst, requests held all 15 connections while all 40 threads waited for one. Nothing moved until 30-second timeouts failed requests, and the queue then drained slowly.
+
+**The fix.** At most 30 API requests run at once, fewer than the 40 threads and the 50 database connections, so the deadlock can't form. Further requests wait in a queue that holds neither, and one that waits 5 seconds gets a quick 503 ("busy, try again"). The health check is exempt, so Docker's check still gets an answer when the API is busy.
+
+| Test (one local API process) | Before | After |
+|---|---|---|
+| 150 requests at once | Stalled: 30 s, then 500s | All answered in 0.2 s |
+| 1,000 requests at once | Stalled | All answered in 1.6 s |
+| 500 users for 15 s | — | 688 requests per second, none failed, median 546 ms |
+| 50 logins at once (four hashed at a time) | — | All answered, slowest 1.4 s |
+
+Table: The stall and the fix, measured locally.
 
 ## Security review
 

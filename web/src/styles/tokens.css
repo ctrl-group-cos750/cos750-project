@@ -1,0 +1,144 @@
+/*
+ * Design tokens: the only place colours, type, spacing and radii are defined.
+ * Components and pages use these variables, never raw values, so the app stays
+ * consistent and dark mode works everywhere. The reference page is /ui-kit.html
+ * and the reasoning is in docs/brand/README.md.
+ *
+ * Every text colour meets WCAG 2.1 AA (4.5:1) on the surfaces it is used on,
+ * and control borders meet 3:1 (SE document NFR-A2).
+ */
+
+:root {
+  /* Brand (assets/README.md) */
+  --brand-accent: #2470c9;
+  --brand-edge: #184a85;
+  --brand-ink: #141413;
+  --brand-paper: #fafaf7;
+
+  /* Surfaces and text */
+  --color-bg: var(--brand-paper);
+  --color-surface: #ffffff;
+  --color-surface-sunken: #f2f1ec;
+  --color-text: var(--brand-ink);
+  --color-text-muted: #5c5b55;
+  --color-line: #dcdbd3; /* dividers and card edges: decorative */
+  --color-border: #8a897f; /* input and control borders: 3:1 */
+
+  /* Accent: links, primary buttons, focus */
+  --color-accent: var(--brand-accent);
+  --color-accent-hover: var(--brand-edge);
+  --color-accent-text: var(--brand-accent);
+  --color-on-accent: #ffffff;
+  --color-accent-soft: #eaf1fb;
+  --color-accent-soft-text: var(--brand-edge);
+
+  /* Feedback */
+  --color-success: #1e7a3c;
+  --color-success-soft: #e8f4ec;
+  --color-warning: #8f5400;
+  --color-warning-soft: #fdf1dc;
+  --color-danger: #b42318;
+  --color-danger-soft: #fdecea;
+
+  /*
+   * BFS visualiser vertex states. Never shown by colour alone: GraphCanvas also
+   * labels each vertex and marks the state with a symbol (NFR-A2).
+   */
+  --bfs-unvisited-fill: var(--color-surface);
+  --bfs-unvisited-stroke: var(--color-border);
+  --bfs-current-fill: var(--brand-accent);
+  --bfs-current-stroke: var(--brand-edge);
+  --bfs-current-text: #ffffff;
+  --bfs-queued-fill: var(--color-warning-soft);
+  --bfs-queued-stroke: #b26b00;
+  --bfs-visited-fill: var(--color-success-soft);
+  --bfs-visited-stroke: var(--color-success);
+  --bfs-edge: var(--color-border);
+  --bfs-edge-traversed: var(--brand-accent);
+
+  /* Type */
+  --font-display: 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif;
+  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+
+  --leading-tight: 1.2;
+  --leading-body: 1.55;
+
+  /* Spacing: a 4px scale */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+
+  /* Shape and depth */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --shadow-card: 0 1px 2px rgb(20 20 19 / 6%), 0 2px 8px rgb(20 20 19 / 6%);
+  --focus-ring: 0 0 0 3px var(--color-bg), 0 0 0 5px var(--color-accent);
+
+  /* Layout */
+  --content-width: 72rem;
+  --reading-width: 42rem;
+
+  color-scheme: light;
+}
+
+/* Dark mode follows the system unless a page sets data-theme. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-bg: var(--brand-ink);
+    --color-surface: #1f1f1d;
+    --color-surface-sunken: #191918;
+    --color-text: var(--brand-paper);
+    --color-text-muted: #a8a79f;
+    --color-line: #3a3a35;
+    --color-border: #76756d;
+    --color-accent-text: #7fb2ee;
+    --color-accent-soft: #172538;
+    --color-accent-soft-text: #7fb2ee;
+    --color-success: #5cc480;
+    --color-success-soft: #16291d;
+    --color-warning: #f0b44c;
+    --color-warning-soft: #2e2412;
+    --color-danger: #f97066;
+    --color-danger-soft: #331a17;
+    --bfs-queued-stroke: #f0b44c;
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 40%);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --color-bg: var(--brand-ink);
+  --color-surface: #1f1f1d;
+  --color-surface-sunken: #191918;
+  --color-text: var(--brand-paper);
+  --color-text-muted: #a8a79f;
+  --color-line: #3a3a35;
+  --color-border: #76756d;
+  --color-accent-text: #7fb2ee;
+  --color-accent-soft: #172538;
+  --color-accent-soft-text: #7fb2ee;
+  --color-success: #5cc480;
+  --color-success-soft: #16291d;
+  --color-warning: #f0b44c;
+  --color-warning-soft: #2e2412;
+  --color-danger: #f97066;
+  --color-danger-soft: #331a17;
+  --bfs-queued-stroke: #f0b44c;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 40%);
+  color-scheme: dark;
+}

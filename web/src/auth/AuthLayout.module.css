@@ -1,0 +1,43 @@
+.page {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: var(--space-6) var(--space-4);
+}
+
+.column {
+  width: 100%;
+  max-width: 26rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-xl);
+}
+
+.mark {
+  height: 2.5rem;
+}
+
+.title {
+  font-size: var(--text-2xl);
+}
+
+.intro {
+  color: var(--color-text-muted);
+}
+
+.footer {
+  margin-top: var(--space-5);
+  text-align: center;
+}
+
+.form button[type='submit'] {
+  width: 100%;
+}

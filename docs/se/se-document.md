@@ -452,11 +452,11 @@ Table: Which part of the ID document each functional requirement delivers.
 
 ## Security & Authentication
 - **NFR-S1** Passwords stored only as salted hashes (Argon2, via pwdlib).
-- **NFR-S2** Authenticated endpoints require a valid **JWT in the session cookie**; every query is scoped to the logged-in user, so one student can never read another's data. Password reset and refresh tokens are future work (§15).
+- **NFR-S2** Authenticated endpoints require a valid **JWT in the session cookie**; every query is scoped to the logged-in user, so one student can never read another's data. Each token carries the user's session version; logging out increases it, so every earlier token, including a copied cookie, stops working on every device. Password reset and refresh tokens are future work (§15).
 - **NFR-S3** All traffic over HTTPS in deployed environments.
 - **NFR-S4** Server-side validation of all inputs (Pydantic schemas); answers, results and points are never accepted from the client.
 - **NFR-S5** No secrets in the repository; configuration via environment variables.
-- **NFR-S6** Standard protections: the session cookie is httpOnly, Secure and SameSite=Lax; state-changing requests require JSON bodies (blocking cross-site form posts); parameterised queries via the ORM; rate limiting on login, registration and code submission. The app and the API share one origin, so no CORS is configured.
+- **NFR-S6** Standard protections: the session cookie is httpOnly, Secure and SameSite=Lax; state-changing requests require JSON bodies (blocking cross-site form posts); parameterised queries via the ORM; rate limiting on login (per address and account, and per address), registration and code submission, keyed on the student's real address (Cloudflare's `CF-Connecting-IP`, believed only from Cloudflare's own servers); security headers on every page (a Content Security Policy allowing only our own scripts, styles and fonts, no framing, HSTS, `nosniff`). The app and the API share one origin, so no CORS is configured.
 - **NFR-S7** **Code runner isolation.** Student code is untrusted and runs only in the runner container, which:
   - is on an internal Docker network with no route to the internet, reachable only from the API;
   - has no database credentials, no secrets and no volumes;
@@ -990,6 +990,26 @@ Defects found in review, exploratory testing or the pilot are filed as issues la
 - **Minor:** cosmetic or rare. Fixed if time allows before the freeze on 12 Nov.
 
 Every fix comes with a test that fails without it, so the defect can't return.
+
+## Security review
+
+On 2 November the team attacked the deployed accounts feature on staging, as an outsider would, and simulated a stolen copy of the database.
+
+| Attack | Result | Action |
+|---|---|---|
+| Forge a session: `alg: none`, a swapped user ID, guessed signing keys | Refused | None needed |
+| Make yourself staff by sending `isStaff` when registering | Refused | None needed |
+| Cross-site request from another website (form post, `text/plain`, CORS) | Refused | None needed |
+| Script in the display name (stored XSS) | Shown as text | None needed |
+| Learn which emails have accounts from login responses or timing | Same message and time | None needed |
+| Replay a copied session cookie after its owner logs out | **Still worked** | Fixed: session version (NFR-S2) |
+| Get round the login rate limit | Limits were counted per Cloudflare server, shared by many students, not per student | Fixed: real client address, per-account limit (NFR-S6) |
+| Frame the app in another site; check security headers | **Headers missing** | Fixed: CSP, `X-Frame-Options`, HSTS (NFR-S6) |
+| Learn which emails have accounts from registering | A taken email is reported (409) | Accepted: needed for a clear message; would need email verification to avoid |
+
+Table: Security review of the accounts feature.
+
+**A stolen database** holds emails, display names and Argon2id password hashes (64 MiB, 3 passes). It holds no sessions and not the signing key, so it gives no way in by itself. A strong password costs years to crack per account, but a common one such as `password1` fell in under a second to an eight-word list. Write access to the database, or the `SECRET_KEY` from the server's environment, would let someone become any user; both exist only on the server and in Coolify. A leak would also be a POPIA breach, because emails are personal information (NFR-S8).
 
 ## Pilot
 

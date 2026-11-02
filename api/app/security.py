@@ -45,27 +45,30 @@ def verify_password(password: str, password_hash: str | None) -> bool:
     return _password_hash.verify(password, password_hash)
 
 
-def create_session_token(user_id: int, now: datetime | None = None) -> str:
+def create_session_token(user_id: int, version: int, now: datetime | None = None) -> str:
     issued = now or datetime.now(UTC)
-    claims = {"sub": str(user_id), "iat": issued, "exp": issued + SESSION_LIFETIME}
+    claims = {"sub": str(user_id), "ver": version, "iat": issued, "exp": issued + SESSION_LIFETIME}
     return jwt.encode(claims, SECRET_KEY, algorithm=_ALGORITHM)
 
 
-def read_session_token(token: str) -> int | None:
-    """The user ID in a valid, unexpired token, or None."""
+def read_session_token(token: str) -> tuple[int, int] | None:
+    """The user ID and session version in a valid, unexpired token, or None."""
     try:
         claims = jwt.decode(
-            token, SECRET_KEY, algorithms=[_ALGORITHM], options={"require": ["exp", "sub"]}
+            token, SECRET_KEY, algorithms=[_ALGORITHM], options={"require": ["exp", "sub", "ver"]}
         )
-        return int(claims["sub"])
+        version = claims["ver"]
+        if not isinstance(version, int):
+            return None
+        return int(claims["sub"]), version
     except (jwt.InvalidTokenError, ValueError):
         return None
 
 
-def set_session_cookie(response: Response, user_id: int) -> None:
+def set_session_cookie(response: Response, user_id: int, version: int) -> None:
     response.set_cookie(
         SESSION_COOKIE,
-        create_session_token(user_id),
+        create_session_token(user_id, version),
         max_age=int(SESSION_LIFETIME.total_seconds()),
         httponly=True,  # page scripts can't read it
         secure=True,  # HTTPS only; browsers treat http://localhost as secure too

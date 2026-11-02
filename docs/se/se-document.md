@@ -442,7 +442,6 @@ Table: Which part of the ID document each functional requirement delivers.
 - **NFR-P2** Answer checks for non-code activities return in under 300 ms under light load. **[PROVISIONAL target]**
 - **NFR-P3** A code submission returns its results within 6 seconds, including the runner's 5-second limit.
 - **NFR-P4** The BFS animation runs from precomputed steps, with no server calls per frame.
-- **NFR-P6** Under more load than it can serve, the API stays up and answers every request, at worst with a quick "busy" (503 within 5 seconds), and recovers as soon as the load drops. It never stalls (see §14, "Load testing").
 - **NFR-P5** Videos are served by nginx from a volume with range requests, so seeking doesn't download the whole file and video never passes through the API.
 
 ## Usability
@@ -452,12 +451,12 @@ Table: Which part of the ID document each functional requirement delivers.
 - **NFR-U4** Before the feature freeze, team members pilot every module they did not build, and the defects they find are fixed or recorded (§14.5).
 
 ## Security & Authentication
-- **NFR-S1** Passwords stored only as salted hashes (Argon2, via pwdlib). A new password has at least 8 characters, a lowercase and an uppercase letter, a number and a symbol (a space counts), and doesn't contain the student's name or the first part of their email. The register page lists these rules and ticks each one off as the student types; the API checks the same rules (`api/app/passwords.py`, `web/src/auth/passwordRules.ts`).
-- **NFR-S2** Authenticated endpoints require a valid **JWT in the session cookie**; every query is scoped to the logged-in user, so one student can never read another's data. Each token carries the user's session version; logging out increases it, so every earlier token, including a copied cookie, stops working on every device. Password reset and refresh tokens are future work (§15).
+- **NFR-S1** Passwords stored only as salted hashes (Argon2, via pwdlib).
+- **NFR-S2** Authenticated endpoints require a valid **JWT in the session cookie**; every query is scoped to the logged-in user, so one student can never read another's data. Password reset and refresh tokens are future work (§15).
 - **NFR-S3** All traffic over HTTPS in deployed environments.
 - **NFR-S4** Server-side validation of all inputs (Pydantic schemas); answers, results and points are never accepted from the client.
 - **NFR-S5** No secrets in the repository; configuration via environment variables.
-- **NFR-S6** Standard protections: the session cookie is httpOnly, Secure and SameSite=Lax; state-changing requests require JSON bodies (blocking cross-site form posts); parameterised queries via the ORM; rate limiting on login (per address and account, and per address), registration and code submission, keyed on the student's real address (Cloudflare's `CF-Connecting-IP`, believed only from Cloudflare's own servers); security headers on every page (a Content Security Policy allowing only our own scripts, styles and fonts, no framing, HSTS, `nosniff`). The app and the API share one origin, so no CORS is configured.
+- **NFR-S6** Standard protections: the session cookie is httpOnly, Secure and SameSite=Lax; state-changing requests require JSON bodies (blocking cross-site form posts); parameterised queries via the ORM; rate limiting on login, registration and code submission. The app and the API share one origin, so no CORS is configured.
 - **NFR-S7** **Code runner isolation.** Student code is untrusted and runs only in the runner container, which:
   - is on an internal Docker network with no route to the internet, reachable only from the API;
   - has no database credentials, no secrets and no volumes;
@@ -465,7 +464,7 @@ Table: Which part of the ID document each functional requirement delivers.
   - is capped by Docker at 0.5 CPU, 256 MB of memory and 64 processes;
   - runs each submission in a fresh temporary directory, as a separate Python process (`python -I`) with its own limits: 5 seconds of CPU, 10 seconds wall time, 128 MB of memory, 1 MB of output; the whole process group is killed when a limit is reached;
   - runs at most four submissions at a time; further requests get "busy, try again in a moment".
-- **NFR-S8** **Privacy (POPIA [8]).** The app stores only what it needs: email (to log in), a display name, and learning data. It shows no student's data to another student, and exports only internal IDs (FR-10.3). Test and demo data never uses real students' details.
+- **NFR-S8** **Privacy (POPIA [8]).** The app stores only what it needs: email (to log in), a display name, and learning data. It shows no student's data to another student, exports only internal IDs (FR-10.3), and states what is collected and why on the registration page. Test and demo data never uses real students' details.
 
 ## Maintainability
 - **NFR-M1** Layered backend (routers → services → data) with the BfsEngine, the answer checkers and the mastery rules isolated from web concerns and unit-testable in isolation.
@@ -553,7 +552,7 @@ Base path: `/api`. JSON over HTTPS. Auth via the session cookie set by `/api/aut
 |---|---|---|---|
 | POST | `/api/auth/register` | public | Create an account (email, password, display name). |
 | POST | `/api/auth/login` | public | Check credentials and set the session cookie. |
-| POST | `/api/auth/logout` | public | Clear the session cookie. Succeeds without a valid session, so logging out never fails. |
+| POST | `/api/auth/logout` | user | Clear the session cookie. |
 | GET | `/api/auth/me` | user | The logged-in user. |
 
 ## Modules and content
@@ -687,10 +686,10 @@ The returned payload (see §9.4) contains:
 
 - **App shell**
   - `AppRouter`: route definitions.
-  - `useCurrentUser`, `useLogin`, `useRegister`, `useLogout`: the session, held in the TanStack Query cache (no separate context); logging out clears the cache.
+  - `AuthProvider`: the logged-in user and session; guards routes.
   - `ApiClient`: typed REST client generated from the OpenAPI schema, used through TanStack Query.
 - **Auth**
-  - `LoginPage`, `RegisterPage` (with the password checklist, NFR-S1), `RequireAuth` (sends visitors to log in, then back), `GuestOnly` (sends logged-in students past the log-in page).
+  - `LoginPage`, `RegisterPage` (with the privacy notice, NFR-S8), `ProtectedRoute`.
 - **Modules**
   - `ModuleMap`: the seven modules with their state and duration (FR-2.6), points and badges.
   - `ModulePage`: plays a module's segments in order, saves position, shows the module's goals.
@@ -715,8 +714,7 @@ The returned payload (see §9.4) contains:
 - **Points and badges**
   - `PointsIndicator`, `BadgeShelf`. Private to the student; there is no leaderboard.
 - **Shared**
-  - The UI kit in `web/src/components/` (`AppShell`, `Button`, `TextField`, `Card`, `Alert`, `Tag`, `MasteryStatus`, `ProgressBar`, `Spinner`), built on the design tokens in `web/src/styles/tokens.css`. Every screen is built from these; the live reference is `/ui-kit` and the rules are in `docs/brand/README.md`.
-  - `Markdown` (renders prompts, hints and text segments), `ErrorBoundary`, `Toast`.
+  - `Markdown` (renders prompts, hints and text segments), `Spinner`, `ErrorBoundary`, `Toast`.
 
 ## Main screens
 
@@ -872,11 +870,8 @@ cos750-project/
 │  │  ├─ main.py                FastAPI app, router registration
 │  │  ├─ db.py                  engine, Base, DbSession dependency
 │  │  ├─ models/                SQLAlchemy models
-│  │  ├─ schemas/               Pydantic request/response models, camelCase in JSON
-│  │  ├─ routers/               auth; modules, activities, graphs, progress, staff (planned)
-│  │  ├─ auth.py                CurrentUser: the logged-in user, for any route that needs one
-│  │  ├─ security.py            Argon2 hashing, session JWTs, the session cookie
-│  │  ├─ rate_limit.py          per-client limits on login and registration
+│  │  ├─ schemas/               Pydantic request/response models (planned)
+│  │  ├─ routers/               auth, modules, activities, graphs, progress, staff (planned)
 │  │  ├─ services/              content, checking (one checker per activity kind), mastery, points, runner client (planned)
 │  │  ├─ bfs/engine.py          BfsEngine: pure, tested in isolation (planned)
 │  │  └─ seed/                  modules, activities, hints, tests, scenarios, demo accounts (planned)
@@ -889,12 +884,9 @@ cos750-project/
 │  ├─ package.json, vite.config.ts, .oxlintrc.json, .prettierrc.json, .nvmrc
 │  └─ src/
 │     ├─ main.tsx, App.tsx
-│     ├─ api/                   API client: JSON, errors as ApiError
-│     ├─ auth/                  log-in and register pages, session hooks, route guards
-│     ├─ pages/                 signed-in layout, home, not found
-│     ├─ components/            the shared UI kit: AppShell, Button, TextField, Card, Alert, Tag, ...
-│     ├─ styles/                tokens.css (design tokens, light and dark), base.css
-│     ├─ ui-kit/                the /ui-kit reference page
+│     ├─ api/                   typed API client (planned)
+│     ├─ auth/                  (planned)
+│     ├─ components/            shared components (planned)
 │     ├─ features/              modules, video, activities, bfs, mastery, points (planned)
 │     └─ test/setup.ts
 ├─ e2e/                         Playwright tests (planned)
@@ -903,7 +895,6 @@ cos750-project/
    ├─ se/se-document.md         this document
    ├─ id/id-document.md         the ID document
    ├─ build/                    builds both into PDFs (npm run pdf)
-   ├─ brand/README.md           brand and UI guide: logo, colour, type, components, writing
    ├─ spec/, references/, course-material/
    └─ deploy/coolify.md
 ```
@@ -991,124 +982,6 @@ Defects found in review, exploratory testing or the pilot are filed as issues la
 - **Minor:** cosmetic or rare. Fixed if time allows before the freeze on 12 Nov.
 
 Every fix comes with a test that fails without it, so the defect can't return.
-
-## Load testing
-
-`scripts/load-test.py` loads a deployed copy with simulated users, each sending requests back to back over one connection: a ramp (more users every 15 seconds), a burst (requests released at one instant), sustained load, and a burst of logins. Staging shares its server with other applications, so load tests run only when nobody is testing or presenting, never during the pilot or the demo.
-
-**First run, 2 November (staging, before the fix).** Most of the time a request takes is the trip to the server: Cloudflare answers from Johannesburg in 5 ms, and a request through to our API takes about 190 ms.
-
-| Users | Requests per second | Median | 95th percentile | Over 0.5 s | Failed |
-|---|---|---|---|---|---|
-| 1 | 5 | 188 ms | 211 ms | 1.3% | 0 |
-| 20 | 99 | 190 ms | 214 ms | 0.1% | 0 |
-| 80 | 307 | 222 ms | 327 ms | 0% | 0 |
-| 120 | 316 | 355 ms | 457 ms | 1.1% | 0 |
-| 160 | 299 | 510 ms | 636 ms | 53.5% | 0 |
-| 240 | 38 | 545 ms | 30 s | 59.6% | **all connections timed out** |
-
-Table: Ramp on staging before the fix.
-
-At 240 users, and again for a single burst of 300 requests, **the API stalled for four to six minutes**, though nginx and the server stayed up. Reproduced locally: a request takes its database connection in one thread job and runs its handler in another, so it can hold a connection while waiting for a thread. Under a burst, requests held all 15 connections while all 40 threads waited for one. Nothing moved until 30-second timeouts failed requests, and the queue then drained slowly.
-
-**The fix.** At most 30 API requests run at once, fewer than the 40 threads and the 50 database connections, so the deadlock can't form. Further requests wait in a queue that holds neither, and one that waits 5 seconds gets a quick 503 ("busy, try again"). The health check is exempt, so Docker's check still gets an answer when the API is busy.
-
-| Test (one local API process) | Before | After |
-|---|---|---|
-| 150 requests at once | Stalled: 30 s, then 500s | All answered in 0.2 s |
-| 1,000 requests at once | Stalled | All answered in 1.6 s |
-| 500 users for 15 s | — | 688 requests per second, none failed, median 546 ms |
-| 50 logins at once (four hashed at a time) | — | All answered, slowest 1.4 s |
-
-Table: The stall and the fix, measured locally.
-
-## Security review
-
-On 2 November the team attacked the deployed accounts feature on staging, as an outsider would, and simulated a stolen copy of the database.
-
-| Attack | Result | Action |
-|---|---|---|
-| Forge a session: `alg: none`, a swapped user ID, guessed signing keys | Refused | None needed |
-| Make yourself staff by sending `isStaff` when registering | Refused | None needed |
-| Cross-site request from another website (form post, `text/plain`, CORS) | Refused | None needed |
-| Script in the display name (stored XSS) | Shown as text | None needed |
-| Learn which emails have accounts from login responses or timing | Same message and time | None needed |
-| Replay a copied session cookie after its owner logs out | **Still worked** | Fixed: session version (NFR-S2) |
-| Get round the login rate limit | Limits were counted per Cloudflare server, shared by many students, not per student | Fixed: real client address, per-account limit (NFR-S6) |
-| Frame the app in another site; check security headers | **Headers missing** | Fixed: CSP, `X-Frame-Options`, HSTS (NFR-S6) |
-| Learn which emails have accounts from registering | A taken email is reported (409) | Accepted: needed for a clear message; would need email verification to avoid |
-
-Table: Security review of the accounts feature, round one.
-
-A second round on the same day, after the fixes were deployed, kept every attack as a test: `api/tests/test_attacks.py` runs in CI, and `scripts/security-probe.py` attacks a deployed copy (`STAGING_PASSWORD=… python3 scripts/security-probe.py --base https://staging.ctrlacademy.co.za`) and fails if any attack works. It adds:
-
-| Attack | Result | Action |
-|---|---|---|
-| Fourteen kinds of forged token, including `kid`, `jku` and embedded-key headers, HS512, an RS256 header, and editing a real token's user, version or expiry | Refused | None needed |
-| Replay a cookie after logout, also from a second device | Refused | None needed (round one fix) |
-| Fake `X-Forwarded-For`, `X-Real-IP`, `Forwarded`, `CF-Connecting-IP` or `True-Client-IP` to reset the login limit | Limit held; Cloudflare refuses a forged `CF-Connecting-IP` outright | None needed |
-| Get past the staging gate with path tricks (`//api`, `/API`, `%61pi`, `/__gate/../api`, `%00` …) | Refused | None needed |
-| SQL and NoSQL-style values, null bytes, wrong types, a 200 kB password, a 2 MB body | Refused (401, 413 or 422) | None needed |
-| JSON nested 5,000 deep | **Server error (500)** on Python 3.12: the standard error response echoed the input and its encoder ran out of stack | Fixed: validation errors no longer repeat the input, which also stops them echoing a rejected password |
-| Read `.env`, `.git/config`, the nginx config or `/etc/passwd` | Nothing revealed | None needed |
-| From another site, while the victim is logged in: log them out with a form, read their account with `fetch`, send a JSON login | Refused by SameSite cookies and the absence of CORS | None needed |
-| Script in the display name or the URL; an injected inline script | Not run; the CSP blocks inline scripts | None needed |
-| Frame the site from another site | The app refuses; **the staging gate page could be framed** (the gate cookie isn't sent in a cross-site frame) | Fixed: the gate page refuses framing too |
-
-Table: Security review, round two.
-
-A third round on the same day reran both rounds against the deployed fixes (all passed, including in a browser from another site) and added:
-
-| Check | Result | Action |
-|---|---|---|
-| Known vulnerabilities in dependencies (`pip-audit`, `npm audit`) | None in the API, the web app or the document builder | None needed |
-| Secrets in the repository's history (`gitleaks`, every commit) | None | None needed |
-| Session cookie attributes | `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, no `Domain`, 14 days; a failed login sets none; logout deletes it | None needed |
-| Five registrations of one email at the same moment | Exactly one account | None needed |
-| Login time for a wrong password and for an unknown email | The same (379 ms and 387 ms) | None needed |
-| Look-alike emails (full-width or Cyrillic letters) | Become separate accounts; none opens the real one | None needed |
-| `TRACE` and `CONNECT` | Refused | None needed |
-| Caching of API responses | **No `Cache-Control`**: a shared computer's browser could keep a student's account details | Fixed: every API response is `no-store` |
-| The API container's user | **Ran as root** | Fixed: runs as an unprivileged user |
-
-Table: Security review, round three.
-
-The team keeps repeating the review: each round reruns every earlier attack against staging, then adds new ones. Round four:
-
-| Check | Result | Action |
-|---|---|---|
-| Every earlier attack, the browser attacks, dependency audits and the secrets scan | All passed | None needed |
-| A NUL character in a display name | **Server error (500)**: Postgres refuses NUL in text, SQLite accepts it, so the tests (on SQLite) never saw it | Fixed: names refuse control and invisible characters (`NoHiddenCharacters`, `api/app/schemas/text.py`), and CI now also runs every API test on Postgres |
-| Newlines, right-to-left overrides, zero-width spaces and byte-order marks in names | Accepted, so one name could be made to look like another | Fixed: refused by the same rule, in the API and the register page |
-| A session cookie planted by another `*.ctrlacademy.co.za` site | Possible: the cookie was called `session` | Fixed: `__Host-session`, which browsers only accept from this exact host |
-| Which nginx version runs | **Shown** on error pages | Fixed: `server_tokens off` |
-| `Permissions-Policy`, `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy` | **Missing** | Fixed: added; camera, microphone, location and payments are off |
-| `/api/docs` and the OpenAPI schema in production | Would be public | Fixed: `API_DOCS=off` hides them in production; staging keeps them |
-| Logging in as another user while logged in; duplicate JSON keys; unknown API routes | Switches cleanly; no confusion; a plain 404 | None needed |
-| Invisible or bidirectional characters in the source code ("Trojan Source") | One appeared in a test while this round was written | Fixed: a test now fails if any source file contains one |
-
-Table: Security review, round four.
-
-Round five:
-
-| Check | Result | Action |
-|---|---|---|
-| Every earlier attack (127 checks), the browser attacks, audits and the secrets scan | All passed; the API tests passed on SQLite and Postgres | None needed |
-| Register with a weak password (`password1`, `12345678`, `password123`) | **Accepted** (only a length of 8 was required); round one cracked `password1` from its hash in 0.26 s | Fixed: password rules (NFR-S1), checked by the API and shown on the register page as a checklist that ticks off while the student types |
-| A password containing the student's own email name or display name | **Accepted** | Fixed: one of the rules |
-| Many logins at once | Each Argon2 hash takes 64 MiB, so 40 at once would need 2.5 GiB | Fixed: at most four hashes run at a time; the rest wait their turn (12 at once answered in under a second) |
-| A 12 kB cookie header, a 312-character email, `HEAD` requests | Refused, never a server error | None needed |
-| Who can change `staging` and `master` | **Anyone with write access can push straight to either**, without a PR or CI: GitHub's free plan has no branch protection for private repositories | Open: see below |
-
-Table: Security review, round five.
-
-**Branch protection.** All seven members have write access, and nothing stops a direct push to `master`. Until the organisation has a plan with branch protection (GitHub's education offer gives organisations of students the Team plan free), the team relies on the rule that every change goes through a PR into `staging`, and production deploys are started deliberately rather than on every push.
-
-**For later features.** Every free-text field a student sends (answers, code, feedback) adds `NoHiddenCharacters` or strips NUL before it is stored: Postgres refuses NUL in `text` and `jsonb` alike.
-
-**Accepted risks.** Without email verification, anyone can register with an email address that isn't theirs, and registering reveals that an address already has an account. The staging gate's team password is weak and shared, which is acceptable because staging holds no real student data. Each deploy makes staging unavailable for about a minute while containers are replaced, so nobody merges during the pilot or the demo.
-
-**A stolen database** holds emails, display names and Argon2id password hashes (64 MiB, 3 passes). It holds no sessions and not the signing key, so it gives no way in by itself. A strong password costs years to crack per account, but a common one such as `password1` fell in under a second to an eight-word list. Write access to the database, or the `SECRET_KEY` from the server's environment, would let someone become any user; both exist only on the server and in Coolify. A leak would also be a POPIA breach, because emails are personal information (NFR-S8).
 
 ## Pilot
 

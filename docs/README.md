@@ -9,7 +9,6 @@
 | `references/` | Works cited by the spec or by our SE and ID documents |
 | `course-material/` | The COS750 lectures and readings from ClickUP, one folder per lecture, with an index of what each gives the project |
 | `deploy/` | How the app is hosted (Coolify, DNS) |
-| `brand/` | The brand and UI guide: logo, colour, type, the UI kit and how the app writes. The live kit is `/ui-kit` on staging |
 
 ## Naming
 

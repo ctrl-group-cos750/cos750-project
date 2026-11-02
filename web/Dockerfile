@@ -7,7 +7,6 @@ RUN npm run build
 
 FROM nginx:1.29-alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY security-headers.conf /etc/nginx/security-headers.conf
 COPY --chmod=755 staging-gate.sh /docker-entrypoint.d/40-staging-gate.sh
 COPY gate /usr/share/nginx/gate
 COPY --from=build /app/dist /usr/share/nginx/html

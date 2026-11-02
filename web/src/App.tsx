@@ -1,42 +1,32 @@
-import { Route, Routes } from 'react-router'
-import { GuestOnly, RequireAuth } from './auth/guards.tsx'
-import { LoginPage } from './auth/LoginPage.tsx'
-import { RegisterPage } from './auth/RegisterPage.tsx'
-import { HomePage } from './pages/HomePage.tsx'
-import { NotFoundPage } from './pages/NotFoundPage.tsx'
-import { SignedInLayout } from './pages/SignedInLayout.tsx'
+import { useEffect, useState } from 'react'
+import logo from './logo.svg'
 
-/** Every route in the app. Signed-in pages go inside the RequireAuth route. */
+type Health = { status: string; database: string }
+
 function App() {
+  const [health, setHealth] = useState<Health | 'down' | null>(null)
+
+  useEffect(() => {
+    fetch('/api/health')
+      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+      .then(setHealth)
+      .catch(() => setHealth('down'))
+  }, [])
+
   return (
-    <Routes>
-      <Route
-        path="/login"
-        element={
-          <GuestOnly>
-            <LoginPage />
-          </GuestOnly>
-        }
-      />
-      <Route
-        path="/register"
-        element={
-          <GuestOnly>
-            <RegisterPage />
-          </GuestOnly>
-        }
-      />
-      <Route
-        element={
-          <RequireAuth>
-            <SignedInLayout />
-          </RequireAuth>
-        }
-      >
-        <Route index element={<HomePage />} />
-      </Route>
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+    <main>
+      <img src={logo} alt="Control Group" className="logo" />
+      <h1>Ctrl Academy</h1>
+      <p>Graphs and breadth-first search, before the lecture.</p>
+      <p className="status">
+        API:{' '}
+        {health === null
+          ? 'checking…'
+          : health === 'down'
+            ? 'unreachable'
+            : `${health.status}, database ${health.database}`}
+      </p>
+    </main>
   )
 }
 

@@ -9,7 +9,7 @@ from sqlalchemy.pool import StaticPool
 import app.main
 from app.db import Base, get_session
 from app.main import app as fastapi_app
-from app.rate_limit import login_limiter, register_limiter
+from app.rate_limit import login_account_limiter, login_address_limiter, register_limiter
 
 
 @pytest.fixture
@@ -21,7 +21,8 @@ def client() -> Iterator[TestClient]:
 
 @pytest.fixture(autouse=True)
 def fresh_rate_limits() -> None:
-    login_limiter.reset()
+    login_account_limiter.reset()
+    login_address_limiter.reset()
     register_limiter.reset()
 
 

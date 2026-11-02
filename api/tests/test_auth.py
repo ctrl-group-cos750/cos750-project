@@ -158,11 +158,12 @@ def test_me_needs_a_session(client: TestClient, db: Session) -> None:
     "token",
     [
         "not-a-token",
-        create_session_token(1)[:-4] + "AAAA",  # signature tampered with
-        create_session_token(1, now=datetime.now(UTC) - timedelta(days=15)),  # expired
-        create_session_token(999),  # user no longer exists
+        create_session_token(1, 0)[:-4] + "AAAA",  # signature tampered with
+        create_session_token(1, 0, now=datetime.now(UTC) - timedelta(days=15)),  # expired
+        create_session_token(999, 0),  # user no longer exists
+        create_session_token(1, 1),  # a session version the user never had
     ],
-    ids=["garbage", "tampered", "expired", "deleted user"],
+    ids=["garbage", "tampered", "expired", "deleted user", "wrong version"],
 )
 def test_invalid_sessions_are_refused(client: TestClient, db: Session, token: str) -> None:
     register(client)  # user 1 exists
@@ -171,21 +172,85 @@ def test_invalid_sessions_are_refused(client: TestClient, db: Session, token: st
     assert client.get("/api/auth/me").status_code == 401
 
 
+# Stolen cookies
+
+
+def test_a_copied_cookie_stops_working_after_logout(client: TestClient, db: Session) -> None:
+    register(client)
+    stolen = client.cookies[SESSION_COOKIE]
+    assert client.post("/api/auth/logout").status_code == 204
+    client.cookies.set(SESSION_COOKIE, stolen)
+    assert client.get("/api/auth/me").status_code == 401
+
+
+def test_logging_out_ends_the_session_on_every_device(client: TestClient, db: Session) -> None:
+    register(client)
+    client.cookies.clear()
+    credentials = {"email": "ada@example.com", "password": ADA["password"]}
+    laptop = client.post("/api/auth/login", json=credentials).cookies[SESSION_COOKIE]
+    phone = client.post("/api/auth/login", json=credentials).cookies[SESSION_COOKIE]
+    client.cookies.set(SESSION_COOKIE, phone)
+    client.post("/api/auth/logout")
+    client.cookies.set(SESSION_COOKIE, laptop)
+    assert client.get("/api/auth/me").status_code == 401
+
+
+def test_logging_in_again_after_logout_works(client: TestClient, db: Session) -> None:
+    register(client)
+    client.post("/api/auth/logout")
+    res = client.post(
+        "/api/auth/login", json={"email": "ada@example.com", "password": ADA["password"]}
+    )
+    assert res.status_code == 200
+    assert client.get("/api/auth/me").status_code == 200
+
+
 # Rate limits (NFR-S6)
 
+WRONG = {"email": "ada@example.com", "password": "wrong password"}
 
-def test_login_is_rate_limited(client: TestClient, db: Session) -> None:
-    wrong = {"email": "ada@example.com", "password": "wrong password"}
+
+def test_guessing_one_account_is_rate_limited(client: TestClient, db: Session) -> None:
     for _ in range(10):
-        assert client.post("/api/auth/login", json=wrong).status_code == 401
-    res = client.post("/api/auth/login", json=wrong)
+        assert client.post("/api/auth/login", json=WRONG).status_code == 401
+    res = client.post("/api/auth/login", json=WRONG)
     assert res.status_code == 429
     assert res.json()["detail"] == "Too many attempts. Wait a minute and try again."
     assert 0 < int(res.headers["Retry-After"]) <= 60
 
 
+def test_one_locked_account_does_not_block_others_on_the_same_address(
+    client: TestClient, db: Session
+) -> None:
+    # A campus shares one public address: one student's typos must not lock out the class.
+    for _ in range(11):
+        client.post("/api/auth/login", json=WRONG)
+    other = {"email": "grace@example.com", "password": "wrong password"}
+    assert client.post("/api/auth/login", json=other).status_code == 401
+
+
+def test_spraying_many_accounts_from_one_address_is_rate_limited(
+    client: TestClient, db: Session
+) -> None:
+    for n in range(60):
+        body = {"email": f"student{n}@example.com", "password": "wrong password"}
+        assert client.post("/api/auth/login", json=body).status_code == 401
+    assert client.post("/api/auth/login", json=WRONG).status_code == 429
+
+
 def test_register_is_rate_limited(client: TestClient, db: Session) -> None:
-    for n in range(5):
+    for n in range(20):
         register(client, email=f"student{n}@example.com")
-    res = client.post("/api/auth/register", json={**ADA, "email": "student5@example.com"})
+    res = client.post("/api/auth/register", json={**ADA, "email": "student20@example.com"})
+    assert res.status_code == 429
+
+
+def test_a_faked_cloudflare_header_does_not_dodge_the_limit(
+    client: TestClient, db: Session
+) -> None:
+    # The test client is not a Cloudflare address, so CF-Connecting-IP must be ignored.
+    for n in range(10):
+        headers = {"CF-Connecting-IP": f"203.0.113.{n}"}
+        client.post("/api/auth/login", json=WRONG, headers=headers)
+    res = client.post("/api/auth/login", json=WRONG, headers={"CF-Connecting-IP": "203.0.113.99"})
     assert res.status_code == 429

@@ -2,9 +2,10 @@ import logging
 
 import jwt
 import pytest
+from fastapi import HTTPException, Request
 
 from app import security
-from app.rate_limit import RateLimiter
+from app.rate_limit import RateLimiter, client_ip, is_cloudflare
 from app.security import (
     SECRET_KEY,
     create_session_token,
@@ -25,11 +26,25 @@ def test_an_unknown_user_never_verifies() -> None:
 
 
 def test_a_session_token_round_trips() -> None:
-    assert read_session_token(create_session_token(42)) == 42
+    assert read_session_token(create_session_token(42, version=3)) == (42, 3)
 
 
-def test_a_token_without_a_numeric_subject_is_refused() -> None:
-    token = jwt.encode({"sub": "ada", "exp": 9999999999}, SECRET_KEY, algorithm="HS256")
+@pytest.mark.parametrize(
+    "claims",
+    [
+        {"sub": "ada", "ver": 0, "exp": 9999999999},  # not a user ID
+        {"sub": "1", "exp": 9999999999},  # no session version
+        {"sub": "1", "ver": "0", "exp": 9999999999},  # version not a number
+        {"sub": "1", "ver": 0},  # never expires
+    ],
+    ids=["named subject", "no version", "text version", "no expiry"],
+)
+def test_malformed_tokens_are_refused(claims: dict[str, object]) -> None:
+    assert read_session_token(jwt.encode(claims, SECRET_KEY, algorithm="HS256")) is None
+
+
+def test_a_token_with_alg_none_is_refused() -> None:
+    token = jwt.encode({"sub": "1", "ver": 0, "exp": 9999999999}, None, algorithm="none")
     assert read_session_token(token) is None
 
 
@@ -80,3 +95,40 @@ def test_clients_are_counted_separately() -> None:
     assert limiter.hit("a") is None
     assert limiter.hit("b") is None
     assert limiter.hit("a") is not None
+
+
+def request_from(peer: str, headers: dict[str, str] | None = None) -> Request:
+    raw = [(k.lower().encode(), v.encode()) for k, v in (headers or {}).items()]
+    return Request({"type": "http", "client": (peer, 1234), "headers": raw})
+
+
+def test_behind_cloudflare_the_students_own_address_is_used() -> None:
+    req = request_from("104.22.45.26", {"CF-Connecting-IP": "102.132.239.1"})
+    assert client_ip(req) == "102.132.239.1"
+
+
+def test_cloudflare_ipv6_edges_are_recognised() -> None:
+    req = request_from("2606:4700:3034::ac43:ca46", {"CF-Connecting-IP": "102.132.239.1"})
+    assert client_ip(req) == "102.132.239.1"
+
+
+def test_someone_bypassing_cloudflare_cannot_choose_their_address() -> None:
+    req = request_from("198.51.100.7", {"CF-Connecting-IP": "203.0.113.1"})
+    assert client_ip(req) == "198.51.100.7"
+
+
+def test_a_request_without_the_header_uses_the_connecting_address() -> None:
+    assert client_ip(request_from("104.22.45.26")) == "104.22.45.26"
+
+
+def test_a_peer_that_is_not_an_address_is_never_cloudflare() -> None:
+    assert not is_cloudflare("testclient")
+
+
+def test_the_limiter_refuses_with_retry_after() -> None:
+    limiter = RateLimiter(limit=1, window=60, clock=FakeClock())
+    limiter.check("a")
+    with pytest.raises(HTTPException) as refused:
+        limiter.check("a")
+    assert refused.value.status_code == 429
+    assert refused.value.headers == {"Retry-After": "60"}

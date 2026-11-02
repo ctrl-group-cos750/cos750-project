@@ -19,3 +19,6 @@ class User(Base):
     # Team members: may export evaluation data (FR-10).
     is_staff: Mapped[bool] = mapped_column(default=False, server_default=false())
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Every session token carries this number. Logging out adds one, so every token issued before
+    # stops working at once, even a copy someone took of the cookie.
+    session_version: Mapped[int] = mapped_column(default=0, server_default="0")

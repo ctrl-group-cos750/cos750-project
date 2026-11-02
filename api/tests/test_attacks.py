@@ -210,3 +210,56 @@ def test_an_expired_token_with_a_valid_signature_is_refused(client: TestClient, 
     old = create_session_token(1, 0, now=datetime.now(UTC) - timedelta(days=14, seconds=1))
     assert me(client, old) == 401
     assert time.time() > unb64(old.split(".")[1])["exp"]
+
+
+# Responses and tokens
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "body"),
+    [
+        ("GET", "/api/health", None),
+        ("GET", "/api/auth/me", None),
+        ("POST", "/api/auth/login", {"email": "ada@example.com", "password": "correct horse"}),
+        ("POST", "/api/auth/login", {"email": "ada@example.com", "password": "wrong"}),
+        ("POST", "/api/auth/register", {"email": "bad"}),
+    ],
+    ids=["health", "me", "login", "failed login", "validation error"],
+)
+def test_no_api_response_is_cached(
+    client: TestClient, ada: str, method: str, path: str, body: dict[str, str] | None
+) -> None:
+    client.cookies.set(SESSION_COOKIE, ada)
+    res = client.request(method, path, json=body)
+    assert res.headers["cache-control"] == "no-store"
+
+
+def test_a_token_lasts_exactly_fourteen_days(ada: str) -> None:
+    claims = unb64(ada.split(".")[1])
+    assert claims["exp"] - claims["iat"] == 14 * 24 * 60 * 60
+
+
+@pytest.mark.parametrize(
+    "lookalike",
+    ["\uff41da@example.com", "\u0430da@example.com", "ada@exa\u0335mple.com"],
+    ids=["fullwidth a", "cyrillic a", "combining mark"],
+)
+def test_a_lookalike_email_never_reaches_the_real_account(
+    client: TestClient, ada: str, lookalike: str
+) -> None:
+    res = client.post(
+        "/api/auth/register", json={**ADA, "email": lookalike, "password": "other pw 12"}
+    )
+    if res.status_code == 201:
+        assert res.json()["email"] != "ada@example.com"
+    else:
+        assert res.status_code in (409, 422)
+    client.cookies.clear()
+    wrong = client.post(
+        "/api/auth/login", json={"email": "ada@example.com", "password": "other pw 12"}
+    )
+    assert wrong.status_code == 401
+    right = client.post(
+        "/api/auth/login", json={"email": "ada@example.com", "password": ADA["password"]}
+    )
+    assert right.status_code == 200

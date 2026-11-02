@@ -1026,6 +1026,24 @@ A second round on the same day, after the fixes were deployed, kept every attack
 
 Table: Security review, round two.
 
+A final round on the same day reran both rounds against the deployed fixes (all passed, including in a browser from another site) and added:
+
+| Check | Result | Action |
+|---|---|---|
+| Known vulnerabilities in dependencies (`pip-audit`, `npm audit`) | None in the API, the web app or the document builder | None needed |
+| Secrets in the repository's history (`gitleaks`, every commit) | None | None needed |
+| Session cookie attributes | `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, no `Domain`, 14 days; a failed login sets none; logout deletes it | None needed |
+| Five registrations of one email at the same moment | Exactly one account | None needed |
+| Login time for a wrong password and for an unknown email | The same (379 ms and 387 ms) | None needed |
+| Look-alike emails (full-width or Cyrillic letters) | Become separate accounts; none opens the real one | None needed |
+| `TRACE` and `CONNECT` | Refused | None needed |
+| Caching of API responses | **No `Cache-Control`**: a shared computer's browser could keep a student's account details | Fixed: every API response is `no-store` |
+| The API container's user | **Ran as root** | Fixed: runs as an unprivileged user |
+
+Table: Security review, final round.
+
+**Accepted risks.** Without email verification, anyone can register with an email address that isn't theirs, and registering reveals that an address already has an account. The staging gate's team password is weak and shared, which is acceptable because staging holds no real student data. Each deploy makes staging unavailable for about a minute while containers are replaced, so nobody merges during the pilot or the demo.
+
 **A stolen database** holds emails, display names and Argon2id password hashes (64 MiB, 3 passes). It holds no sessions and not the signing key, so it gives no way in by itself. A strong password costs years to crack per account, but a common one such as `password1` fell in under a second to an eight-word list. Write access to the database, or the `SECRET_KEY` from the server's environment, would let someone become any user; both exist only on the server and in Coolify. A leak would also be a POPIA breach, because emails are personal information (NFR-S8).
 
 ## Pilot

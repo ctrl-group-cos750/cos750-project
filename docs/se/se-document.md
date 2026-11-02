@@ -552,7 +552,7 @@ Base path: `/api`. JSON over HTTPS. Auth via the session cookie set by `/api/aut
 |---|---|---|---|
 | POST | `/api/auth/register` | public | Create an account (email, password, display name). |
 | POST | `/api/auth/login` | public | Check credentials and set the session cookie. |
-| POST | `/api/auth/logout` | user | Clear the session cookie. |
+| POST | `/api/auth/logout` | public | Clear the session cookie. Succeeds without a valid session, so logging out never fails. |
 | GET | `/api/auth/me` | user | The logged-in user. |
 
 ## Modules and content
@@ -686,10 +686,10 @@ The returned payload (see §9.4) contains:
 
 - **App shell**
   - `AppRouter`: route definitions.
-  - `AuthProvider`: the logged-in user and session; guards routes.
+  - `useCurrentUser`, `useLogin`, `useRegister`, `useLogout`: the session, held in the TanStack Query cache (no separate context); logging out clears the cache.
   - `ApiClient`: typed REST client generated from the OpenAPI schema, used through TanStack Query.
 - **Auth**
-  - `LoginPage`, `RegisterPage` (with the privacy notice, NFR-S8), `ProtectedRoute`.
+  - `LoginPage`, `RegisterPage` (with the privacy notice, NFR-S8), `RequireAuth` (sends visitors to log in, then back), `GuestOnly` (sends logged-in students past the log-in page).
 - **Modules**
   - `ModuleMap`: the seven modules with their state and duration (FR-2.6), points and badges.
   - `ModulePage`: plays a module's segments in order, saves position, shows the module's goals.
@@ -871,8 +871,11 @@ cos750-project/
 │  │  ├─ main.py                FastAPI app, router registration
 │  │  ├─ db.py                  engine, Base, DbSession dependency
 │  │  ├─ models/                SQLAlchemy models
-│  │  ├─ schemas/               Pydantic request/response models (planned)
-│  │  ├─ routers/               auth, modules, activities, graphs, progress, staff (planned)
+│  │  ├─ schemas/               Pydantic request/response models, camelCase in JSON
+│  │  ├─ routers/               auth; modules, activities, graphs, progress, staff (planned)
+│  │  ├─ auth.py                CurrentUser: the logged-in user, for any route that needs one
+│  │  ├─ security.py            Argon2 hashing, session JWTs, the session cookie
+│  │  ├─ rate_limit.py          per-client limits on login and registration
 │  │  ├─ services/              content, checking (one checker per activity kind), mastery, points, runner client (planned)
 │  │  ├─ bfs/engine.py          BfsEngine: pure, tested in isolation (planned)
 │  │  └─ seed/                  modules, activities, hints, tests, scenarios, demo accounts (planned)
@@ -885,8 +888,9 @@ cos750-project/
 │  ├─ package.json, vite.config.ts, .oxlintrc.json, .prettierrc.json, .nvmrc
 │  └─ src/
 │     ├─ main.tsx, App.tsx
-│     ├─ api/                   typed API client (planned)
-│     ├─ auth/                  (planned)
+│     ├─ api/                   API client: JSON, errors as ApiError
+│     ├─ auth/                  log-in and register pages, session hooks, route guards
+│     ├─ pages/                 signed-in layout, home, not found
 │     ├─ components/            the shared UI kit: AppShell, Button, TextField, Card, Alert, Tag, ...
 │     ├─ styles/                tokens.css (design tokens, light and dark), base.css
 │     ├─ ui-kit/                the /ui-kit reference page

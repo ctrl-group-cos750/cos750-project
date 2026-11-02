@@ -3,16 +3,46 @@ from collections.abc import Iterator
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine
+from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 import app.main
+from app.db import Base, get_session
 from app.main import app as fastapi_app
+from app.rate_limit import login_limiter, register_limiter
 
 
 @pytest.fixture
 def client() -> Iterator[TestClient]:
-    with TestClient(fastapi_app) as test_client:
+    # https, because the session cookie is Secure and is never sent over plain http.
+    with TestClient(fastapi_app, base_url="https://testserver") as test_client:
         yield test_client
+
+
+@pytest.fixture(autouse=True)
+def fresh_rate_limits() -> None:
+    login_limiter.reset()
+    register_limiter.reset()
+
+
+@pytest.fixture
+def db() -> Iterator[Session]:
+    """Routes get an in-memory SQLite database with every table, empty for each test."""
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    Base.metadata.create_all(engine)
+    sessions = sessionmaker(bind=engine, expire_on_commit=False)
+
+    def override() -> Iterator[Session]:
+        with sessions() as session:
+            yield session
+
+    fastapi_app.dependency_overrides[get_session] = override
+    with sessions() as session:
+        yield session
+    fastapi_app.dependency_overrides.clear()
+    engine.dispose()
 
 
 @pytest.fixture

@@ -138,6 +138,25 @@ describe('register page', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
+  it('shows a password the API refuses next to the password field', async () => {
+    const msg = "This password is too common. Choose one that's harder to guess."
+    fakeApi({
+      overrides: {
+        'POST /api/auth/register': () =>
+          Response.json(
+            { detail: [{ loc: ['body', 'password'], msg, type: 'value_error' }] },
+            { status: 422 },
+          ),
+      },
+    })
+    renderApp('/register')
+    await fillRegistration('Ada', 'ada@example.com', 'password123')
+    expect(await screen.findByText(msg)).toBeInTheDocument()
+    expect(screen.getByLabelText('Password')).toHaveAccessibleDescription(msg)
+    expect(screen.getByLabelText('Password')).toHaveFocus()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
   it('shows other failures above the form', async () => {
     fakeApi({
       overrides: { 'POST /api/auth/register': () => new Response('oops', { status: 500 }) },

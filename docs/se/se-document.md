@@ -1058,6 +1058,21 @@ The team keeps repeating the review: each round reruns every earlier attack agai
 
 Table: Security review, round four.
 
+Round five:
+
+| Check | Result | Action |
+|---|---|---|
+| Every earlier attack (127 checks), the browser attacks, audits and the secrets scan | All passed; the API tests passed on SQLite and Postgres | None needed |
+| Register with a common password (`password1`, `12345678`) or a common one with digits added (`password123`, `Dragon2024!`) | **Accepted**; round one cracked `password1` from its hash in 0.26 s | Fixed: refused against the 10,000 most common passwords (SecLists), with digits and symbols stripped (NIST SP 800-63B §5.1.1.2) |
+| A password made of the student's own email name, display name or the site's name; a few characters repeated | **Accepted** | Fixed: refused; the register page shows why under the password field |
+| Many logins at once | Each Argon2 hash takes 64 MiB, so 40 at once would need 2.5 GiB | Fixed: at most four hashes run at a time; the rest wait their turn (12 at once answered in under a second) |
+| A 12 kB cookie header, a 312-character email, `HEAD` requests | Refused, never a server error | None needed |
+| Who can change `staging` and `master` | **Anyone with write access can push straight to either**, without a PR or CI: GitHub's free plan has no branch protection for private repositories | Open: see below |
+
+Table: Security review, round five.
+
+**Branch protection.** All seven members have write access, and nothing stops a direct push to `master`. Until the organisation has a plan with branch protection (GitHub's education offer gives organisations of students the Team plan free), the team relies on the rule that every change goes through a PR into `staging`, and production deploys are started deliberately rather than on every push.
+
 **For later features.** Every free-text field a student sends (answers, code, feedback) adds `NoHiddenCharacters` or strips NUL before it is stored: Postgres refuses NUL in `text` and `jsonb` alike.
 
 **Accepted risks.** Without email verification, anyone can register with an email address that isn't theirs, and registering reveals that an address already has an account. The staging gate's team password is weak and shared, which is acceptable because staging holds no real student data. Each deploy makes staging unavailable for about a minute while containers are replaced, so nobody merges during the pilot or the demo.

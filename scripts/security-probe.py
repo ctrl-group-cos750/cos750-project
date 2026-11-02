@@ -156,8 +156,8 @@ def forged_tokens(sample: str, victim_id: int) -> dict[str, str]:
 
 def run(site: Site) -> None:
     tag = f"probe-{int(time.time())}"
-    victim_email, victim_pw = f"{tag}-victim@example.com", "victim password 1"
-    attacker_email, attacker_pw = f"{tag}-attacker@example.com", "attacker password 1"
+    victim_email, victim_pw = f"{tag}-victim@example.com", "violet otter 41"
+    attacker_email, attacker_pw = f"{tag}-attacker@example.com", "amber falcon 77"
     victim_cookie, victim_id = site.register(victim_email, victim_pw, "Victim")
     attacker_cookie, _ = site.register(attacker_email, attacker_pw, "Attacker")
     sample = attacker_cookie.split("=", 1)[1]
@@ -499,6 +499,60 @@ def round_four(site: Site, tag: str, production: bool) -> None:
         check(docs == (200, 200), "API docs are available on staging", str(docs))
 
 
+def round_five(site: Site, tag: str) -> None:
+    print("\nWeak passwords at registration (each must be refused on the password field)")
+    weak = {
+        "a common password": "password1",
+        "a common password plus digits": "password123",
+        "a common password plus a year and symbol": "Dragon2024!",
+        "the email's own name": f"{tag}-weak-xyz",
+        "the site's name": "Ctrl-Academy-99",
+        "three characters repeated": "x9x9x9x9x",
+    }
+    for name, password in weak.items():
+        status, _, body = site.request(
+            "POST",
+            "/api/auth/register",
+            {"email": f"{tag}-weak@example.com", "password": password, "displayName": "W"},
+        )
+        on_field = status == 422 and '"loc":["body","password"]' in body.replace(" ", "")
+        check(on_field, f"refuses {name}", str(status))
+
+    print("\nLoad and odd requests (never a server error)")
+
+    def one_login(n: int) -> tuple[int, float]:
+        start = time.perf_counter()
+        status = site.request(
+            "POST",
+            "/api/auth/login",
+            {"email": f"{tag}-p{n}@example.com", "password": "wrong pw 1"},
+        )[0]
+        return status, time.perf_counter() - start
+
+    with concurrent.futures.ThreadPoolExecutor(12) as pool:
+        results_ = list(pool.map(one_login, range(12)))
+    statuses = sorted({s for s, _ in results_})
+    slowest = max(t for _, t in results_)
+    check(
+        statuses == [401],
+        "12 logins at once are all answered",
+        f"{statuses}, slowest {slowest:.1f} s",
+    )
+    check(slowest < 10, "and none waits more than 10 s for its turn to hash", f"{slowest:.1f} s")
+    status = site.request("GET", "/api/auth/me", headers={"Cookie": "x=" + "a" * 12_000})[0]
+    check(status < 500, "a 12 kB cookie header", str(status))
+    long_email = "a" * 300 + "@example.com"
+    status = site.request(
+        "POST",
+        "/api/auth/register",
+        {"email": long_email, "password": "violet otter 41", "displayName": "L"},
+    )[0]
+    check(status == 422, "a 312-character email", str(status))
+    for path in ["/api/auth/me", "/api/health", "/login"]:
+        status = site.request("HEAD", path)[0]
+        check(status < 500, f"HEAD {path}", str(status))
+
+
 def gate_bypass(site: Site) -> None:
     print("\nStaging gate (no team-password cookie)")
     for path in [
@@ -552,6 +606,7 @@ def main() -> None:
     run(site)
     responses_and_races(site, f"probe-{int(time.time())}")
     round_four(site, f"probe4-{int(time.time())}", args.production)
+    round_five(site, f"probe5-{int(time.time())}")
     failed = [r for r in results if not r[0]]
     print(f"\n{len(results) - len(failed)} passed, {len(failed)} failed")
     for _, name, detail in failed:

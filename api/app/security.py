@@ -3,6 +3,7 @@
 import logging
 import os
 import secrets
+import threading
 from datetime import UTC, datetime, timedelta
 
 import jwt
@@ -36,15 +37,23 @@ _password_hash = PasswordHash.recommended()  # Argon2id
 _DUMMY_HASH = _password_hash.hash(secrets.token_urlsafe(16))
 
 
+# Each Argon2 hash takes 64 MiB of memory. Without a limit, a burst of logins (40 at once fill
+# the thread pool) would need 2.5 GiB; with it, at most 4 hash at a time and the rest wait.
+MAX_PARALLEL_HASHES = 4
+_hashing = threading.BoundedSemaphore(MAX_PARALLEL_HASHES)
+
+
 def hash_password(password: str) -> str:
-    return _password_hash.hash(password)
+    with _hashing:
+        return _password_hash.hash(password)
 
 
 def verify_password(password: str, password_hash: str | None) -> bool:
-    if password_hash is None:
-        _password_hash.verify(password, _DUMMY_HASH)
-        return False
-    return _password_hash.verify(password, password_hash)
+    with _hashing:
+        if password_hash is None:
+            _password_hash.verify(password, _DUMMY_HASH)
+            return False
+        return _password_hash.verify(password, password_hash)
 
 
 def create_session_token(user_id: int, version: int, now: datetime | None = None) -> str:

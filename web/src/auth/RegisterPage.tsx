@@ -22,6 +22,15 @@ const ids: Record<Field, string> = {
   password: 'register-password',
 }
 
+/** The API's complaints that belong to one of this form's fields, or null if there are none. */
+function fieldProblems(error: Error): FieldErrors<Field> | null {
+  if (!(error instanceof ApiError)) return null
+  if (error.status === 409) return { email: error.message }
+  const found: FieldErrors<Field> = {}
+  for (const field of order) if (error.fields[field]) found[field] = error.fields[field]
+  return Object.keys(found).length ? found : null
+}
+
 export function RegisterPage() {
   const navigate = useNavigate()
   const register = useRegister()
@@ -56,10 +65,12 @@ export function RegisterPage() {
       {
         onSuccess: () => void navigate('/', { replace: true }),
         onError: (error) => {
-          // A taken email belongs next to the email field, not in a general alert.
-          if (error instanceof ApiError && error.status === 409) {
-            setErrors({ email: error.message })
-            focusFirstError(order, { email: error.message }, ids)
+          // A taken email, or a password the API finds too easy to guess, belongs next to its
+          // field, not in a general alert.
+          const problems = fieldProblems(error)
+          if (problems) {
+            setErrors(problems)
+            focusFirstError(order, problems, ids)
           }
         },
       },
@@ -67,9 +78,7 @@ export function RegisterPage() {
   }
 
   const generalError =
-    register.error && !(register.error instanceof ApiError && register.error.status === 409)
-      ? register.error.message
-      : undefined
+    register.error && !fieldProblems(register.error) ? register.error.message : undefined
 
   return (
     <AuthLayout
@@ -106,7 +115,7 @@ export function RegisterPage() {
           label="Password"
           type="password"
           autoComplete="new-password"
-          hint={`At least ${MIN_PASSWORD} characters.`}
+          hint={`At least ${MIN_PASSWORD} characters. Not a common password, and not your name.`}
           value={values.password}
           onChange={set('password')}
           error={errors.password}

@@ -6,6 +6,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY alembic.ini ./
 COPY migrations ./migrations
 COPY app ./app
+# Run as an unprivileged user: code that breaks out of the API process can't change the image.
+RUN useradd --system --uid 10001 --no-create-home app
+USER app
 EXPOSE 8000
 HEALTHCHECK CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')" || exit 1
 # Only our own proxies (Traefik, nginx; private Docker networks) may say who the client is, so

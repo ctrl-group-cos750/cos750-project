@@ -11,6 +11,8 @@ SE document §14, "Security review".
 
 import argparse
 import base64
+import concurrent.futures
+import statistics
 import hashlib
 import hmac
 import json
@@ -331,6 +333,94 @@ def run(site: Site) -> None:
         )
 
 
+def responses_and_races(site: Site, tag: str) -> None:
+    print("\nCookies, caching and responses")
+    email, password = f"{tag}-cookie@example.com", "cookie test pw 1"
+    status, headers, _ = site.request(
+        "POST", "/api/auth/register", {"email": email, "password": password, "displayName": "C"}
+    )
+    cookie = headers.get("set-cookie", "")
+    attrs = {a.strip().split("=")[0].lower(): a.strip() for a in cookie.split(";")[1:]}
+    check("httponly" in attrs, "session cookie is HttpOnly (scripts can't read it)")
+    check("secure" in attrs, "session cookie is Secure (HTTPS only)")
+    check(attrs.get("samesite", "").lower() == "samesite=lax", "session cookie is SameSite=Lax")
+    check(attrs.get("path") == "Path=/", "session cookie path is /")
+    check("domain" not in attrs, "session cookie has no Domain (never sent to other subdomains)")
+    check(
+        attrs.get("max-age") == "Max-Age=1209600", "session lasts 14 days", attrs.get("max-age", "")
+    )
+    token = cookie.split(";")[0].split("=", 1)[1]
+    claims = unb64(token.split(".")[1])
+    check(claims["exp"] - claims["iat"] == 14 * 86400, "token expires 14 days after it was issued")
+    session = cookie.split(";")[0]
+    for path in ["/api/auth/me", "/api/health"]:
+        _, headers, _ = site.request("GET", path, cookie=session)
+        check(
+            headers.get("cache-control") == "no-store",
+            f"{path} is never cached",
+            headers.get("cache-control", "(none)"),
+        )
+    status, headers, _ = site.request(
+        "POST", "/api/auth/login", {"email": email, "password": "wrong!"}
+    )
+    check(
+        status == 401 and "set-cookie" not in headers, "a failed login sets no cookie", str(status)
+    )
+    status, headers, _ = site.request("POST", "/api/auth/logout", cookie=session)
+    check(
+        "max-age=0" in headers.get("set-cookie", "").lower(),
+        "logout deletes the cookie in the browser",
+    )
+    for method in ["TRACE", "CONNECT"]:
+        status = site.request(method, "/api/health")[0]
+        check(status in (400, 403, 405, 501), f"{method} is refused", str(status))
+
+    print("\nRaces")
+    race = f"{tag}-race@example.com"
+
+    def attempt(_: int) -> int:
+        return site.request(
+            "POST",
+            "/api/auth/register",
+            {"email": race, "password": "race pw 1234", "displayName": "R"},
+        )[0]
+
+    with concurrent.futures.ThreadPoolExecutor(5) as pool:
+        statuses = sorted(pool.map(attempt, range(5)))
+    check(
+        statuses.count(201) == 1 and statuses.count(409) == 4,
+        "5 simultaneous registrations of one email make one account",
+        str(statuses),
+    )
+
+    print("\nInformation from timing")
+    times: dict[str, list[float]] = {"known": [], "unknown": []}
+    for _ in range(5):
+        for label, address in [("known", email), ("unknown", f"{tag}-nobody@example.com")]:
+            start = time.perf_counter()
+            site.request("POST", "/api/auth/login", {"email": address, "password": "wrong pw 1"})
+            times[label].append(time.perf_counter() - start)
+    known, unknown = statistics.median(times["known"]), statistics.median(times["unknown"])
+    check(
+        abs(known - unknown) < 0.15,
+        "a wrong password and an unknown email take the same time",
+        f"{known * 1000:.0f} ms vs {unknown * 1000:.0f} ms",
+    )
+
+    print("\nLook-alike emails")
+    lookalike = "\uff41" + email[1:] if email[0] == "a" else email.replace("e", "\u0435", 1)
+    status = site.request(
+        "POST",
+        "/api/auth/register",
+        {"email": lookalike, "password": "lookalike pw 1", "displayName": "L"},
+    )[0]
+    check(status in (201, 409, 422), "registering a look-alike of an existing email", str(status))
+    status = site.request(
+        "POST", "/api/auth/login", {"email": email, "password": "lookalike pw 1"}
+    )[0]
+    check(status == 401, "the look-alike's password does not open the real account", str(status))
+
+
 def gate_bypass(site: Site) -> None:
     print("\nStaging gate (no team-password cookie)")
     for path in [
@@ -379,6 +469,7 @@ def main() -> None:
     if gate:
         gate_bypass(site)
     run(site)
+    responses_and_races(site, f"probe-{int(time.time())}")
     failed = [r for r in results if not r[0]]
     print(f"\n{len(results) - len(failed)} passed, {len(failed)} failed")
     for _, name, detail in failed:

@@ -1,8 +1,9 @@
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
+from starlette.middleware.base import RequestResponseEndpoint
 
 from app.db import engine
 from app.routers import auth
@@ -10,6 +11,14 @@ from app.routers import auth
 # Every route lives under /api: nginx in the web container forwards that prefix here unchanged.
 app = FastAPI(title="Ctrl Academy API", docs_url="/api/docs", openapi_url="/api/openapi.json")
 app.include_router(auth.router)
+
+
+@app.middleware("http")
+async def no_store(request: Request, call_next: RequestResponseEndpoint) -> Response:
+    """API answers are about one student and change all the time: no browser or proxy keeps them."""
+    response = await call_next(request)
+    response.headers.setdefault("Cache-Control", "no-store")
+    return response
 
 
 @app.exception_handler(RequestValidationError)

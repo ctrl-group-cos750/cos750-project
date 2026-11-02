@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.models import User
 from app.security import SESSION_COOKIE, create_session_token
 
-ADA = {"email": "Ada@Example.com", "password": "correct horse", "displayName": "Ada"}
+ADA = {"email": "Ada@Example.com", "password": "Correct horse 1", "displayName": "Ada"}
 
 
 def register(client: TestClient, **changes: str) -> dict[str, object]:
@@ -118,7 +118,7 @@ def test_login_with_the_right_password(client: TestClient, db: Session) -> None:
     "credentials",
     [
         {"email": "ada@example.com", "password": "wrong password"},
-        {"email": "nobody@example.com", "password": "correct horse"},
+        {"email": "nobody@example.com", "password": "Correct horse 1"},
     ],
     ids=["wrong password", "unknown email"],
 )

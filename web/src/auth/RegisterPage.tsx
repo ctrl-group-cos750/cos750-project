@@ -3,19 +3,20 @@ import { Link, useNavigate } from 'react-router'
 import { ApiError } from '../api/client.ts'
 import { Alert, Button, TextField } from '../components'
 import { AuthLayout } from './AuthLayout.tsx'
+import { PasswordChecklist } from './PasswordChecklist.tsx'
 import styles from './AuthLayout.module.css'
 import { useRegister } from './hooks.ts'
 import {
   displayNameError,
   emailError,
   focusFirstError,
-  MIN_PASSWORD,
   newPasswordError,
   type FieldErrors,
 } from './validation.ts'
 
 type Field = 'displayName' | 'email' | 'password'
 const order: Field[] = ['displayName', 'email', 'password']
+const rulesId = 'register-password-rules'
 const ids: Record<Field, string> = {
   displayName: 'register-name',
   email: 'register-email',
@@ -49,7 +50,7 @@ export function RegisterPage() {
     const found: FieldErrors<Field> = {
       displayName: displayNameError(values.displayName),
       email: emailError(values.email),
-      password: newPasswordError(values.password),
+      password: newPasswordError(values.password, values.email.trim(), values.displayName.trim()),
     }
     setErrors(found)
     if (order.some((field) => found[field])) {
@@ -115,10 +116,16 @@ export function RegisterPage() {
           label="Password"
           type="password"
           autoComplete="new-password"
-          hint={`At least ${MIN_PASSWORD} characters. Not a common password, and not your name.`}
           value={values.password}
           onChange={set('password')}
           error={errors.password}
+          aria-describedby={errors.password ? `${ids.password}-message ${rulesId}` : rulesId}
+        />
+        <PasswordChecklist
+          id={rulesId}
+          password={values.password}
+          email={values.email.trim()}
+          name={values.displayName.trim()}
         />
         <section aria-label="What we keep" className={styles.notice}>
           <p>

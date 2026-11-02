@@ -156,8 +156,8 @@ def forged_tokens(sample: str, victim_id: int) -> dict[str, str]:
 
 def run(site: Site) -> None:
     tag = f"probe-{int(time.time())}"
-    victim_email, victim_pw = f"{tag}-victim@example.com", "violet otter 41"
-    attacker_email, attacker_pw = f"{tag}-attacker@example.com", "amber falcon 77"
+    victim_email, victim_pw = f"{tag}-victim@example.com", "Violet otter 41"
+    attacker_email, attacker_pw = f"{tag}-attacker@example.com", "Amber falcon 77"
     victim_cookie, victim_id = site.register(victim_email, victim_pw, "Victim")
     attacker_cookie, _ = site.register(attacker_email, attacker_pw, "Attacker")
     sample = attacker_cookie.split("=", 1)[1]
@@ -250,7 +250,7 @@ def run(site: Site) -> None:
         status = site.request(
             "POST",
             "/api/auth/register",
-            {"email": email, "password": "another pw 1", "displayName": "Copy"},
+            {"email": email, "password": "Another pw 1", "displayName": "Copy"},
         )[0]
         check(status in (409, 422), f"register {name}", str(status))
     status = site.request(
@@ -258,7 +258,7 @@ def run(site: Site) -> None:
         "/api/auth/register",
         {
             "email": f"{tag}-x@example.com",
-            "password": "another pw 1",
+            "password": "Another pw 1",
             "displayName": "X",
             "id": victim_id,
         },
@@ -336,7 +336,7 @@ def run(site: Site) -> None:
 
 def responses_and_races(site: Site, tag: str) -> None:
     print("\nCookies, caching and responses")
-    email, password = f"{tag}-cookie@example.com", "cookie test pw 1"
+    email, password = f"{tag}-cookie@example.com", "Cookie test pw 1"
     status, headers, _ = site.request(
         "POST", "/api/auth/register", {"email": email, "password": password, "displayName": "C"}
     )
@@ -383,7 +383,7 @@ def responses_and_races(site: Site, tag: str) -> None:
         return site.request(
             "POST",
             "/api/auth/register",
-            {"email": race, "password": "race pw 1234", "displayName": "R"},
+            {"email": race, "password": "Race pw 1234", "displayName": "R"},
         )[0]
 
     with concurrent.futures.ThreadPoolExecutor(5) as pool:
@@ -413,11 +413,11 @@ def responses_and_races(site: Site, tag: str) -> None:
     status = site.request(
         "POST",
         "/api/auth/register",
-        {"email": lookalike, "password": "lookalike pw 1", "displayName": "L"},
+        {"email": lookalike, "password": "Lookalike pw 1", "displayName": "L"},
     )[0]
     check(status in (201, 409, 422), "registering a look-alike of an existing email", str(status))
     status = site.request(
-        "POST", "/api/auth/login", {"email": email, "password": "lookalike pw 1"}
+        "POST", "/api/auth/login", {"email": email, "password": "Lookalike pw 1"}
     )[0]
     check(status == 401, "the look-alike's password does not open the real account", str(status))
 
@@ -436,12 +436,12 @@ def round_four(site: Site, tag: str, production: bool) -> None:
         status = site.request(
             "POST",
             "/api/auth/register",
-            {"email": f"{tag}-h@example.com", "password": "hidden pw 12", "displayName": value},
+            {"email": f"{tag}-h@example.com", "password": "Hidden pw 12", "displayName": value},
         )[0]
         check(status == 422, f"display name with a {name} is refused", str(status))
 
     print("\nCookie prefix and switching accounts")
-    a_email, b_email, pw = f"{tag}-a@example.com", f"{tag}-b@example.com", "switch pw 123"
+    a_email, b_email, pw = f"{tag}-a@example.com", f"{tag}-b@example.com", "Switch pw 123"
     a_cookie, _ = site.register(a_email, pw, "A")
     site.register(b_email, pw, "B")
     check(
@@ -500,14 +500,14 @@ def round_four(site: Site, tag: str, production: bool) -> None:
 
 
 def round_five(site: Site, tag: str) -> None:
-    print("\nWeak passwords at registration (each must be refused on the password field)")
+    print("\nPassword rules at registration (each must be refused on the password field)")
     weak = {
-        "a common password": "password1",
-        "a common password plus digits": "password123",
-        "a common password plus a year and symbol": "Dragon2024!",
-        "the email's own name": f"{tag}-weak-xyz",
-        "the site's name": "Ctrl-Academy-99",
-        "three characters repeated": "x9x9x9x9x",
+        "a password under 8 characters": "Ab1!",
+        "a password without an uppercase letter": "violet otter 41",
+        "a password without a lowercase letter": "VIOLET OTTER 41",
+        "a password without a number": "Violet otter!",
+        "a password without a symbol": "Violetotter41",
+        "the email's own name": f"{tag}-weak-X1!",
     }
     for name, password in weak.items():
         status, _, body = site.request(
@@ -545,7 +545,7 @@ def round_five(site: Site, tag: str) -> None:
     status = site.request(
         "POST",
         "/api/auth/register",
-        {"email": long_email, "password": "violet otter 41", "displayName": "L"},
+        {"email": long_email, "password": "Violet otter 41", "displayName": "L"},
     )[0]
     check(status == 422, "a 312-character email", str(status))
     for path in ["/api/auth/me", "/api/health", "/login"]:

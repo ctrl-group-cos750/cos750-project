@@ -451,7 +451,7 @@ Table: Which part of the ID document each functional requirement delivers.
 - **NFR-U4** Before the feature freeze, team members pilot every module they did not build, and the defects they find are fixed or recorded (§14.5).
 
 ## Security & Authentication
-- **NFR-S1** Passwords stored only as salted hashes (Argon2, via pwdlib).
+- **NFR-S1** Passwords stored only as salted hashes (Argon2, via pwdlib). A new password has at least 8 characters, a lowercase and an uppercase letter, a number and a symbol (a space counts), and doesn't contain the student's name or the first part of their email. The register page lists these rules and ticks each one off as the student types; the API checks the same rules (`api/app/passwords.py`, `web/src/auth/passwordRules.ts`).
 - **NFR-S2** Authenticated endpoints require a valid **JWT in the session cookie**; every query is scoped to the logged-in user, so one student can never read another's data. Each token carries the user's session version; logging out increases it, so every earlier token, including a copied cookie, stops working on every device. Password reset and refresh tokens are future work (§15).
 - **NFR-S3** All traffic over HTTPS in deployed environments.
 - **NFR-S4** Server-side validation of all inputs (Pydantic schemas); answers, results and points are never accepted from the client.
@@ -1063,8 +1063,8 @@ Round five:
 | Check | Result | Action |
 |---|---|---|
 | Every earlier attack (127 checks), the browser attacks, audits and the secrets scan | All passed; the API tests passed on SQLite and Postgres | None needed |
-| Register with a common password (`password1`, `12345678`) or a common one with digits added (`password123`, `Dragon2024!`) | **Accepted**; round one cracked `password1` from its hash in 0.26 s | Fixed: refused against the 10,000 most common passwords (SecLists), with digits and symbols stripped (NIST SP 800-63B §5.1.1.2) |
-| A password made of the student's own email name, display name or the site's name; a few characters repeated | **Accepted** | Fixed: refused; the register page shows why under the password field |
+| Register with a weak password (`password1`, `12345678`, `password123`) | **Accepted** (only a length of 8 was required); round one cracked `password1` from its hash in 0.26 s | Fixed: password rules (NFR-S1), checked by the API and shown on the register page as a checklist that ticks off while the student types |
+| A password containing the student's own email name or display name | **Accepted** | Fixed: one of the rules |
 | Many logins at once | Each Argon2 hash takes 64 MiB, so 40 at once would need 2.5 GiB | Fixed: at most four hashes run at a time; the rest wait their turn (12 at once answered in under a second) |
 | A 12 kB cookie header, a 312-character email, `HEAD` requests | Refused, never a server error | None needed |
 | Who can change `staging` and `master` | **Anyone with write access can push straight to either**, without a PR or CI: GitHub's free plan has no branch protection for private repositories | Open: see below |

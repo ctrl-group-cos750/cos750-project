@@ -6,81 +6,73 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app import security
-from app.passwords import (
-    PERSONAL,
-    REPETITIVE,
-    TOO_COMMON,
-    common_passwords,
-    password_problem,
-)
+from app.passwords import RULES, password_problem
 
 GRACE = {"email": "grace@example.com", "displayName": "Grace Hopper"}
-
-
-def test_the_list_is_loaded() -> None:
-    assert len(common_passwords()) == 10_001
-    assert "password1" in common_passwords()
+MESSAGES = {rule.key: rule.message for rule in RULES}
 
 
 @pytest.mark.parametrize(
-    "password",
-    ["password1", "12345678", "PASSWORD1", "qwerty123", "iloveyou", "football", "welcome1"],
+    ("password", "broken"),
+    [
+        ("Ab1!", "length"),
+        ("ABCDEF1!", "lower"),
+        ("abcdef1!", "upper"),
+        ("Abcdefg!", "number"),
+        ("Abcdefg1", "symbol"),
+    ],
 )
-def test_common_passwords_are_refused(password: str) -> None:
-    assert password_problem(password) == TOO_COMMON
-
-
-@pytest.mark.parametrize("password", ["password123", "Dragon2024!", "football!!!", "monkey_99"])
-def test_a_common_password_with_digits_or_symbols_added_is_refused(password: str) -> None:
-    assert password_problem(password) == TOO_COMMON
+def test_each_rule(password: str, broken: str) -> None:
+    assert password_problem(password) == MESSAGES[broken]
 
 
 @pytest.mark.parametrize(
     ("password", "email", "name"),
     [
-        ("grace-2024-xyz", "grace@example.com", ""),
-        ("I am hopper!!", "x@example.com", "Grace Hopper"),
-        ("ctrl academy 1!", "x@example.com", ""),
-        ("Ctrl-Academy-99", "x@example.com", ""),
-        ("my cos212 pass", "x@example.com", ""),
+        ("Grace-2024-x", "grace@example.com", ""),
+        ("I am Hopper 1!", "x@example.com", "Grace Hopper"),
+        ("My ada pw 9!", "ada@example.com", "Ada"),
     ],
-    ids=["email name", "display name", "site name", "site name, dashes", "module code"],
+    ids=["email name", "display name", "three-letter name"],
 )
-def test_personal_and_site_words_are_refused(password: str, email: str, name: str) -> None:
-    assert password_problem(password, email, name) == PERSONAL
-
-
-@pytest.mark.parametrize("password", ["qqqqqqqqq", "abababab", "x9x9x9x9x", "!!!!!!!!!"])
-def test_a_few_characters_repeated_are_refused(password: str) -> None:
-    assert password_problem(password) == REPETITIVE
+def test_your_own_name_or_email_is_refused(password: str, email: str, name: str) -> None:
+    assert password_problem(password, email, name) == MESSAGES["personal"]
 
 
 @pytest.mark.parametrize(
     "password",
-    ["correct horse", "violet otter 42", "Tr0ub4dor&3x", "grap hs are fun", "ada-is-here-9"],
+    ["Correct horse 1", "Violet otter 41", "Tr0ub4dor&3", "Gr@phs-are-fun-9", "Äpfel und Birnen 7"],
 )
-def test_ordinary_good_passwords_are_accepted(password: str) -> None:
-    # "ada" is only three letters, too short to count as a personal word.
-    assert password_problem(password, "ada@example.com", "Ada") is None
+def test_passwords_that_follow_the_rules_are_accepted(password: str) -> None:
+    assert password_problem(password, "student@example.com", "Sam Student") is None
 
 
-def test_register_explains_a_weak_password_on_the_field(client: TestClient, db: Session) -> None:
-    res = client.post("/api/auth/register", json={**GRACE, "password": "password123"})
+def test_a_space_counts_as_a_symbol() -> None:
+    assert password_problem("Violet otter 41") is None
+
+
+def test_the_first_broken_rule_is_reported() -> None:
+    assert password_problem("abc") == MESSAGES["length"]
+
+
+def test_register_explains_the_rule_on_the_password_field(client: TestClient, db: Session) -> None:
+    res = client.post("/api/auth/register", json={**GRACE, "password": "violet otter 41"})
     assert res.status_code == 422
     assert res.json()["detail"] == [
-        {"loc": ["body", "password"], "msg": TOO_COMMON, "type": "value_error"}
+        {"loc": ["body", "password"], "msg": MESSAGES["upper"], "type": "value_error"}
     ]
 
 
 def test_register_refuses_the_students_own_name_as_a_password(
     client: TestClient, db: Session
 ) -> None:
-    res = client.post("/api/auth/register", json={**GRACE, "password": "hopper rocks 1"})
-    assert res.json()["detail"][0]["msg"] == PERSONAL
+    res = client.post("/api/auth/register", json={**GRACE, "password": "Hopper rocks 1"})
+    assert res.json()["detail"][0]["msg"] == MESSAGES["personal"]
 
 
-def test_an_existing_weak_password_still_logs_in(client: TestClient, db: Session) -> None:
-    # The rules are for new passwords; nobody is locked out of an account made before them.
+def test_an_existing_password_from_before_the_rules_still_logs_in(
+    client: TestClient, db: Session
+) -> None:
     from app.models import User
 
     db.add(

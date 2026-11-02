@@ -23,7 +23,8 @@ class ApiModel(BaseModel):
     )
 
 
-Password = Annotated[str, Field(min_length=8, max_length=128)]
+# The rules (length included) are in app/passwords.py, so each failure gets its own message.
+Password = Annotated[str, Field(max_length=128)]
 DisplayName = Annotated[
     str,
     StringConstraints(strip_whitespace=True, min_length=1, max_length=50),

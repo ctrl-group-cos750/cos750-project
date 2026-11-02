@@ -23,6 +23,9 @@ export function newPasswordError(password: string): string | undefined {
 export function displayNameError(name: string): string | undefined {
   if (!name.trim()) return 'Enter the name you want to see in the app.'
   if (name.trim().length > 50) return 'Use at most 50 characters.'
+  // Control and invisible characters (NUL, newline, zero-width, right-to-left override): the API
+  // refuses them too, because they can crash the database or make one name look like another.
+  if (/[\p{Cc}\p{Cf}]/u.test(name)) return 'Use letters, numbers, spaces and punctuation only.'
   return undefined
 }
 

@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
@@ -9,7 +11,25 @@ from app.db import engine
 from app.routers import auth
 
 # Every route lives under /api: nginx in the web container forwards that prefix here unchanged.
-app = FastAPI(title="Ctrl Academy API", docs_url="/api/docs", openapi_url="/api/openapi.json")
+
+
+def docs_urls(setting: str | None) -> dict[str, str | None]:
+    """The interactive docs and the schema are on unless API_DOCS is "off" (production)."""
+    on = (setting or "on").strip().lower() != "off"
+    return {
+        "docs_url": "/api/docs" if on else None,
+        "openapi_url": "/api/openapi.json" if on else None,
+        "redoc_url": None,
+    }
+
+
+_docs = docs_urls(os.environ.get("API_DOCS"))
+app = FastAPI(
+    title="Ctrl Academy API",
+    docs_url=_docs["docs_url"],
+    openapi_url=_docs["openapi_url"],
+    redoc_url=_docs["redoc_url"],
+)
 app.include_router(auth.router)
 
 

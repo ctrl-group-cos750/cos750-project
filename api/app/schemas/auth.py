@@ -3,6 +3,8 @@ from typing import Annotated
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints
 from pydantic.alias_generators import to_camel
 
+from app.schemas.text import NoHiddenCharacters
+
 
 class ApiModel(BaseModel):
     """camelCase in JSON, snake_case in Python. Unknown fields are refused."""
@@ -13,7 +15,11 @@ class ApiModel(BaseModel):
 
 
 Password = Annotated[str, Field(min_length=8, max_length=128)]
-DisplayName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
+DisplayName = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=50),
+    NoHiddenCharacters,
+]
 
 
 class RegisterIn(ApiModel):

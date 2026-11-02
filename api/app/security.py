@@ -11,7 +11,9 @@ from pwdlib import PasswordHash
 
 logger = logging.getLogger(__name__)
 
-SESSION_COOKIE = "session"
+# The __Host- prefix makes browsers refuse this cookie unless it is Secure, for "/" and set by this
+# exact host, so no other *.ctrlacademy.co.za site can plant or overwrite a session here.
+SESSION_COOKIE = "__Host-session"
 SESSION_LIFETIME = timedelta(days=14)  # FR-1.2
 _ALGORITHM = "HS256"
 

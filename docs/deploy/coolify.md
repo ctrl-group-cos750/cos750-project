@@ -37,15 +37,16 @@ app has to be installed where the repo lives.)
    compose file `/docker-compose.yml`.
 3. Under the `web` service, set Domains to `https://ctrlacademy.co.za,https://www.ctrlacademy.co.za`.
    Leave `api` and `db` without a domain: they are only reachable on the internal network.
-4. Environment Variables: set `POSTGRES_PASSWORD` to a long random value (`openssl rand -hex 24`).
-   `POSTGRES_USER` and `POSTGRES_DB` default to `ctrl`.
+4. Environment Variables: set `POSTGRES_PASSWORD` to a long random value (`openssl rand -hex 24`)
+   and `SECRET_KEY`, which signs the session cookies, to another (`openssl rand -hex 32`).
+   `POSTGRES_USER` and `POSTGRES_DB` default to `ctrl`. Changing `SECRET_KEY` logs everyone out.
 5. Optional: in the proxy settings, redirect `www` to the apex.
 6. Deploy. Enable "Auto Deploy" so each push to `master` redeploys.
 
 ## 4. Create the staging resource
 
 The same steps, in a `staging` environment: branch `staging`, domain
-`https://staging.ctrlacademy.co.za`, and a **different** `POSTGRES_PASSWORD`.
+`https://staging.ctrlacademy.co.za`, and a **different** `POSTGRES_PASSWORD` and `SECRET_KEY`.
 
 ## 5. Check it
 

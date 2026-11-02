@@ -30,6 +30,12 @@ error_page 401 /__gate/index.html;
 location ^~ /__gate/ {
     alias /usr/share/nginx/gate/;
     add_header Cache-Control "no-store" always;
+    # Not the app's CSP (this page needs Google Fonts and an inline script), but never in a frame:
+    # framed on another site, it could be used to collect the team password.
+    add_header Content-Security-Policy "frame-ancestors 'none'" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 }
 CONF
   echo "staging-gate: on"

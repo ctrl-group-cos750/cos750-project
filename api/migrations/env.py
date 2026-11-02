@@ -1,7 +1,7 @@
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, pool
 
 from app.db import DATABASE_URL
 from app.models import Base
@@ -22,7 +22,8 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    with create_engine(url).connect() as connection:
+    # NullPool: a migration run opens one connection and closes it, leaving nothing behind.
+    with create_engine(url, poolclass=pool.NullPool).connect() as connection:
         context.configure(connection=connection, target_metadata=target_metadata)
         with context.begin_transaction():
             context.run_migrations()

@@ -1,8 +1,17 @@
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    StringConstraints,
+    ValidationInfo,
+    field_validator,
+)
 from pydantic.alias_generators import to_camel
 
+from app.passwords import password_problem
 from app.schemas.text import NoHiddenCharacters
 
 
@@ -14,7 +23,8 @@ class ApiModel(BaseModel):
     )
 
 
-Password = Annotated[str, Field(min_length=8, max_length=128)]
+# The rules (length included) are in app/passwords.py, so each failure gets its own message.
+Password = Annotated[str, Field(max_length=128)]
 DisplayName = Annotated[
     str,
     StringConstraints(strip_whitespace=True, min_length=1, max_length=50),
@@ -23,9 +33,20 @@ DisplayName = Annotated[
 
 
 class RegisterIn(ApiModel):
+    # Validated in this order, so the password check can see the email and the name.
     email: EmailStr
-    password: Password
     display_name: DisplayName
+    password: Password
+
+    @field_validator("password")
+    @classmethod
+    def hard_to_guess(cls, password: str, info: ValidationInfo) -> str:
+        problem = password_problem(
+            password, str(info.data.get("email", "")), info.data.get("display_name", "")
+        )
+        if problem:
+            raise ValueError(problem)
+        return password
 
 
 class LoginIn(ApiModel):

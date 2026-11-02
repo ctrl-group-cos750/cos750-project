@@ -1,11 +1,14 @@
 /** A failed API call. `status` is 0 when the request never reached the server. */
 export class ApiError extends Error {
   readonly status: number
+  /** For 422: what's wrong with each field, by field name ("password", "email"). */
+  readonly fields: Record<string, string>
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, fields: Record<string, string> = {}) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.fields = fields
   }
 }
 
@@ -29,25 +32,44 @@ export async function api<T>(path: string, options: { method?: string; body?: un
   } catch {
     throw new ApiError(0, OFFLINE_MESSAGE)
   }
-  if (!res.ok) throw new ApiError(res.status, await errorMessage(res))
+  if (!res.ok) {
+    const answer = await readJson(res)
+    throw new ApiError(res.status, errorMessage(answer), fieldErrors(answer))
+  }
   if (res.status === 204) return undefined as T
   return (await res.json()) as T
 }
 
-/** The API's own message when it sent one (FastAPI's `detail` string), else a general one. */
-async function errorMessage(res: Response): Promise<string> {
+async function readJson(res: Response): Promise<unknown> {
   try {
-    const body: unknown = await res.json()
-    if (
-      typeof body === 'object' &&
-      body !== null &&
-      'detail' in body &&
-      typeof body.detail === 'string'
-    ) {
-      return body.detail
-    }
+    return await res.json()
   } catch {
-    // Not JSON: fall through.
+    return null // not JSON
   }
-  return FALLBACK_MESSAGE
+}
+
+function detail(body: unknown): unknown {
+  return typeof body === 'object' && body !== null && 'detail' in body ? body.detail : undefined
+}
+
+/** The API's own message when it sent one (FastAPI's `detail` string), else a general one. */
+function errorMessage(body: unknown): string {
+  const d = detail(body)
+  return typeof d === 'string' ? d : FALLBACK_MESSAGE
+}
+
+/** A validation error's message per field: {"loc": ["body", "password"], "msg": "…"} → password. */
+function fieldErrors(body: unknown): Record<string, string> {
+  const d = detail(body)
+  const fields: Record<string, string> = {}
+  if (!Array.isArray(d)) return fields
+  for (const item of d as unknown[]) {
+    if (typeof item !== 'object' || item === null) continue
+    const { loc, msg } = item as { loc?: unknown; msg?: unknown }
+    const field = Array.isArray(loc) ? loc.at(-1) : undefined
+    if (typeof field === 'string' && typeof msg === 'string' && !(field in fields)) {
+      fields[field] = msg
+    }
+  }
+  return fields
 }

@@ -51,6 +51,32 @@ describe('api', () => {
     })
   })
 
+  it('collects validation errors by field', async () => {
+    respondWith(
+      Response.json(
+        {
+          detail: [
+            { loc: ['body', 'password'], msg: 'Too common.' },
+            { loc: ['body', 'password'], msg: 'A second complaint.' },
+            { loc: ['body', 'email'], msg: 'Not an email.' },
+            { loc: 'not a list', msg: 'ignored' },
+            'not an object',
+          ],
+        },
+        { status: 422 },
+      ),
+    )
+    await expect(api('/api/x')).rejects.toMatchObject({
+      status: 422,
+      fields: { password: 'Too common.', email: 'Not an email.' },
+    })
+  })
+
+  it('has no field errors for other failures', async () => {
+    respondWith(Response.json({ detail: 'Nope.' }, { status: 403 }))
+    await expect(api('/api/x')).rejects.toMatchObject({ fields: {} })
+  })
+
   it('reports status 0 when the request never arrives', async () => {
     vi.stubGlobal(
       'fetch',

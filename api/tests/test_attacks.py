@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.security import SESSION_COOKIE
 
-ADA = {"email": "ada@example.com", "password": "correct horse", "displayName": "Ada"}
+ADA = {"email": "ada@example.com", "password": "Correct horse 1", "displayName": "Ada"}
 
 
 def b64(data: dict[str, Any] | bytes) -> str:
@@ -220,7 +220,7 @@ def test_an_expired_token_with_a_valid_signature_is_refused(client: TestClient, 
     [
         ("GET", "/api/health", None),
         ("GET", "/api/auth/me", None),
-        ("POST", "/api/auth/login", {"email": "ada@example.com", "password": "correct horse"}),
+        ("POST", "/api/auth/login", {"email": "ada@example.com", "password": "Correct horse 1"}),
         ("POST", "/api/auth/login", {"email": "ada@example.com", "password": "wrong"}),
         ("POST", "/api/auth/register", {"email": "bad"}),
     ],
@@ -248,7 +248,7 @@ def test_a_lookalike_email_never_reaches_the_real_account(
     client: TestClient, ada: str, lookalike: str
 ) -> None:
     res = client.post(
-        "/api/auth/register", json={**ADA, "email": lookalike, "password": "other pw 12"}
+        "/api/auth/register", json={**ADA, "email": lookalike, "password": "Other pw 12!"}
     )
     if res.status_code == 201:
         assert res.json()["email"] != "ada@example.com"
@@ -256,7 +256,7 @@ def test_a_lookalike_email_never_reaches_the_real_account(
         assert res.status_code in (409, 422)
     client.cookies.clear()
     wrong = client.post(
-        "/api/auth/login", json={"email": "ada@example.com", "password": "other pw 12"}
+        "/api/auth/login", json={"email": "ada@example.com", "password": "Other pw 12!"}
     )
     assert wrong.status_code == 401
     right = client.post(

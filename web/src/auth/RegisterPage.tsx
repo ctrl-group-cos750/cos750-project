@@ -3,23 +3,33 @@ import { Link, useNavigate } from 'react-router'
 import { ApiError } from '../api/client.ts'
 import { Alert, Button, TextField } from '../components'
 import { AuthLayout } from './AuthLayout.tsx'
+import { PasswordChecklist } from './PasswordChecklist.tsx'
 import styles from './AuthLayout.module.css'
 import { useRegister } from './hooks.ts'
 import {
   displayNameError,
   emailError,
   focusFirstError,
-  MIN_PASSWORD,
   newPasswordError,
   type FieldErrors,
 } from './validation.ts'
 
 type Field = 'displayName' | 'email' | 'password'
 const order: Field[] = ['displayName', 'email', 'password']
+const rulesId = 'register-password-rules'
 const ids: Record<Field, string> = {
   displayName: 'register-name',
   email: 'register-email',
   password: 'register-password',
+}
+
+/** The API's complaints that belong to one of this form's fields, or null if there are none. */
+function fieldProblems(error: Error): FieldErrors<Field> | null {
+  if (!(error instanceof ApiError)) return null
+  if (error.status === 409) return { email: error.message }
+  const found: FieldErrors<Field> = {}
+  for (const field of order) if (error.fields[field]) found[field] = error.fields[field]
+  return Object.keys(found).length ? found : null
 }
 
 export function RegisterPage() {
@@ -40,7 +50,7 @@ export function RegisterPage() {
     const found: FieldErrors<Field> = {
       displayName: displayNameError(values.displayName),
       email: emailError(values.email),
-      password: newPasswordError(values.password),
+      password: newPasswordError(values.password, values.email.trim(), values.displayName.trim()),
     }
     setErrors(found)
     if (order.some((field) => found[field])) {
@@ -56,10 +66,12 @@ export function RegisterPage() {
       {
         onSuccess: () => void navigate('/', { replace: true }),
         onError: (error) => {
-          // A taken email belongs next to the email field, not in a general alert.
-          if (error instanceof ApiError && error.status === 409) {
-            setErrors({ email: error.message })
-            focusFirstError(order, { email: error.message }, ids)
+          // A taken email, or a password the API finds too easy to guess, belongs next to its
+          // field, not in a general alert.
+          const problems = fieldProblems(error)
+          if (problems) {
+            setErrors(problems)
+            focusFirstError(order, problems, ids)
           }
         },
       },
@@ -67,9 +79,7 @@ export function RegisterPage() {
   }
 
   const generalError =
-    register.error && !(register.error instanceof ApiError && register.error.status === 409)
-      ? register.error.message
-      : undefined
+    register.error && !fieldProblems(register.error) ? register.error.message : undefined
 
   return (
     <AuthLayout
@@ -106,22 +116,17 @@ export function RegisterPage() {
           label="Password"
           type="password"
           autoComplete="new-password"
-          hint={`At least ${MIN_PASSWORD} characters.`}
           value={values.password}
           onChange={set('password')}
           error={errors.password}
+          aria-describedby={errors.password ? `${ids.password}-message ${rulesId}` : rulesId}
         />
-        <section aria-label="What we keep" className={styles.notice}>
-          <p>
-            <strong>What we keep and why.</strong> Your email, to log you in. Your name, to greet
-            you. What you do in the course, to save your progress and to see whether the app helps
-            students learn.
-          </p>
-          <p>
-            Nobody else sees your progress. When the team studies the results, you are a number, not
-            a name or an email.
-          </p>
-        </section>
+        <PasswordChecklist
+          id={rulesId}
+          password={values.password}
+          email={values.email.trim()}
+          name={values.displayName.trim()}
+        />
         <Button type="submit" loading={register.isPending}>
           Create account
         </Button>

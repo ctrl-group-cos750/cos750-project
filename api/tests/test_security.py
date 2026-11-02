@@ -16,8 +16,8 @@ from app.security import (
 
 
 def test_a_password_verifies_against_its_own_hash_only() -> None:
-    hashed = hash_password("correct horse")
-    assert verify_password("correct horse", hashed)
+    hashed = hash_password("Correct horse 1")
+    assert verify_password("Correct horse 1", hashed)
     assert not verify_password("wrong horse", hashed)
 
 

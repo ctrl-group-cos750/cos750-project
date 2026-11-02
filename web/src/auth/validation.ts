@@ -1,6 +1,8 @@
 // Checks in the browser, so students see a clear message before anything is sent.
 // The API checks everything again (SE document NFR-S4).
 
+import { passwordProblem } from './passwordRules.ts'
+
 export type FieldErrors<K extends string> = Partial<Record<K, string>>
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -11,13 +13,10 @@ export function emailError(email: string): string | undefined {
   return undefined
 }
 
-export const MIN_PASSWORD = 8
-
-export function newPasswordError(password: string): string | undefined {
+export function newPasswordError(password: string, email = '', name = ''): string | undefined {
   if (!password) return 'Choose a password.'
-  if (password.length < MIN_PASSWORD) return `Use at least ${MIN_PASSWORD} characters.`
   if (password.length > 128) return 'Use at most 128 characters.'
-  return undefined
+  return passwordProblem(password, email, name)
 }
 
 export function displayNameError(name: string): string | undefined {

@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { fakeApi, renderApp } from '../test/app.tsx'
@@ -28,12 +28,12 @@ describe('log-in page', () => {
     const api = fakeApi()
     renderApp('/')
     await userEvent.type(await screen.findByLabelText('Email'), ' ada@example.com ')
-    await userEvent.type(screen.getByLabelText('Password'), 'correct horse')
+    await userEvent.type(screen.getByLabelText('Password'), 'Correct horse 1')
     await userEvent.click(screen.getByRole('button', { name: 'Log in' }))
     expect(await screen.findByRole('heading', { name: 'Welcome, Ada' })).toBeInTheDocument()
     expect(api.callsTo('POST /api/auth/login')[0].body).toEqual({
       email: 'ada@example.com',
-      password: 'correct horse',
+      password: 'Correct horse 1',
     })
   })
 
@@ -58,7 +58,7 @@ describe('log-in page', () => {
     })
     renderApp('/login')
     await userEvent.type(await screen.findByLabelText('Email'), 'ada@example.com')
-    await userEvent.type(screen.getByLabelText('Password'), 'correct horse')
+    await userEvent.type(screen.getByLabelText('Password'), 'Correct horse 1')
     await userEvent.click(screen.getByRole('button', { name: 'Log in' }))
     expect(await screen.findByRole('alert')).toHaveTextContent(
       "Can't reach Ctrl Academy. Check your connection and try again.",
@@ -81,14 +81,6 @@ async function fillRegistration(name: string, email: string, password: string) {
 }
 
 describe('register page', () => {
-  it('says what is kept and why (POPIA)', async () => {
-    fakeApi()
-    renderApp('/register')
-    const notice = await screen.findByRole('region', { name: 'What we keep' })
-    expect(notice).toHaveTextContent('Your email, to log you in.')
-    expect(notice).toHaveTextContent('Nobody else sees your progress.')
-  })
-
   it('checks every field before sending anything', async () => {
     const api = fakeApi()
     renderApp('/register')
@@ -98,7 +90,9 @@ describe('register page', () => {
       'Enter the name you want to see in the app.',
     )
     expect(screen.getByLabelText('Email')).toHaveAccessibleDescription('Enter your email address.')
-    expect(screen.getByLabelText('Password')).toHaveAccessibleDescription('Choose a password.')
+    expect(screen.getByLabelText('Password')).toHaveAccessibleDescription(
+      expect.stringContaining('Choose a password.'),
+    )
     expect(screen.getByLabelText('Your name')).toHaveFocus()
     expect(api.callsTo('POST /api/auth/register')).toHaveLength(0)
   })
@@ -108,20 +102,61 @@ describe('register page', () => {
     renderApp('/register')
     await fillRegistration('Ada', 'ada@example.com', 'short')
     expect(screen.getByLabelText('Password')).toHaveAccessibleDescription(
-      'Use at least 8 characters.',
+      expect.stringContaining('Use at least 8 characters.'),
     )
     expect(screen.getByLabelText('Password')).toHaveFocus()
+  })
+
+  it('lists the password rules and ticks them off while the student types', async () => {
+    fakeApi()
+    renderApp('/register')
+    const rules = await screen.findByRole('list', { name: 'Your password needs' })
+    const line = (text: string) => within(rules).getByText(text, { exact: false })
+    expect(line('An uppercase letter')).toHaveTextContent('still needed')
+    expect(screen.getByLabelText('Password')).toHaveAccessibleDescription(
+      expect.stringContaining('At least 8 characters'),
+    )
+    await userEvent.type(screen.getByLabelText('Password'), 'Violet otter 41')
+    for (const text of [
+      'At least 8 characters',
+      'A lowercase letter',
+      'An uppercase letter',
+      'A number',
+      'A symbol',
+      'Not your name or email',
+    ]) {
+      expect(line(text)).toHaveTextContent('done')
+    }
+  })
+
+  it('says which rule a password breaks before sending it', async () => {
+    const api = fakeApi()
+    renderApp('/register')
+    await fillRegistration('Ada', 'ada@example.com', 'violet otter 41')
+    expect(screen.getByLabelText('Password')).toHaveAccessibleDescription(
+      expect.stringContaining('Use at least one uppercase letter.'),
+    )
+    expect(api.callsTo('POST /api/auth/register')).toHaveLength(0)
+  })
+
+  it("refuses a password containing the student's own name", async () => {
+    fakeApi()
+    renderApp('/register')
+    await fillRegistration('Grace', 'g@example.com', 'Grace rocks 1!')
+    expect(screen.getByLabelText('Password')).toHaveAccessibleDescription(
+      expect.stringContaining("Don't use your name or email in your password."),
+    )
   })
 
   it('creates the account and goes straight into the app', async () => {
     const api = fakeApi()
     renderApp('/register')
-    await fillRegistration('  Grace ', 'grace@example.com', 'correct horse')
+    await fillRegistration('  Grace ', 'grace@example.com', 'Correct horse 1')
     expect(await screen.findByRole('heading', { name: 'Welcome, Grace' })).toBeInTheDocument()
     expect(api.callsTo('POST /api/auth/register')[0].body).toEqual({
       displayName: 'Grace',
       email: 'grace@example.com',
-      password: 'correct horse',
+      password: 'Correct horse 1',
     })
   })
 
@@ -131,10 +166,31 @@ describe('register page', () => {
       overrides: { 'POST /api/auth/register': () => Response.json({ detail }, { status: 409 }) },
     })
     renderApp('/register')
-    await fillRegistration('Ada', 'ada@example.com', 'correct horse')
+    await fillRegistration('Ada', 'ada@example.com', 'Correct horse 1')
     expect(await screen.findByText(detail)).toBeInTheDocument()
     expect(screen.getByLabelText('Email')).toHaveAccessibleDescription(detail)
     expect(screen.getByLabelText('Email')).toHaveFocus()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('shows a password the API refuses next to the password field', async () => {
+    const msg = "Don't use your name or email in your password."
+    fakeApi({
+      overrides: {
+        'POST /api/auth/register': () =>
+          Response.json(
+            { detail: [{ loc: ['body', 'password'], msg, type: 'value_error' }] },
+            { status: 422 },
+          ),
+      },
+    })
+    renderApp('/register')
+    await fillRegistration('Ada', 'ada@example.com', 'Violet otter 41')
+    expect(await screen.findByText(msg)).toBeInTheDocument()
+    expect(screen.getByLabelText('Password')).toHaveAccessibleDescription(
+      expect.stringContaining(msg),
+    )
+    expect(screen.getByLabelText('Password')).toHaveFocus()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
@@ -143,7 +199,7 @@ describe('register page', () => {
       overrides: { 'POST /api/auth/register': () => new Response('oops', { status: 500 }) },
     })
     renderApp('/register')
-    await fillRegistration('Ada', 'ada@example.com', 'correct horse')
+    await fillRegistration('Ada', 'ada@example.com', 'Correct horse 1')
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Something went wrong. Try again in a moment.',
     )

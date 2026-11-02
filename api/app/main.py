@@ -49,7 +49,10 @@ async def validation_error(_request: Request, exc: RequestValidationError) -> JS
     nested thousands deep its encoder recursed until the request failed with 500 (found by
     scripts/security-probe.py on staging).
     """
-    errors = [{"loc": list(e["loc"]), "msg": e["msg"], "type": e["type"]} for e in exc.errors()]
+    errors = [
+        {"loc": list(e["loc"]), "msg": e["msg"].removeprefix("Value error, "), "type": e["type"]}
+        for e in exc.errors()
+    ]
     return JSONResponse(status_code=422, content={"detail": errors})
 
 

@@ -41,16 +41,3 @@
 .form button[type='submit'] {
   width: 100%;
 }
-
-.notice {
-  margin: 0 0 var(--space-5);
-  padding: var(--space-3);
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  background: var(--color-surface-sunken);
-  border-radius: var(--radius-md);
-}
-
-.notice p:last-child {
-  margin-bottom: 0;
-}

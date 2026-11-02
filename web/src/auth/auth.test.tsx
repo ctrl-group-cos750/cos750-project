@@ -81,14 +81,6 @@ async function fillRegistration(name: string, email: string, password: string) {
 }
 
 describe('register page', () => {
-  it('says what is kept and why (POPIA)', async () => {
-    fakeApi()
-    renderApp('/register')
-    const notice = await screen.findByRole('region', { name: 'What we keep' })
-    expect(notice).toHaveTextContent('Your email, to log you in.')
-    expect(notice).toHaveTextContent('Nobody else sees your progress.')
-  })
-
   it('checks every field before sending anything', async () => {
     const api = fakeApi()
     renderApp('/register')

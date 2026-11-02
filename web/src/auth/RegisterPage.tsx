@@ -127,17 +127,6 @@ export function RegisterPage() {
           email={values.email.trim()}
           name={values.displayName.trim()}
         />
-        <section aria-label="What we keep" className={styles.notice}>
-          <p>
-            <strong>What we keep and why.</strong> Your email, to log you in. Your name, to greet
-            you. What you do in the course, to save your progress and to see whether the app helps
-            students learn.
-          </p>
-          <p>
-            Nobody else sees your progress. When the team studies the results, you are a number, not
-            a name or an email.
-          </p>
-        </section>
         <Button type="submit" loading={register.isPending}>
           Create account
         </Button>

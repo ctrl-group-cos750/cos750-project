@@ -464,7 +464,7 @@ Table: Which part of the ID document each functional requirement delivers.
   - is capped by Docker at 0.5 CPU, 256 MB of memory and 64 processes;
   - runs each submission in a fresh temporary directory, as a separate Python process (`python -I`) with its own limits: 5 seconds of CPU, 10 seconds wall time, 128 MB of memory, 1 MB of output; the whole process group is killed when a limit is reached;
   - runs at most four submissions at a time; further requests get "busy, try again in a moment".
-- **NFR-S8** **Privacy (POPIA [8]).** The app stores only what it needs: email (to log in), a display name, and learning data. It shows no student's data to another student, exports only internal IDs (FR-10.3), and states what is collected and why on the registration page. Test and demo data never uses real students' details.
+- **NFR-S8** **Privacy (POPIA [8]).** The app stores only what it needs: email (to log in), a display name, and learning data. It shows no student's data to another student, and exports only internal IDs (FR-10.3). Test and demo data never uses real students' details.
 
 ## Maintainability
 - **NFR-M1** Layered backend (routers → services → data) with the BfsEngine, the answer checkers and the mastery rules isolated from web concerns and unit-testable in isolation.
@@ -689,7 +689,7 @@ The returned payload (see §9.4) contains:
   - `useCurrentUser`, `useLogin`, `useRegister`, `useLogout`: the session, held in the TanStack Query cache (no separate context); logging out clears the cache.
   - `ApiClient`: typed REST client generated from the OpenAPI schema, used through TanStack Query.
 - **Auth**
-  - `LoginPage`, `RegisterPage` (with the privacy notice, NFR-S8), `RequireAuth` (sends visitors to log in, then back), `GuestOnly` (sends logged-in students past the log-in page).
+  - `LoginPage`, `RegisterPage` (with the password checklist, NFR-S1), `RequireAuth` (sends visitors to log in, then back), `GuestOnly` (sends logged-in students past the log-in page).
 - **Modules**
   - `ModuleMap`: the seven modules with their state and duration (FR-2.6), points and badges.
   - `ModulePage`: plays a module's segments in order, saves position, shows the module's goals.

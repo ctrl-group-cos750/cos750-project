@@ -3,9 +3,11 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.db import engine
+from app.routers import auth
 
 # Every route lives under /api: nginx in the web container forwards that prefix here unchanged.
 app = FastAPI(title="Ctrl Academy API", docs_url="/api/docs", openapi_url="/api/openapi.json")
+app.include_router(auth.router)
 
 
 @app.get("/api/health")

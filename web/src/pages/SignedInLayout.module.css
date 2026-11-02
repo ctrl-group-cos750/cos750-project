@@ -1,0 +1,10 @@
+.name {
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 30rem) {
+  .name {
+    display: none;
+  }
+}

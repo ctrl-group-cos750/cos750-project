@@ -1,3 +1,4 @@
+import asyncio
 import os
 
 from fastapi import FastAPI, Request
@@ -31,6 +32,34 @@ app = FastAPI(
     redoc_url=_docs["redoc_url"],
 )
 app.include_router(auth.router)
+
+
+# Admission control. A request takes its database connection in one thread job and runs its handler
+# in another, so it can hold a connection while it waits for a thread. Under a burst, requests held
+# every connection while every thread waited for one, and the API stalled for minutes (stress test,
+# 2 Nov 2026). At most MAX_IN_FLIGHT requests run at once, fewer than the 40 threads and the 50
+# connections (app/db.py), so that can't happen. The rest wait here, holding neither; one that waits
+# QUEUE_WAIT seconds gets a quick 503 instead of joining a pile-up.
+MAX_IN_FLIGHT = 30
+QUEUE_WAIT = 5.0
+_in_flight = asyncio.Semaphore(MAX_IN_FLIGHT)
+BUSY = "Ctrl Academy is busy. Try again in a moment."
+
+
+@app.middleware("http")
+async def admission(request: Request, call_next: RequestResponseEndpoint) -> Response:
+    # The health check takes and returns its connection within one thread, and Docker's health
+    # check must still get an answer when the API is busy.
+    if request.url.path == "/api/health":
+        return await call_next(request)
+    try:
+        await asyncio.wait_for(_in_flight.acquire(), timeout=QUEUE_WAIT)
+    except TimeoutError:
+        return JSONResponse(status_code=503, content={"detail": BUSY}, headers={"Retry-After": "2"})
+    try:
+        return await call_next(request)
+    finally:
+        _in_flight.release()
 
 
 @app.middleware("http")

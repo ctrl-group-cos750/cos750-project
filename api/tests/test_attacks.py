@@ -263,3 +263,106 @@ def test_a_lookalike_email_never_reaches_the_real_account(
         "/api/auth/login", json={"email": "ada@example.com", "password": ADA["password"]}
     )
     assert right.status_code == 200
+
+
+# Round four: hidden characters, cookie prefix, switching accounts
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "Ada\u0000",
+        "Ada\nAdmin",
+        "Ada\u0007",
+        "Ada\u202egnp.exe",
+        "A\u200bda",
+        "\ufeffAda",
+        "\u200b",
+    ],
+    ids=[
+        "NUL",
+        "newline",
+        "bell",
+        "right-to-left override",
+        "zero-width space",
+        "BOM",
+        "only invisible",
+    ],
+)
+def test_display_names_with_hidden_characters_are_refused(
+    client: TestClient, db: Session, name: str
+) -> None:
+    # A NUL used to reach Postgres, which refuses it, and the API answered 500.
+    res = client.post("/api/auth/register", json={**ADA, "displayName": name})
+    assert res.status_code == 422
+    assert res.json()["detail"][0]["loc"] == ["body", "displayName"]
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["Zoë O'Brien-Nkosi", "李小龍", "Ada 🙂", "Thabo (TA)"],
+    ids=["accents", "CJK", "emoji", "brackets"],
+)
+def test_ordinary_names_in_any_language_are_accepted(
+    client: TestClient, db: Session, name: str
+) -> None:
+    res = client.post("/api/auth/register", json={**ADA, "displayName": name})
+    assert res.status_code == 201
+    assert res.json()["displayName"] == name
+
+
+def test_names_are_stored_in_one_unicode_form(client: TestClient, db: Session) -> None:
+    res = client.post("/api/auth/register", json={**ADA, "displayName": "Zoë"})
+    assert res.json()["displayName"] == "Zoë"
+
+
+def test_the_session_cookie_cannot_be_planted_by_another_subdomain(
+    client: TestClient, db: Session
+) -> None:
+    res = client.post("/api/auth/register", json=ADA)
+    header = next(h for h in res.headers.get_list("set-cookie") if h.startswith("__Host-"))
+    assert header.startswith("__Host-session=")
+    assert "domain=" not in header.lower()
+    assert "path=/" in header.lower()
+    assert "secure" in header.lower()
+
+
+def test_logging_in_as_someone_else_switches_the_session(client: TestClient, ada: str) -> None:
+    client.post(
+        "/api/auth/register", json={**ADA, "email": "grace@example.com", "displayName": "G"}
+    )
+    client.cookies.clear()
+    client.cookies.set(SESSION_COOKIE, ada)
+    res = client.post(
+        "/api/auth/login", json={"email": "grace@example.com", "password": ADA["password"]}
+    )
+    assert res.json()["displayName"] == "G"
+    assert client.get("/api/auth/me").json()["displayName"] == "G"
+    assert me(client, ada) == 200  # Ada's own session is untouched
+
+
+def test_duplicate_json_keys_do_not_confuse_login(client: TestClient, ada: str) -> None:
+    res = client.post(
+        "/api/auth/login",
+        content=b'{"email": "nobody@example.com", "email": "ada@example.com", "password": "wrong!"}',
+        headers={"Content-Type": "application/json"},
+    )
+    assert res.status_code == 401
+
+
+def test_an_unknown_api_route_is_a_plain_404(client: TestClient, db: Session) -> None:
+    res = client.get("/api/admin")
+    assert res.status_code == 404
+    assert res.json() == {"detail": "Not Found"}
+
+
+@pytest.mark.parametrize(
+    ("setting", "on"), [(None, True), ("on", True), ("off", False), (" OFF ", False)]
+)
+def test_api_docs_can_be_switched_off_for_production(setting: str | None, on: bool) -> None:
+    from app.main import docs_urls
+
+    urls = docs_urls(setting)
+    assert (urls["docs_url"] == "/api/docs") is on
+    assert (urls["openapi_url"] == "/api/openapi.json") is on
+    assert urls["redoc_url"] is None

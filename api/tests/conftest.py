@@ -1,3 +1,4 @@
+import os
 from collections.abc import Iterator
 
 import pytest
@@ -10,6 +11,8 @@ import app.main
 from app.db import Base, get_session
 from app.main import app as fastapi_app
 from app.rate_limit import login_account_limiter, login_address_limiter, register_limiter
+
+TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL")
 
 
 @pytest.fixture
@@ -28,10 +31,18 @@ def fresh_rate_limits() -> None:
 
 @pytest.fixture
 def db() -> Iterator[Session]:
-    """Routes get an in-memory SQLite database with every table, empty for each test."""
-    engine = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
-    )
+    """Routes get a database with every table, empty for each test.
+
+    In-memory SQLite by default. With TEST_DATABASE_URL set (CI does), a real Postgres instead,
+    which catches what SQLite allows and Postgres refuses, such as NUL characters in text.
+    """
+    if TEST_DATABASE_URL:
+        engine = create_engine(TEST_DATABASE_URL)
+        Base.metadata.drop_all(engine)
+    else:
+        engine = create_engine(
+            "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+        )
     Base.metadata.create_all(engine)
     sessions = sessionmaker(bind=engine, expire_on_commit=False)
 
@@ -43,6 +54,8 @@ def db() -> Iterator[Session]:
     with sessions() as session:
         yield session
     fastapi_app.dependency_overrides.clear()
+    if TEST_DATABASE_URL:
+        Base.metadata.drop_all(engine)
     engine.dispose()
 
 

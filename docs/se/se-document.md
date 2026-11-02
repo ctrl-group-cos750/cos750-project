@@ -1026,7 +1026,7 @@ A second round on the same day, after the fixes were deployed, kept every attack
 
 Table: Security review, round two.
 
-A final round on the same day reran both rounds against the deployed fixes (all passed, including in a browser from another site) and added:
+A third round on the same day reran both rounds against the deployed fixes (all passed, including in a browser from another site) and added:
 
 | Check | Result | Action |
 |---|---|---|
@@ -1040,7 +1040,25 @@ A final round on the same day reran both rounds against the deployed fixes (all 
 | Caching of API responses | **No `Cache-Control`**: a shared computer's browser could keep a student's account details | Fixed: every API response is `no-store` |
 | The API container's user | **Ran as root** | Fixed: runs as an unprivileged user |
 
-Table: Security review, final round.
+Table: Security review, round three.
+
+The team keeps repeating the review: each round reruns every earlier attack against staging, then adds new ones. Round four:
+
+| Check | Result | Action |
+|---|---|---|
+| Every earlier attack, the browser attacks, dependency audits and the secrets scan | All passed | None needed |
+| A NUL character in a display name | **Server error (500)**: Postgres refuses NUL in text, SQLite accepts it, so the tests (on SQLite) never saw it | Fixed: names refuse control and invisible characters (`NoHiddenCharacters`, `api/app/schemas/text.py`), and CI now also runs every API test on Postgres |
+| Newlines, right-to-left overrides, zero-width spaces and byte-order marks in names | Accepted, so one name could be made to look like another | Fixed: refused by the same rule, in the API and the register page |
+| A session cookie planted by another `*.ctrlacademy.co.za` site | Possible: the cookie was called `session` | Fixed: `__Host-session`, which browsers only accept from this exact host |
+| Which nginx version runs | **Shown** on error pages | Fixed: `server_tokens off` |
+| `Permissions-Policy`, `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy` | **Missing** | Fixed: added; camera, microphone, location and payments are off |
+| `/api/docs` and the OpenAPI schema in production | Would be public | Fixed: `API_DOCS=off` hides them in production; staging keeps them |
+| Logging in as another user while logged in; duplicate JSON keys; unknown API routes | Switches cleanly; no confusion; a plain 404 | None needed |
+| Invisible or bidirectional characters in the source code ("Trojan Source") | One appeared in a test while this round was written | Fixed: a test now fails if any source file contains one |
+
+Table: Security review, round four.
+
+**For later features.** Every free-text field a student sends (answers, code, feedback) adds `NoHiddenCharacters` or strips NUL before it is stored: Postgres refuses NUL in `text` and `jsonb` alike.
 
 **Accepted risks.** Without email verification, anyone can register with an email address that isn't theirs, and registering reveals that an address already has an account. The staging gate's team password is weak and shared, which is acceptable because staging holds no real student data. Each deploy makes staging unavailable for about a minute while containers are replaced, so nobody merges during the pilot or the demo.
 

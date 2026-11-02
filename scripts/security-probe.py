@@ -24,6 +24,7 @@ import urllib.request
 from typing import Any
 
 UA = "ctrl-academy-security-probe"
+COOKIE = "__Host-session"
 results: list[tuple[bool, str, str]] = []
 
 
@@ -102,7 +103,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 def session_cookie(headers: dict[str, str]) -> str:
     value = headers.get("set-cookie", "")
-    assert value.startswith("session="), f"no session cookie in {value[:80]!r}"
+    assert value.startswith(f"{COOKIE}="), f"no {COOKIE} cookie in {value[:80]!r}"
     return value.split(";")[0]
 
 
@@ -163,7 +164,7 @@ def run(site: Site) -> None:
 
     print("\nForging a session (becoming the victim without their password)")
     for name, token in forged_tokens(sample, victim_id).items():
-        status = site.me(f"session={token}")
+        status = site.me(f"{COOKIE}={token}")
         check(status == 401, name, f"/me -> {status}")
 
     print("\nThe token itself")
@@ -183,7 +184,7 @@ def run(site: Site) -> None:
     check(site.me(second_device) == 401, "the victim's other device is logged out too")
     victim_cookie = site.login(victim_email, victim_pw)
     check(site.me(victim_cookie) == 200, "the victim can log in again")
-    both = f"{victim_cookie}; session=garbage"
+    both = f"{victim_cookie}; {COOKIE}=garbage"
     check(site.me(both) in (200, 401), "two session cookies don't crash the API")
 
     print("\nCross-site requests")
@@ -421,6 +422,83 @@ def responses_and_races(site: Site, tag: str) -> None:
     check(status == 401, "the look-alike's password does not open the real account", str(status))
 
 
+def round_four(site: Site, tag: str, production: bool) -> None:
+    print("\nHidden characters in names (Postgres refuses NUL: this used to be a 500)")
+    hidden = {
+        "NUL": "Ada" + chr(0),
+        "newline": "Ada" + chr(10) + "Admin",
+        "bell": "Ada" + chr(7),
+        "right-to-left override": "Ada" + chr(0x202E) + "gnp.exe",
+        "zero-width space": "A" + chr(0x200B) + "da",
+        "byte order mark": chr(0xFEFF) + "Ada",
+    }
+    for name, value in hidden.items():
+        status = site.request(
+            "POST",
+            "/api/auth/register",
+            {"email": f"{tag}-h@example.com", "password": "hidden pw 12", "displayName": value},
+        )[0]
+        check(status == 422, f"display name with a {name} is refused", str(status))
+
+    print("\nCookie prefix and switching accounts")
+    a_email, b_email, pw = f"{tag}-a@example.com", f"{tag}-b@example.com", "switch pw 123"
+    a_cookie, _ = site.register(a_email, pw, "A")
+    site.register(b_email, pw, "B")
+    check(
+        a_cookie.startswith("__Host-"),
+        "the session cookie can't be planted by a subdomain (__Host-)",
+    )
+    status, headers, body = site.request(
+        "POST", "/api/auth/login", {"email": b_email, "password": pw}, cookie=a_cookie
+    )
+    switched = session_cookie(headers) if status == 200 else None
+    check(
+        status == 200 and site.request("GET", "/api/auth/me", cookie=switched)[2].find('"B"') > 0,
+        "logging in as someone else while logged in switches the session",
+        str(status),
+    )
+    check(site.me(a_cookie) == 200, "the first account's session is left alone")
+    raw = b'{"email": "%s", "email": "%s", "password": "wrong pw!"}' % (
+        b_email.encode(),
+        a_email.encode(),
+    )
+    status = site.request("POST", "/api/auth/login", raw=raw)[0]
+    check(status == 401, "duplicate JSON keys don't confuse login", str(status))
+
+    print("\nMore headers and pages")
+    _, headers, _ = site.request("GET", "/login")
+    check(
+        headers.get("permissions-policy", "").startswith("camera=()"),
+        "Permissions-Policy turns off camera, microphone and location",
+    )
+    check(headers.get("cross-origin-opener-policy") == "same-origin", "Cross-Origin-Opener-Policy")
+    check(
+        headers.get("cross-origin-resource-policy") == "same-origin", "Cross-Origin-Resource-Policy"
+    )
+    _, headers, _ = site.request("GET", "/api/health")
+    check(
+        headers.get("cross-origin-resource-policy") == "same-origin",
+        "other sites can't embed API answers (CORP on /api)",
+    )
+    status, _, body = site.request("GET", "/assets/does-not-exist.js")
+    check(
+        status == 404 and "nginx/" not in body,
+        "error pages don't reveal the nginx version",
+        str(status),
+    )
+    status, _, body = site.request("GET", "/api/admin")
+    check(
+        status == 404 and body == '{"detail":"Not Found"}',
+        "an unknown API route is a plain 404",
+        str(status),
+    )
+    docs = site.request("GET", "/api/docs")[0], site.request("GET", "/api/openapi.json")[0]
+    if production:
+        check(docs == (404, 404), "API docs and schema are hidden in production", str(docs))
+    else:
+        check(docs == (200, 200), "API docs are available on staging", str(docs))
+
+
 def gate_bypass(site: Site) -> None:
     print("\nStaging gate (no team-password cookie)")
     for path in [
@@ -456,6 +534,9 @@ def main() -> None:
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument("--base", default="https://staging.ctrlacademy.co.za")
+    parser.add_argument(
+        "--production", action="store_true", help="also expect production settings (no API docs)"
+    )
     args = parser.parse_args()
     password = os.environ.get("STAGING_PASSWORD")
     gate = None
@@ -470,6 +551,7 @@ def main() -> None:
         gate_bypass(site)
     run(site)
     responses_and_races(site, f"probe-{int(time.time())}")
+    round_four(site, f"probe4-{int(time.time())}", args.production)
     failed = [r for r in results if not r[0]]
     print(f"\n{len(results) - len(failed)} passed, {len(failed)} failed")
     for _, name, detail in failed:

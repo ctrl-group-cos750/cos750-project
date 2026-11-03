@@ -1,9 +1,6 @@
-
 import { Alert } from '../../components'
-import {
-  findFirstUnansweredCheckpoint,
-  findReachedCheckpoint,
-} from './checkpointGate.ts'
+import { useRef, useState } from 'react'
+import { findFirstUnansweredCheckpoint, findReachedCheckpoint } from './checkpointGate.ts'
 import { CheckpointQuestion } from './CheckpointQuestion.tsx'
 import type {
   AttemptInput,
@@ -62,7 +59,7 @@ export function NarratedVideoPlayer(props: NarratedVideoPlayerProps) {
   function handleCheckpointPassed() {
     if (!activeCheckpoint) return
 
-    setPassedIds((currentIds) => new Set([...currentIds, activeCheckpoint.id]))
+    setPassedIds((currentIds: ReadonlySet<number>) => new Set([...currentIds, activeCheckpoint.id]))
     setActiveCheckpoint(undefined)
     void playerRef.current?.play()
   }
@@ -104,8 +101,13 @@ export function NarratedVideoPlayer(props: NarratedVideoPlayerProps) {
           />
         </section>
       )}
-      <section className="max-w-3xl rounded-lg border border-border bg-card p-6" aria-labelledby="transcript-heading">
-        <h2 id="transcript-heading" className="mb-3 text-xl font-semibold">Transcript</h2>
+      <section
+        className="max-w-3xl rounded-lg border border-border bg-card p-6"
+        aria-labelledby="transcript-heading"
+      >
+        <h2 id="transcript-heading" className="mb-3 text-xl font-semibold">
+          Transcript
+        </h2>
         <p className="text-muted-foreground">{props.video.transcript}</p>
       </section>
     </section>

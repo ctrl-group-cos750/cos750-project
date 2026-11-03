@@ -1,20 +1,20 @@
 import type { Checkpoint } from './video.types.ts'
 
-type ReachedCeckpointInput = {
-  checkpoints: readonly CheckPoint[]
+type ReachedCheckpointInput = {
+  checkpoints: readonly Checkpoint[]
   passedIds: ReadonlySet<number>
   currentSeconds: number
 }
 
 type SeekInput = {
-  checkpoints: readonly CheckPoint[]
+  checkpoints: readonly Checkpoint[]
   passedIds: ReadonlySet<number>
   targetSeconds: number
 }
 
 export function findReachedCheckpoint(input: ReachedCheckpointInput): Checkpoint | undefined {
   return input.checkpoints.find(
-    (checkpoints) =>
+    (checkpoint) =>
       checkpoint.atSeconds <= input.currentSeconds && !input.passedIds.has(checkpoint.id),
   )
 }
@@ -27,5 +27,5 @@ export function findFirstUnansweredCheckpoint(
 
 export function canSeek(input: SeekInput): boolean {
   const checkpoint = findFirstUnansweredCheckpoint(input)
-  return checkpoint == undefined || input.targetSeconds <= checkpoint.atSeconds
+  return checkpoint === undefined || input.targetSeconds <= checkpoint.atSeconds
 }

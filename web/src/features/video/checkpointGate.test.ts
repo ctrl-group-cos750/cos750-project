@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  canSeek,
-  findFirstUnansweredCheckpoint,
-  findReachedCheckpoint,
-} from './checkpointGate.ts'
+import { canSeek, findFirstUnansweredCheckpoint, findReachedCheckpoint } from './checkpointGate.ts'
 
 const checkpoints = [
   { id: 1, atSeconds: 20, activityId: 101 },

@@ -6,7 +6,7 @@ A submission carries only line IDs and tokens the student chose from a given set
 so nothing a student sends here is ever executed or stored as free-form code.
 """
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import Field
 
@@ -75,5 +75,36 @@ class PartResult(ApiModel):
 class CheckResult(ApiModel):
     correct: bool
     score: float  # 0 to 1: the fraction of parts correct
+    parts: list[PartResult]
+    feedback: str
+
+
+# --- Over the wire: what a GET returns and what a submission sends/gets back --------------------
+
+
+class ActivityOut(ApiModel):
+    """An activity as the browser sees it. There is deliberately no `solution` field: the answer
+    stays on the server (SE document §8 "Answers never leave the server")."""
+
+    id: int
+    kind: str
+    title: str
+    visible: bool
+    config: dict[str, Any]
+
+
+class AttemptIn(ApiModel):
+    """A submission: only the student's choices (line ids, chosen tokens), never free-form code."""
+
+    submitted: dict[str, Any]
+
+
+class AttemptOut(ApiModel):
+    """The graded result sent back. Carries per-part correctness and messages, never the solution."""
+
+    id: int
+    activity_id: int
+    correct: bool
+    score: float
     parts: list[PartResult]
     feedback: str

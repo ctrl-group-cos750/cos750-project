@@ -2,8 +2,8 @@
 
 Runs students' Python where it can't harm anything (SE document NFR-S7). An internal service: only
 the API can reach it. **It has no network at all** (`network_mode: none`): it listens on the Unix
-socket `/run/runner/runner.sock` (`RUNNER_SOCKET`), on a small in-memory volume that only the runner
-and the API mount. The API's client is `api/app/runner_client.py` (`run_code`, which raises
+socket `/run/runner/runner.sock` (`RUNNER_SOCKET`), on a small volume that only the runner and the API
+mount. The API's client is `api/app/runner_client.py` (`run_code`, which raises
 `RunnerUnavailable` with a message for the student).
 
 ## Contract

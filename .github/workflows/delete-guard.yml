@@ -1,0 +1,38 @@
+# Until branch protection is on (.github/rulesets), anyone with write access could delete master.
+# (GitHub never allows deleting the default branch, staging.) This raises the alarm straight away
+# with the commit to restore it from; feature branches deleted after their PR are ignored.
+name: delete-guard
+
+on:
+  delete:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  protected-branch-deleted:
+    if: github.event.ref_type == 'branch' && (github.event.ref == 'master' || github.event.ref == 'staging')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Open an issue for the Scrum Master
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.event.ref }}
+          WHO: ${{ github.actor }}
+        run: |
+          # The last release is the newest merge into master: restore the branch at that commit.
+          last=$(gh api "repos/$REPO/pulls?state=closed&base=$BRANCH&sort=updated&direction=desc&per_page=20" \
+            --jq '[.[] | select(.merged_at != null)] | sort_by(.merged_at) | last | .merge_commit_sha // "unknown"')
+          gh issue create --repo "$REPO" --assignee MatthewEls \
+            --title "$BRANCH was deleted by $WHO" \
+            --body "delete-guard: \`$BRANCH\` was deleted by @$WHO. Its last merged PR left it at \`$last\`. Restore it with:
+
+          \`\`\`
+          git push origin $last:refs/heads/$BRANCH
+          \`\`\`
+
+          then check nothing after that commit is missing."
+          echo "::error::$BRANCH was deleted by $WHO"
+          exit 1

@@ -103,7 +103,9 @@ other branch fails the `branch-flow` check.
   `source-is-staging`. No force-pushes, no deleting either branch. They need the organisation on
   GitHub Team (free for student organisations through GitHub Education).
 - **Until then**, the `push-guard` workflow checks every push to `staging` and `master`: anything
-  that isn't the merge of a PR, or is a force-push, fails and opens an issue for the Scrum Master.
+  that isn't the merge of a PR, or is a force-push, fails and opens an issue for the Scrum Master;
+  and `delete-guard` does the same if `master` is deleted, with the commit to restore it from.
+  (GitHub never allows deleting the default branch, `staging`.)
 
 Coolify deploys `staging` to staging.ctrlacademy.co.za on every push. Production (`master` →
 ctrlacademy.co.za) is deployed deliberately after a release PR, not automatically on push.

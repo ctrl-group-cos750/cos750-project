@@ -8,6 +8,9 @@ from app.schemas.activities import (
     FillInConfig,
     FillInSolution,
     FillInSubmission,
+    MultipleChoiceConfig,
+    MultipleChoiceSolution,
+    MultipleChoiceSubmission,
     ParsonsConfig,
     ParsonsSolution,
     ParsonsSubmission,
@@ -105,7 +108,7 @@ def test_fill_in_missing_blank_is_reported_empty() -> None:
 
 
 def test_dispatch_parsons_from_plain_data() -> None:
-    result = checking.check_code_activity(
+    result = checking.check_activity(
         "parsons",
         {"lines": [{"id": 0, "text": "a"}, {"id": 1, "text": "b"}]},
         {"order": [0, 1]},
@@ -115,7 +118,7 @@ def test_dispatch_parsons_from_plain_data() -> None:
 
 
 def test_dispatch_fill_in_from_plain_data() -> None:
-    result = checking.check_code_activity(
+    result = checking.check_activity(
         "fill_in",
         {"code": "x = __1__", "blanks": [1], "options": ["1", "2"]},
         {"answers": {"1": "1"}},
@@ -126,8 +129,8 @@ def test_dispatch_fill_in_from_plain_data() -> None:
 
 
 def test_dispatch_unknown_kind_raises() -> None:
-    with pytest.raises(ValueError, match="unknown code activity kind"):
-        checking.check_code_activity("freeform", {}, {}, {})
+    with pytest.raises(ValueError, match="unknown activity kind"):
+        checking.check_activity("freeform", {}, {}, {})
 
 
 # --- Hardening: the checker is the untrusted boundary now, so malformed input must be graded,
@@ -178,3 +181,60 @@ def test_the_result_never_contains_the_solution() -> None:
     blob = result.model_dump_json()
     assert "start" not in blob
     assert "set()" not in blob
+
+
+# --- Multiple choice ---------------------------------------------------------------------------
+
+CHOICE = MultipleChoiceConfig.model_validate(
+    {
+        "prompt": "Which leaves the queue?",
+        "options": [
+            {"id": "a", "label": "A"},
+            {"id": "c", "label": "C"},
+            {"id": "z", "label": "Z"},
+        ],
+    }
+)
+CHOICE_SOLUTION = MultipleChoiceSolution(correct="a", feedback={"c": "C was added last."})
+
+
+def test_multiple_choice_right_option_passes() -> None:
+    result = checking.check_multiple_choice(
+        CHOICE, CHOICE_SOLUTION, MultipleChoiceSubmission(selected="a")
+    )
+    assert result.correct
+    assert result.score == 1.0
+
+
+def test_multiple_choice_wrong_option_says_why() -> None:
+    result = checking.check_multiple_choice(
+        CHOICE, CHOICE_SOLUTION, MultipleChoiceSubmission(selected="c")
+    )
+    assert not result.correct
+    assert result.feedback == "C was added last."
+    assert '"a"' not in result.model_dump_json()  # the correct option is never named
+
+
+def test_multiple_choice_wrong_option_without_feedback_gets_the_generic_message() -> None:
+    result = checking.check_multiple_choice(
+        CHOICE, CHOICE_SOLUTION, MultipleChoiceSubmission(selected="z")
+    )
+    assert result.feedback == checking.WRONG_OPTION
+
+
+def test_multiple_choice_unknown_option_is_wrong_not_a_crash() -> None:
+    result = checking.check_multiple_choice(
+        CHOICE, CHOICE_SOLUTION, MultipleChoiceSubmission(selected="nope")
+    )
+    assert not result.correct
+    assert result.feedback == checking.UNKNOWN_OPTION
+
+
+def test_dispatch_multiple_choice_from_plain_data() -> None:
+    result = checking.check_activity(
+        "multiple_choice",
+        CHOICE.model_dump(),
+        CHOICE_SOLUTION.model_dump(),
+        {"selected": "a"},
+    )
+    assert result.correct

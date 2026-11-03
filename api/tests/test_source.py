@@ -9,8 +9,6 @@ SOURCES = [
         "api/app",
         "api/tests",
         "api/migrations",
-        "runner/runner",
-        "runner/tests",
         "web/src",
         "scripts",
     )

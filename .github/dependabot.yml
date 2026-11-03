@@ -19,16 +19,8 @@ updates:
       api-minor:
         update-types: [minor, patch]
 
-  - package-ecosystem: pip
-    directory: /runner
-    target-branch: staging
-    schedule: { interval: monthly }
-    groups:
-      runner-minor:
-        update-types: [minor, patch]
-
   - package-ecosystem: docker
-    directories: [/web, /api, /runner]
+    directories: [/web, /api]
     target-branch: staging
     schedule: { interval: monthly }
 

@@ -73,22 +73,34 @@ def _read_capped(file: IO[bytes], limit: int) -> str:
 
 
 def _read_events(fd: int, limit: int, events: list[dict[str, Any]], ready: threading.Event) -> None:
-    """Reads the harness's JSON lines until it closes the pipe, keeping at most `limit` bytes."""
-    seen = 0
-    with os.fdopen(fd, "rb") as pipe:
-        for line in pipe:
-            if not ready.is_set() and line.strip() == b'{"event": "ready"}':
-                ready.set()
-                continue
-            seen += len(line)
+    """Reads the harness's JSON lines until it closes the pipe, holding at most `limit` bytes.
+
+    Read in chunks, never line by line: student code can write to this pipe too, and a line with
+    no end would otherwise grow in memory until the runner ran out (13.7 GB in 16 s, in testing).
+    Past the limit the pipe is closed, so the run's further writes fail.
+    """
+    seen, pending = 0, b""
+    try:
+        while True:
+            chunk = os.read(fd, 65536)
+            if not chunk:
+                break
+            seen += len(chunk)
             if seen > limit:
                 break
-            try:
-                event = json.loads(line)
-            except ValueError:
-                continue
-            if isinstance(event, dict):
-                events.append(event)
+            *lines, pending = (pending + chunk).split(b"\n")
+            for line in lines:
+                if not ready.is_set() and line.strip() == b'{"event": "ready"}':
+                    ready.set()
+                    continue
+                try:
+                    event = json.loads(line)
+                except ValueError:
+                    continue
+                if isinstance(event, dict):
+                    events.append(event)
+    finally:
+        os.close(fd)
 
 
 def execute(code: str, tests: list[TestCase], limits: Limits = LIMITS) -> RunResult:

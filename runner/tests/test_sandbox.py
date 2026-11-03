@@ -533,3 +533,74 @@ def test_code_that_breaks_the_compiler_is_reported_not_crashed(bomb: str) -> Non
 def test_hidden_code_tests_are_refused_because_they_could_be_faked() -> None:
     with pytest.raises(ValueError, match="a hidden test must be a call test"):
         TestCase.model_validate({"name": "t", "kind": "code", "code": "assert True"})
+
+
+# Round three: interfaces Docker's own profile usually blocks, refused here too (EACCES, so the
+# test proves it was this filter); and the runner's own memory
+
+
+KERNEL_ATTEMPTS = {
+    "io_uring (opens sockets and files without the usual calls)": ("io_uring_setup", "8, buf"),
+    "a new user and network namespace": ("unshare", "0x10000000 | 0x40000000"),
+    "joining another namespace": ("setns", "0, 0"),
+    "mounting a filesystem": ("mount", "b'none', b'/tmp', b'tmpfs', 0, None"),
+    "chroot": ("chroot", "b'/tmp'"),
+    "the kernel keyring": ("keyctl", "0, 0"),
+    "eBPF": ("bpf", "0, buf, 48"),
+    "perf events": ("perf_event_open", "buf, 0, -1, -1, 0"),
+    "userfaultfd": ("userfaultfd", "0"),
+    "loading a kernel module": ("init_module", "None, 0, b''"),
+    "opening a file by handle": ("open_by_handle_at", "-100, buf, 0"),
+    "fanotify": ("fanotify_init", "0, 0"),
+    "the kernel log": ("syslog", "3, buf, 100"),
+    "the new mount API": ("fsopen", "b'tmpfs', 0"),
+}
+
+
+@pytest.mark.parametrize("attempt", list(KERNEL_ATTEMPTS))
+def test_risky_kernel_interfaces_are_refused_by_our_own_filter(attempt: str) -> None:
+    name, args = KERNEL_ATTEMPTS[attempt]
+    from runner import harness
+
+    number = harness._KERNEL[name][0 if __import__("platform").machine() == "x86_64" else 1]
+    probe = (
+        "import ctypes\nlibc = ctypes.CDLL(None, use_errno=True)\nbuf = ctypes.create_string_buffer(256)\n"
+        f"print(libc.syscall({number}, {args}), ctypes.get_errno())"
+    )
+    assert execute(probe, []).stdout == "-1 13\n"
+
+
+def test_a_flood_on_the_report_pipe_cannot_exhaust_the_runners_memory() -> None:
+    # Student code can write to the pipe the harness reports on. With no newline, a line-by-line
+    # reader held it all in memory: 13.7 GB in 16 s, in testing.
+    import resource
+    import time
+
+    flood = (
+        "import os\nfd = int(os.environ['RESULT_FD'])\nchunk = b'x' * (1 << 20)\n"
+        "while True:\n    os.write(fd, chunk)"
+    )
+    before = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    started = time.monotonic()
+    result = execute(flood, [call("never reached", "1", 1)])
+    grown_mb = (resource.getrusage(resource.RUSAGE_SELF).ru_maxrss - before) / 1024
+    assert grown_mb < 50
+    assert time.monotonic() - started < 5
+    assert not result.tests[0].passed
+
+
+def test_memory_files_cannot_be_made() -> None:
+    # Writes to a memfd aren't held to the file-size limit, nor counted by the memory limit, so one
+    # could fill the container's memory until the kernel killed the runner.
+    probe = (
+        "import os\ntry:\n    os.memfd_create('x')\n    print('made')\n"
+        "except OSError as e:\n    print('refused', e.errno)"
+    )
+    assert execute(probe, []).stdout == "refused 13\n"
+
+
+def test_the_filter_fits_in_bpf_jumps() -> None:
+    # Jumps are one byte: a filter grown too long would fail to install (and no code would run).
+    from runner import harness
+
+    assert len(harness._KERNEL) + len(harness._REFUSED) < 200

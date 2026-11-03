@@ -98,15 +98,30 @@ jobs:
       - run: docker compose build
       # Hostile code against the real runner image with docker-compose.yml's limits, from a second
       # container on the runner's internal network (NFR-S7).
-      - name: Start the runner
-        run: docker compose -p ctrlci up -d --wait runner
+      - name: Start the whole stack
+        run: docker compose -p ctrlci up -d --wait
       - name: Hostile code against the runner container
         run: >-
           docker run --rm --network ctrlci_sandbox
           -v "$PWD/runner/tests/container_check.py:/check.py:ro"
           python:3.12-slim python /check.py http://runner:8000
-      - name: Runner logs
+      # Whatever the sandbox does, only running code is affected: the app is measured at rest,
+      # then while the sandbox is flooded with hostile code, then with the runner stopped.
+      - name: The app keeps working while the sandbox is flooded
+        run: |
+          docker create --name isolation --network ctrlci_default \
+            -v "$PWD/runner/tests/isolation_check.py:/check.py:ro" \
+            python:3.12-slim python /check.py flood http://web http://runner:8000
+          docker network connect ctrlci_sandbox isolation
+          docker start -a isolation
+      - name: The app works with the runner stopped
+        run: |
+          docker compose -p ctrlci stop runner
+          docker run --rm --network ctrlci_default \
+            -v "$PWD/runner/tests/isolation_check.py:/check.py:ro" \
+            python:3.12-slim python /check.py runner-down http://web
+      - name: Logs
         if: always()
-        run: docker compose -p ctrlci logs runner
-      - run: docker compose -p ctrlci down
+        run: docker compose -p ctrlci logs --tail 50
+      - run: docker compose -p ctrlci down -v
         if: always()

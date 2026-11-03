@@ -14,6 +14,7 @@ import json
 import os
 import platform
 import resource
+import signal
 import struct
 import sys
 
@@ -42,6 +43,9 @@ def set_limits(limits: dict[str, int]) -> None:
 #   the runner, so it could otherwise kill the runner or every other student's run (kill(-1)), or
 #   cripple the runner with prlimit;
 # - nothing that reaches into other processes: pidfd, ptrace, process_vm_*, priorities, scheduling;
+# - no prctl: what the harness set up (non-dumpable, dying with the runner) stays set;
+# - no creating, writing, renaming or deleting files: the code has no need to, and it can't fill the
+#   shared /tmp or touch another run's folder (opening to read is still allowed);
 # - no calls from another architecture's table, which could be used to get around all of this.
 # (Linux: <linux/seccomp.h>, <linux/filter.h>.)
 _ARCH: dict[str, dict[str, int]] = {
@@ -49,25 +53,35 @@ _ARCH: dict[str, dict[str, int]] = {
         "audit": 0xC000003E, "socket": 41, "kill": 62, "tkill": 200, "tgkill": 234,
         "prlimit64": 302, "ptrace": 101, "setpriority": 141, "sched_setparam": 142,
         "sched_setscheduler": 144, "sched_setaffinity": 203, "ioprio_set": 251,
-        "process_vm_readv": 310, "process_vm_writev": 311, "pidfd_send_signal": 424,
+        "process_vm_readv": 310, "process_vm_writev": 311, "pidfd_send_signal": 424, "prctl": 157,
         "pidfd_open": 434, "pidfd_getfd": 438,
+        "open": 2, "openat": 257, "openat2": 437, "creat": 85, "mkdir": 83, "mkdirat": 258,
+        "unlink": 87, "unlinkat": 263, "rename": 82, "renameat": 264, "renameat2": 316, "link": 86,
+        "linkat": 265, "symlink": 88, "symlinkat": 266, "mknod": 133, "mknodat": 259,
+        "truncate": 76,
     },
     "aarch64": {
         "audit": 0xC00000B7, "socket": 198, "kill": 129, "tkill": 130, "tgkill": 131,
         "prlimit64": 261, "ptrace": 117, "setpriority": 140, "sched_setparam": 118,
         "sched_setscheduler": 119, "sched_setaffinity": 122, "ioprio_set": 30,
-        "process_vm_readv": 270, "process_vm_writev": 271, "pidfd_send_signal": 424,
+        "process_vm_readv": 270, "process_vm_writev": 271, "pidfd_send_signal": 424, "prctl": 167,
         "pidfd_open": 434, "pidfd_getfd": 438,
+        "openat": 56, "openat2": 437, "mkdirat": 34, "unlinkat": 35, "renameat": 38,
+        "renameat2": 276, "linkat": 37, "symlinkat": 36, "mknodat": 33, "truncate": 45,
     },
 }  # fmt: skip
 _REFUSED = (
     "socket", "ptrace", "setpriority", "sched_setparam", "sched_setscheduler", "sched_setaffinity",
     "ioprio_set", "process_vm_readv", "process_vm_writev", "pidfd_send_signal", "pidfd_open",
-    "pidfd_getfd",
+    "pidfd_getfd", "prctl", "openat2", "creat", "mkdir", "mkdirat", "unlink", "unlinkat", "rename",
+    "renameat", "renameat2", "link", "linkat", "symlink", "symlinkat", "mknod", "mknodat",
+    "truncate",
 )  # fmt: skip
-_LD_W_ABS, _JEQ, _JGE, _RET = 0x20, 0x15, 0x35, 0x06
+# O_WRONLY | O_RDWR | O_CREAT | O_TRUNC | O_APPEND: any of these in open()'s flags is a write.
+_WRITE_FLAGS = 0o1 | 0o2 | 0o100 | 0o1000 | 0o2000
+_LD_W_ABS, _JEQ, _JGE, _JSET, _RET = 0x20, 0x15, 0x35, 0x45, 0x06
 _ALLOW, _ERRNO = 0x7FFF0000, 0x00050000
-_ARG0 = 16  # seccomp_data.args[0], low 32 bits (pid_t is an int)
+_ARG0, _ARG1, _ARG2 = 16, 24, 32  # seccomp_data.args[i], low 32 bits (pid_t, flags are ints)
 
 
 def _assemble(program: list[tuple[object, ...]]) -> bytes:
@@ -97,7 +111,9 @@ def sandbox_syscalls() -> None:
         (_JEQ, 0, "refuse", nr["audit"]),
         (_LD_W_ABS, 0, 0, 0),  # seccomp_data.nr
         (_JGE, "refuse", 0, 0x40000000),  # x32 calls
-        *[(_JEQ, "refuse", 0, nr[name]) for name in _REFUSED],
+        *[(_JEQ, "refuse", 0, nr[name]) for name in _REFUSED if name in nr],
+        *([(_JEQ, "open_flags", 0, nr["open"])] if "open" in nr else []),
+        (_JEQ, "openat_flags", 0, nr["openat"]),
         (_JEQ, "self_or_group", 0, nr["kill"]),  # kill(0) is its own group: only itself
         (_JEQ, "self_or_group", 0, nr["prlimit64"]),  # prlimit64(0) is itself (setrlimit)
         (_JEQ, "self", 0, nr["tkill"]),
@@ -110,6 +126,12 @@ def sandbox_syscalls() -> None:
         ("label", "self"),
         (_LD_W_ABS, 0, 0, _ARG0),
         (_JEQ, "allow", "refuse", me),
+        ("label", "open_flags"),
+        (_LD_W_ABS, 0, 0, _ARG1),
+        (_JSET, "refuse", "allow", _WRITE_FLAGS),
+        ("label", "openat_flags"),
+        (_LD_W_ABS, 0, 0, _ARG2),
+        (_JSET, "refuse", "allow", _WRITE_FLAGS),
         ("label", "refuse"),
         (_RET, 0, 0, _ERRNO | errno.EPERM),
         ("label", "allow"),
@@ -128,6 +150,21 @@ def sandbox_syscalls() -> None:
         raise OSError(ctypes.get_errno(), "PR_SET_NO_NEW_PRIVS")
     if libc.prctl(pr_set_seccomp, seccomp_mode_filter, ctypes.byref(prog), 0, 0) != 0:
         raise OSError(ctypes.get_errno(), "PR_SET_SECCOMP")
+
+
+def make_undumpable() -> None:
+    """Closes this process's /proc entries (memory, open files, folder, environment) to every
+    other process of the same user, that is, to every other run. Done first, before the job
+    arrives: until then, another run could read the job off this process's stdin through /proc."""
+    libc = ctypes.CDLL(None, use_errno=True)
+    pr_set_pdeathsig, pr_set_dumpable = 1, 4
+    if libc.prctl(pr_set_dumpable, 0, 0, 0, 0) != 0:
+        raise OSError(ctypes.get_errno(), "PR_SET_DUMPABLE")
+    # Dies with the runner, so no run can outlive the wall clock the runner enforces.
+    if libc.prctl(pr_set_pdeathsig, signal.SIGKILL, 0, 0, 0) != 0:
+        raise OSError(ctypes.get_errno(), "PR_SET_PDEATHSIG")
+    if os.getppid() == 1:  # the runner was already gone
+        os._exit(1)
 
 
 def student_line(error: BaseException) -> int | None:
@@ -158,11 +195,13 @@ def plain(value: object, depth: int = 0) -> object:
 
 
 def main() -> None:
+    make_undumpable()
     report = os.fdopen(int(os.environ["RESULT_FD"]), "w", buffering=1)
 
     def emit(event: dict[str, object]) -> None:
         report.write(json.dumps(event) + "\n")
 
+    emit({"event": "ready"})  # the runner writes the job only after this
     job = json.loads(sys.stdin.read())
     sandbox_syscalls()  # fails closed: if it can't be set up, no student code runs
     set_limits(job["limits"])
@@ -172,6 +211,15 @@ def main() -> None:
         compiled = compile(job["code"], STUDENT, "exec")
     except SyntaxError as e:
         emit({"event": "syntax_error", "message": e.msg, "line": e.lineno})
+        return
+    except (MemoryError, RecursionError, ValueError) as e:  # code too big or deep to compile
+        emit(
+            {
+                "event": "syntax_error",
+                "message": f"{type(e).__name__}: {str(e)[:200]}",
+                "line": None,
+            }
+        )
         return
     namespace: dict[str, object] = {"__name__": "__main__", "__builtins__": __builtins__}
     try:

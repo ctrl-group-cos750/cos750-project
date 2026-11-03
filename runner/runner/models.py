@@ -38,6 +38,10 @@ class TestCase(Model):
             raise ValueError("a call test needs `call`")
         if self.kind == "code" and not self.code:
             raise ValueError("a code test needs `code`")
+        # A code test reports its own result from inside the student's process, where the student's
+        # code could fake it. Graded, hidden tests are call tests, which are checked out here.
+        if self.kind == "code" and not self.visible:
+            raise ValueError("a hidden test must be a call test; code tests must be visible")
         return self
 
 

@@ -172,6 +172,71 @@ check(
 out = stdout_of("import os\nprint(os.access('/tmp', os.W_OK), os.access('/', os.W_OK))")
 check(out.split() == ["True", "False"], "only /tmp is writable", out.strip())
 
+# The container's own limits, as a run sees them (cgroup v2): these are what keep the rest of the
+# server safe whatever the code does.
+limits = stdout_of(
+    "import os\nfor name in ['memory.max', 'memory.swap.max', 'cpu.max', 'cpu.weight', 'pids.max']:\n"
+    "    try:\n        print(name, open('/sys/fs/cgroup/' + name).read().strip())\n"
+    "    except OSError:\n        print(name, '?')\nprint('oom_score_adj', open('/proc/self/oom_score_adj').read().strip())"
+)
+seen = dict(line.split(" ", 1) for line in limits.splitlines() if " " in line)
+check(
+    seen.get("memory.max") == str(768 * 1024 * 1024),
+    "memory capped at 768 MB",
+    seen.get("memory.max"),
+)
+check(seen.get("memory.swap.max") == "0", "no swap", seen.get("memory.swap.max"))
+check(seen.get("cpu.max") == "200000 100000", "CPU capped at 2", seen.get("cpu.max"))
+check(
+    seen.get("cpu.weight", "100").isdigit() and int(seen.get("cpu.weight", "100")) < 100,
+    "lower CPU weight than the rest of the app",
+    seen.get("cpu.weight"),
+)
+check(seen.get("pids.max") == "64", "at most 64 processes", seen.get("pids.max"))
+check(
+    seen.get("oom_score_adj") == "1000",
+    "killed first if the server runs out of memory",
+    seen.get("oom_score_adj"),
+)
+
+out = stdout_of(
+    "import os\nresults = []\nfor how in ['w', 'a', 'x']:\n    try:\n        open('/tmp/fill', how)\n"
+    "        results.append('written')\n    except OSError:\n        results.append('refused')\nprint(results)"
+)
+check("written" not in out, "not even /tmp can be written to (it can't be filled up)", out.strip())
+
+spy_code = (
+    "import os, time\ntime.sleep(1)\nseen = []\nfor pid in os.listdir('/proc'):\n"
+    "    if pid.isdigit() and int(pid) != os.getpid():\n"
+    "        for part in ['environ', 'mem', 'maps']:\n"
+    "            try:\n                open(f'/proc/{pid}/{part}', 'rb').read(1)\n                seen.append(part)\n"
+    "            except OSError:\n                pass\n"
+    "        try:\n            os.readlink(f'/proc/{pid}/cwd')\n            seen.append('cwd')\n"
+    "        except OSError:\n            pass\n"
+    "others = [r for r in os.listdir('..') if r != os.path.basename(os.getcwd())]\n"
+    "files = [f for r in others for f in os.listdir(os.path.join('..', r))]\n"
+    "print('readable', seen, 'files', files)"
+)
+victim_result: list[str] = []
+victim = threading.Thread(
+    target=lambda: victim_result.append(stdout_of("import time\nprint('private')\ntime.sleep(3)"))
+)
+victim.start()
+spied = stdout_of(spy_code)
+victim.join()
+check(
+    spied.strip() == "readable [] files []",
+    "one run can't see into another running at the same time",
+    spied.strip(),
+)
+
+_, body = run("import sys\nprint('a' + chr(0) + 'b')\nraise ValueError('x' + chr(0))")
+check(
+    chr(0) not in json.dumps(body, ensure_ascii=False),
+    "no NUL goes back to the API",
+    body.get("outcome"),
+)
+
 results: list[int] = []
 
 

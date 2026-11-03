@@ -87,14 +87,14 @@ def test_code_tests_pass_when_they_run_without_error() -> None:
     result = execute(
         BFS,
         [
-            code("passes", "assert bfs({'A': []}, 'A') == ['A']"),
+            code("passes", "assert bfs({'A': []}, 'A') == ['A']", visible=True),
             code("fails", "assert bfs({'A': []}, 'A') == ['B'], 'start comes first'", visible=True),
-            code("hidden fail", "assert False"),
+            code("authored", "assert False", visible=True, message="Check the start vertex."),
         ],
     )
     assert [t.passed for t in result.tests] == [True, False, False]
     assert result.tests[1].message == "AssertionError: start comes first"
-    assert result.tests[2].message == "Your code raised AssertionError on this test."
+    assert result.tests[2].message == "Check the start vertex."
 
 
 def test_an_error_inside_one_test_does_not_stop_the_rest() -> None:
@@ -210,19 +210,21 @@ def test_the_environment_holds_nothing_from_the_runner() -> None:
 
 
 def test_the_code_runs_in_its_own_empty_folder_that_is_removed_afterwards() -> None:
+    # Even its output files have no name there, so another run has nothing to open.
     result = execute("import os\nprint(os.getcwd())\nprint(sorted(os.listdir('.')))", [])
     folder, listing = result.stdout.splitlines()
-    assert listing == "['stderr', 'stdout']"
+    assert listing == "[]"
     import os
 
     assert not os.path.exists(folder)
 
 
-def test_writing_a_big_file_is_refused_at_the_size_limit() -> None:
-    # Python ignores SIGXFSZ, so the write fails with an error instead of ending the process.
+def test_writing_a_file_is_refused() -> None:
     result = execute("open('big', 'w').write('x' * (2 * 1024 * 1024))", [])
     assert result.outcome == "error"
-    assert result.message == "Your code raised OSError on line 1: [Errno 27] File too large"
+    assert result.message == (
+        "Your code raised PermissionError on line 1: [Errno 1] Operation not permitted: 'big'"
+    )
 
 
 def test_ending_python_abruptly_is_reported_as_a_crash() -> None:
@@ -264,7 +266,7 @@ def test_faking_the_harness_report_cannot_pass_a_hidden_test() -> None:
 
 def test_garbage_on_the_report_channel_is_ignored() -> None:
     noise = "import os\nos.write(int(os.environ['RESULT_FD']), b'not json\\n[1]\\n')"
-    result = execute(noise, [code("t", "pass")])
+    result = execute(noise, [code("t", "pass", visible=True)])
     assert result.outcome == "completed"
     assert result.tests[0].passed
 
@@ -310,7 +312,22 @@ def test_the_filter_cannot_be_removed() -> None:
         "import ctypes\nlibc = ctypes.CDLL(None, use_errno=True)\n"
         "print(libc.prctl(38, 0, 0, 0, 0), ctypes.get_errno())"  # clear no_new_privs: refused
     )
-    assert execute(undo, []).stdout == "-1 22\n"
+    assert execute(undo, []).stdout == "-1 1\n"
+
+
+@pytest.mark.parametrize(
+    ("attempt", "args"),
+    [
+        ("make itself inspectable again", "4, 1"),  # PR_SET_DUMPABLE
+        ("stop dying with the runner", "1, 0"),  # PR_SET_PDEATHSIG
+    ],
+)
+def test_what_the_harness_set_up_stays_set(attempt: str, args: str) -> None:
+    probe = (
+        "import ctypes\nlibc = ctypes.CDLL(None, use_errno=True)\n"
+        f"print(libc.prctl({args}, 0, 0, 0), ctypes.get_errno())"
+    )
+    assert execute(probe, []).stdout == "-1 1\n"
 
 
 # Other processes are out of reach: student code runs as the same user as the runner
@@ -349,3 +366,165 @@ def test_its_own_process_is_still_its_own() -> None:
 def test_ending_its_own_process_with_a_signal_is_a_crash_not_a_problem() -> None:
     result = execute("import os, signal\nos.kill(os.getpid(), signal.SIGTERM)", [])
     assert result.outcome == "crashed"
+
+
+# Round two: files, other runs, output the API stores, the compiler
+
+
+@pytest.mark.parametrize(
+    ("attempt", "call"),
+    [
+        ("create a file", "open('new.txt', 'w')"),
+        ("append to a file", "open('/etc/hostname', 'a')"),
+        ("open for reading and writing", "open('/etc/hostname', 'r+')"),
+        ("create with os.open", "os.open('x', os.O_CREAT | os.O_RDONLY)"),
+        ("truncate with os.open", "os.open('/etc/hostname', os.O_TRUNC)"),
+        ("make a folder", "os.mkdir('d')"),
+        ("delete a file", "os.unlink('/etc/hostname')"),
+        ("rename", "os.rename('/etc/hostname', 'y')"),
+        ("hard link", "os.link('/etc/hostname', 'y')"),
+        ("symlink", "os.symlink('/etc/hostname', 'y')"),
+        ("make a fifo", "os.mkfifo('y')"),
+        ("truncate a file", "os.truncate('/etc/hostname', 0)"),
+    ],
+)
+def test_nothing_on_disk_can_be_created_or_changed(attempt: str, call: str) -> None:
+    probe = (
+        "import os\ntry:\n    "
+        + call
+        + "\n    print('done')\nexcept OSError as e:\n    print('refused', e.errno)"
+    )
+    assert execute(probe, []).stdout == "refused 1\n"
+
+
+def test_files_can_still_be_read_and_modules_imported() -> None:
+    probe = "import json, collections, heapq, itertools\nprint(len(open(json.__file__).read()) > 0)"
+    assert execute(probe, []).stdout == "True\n"
+
+
+def test_the_raw_openat_call_with_create_is_refused() -> None:
+    raw = (
+        "import ctypes, os, platform\nlibc = ctypes.CDLL(None, use_errno=True)\n"
+        "nr = {'x86_64': 257, 'aarch64': 56}[platform.machine()]\n"
+        "print(libc.syscall(nr, -100, b'x', os.O_CREAT | os.O_WRONLY, 0o600), ctypes.get_errno())"
+    )
+    assert execute(raw, []).stdout == "-1 1\n"
+
+
+def test_openat2_is_refused_because_its_flags_cant_be_checked() -> None:
+    raw = (
+        "import ctypes\nlibc = ctypes.CDLL(None, use_errno=True)\n"
+        "print(libc.syscall(437, -100, b'/etc/hostname', 0, 0), ctypes.get_errno())"
+    )
+    assert execute(raw, []).stdout == "-1 1\n"
+
+
+def test_x32_system_calls_are_refused() -> None:
+    # On x86-64, bit 30 selects the x32 table, a second way to make every call.
+    raw = (
+        "import ctypes, platform\nlibc = ctypes.CDLL(None, use_errno=True)\n"
+        "print(libc.syscall(0x40000000 | 41, 2, 1, 0) if platform.machine() == 'x86_64' else -1,"
+        " ctypes.get_errno() if platform.machine() == 'x86_64' else 1)"
+    )
+    assert execute(raw, []).stdout == "-1 1\n"
+
+
+def test_ptrace_is_refused() -> None:
+    raw = (
+        "import ctypes, platform\nlibc = ctypes.CDLL(None, use_errno=True)\n"
+        "nr = {'x86_64': 101, 'aarch64': 117}[platform.machine()]\n"
+        "print(libc.syscall(nr, 0, 0, 0, 0), ctypes.get_errno())"  # PTRACE_TRACEME
+    )
+    assert execute(raw, []).stdout == "-1 1\n"
+
+
+def test_a_run_cannot_see_into_another_run_happening_at_the_same_time() -> None:
+    victim = "import time\nprint('private output')\ntime.sleep(2)"
+    snoop = (
+        "import os, time\ntime.sleep(0.5)\nseen = []\n"
+        "for pid in os.listdir('/proc'):\n"
+        "    if not pid.isdigit() or int(pid) == os.getpid():\n        continue\n"
+        "    try:\n        cmd = open(f'/proc/{pid}/cmdline').read()\n    except OSError:\n        continue\n"
+        "    if 'harness.py' not in cmd:\n        continue\n"
+        "    for part in ['cwd', 'environ', 'fd', 'mem', 'maps']:\n"
+        "        try:\n"
+        "            os.readlink(f'/proc/{pid}/cwd') if part == 'cwd' else (os.listdir(f'/proc/{pid}/fd') if part == 'fd' else open(f'/proc/{pid}/{part}', 'rb').read(1))\n"
+        "            seen.append(part)\n"
+        "        except OSError:\n            pass\n"
+        "runs = os.listdir('..')\n"
+        "found = [f for r in runs if r != os.path.basename(os.getcwd()) for f in os.listdir(os.path.join('..', r))]\n"
+        "print('readable:', seen, 'files in other runs:', found)"
+    )
+    import threading
+
+    results: dict[str, object] = {}
+    other = threading.Thread(target=lambda: results.update(victim=execute(victim, [])))
+    other.start()
+    # Wait until the other run has locked its /proc entries (its first instruction, before its
+    # job arrives). In the milliseconds before, Python is still starting and holds nothing of the
+    # student's: the job is only sent after the lock.
+    assert _wait_for_locked_run(), "the other run never started"
+    spy = execute(snoop, [])
+    other.join()
+    assert spy.stdout == "readable: [] files in other runs: []\n"
+
+
+def _wait_for_locked_run(seconds: float = 5) -> bool:
+    import time
+    from pathlib import Path
+
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        for proc in Path("/proc").iterdir():
+            if not proc.name.isdigit():
+                continue
+            try:
+                if "harness.py" not in (proc / "cmdline").read_text():
+                    continue
+                (proc / "environ").read_bytes()  # readable: not locked yet
+            except PermissionError:
+                return True
+            except OSError:
+                continue
+        time.sleep(0.01)
+    return False
+
+
+def test_output_never_carries_a_nul_to_the_api() -> None:
+    nul = "chr(0)"
+    result = execute(
+        f"import sys\nprint('a' + {nul} + 'b')\nprint({nul}, file=sys.stderr)\nraise ValueError('x' + {nul})",
+        [],
+    )
+    zero = chr(0)
+    assert zero not in result.stdout + result.stderr + (result.message or "")
+    assert result.stdout == "a" + chr(0xFFFD) + "b\n"
+
+
+def test_a_test_message_never_carries_a_nul_either() -> None:
+    result = execute(
+        "def f():\n    raise KeyError('k' + chr(0))",
+        [call("visible", "f()", 1, visible=True)],
+    )
+    assert chr(0) not in (result.tests[0].message or "")
+
+
+def test_bytes_that_are_not_utf8_come_back_replaced() -> None:
+    result = execute("import sys\nsys.stdout.buffer.write(bytes([0xFF, 0x41]))", [])
+    assert result.stdout == chr(0xFFFD) + "A"
+
+
+@pytest.mark.parametrize(
+    "bomb",
+    ["(" * 200_000 + ")" * 200_000, "x = " + "-" * 90_000 + "1", "x = " + "[" * 5000 + "]" * 5000],
+    ids=["nested brackets", "deep unary", "nested lists"],
+)
+def test_code_that_breaks_the_compiler_is_reported_not_crashed(bomb: str) -> None:
+    result = execute(bomb[:100_000], [])
+    assert result.outcome in ("syntax_error", "error", "memory_limit")
+    assert result.message
+
+
+def test_hidden_code_tests_are_refused_because_they_could_be_faked() -> None:
+    with pytest.raises(ValueError, match="a hidden test must be a call test"):
+        TestCase.model_validate({"name": "t", "kind": "code", "code": "assert True"})

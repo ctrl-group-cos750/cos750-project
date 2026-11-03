@@ -28,15 +28,17 @@ services:
     networks:
       - default
       - sandbox
+    # Not on the runner: the app starts and works without it; only running code needs it.
     depends_on:
       db:
-        condition: service_healthy
-      runner:
         condition: service_healthy
     restart: unless-stopped
 
   # Runs students' Python (SE document NFR-S7). Only on the internal `sandbox` network, which
   # has no route to the internet and holds only the API; no secrets, no volumes, no database.
+  # Whatever student code does, only running code is affected: the caps below are the runner's
+  # alone, it yields the CPU to everything else, and it is the first thing the kernel kills if the
+  # server runs short of memory.
   runner:
     build: ./runner
     expose:
@@ -53,7 +55,10 @@ services:
     # Four runs at once, each up to 0.5 CPU and 128 MB, plus the runner and its 64 MB /tmp: the
     # kernel never has to choose between a student's run and the runner itself.
     cpus: 2
+    cpu_shares: 256  # a quarter of the default weight: the API and database win any contest
     mem_limit: 768m
+    memswap_limit: 768m  # no swap: it can't push the server into swapping
+    oom_score_adj: 1000  # if the server runs out of memory, the runner goes first
     pids_limit: 64
     restart: unless-stopped
 

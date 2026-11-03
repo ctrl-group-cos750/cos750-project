@@ -18,7 +18,7 @@ import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import IO, Any
 
 from runner.models import Outcome, RunResult, TestCase, TestResult
 
@@ -47,21 +47,39 @@ MESSAGES: dict[Outcome, str] = {
 }
 
 
-def _work_root() -> str | None:
-    # In the container /tmp is the only writable place (a small tmpfs).
-    return os.environ.get("RUNNER_TMP") or None
+def _work_root() -> str:
+    """Where each run gets its folder. In the container /tmp is the only writable place.
+
+    Each run's folder stays empty: its output files have no name (see execute), and every run is
+    non-dumpable, so another run (the same user) finds nothing to read.
+    """
+    root = Path(os.environ.get("RUNNER_TMP") or tempfile.gettempdir()) / "runs"
+    root.mkdir(mode=0o711, exist_ok=True)
+    root.chmod(0o711)
+    return str(root)
 
 
-def _read_capped(path: Path, limit: int) -> str:
-    with path.open("rb") as f:
-        return f.read(limit).decode("utf-8", errors="replace")
+# NUL: Postgres refuses it in text and jsonb, so none goes back to the API, which may store it.
+_NUL, _REPLACEMENT = chr(0), chr(0xFFFD)
 
 
-def _read_events(fd: int, limit: int, events: list[dict[str, Any]]) -> None:
+def clean(text: str) -> str:
+    return text.replace(_NUL, _REPLACEMENT)
+
+
+def _read_capped(file: IO[bytes], limit: int) -> str:
+    file.seek(0)
+    return clean(file.read(limit).decode("utf-8", errors="replace"))
+
+
+def _read_events(fd: int, limit: int, events: list[dict[str, Any]], ready: threading.Event) -> None:
     """Reads the harness's JSON lines until it closes the pipe, keeping at most `limit` bytes."""
     seen = 0
     with os.fdopen(fd, "rb") as pipe:
         for line in pipe:
+            if not ready.is_set() and line.strip() == b'{"event": "ready"}':
+                ready.set()
+                continue
             seen += len(line)
             if seen > limit:
                 break
@@ -89,7 +107,9 @@ def execute(code: str, tests: list[TestCase], limits: Limits = LIMITS) -> RunRes
             },
         }
         env = {"RESULT_FD": str(write_fd), "HOME": work_dir, "LANG": "C.UTF-8", "PATH": "/usr/bin"}
-        with (work / "stdout").open("wb") as out, (work / "stderr").open("wb") as err:
+        # Output files with no name (O_TMPFILE): only this process and the run hold them, so
+        # another run can't open them, and nothing is left behind.
+        with tempfile.TemporaryFile(dir=work) as out, tempfile.TemporaryFile(dir=work) as err:
             proc = subprocess.Popen(
                 [sys.executable, "-I", "-B", str(HARNESS)],
                 stdin=subprocess.PIPE,
@@ -100,23 +120,29 @@ def execute(code: str, tests: list[TestCase], limits: Limits = LIMITS) -> RunRes
                 env=env,
                 start_new_session=True,
             )
-        os.close(write_fd)
-        events: list[dict[str, Any]] = []
-        reader = threading.Thread(target=_read_events, args=(read_fd, limits.output_bytes, events))
-        reader.start()
-        if proc.stdin is None:
-            raise RuntimeError("the harness has no stdin")
-        try:
-            proc.stdin.write(json.dumps(job).encode())
-            proc.stdin.close()
-        except BrokenPipeError:  # the harness died before reading the job
-            pass
-        returncode, cpu_used, timed_out = _wait(proc, started + limits.wall_seconds)
-        reader.join(timeout=5)
-        stdout_size = (work / "stdout").stat().st_size
-        stderr_size = (work / "stderr").stat().st_size
-        stdout = _read_capped(work / "stdout", limits.output_bytes)
-        stderr = _read_capped(work / "stderr", limits.output_bytes)
+            os.close(write_fd)
+            events: list[dict[str, Any]] = []
+            ready = threading.Event()
+            reader = threading.Thread(
+                target=_read_events, args=(read_fd, limits.output_bytes, events, ready)
+            )
+            reader.start()
+            if proc.stdin is None:
+                raise RuntimeError("the harness has no stdin")
+            # The job only once the harness is non-dumpable, so no other run can read it.
+            if ready.wait(timeout=limits.wall_seconds):
+                with contextlib.suppress(BrokenPipeError):  # the harness died before reading it
+                    proc.stdin.write(json.dumps(job).encode())
+            with contextlib.suppress(BrokenPipeError):
+                proc.stdin.close()
+            returncode, cpu_used, timed_out = _wait(proc, started + limits.wall_seconds)
+            reader.join(timeout=5)
+            stdout_size, stderr_size = (
+                os.fstat(out.fileno()).st_size,
+                os.fstat(err.fileno()).st_size,
+            )
+            stdout = _read_capped(out, limits.output_bytes)
+            stderr = _read_capped(err, limits.output_bytes)
 
     outcome = _outcome(
         returncode,
@@ -124,10 +150,14 @@ def execute(code: str, tests: list[TestCase], limits: Limits = LIMITS) -> RunRes
         events,
         output_full=max(stdout_size, stderr_size) >= limits.output_bytes,
     )
+    message = _message(outcome, events, limits)
     return RunResult(
         outcome=outcome,
-        message=_message(outcome, events, limits),
-        tests=_grade(tests, events),
+        message=clean(message) if message else None,
+        tests=[
+            t.model_copy(update={"message": clean(t.message) if t.message else None})
+            for t in _grade(tests, events)
+        ],
         stdout=stdout,
         stderr=stderr,
         duration_ms=int((time.monotonic() - started) * 1000),

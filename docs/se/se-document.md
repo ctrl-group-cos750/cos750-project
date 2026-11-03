@@ -1126,6 +1126,19 @@ Table: Security review, round five.
 
 Table: The code runner, pentested.
 
+A second break-out round the same day, after those fixes, went after the doors the filter didn't name:
+
+| Attempt | Result | Action |
+|---|---|---|
+| A queued signal (`rt_sigqueueinfo` with `SI_QUEUE`) to the runner | **Allowed**: the kernel lets it reach any process of the same user, so with `SIGKILL` it could kill the runner around the `kill` rule | Fixed: queued signals only to the run's own process |
+| Make the runner the owner of a pipe (`F_SETOWN`), pick `SIGKILL` (`F_SETSIG`), then write to it | **Allowed**: the kernel would signal the runner | Fixed: file owners and their signals are refused (`fcntl` and `ioctl`) |
+| SysV shared memory, semaphores, message queues; POSIX message queues | **Allowed, and they outlive the run**: an 8 MB segment was still there afterwards, so runs could fill the container over time | Fixed: all refused |
+| Change the runner's scheduling (`sched_setattr`); read its robust-futex list | **Allowed** (the older scheduling calls were already refused) | Fixed: refused |
+| Page migration of another process | Refused, but only by Docker's profile | Now refused by the runner's own filter too |
+| Grow an output file past 1 MB with `fallocate` or `ftruncate` | Refused (`EFBIG`) | None needed |
+
+Table: The code runner, second break-out round.
+
 **Branch protection.** All seven members have write access, and nothing stops a direct push to `master`. Until the organisation has a plan with branch protection (GitHub's education offer gives organisations of students the Team plan free), the team relies on the rule that every change goes through a PR into `staging`, and production deploys are started deliberately rather than on every push.
 
 **For later features.** Every free-text field a student sends (answers, code, feedback) adds `NoHiddenCharacters` or strips NUL before it is stored: Postgres refuses NUL in `text` and `jsonb` alike.

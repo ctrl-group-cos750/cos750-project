@@ -41,7 +41,8 @@ def set_limits(limits: dict[str, int]) -> None:
 # seccomp: rules the kernel enforces on this process from here on, which can't be undone:
 # - no network sockets, so no connection anywhere (internet, DNS, the API, the database), whatever
 #   the Docker network allows;
-# - signals and resource limits only for this process itself: student code runs as the same user as
+# - signals (kill, tkill, tgkill and queued signals) and resource limits only for this process itself,
+#   and no file owners for SIGIO: student code runs as the same user as
 #   the runner, so it could otherwise kill the runner or every other student's run (kill(-1)), or
 #   cripple the runner with prlimit;
 # - nothing that reaches into other processes: pidfd, ptrace, process_vm_*, priorities, scheduling;
@@ -61,6 +62,7 @@ _ARCH: dict[str, dict[str, int]] = {
         "prlimit64": 302, "ptrace": 101, "setpriority": 141, "sched_setparam": 142,
         "sched_setscheduler": 144, "sched_setaffinity": 203, "ioprio_set": 251,
         "process_vm_readv": 310, "process_vm_writev": 311, "pidfd_send_signal": 424, "prctl": 157,
+        "rt_sigqueueinfo": 129, "rt_tgsigqueueinfo": 297, "fcntl": 72, "ioctl": 16,
         "pidfd_open": 434, "pidfd_getfd": 438,
         "open": 2, "openat": 257, "openat2": 437, "creat": 85, "mkdir": 83, "mkdirat": 258,
         "unlink": 87, "unlinkat": 263, "rename": 82, "renameat": 264, "renameat2": 316, "link": 86,
@@ -72,6 +74,7 @@ _ARCH: dict[str, dict[str, int]] = {
         "prlimit64": 261, "ptrace": 117, "setpriority": 140, "sched_setparam": 118,
         "sched_setscheduler": 119, "sched_setaffinity": 122, "ioprio_set": 30,
         "process_vm_readv": 270, "process_vm_writev": 271, "pidfd_send_signal": 424, "prctl": 167,
+        "rt_sigqueueinfo": 138, "rt_tgsigqueueinfo": 240, "fcntl": 25, "ioctl": 29,
         "pidfd_open": 434, "pidfd_getfd": 438,
         "openat": 56, "openat2": 437, "mkdirat": 34, "unlinkat": 35, "renameat": 38,
         "renameat2": 276, "linkat": 37, "symlinkat": 36, "mknodat": 33, "truncate": 45,
@@ -134,6 +137,30 @@ _KERNEL = {
     "lookup_dcookie": (212, 18),
     "memfd_secret": (447, 447),
     "memfd_create": (319, 279),
+    # SysV IPC and POSIX message queues outlive the run, so each run could leave memory behind.
+    "shmget": (29, 194),
+    "shmat": (30, 196),
+    "shmctl": (31, 195),
+    "semget": (64, 190),
+    "semop": (65, 193),
+    "semctl": (66, 191),
+    "semtimedop": (220, 192),
+    "msgget": (68, 186),
+    "msgsnd": (69, 189),
+    "msgrcv": (70, 188),
+    "msgctl": (71, 187),
+    "mq_open": (240, 180),
+    "mq_unlink": (241, 181),
+    "mq_timedsend": (242, 182),
+    "mq_timedreceive": (243, 183),
+    "mq_notify": (244, 184),
+    "mq_getsetattr": (245, 185),
+    # Another process's scheduling, and its robust-futex list (an address leak).
+    "sched_setattr": (314, 274),
+    "get_robust_list": (274, 100),
+    "migrate_pages": (256, 238),
+    "move_pages": (279, 239),
+    "set_mempolicy_home_node": (450, 450),
     "iopl": (172, None),
     "ioperm": (173, None),
     "modify_ldt": (154, None),
@@ -181,7 +208,23 @@ def sandbox_syscalls() -> None:
         (_JEQ, "self_or_group", 0, nr["prlimit64"]),  # prlimit64(0) is itself (setrlimit)
         (_JEQ, "self", 0, nr["tkill"]),
         (_JEQ, "self", 0, nr["tgkill"]),
+        # Queued signals (SI_QUEUE) reach other processes of the same user, like kill.
+        (_JEQ, "self", 0, nr["rt_sigqueueinfo"]),
+        (_JEQ, "self", 0, nr["rt_tgsigqueueinfo"]),
+        # A file's owner gets SIGIO, or any signal F_SETSIG names, when the file is ready: a way
+        # to have the kernel signal the runner.
+        (_JEQ, "fcntl_cmd", 0, nr["fcntl"]),
+        (_JEQ, "ioctl_cmd", 0, nr["ioctl"]),
         (_RET, 0, 0, _ALLOW),
+        ("label", "fcntl_cmd"),
+        (_LD_W_ABS, 0, 0, _ARG1),
+        (_JEQ, "refuse", 0, 8),  # F_SETOWN
+        (_JEQ, "refuse", 0, 10),  # F_SETSIG
+        (_JEQ, "refuse", "allow", 15),  # F_SETOWN_EX
+        ("label", "ioctl_cmd"),
+        (_LD_W_ABS, 0, 0, _ARG1),
+        (_JEQ, "refuse", 0, 0x8901),  # FIOSETOWN
+        (_JEQ, "refuse", "allow", 0x8902),  # SIOCSPGRP
         ("label", "self_or_group"),
         (_LD_W_ABS, 0, 0, _ARG0),
         (_JEQ, "allow", 0, 0),

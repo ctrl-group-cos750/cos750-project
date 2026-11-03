@@ -153,6 +153,18 @@ out = stdout_of(
 check(out.strip() == "refused", "the runner process's environment can't be read", out.strip())
 
 out = stdout_of(
+    "import os\nseen = []\nfor part in ['cwd', 'root', 'fd']:\n    try:\n"
+    "        os.listdir(f'/proc/{os.getppid()}/{part}')\n        seen.append(part)\n"
+    "    except OSError:\n        pass\ntry:\n    os.readlink(f'/proc/{os.getppid()}/exe')\n"
+    "    seen.append('exe')\nexcept OSError:\n    pass\nprint(seen)"
+)
+check(
+    out.strip() == "[]",
+    "the runner process's folder, root, binary and files can't be reached",
+    out.strip(),
+)
+
+out = stdout_of(
     "import os\nprint(os.getuid(), open('/proc/self/status').read().split('CapEff:')[1].split()[0])"
 )
 check(

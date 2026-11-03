@@ -604,3 +604,87 @@ def test_the_filter_fits_in_bpf_jumps() -> None:
     from runner import harness
 
     assert len(harness._KERNEL) + len(harness._REFUSED) < 200
+
+
+# Round four: signals and memory through doors the filter didn't name
+
+
+@pytest.mark.parametrize(
+    ("attempt", "call", "expected"),
+    [
+        ("a queued signal to the runner", "rt_sigqueueinfo, os.getppid(), 0, info", "-1 1"),
+        (
+            "a queued thread signal to the runner",
+            "rt_tgsigqueueinfo, os.getppid(), os.getppid(), 0, info",
+            "-1 1",
+        ),
+        ("a queued signal to itself", "rt_sigqueueinfo, os.getpid(), 0, info", "0 0"),
+    ],
+)
+def test_queued_signals_reach_only_its_own_process(attempt: str, call: str, expected: str) -> None:
+    # With si_code SI_QUEUE the kernel lets these reach any process of the same user: with
+    # SIGKILL instead of 0, a way to kill the runner around the kill rule.
+    probe = (
+        "import ctypes, os, platform\nlibc = ctypes.CDLL(None, use_errno=True)\n"
+        "x86 = platform.machine() == 'x86_64'\n"
+        "rt_sigqueueinfo, rt_tgsigqueueinfo = (129, 297) if x86 else (138, 240)\n"
+        "info = ctypes.create_string_buffer(128)\n"
+        "ctypes.memmove(ctypes.addressof(info) + 8, (-1).to_bytes(4, 'little', signed=True), 4)\n"
+        f"print(libc.syscall({call}), ctypes.get_errno())"
+    )
+    assert execute(probe, []).stdout == expected + "\n"
+
+
+@pytest.mark.parametrize(
+    ("attempt", "call"),
+    [
+        (
+            "make the runner a pipe's owner (it would get SIGIO)",
+            "fcntl.fcntl(r, fcntl.F_SETOWN, os.getppid())",
+        ),
+        ("choose SIGKILL as the pipe's signal", "fcntl.fcntl(r, 10, 9)"),
+        ("the same through ioctl", "fcntl.ioctl(r, 0x8901, ctypes.c_int(os.getppid()))"),
+    ],
+)
+def test_files_cannot_be_made_to_signal_another_process(attempt: str, call: str) -> None:
+    probe = (
+        "import ctypes, fcntl, os\nr, w = os.pipe()\ntry:\n    " + call + "\n    print('done')\n"
+        "except OSError as e:\n    print('refused', e.errno)"
+    )
+    assert execute(probe, []).stdout == "refused 1\n"
+
+
+def test_ordinary_fcntl_still_works() -> None:
+    probe = "import fcntl, os\nr, w = os.pipe()\nfcntl.fcntl(r, fcntl.F_SETFL, os.O_NONBLOCK)\nprint('ok')"
+    assert execute(probe, []).stdout == "ok\n"
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["shmget", "semget", "msgget", "mq_open", "sched_setattr", "get_robust_list", "migrate_pages"],
+)
+def test_ipc_and_other_processes_scheduling_are_refused(name: str) -> None:
+    from runner import harness
+
+    number = harness._KERNEL[name][0 if __import__("platform").machine() == "x86_64" else 1]
+    probe = (
+        "import ctypes\nlibc = ctypes.CDLL(None, use_errno=True)\nbuf = ctypes.create_string_buffer(64)\n"
+        f"print(libc.syscall({number}, 0, 8 << 20, 0o1600, buf), ctypes.get_errno())"
+    )
+    assert execute(probe, []).stdout == "-1 13\n"
+
+
+def test_no_shared_memory_is_left_behind_by_a_run() -> None:
+    # SysV segments outlive the process that made them: each run could leave memory behind.
+    from pathlib import Path
+
+    def segments() -> int:
+        return len(Path("/proc/sysvipc/shm").read_text().splitlines())
+
+    before = segments()
+    probe = (
+        "import ctypes, platform\nlibc = ctypes.CDLL(None, use_errno=True)\n"
+        "libc.syscall(29 if platform.machine() == 'x86_64' else 194, 0, 8 << 20, 0o1600)"
+    )
+    execute(probe, [])
+    assert segments() == before

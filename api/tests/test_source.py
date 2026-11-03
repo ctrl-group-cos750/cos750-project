@@ -5,7 +5,15 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 SOURCES = [
     p
-    for folder in ("api/app", "api/tests", "api/migrations", "web/src", "scripts")
+    for folder in (
+        "api/app",
+        "api/tests",
+        "api/migrations",
+        "runner/runner",
+        "runner/tests",
+        "web/src",
+        "scripts",
+    )
     for p in (REPO / folder).rglob("*")
     if p.suffix in {".py", ".ts", ".tsx", ".css", ".sh", ".mjs"}
 ]

@@ -1,0 +1,54 @@
+# Tool config for the code runner. Dependencies stay in requirements*.txt, which the Dockerfile and CI install.
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+  "E", "W",   # pycodestyle
+  "F",        # pyflakes
+  "I",        # import order
+  "B",        # bugbear
+  "UP",       # pyupgrade
+  "SIM",      # simplify
+  "C4",       # comprehensions
+  "PT",       # pytest style
+  "RUF",      # ruff-specific
+  "FAST",     # FastAPI
+  "S",        # bandit security checks
+]
+ignore = ["E501"]  # the formatter owns line length
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]  # assert is how pytest checks things
+# Running the student's code is this file's whole job; it runs in the sandboxed process.
+"runner/harness.py" = ["S102", "S307"]
+# The one subprocess: a fixed command (this Python and harness.py), never student input.
+"runner/sandbox.py" = ["S603"]
+# Talks to the runner over plain http on the internal network; the URL comes from CI.
+"tests/container_check.py" = ["S101", "S310"]
+"tests/isolation_check.py" = ["S105", "S310"]  # a throwaway test account on the CI stack
+
+[tool.ruff.lint.isort]
+known-first-party = ["runner"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["runner", "tests"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+source = ["runner"]
+# harness.py runs in the sandbox's own process, where coverage can't follow; tests check it from outside.
+omit = ["runner/harness.py"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true

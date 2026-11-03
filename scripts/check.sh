@@ -30,4 +30,15 @@ echo "== api"
   .venv/bin/pytest
 )
 
+echo "== runner"
+(
+  cd runner
+  [[ -d .venv ]] || { python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt; }
+  if $fix; then .venv/bin/ruff format . && .venv/bin/ruff check --fix .; fi
+  .venv/bin/ruff format --check .
+  .venv/bin/ruff check .
+  .venv/bin/mypy
+  .venv/bin/pytest --cov
+)
+
 echo "== all checks passed"

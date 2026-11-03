@@ -371,7 +371,7 @@ Figure: Use cases. The student takes part in every use case in both groups excep
 - **FR-5.3** **Submit** executes the code against the activity's hidden tests and records a graded attempt. The student sees which tests failed and a message for each, but not the hidden test code.
 - **FR-5.4** Parsons problems are checked by the order of the lines; completing and writing code are checked by tests.
 - **FR-5.5** For "write tests" activities, run the student's tests against the correct implementation (they must all pass) and against each faulty implementation (each must fail at least one test), as the ID document's objective 7 criterion requires.
-- **FR-5.6** All student code runs in the code runner under the limits of NFR-S7. A run that exceeds them returns a clear message ("Your code took longer than 5 seconds — check for a loop that never ends"), not an error page.
+- **FR-5.6** All student code runs in the code runner under the limits of NFR-S7. A run that exceeds them returns a clear message ("Your code took longer than 3 seconds. Check for a loop that never ends."), not an error page.
 
 ## BFS visualiser (FR-6)
 - **FR-6.1** Load a graph scenario (vertices, edges, directed or not, start vertex) and its BFS steps from the backend.
@@ -462,9 +462,13 @@ Table: Which part of the ID document each functional requirement delivers.
   - is on an internal Docker network with no route to the internet, reachable only from the API;
   - has no database credentials, no secrets and no volumes;
   - runs as an unprivileged user, with a read-only filesystem except a small temporary directory, all Linux capabilities dropped and `no-new-privileges` set;
-  - is capped by Docker at 0.5 CPU, 256 MB of memory and 64 processes;
-  - runs each submission in a fresh temporary directory, as a separate Python process (`python -I`) with its own limits: 5 seconds of CPU, 10 seconds wall time, 128 MB of memory, 1 MB of output; the whole process group is killed when a limit is reached;
-  - runs at most four submissions at a time; further requests get "busy, try again in a moment".
+  - is capped by Docker at 2 CPUs, 768 MB of memory and 64 processes, enough for four runs at once and the runner itself, so the kernel never has to choose between them;
+  - runs each submission in a fresh temporary directory, as a separate Python process (`python -I`) with its own limits: 3 seconds of CPU, 10 seconds wall time, 128 MB of memory, 1 MB of output, no new processes or threads; the whole process group is killed when a limit is reached;
+  - runs at most four submissions at a time; further requests get "busy, try again in a moment";
+  - sets a seccomp filter before the student's code runs, which the code can't remove: no network sockets, so it can't reach the internet, the API or the database even though it shares a network with the API; and signals and resource limits only for its own process, so it can't kill or slow the runner or another student's run (student code and the runner run as the same user);
+  - refuses, in the same filter, creating, writing, renaming or deleting files, so the code can't fill `/tmp` or touch another run; each run is non-dumpable before its job arrives and its output files have no name on disk, so one run can't see into another;
+  - never affects the rest of the app: its limits are its own, it has a quarter of the default CPU weight, no swap, and is the first thing the kernel kills if the server runs short of memory; the API starts and works without it (checked in CI with the sandbox flooded and with the runner stopped);
+  - and the API lets each student have one run at a time and at most 20 a minute, so one student can't keep all four slots busy (#21).
 - **NFR-S8** **Privacy (POPIA [8]).** The app stores only what it needs: email (to log in), a display name, and learning data. It shows no student's data to another student, and exports only internal IDs (FR-10.3). Test and demo data never uses real students' details.
 
 ## Maintainability
@@ -639,7 +643,9 @@ Progress, results and points change only as a side effect of attempts and segmen
 - OpenAPI/Swagger auto-published at `/api/docs` (FastAPI) and used as the frontend contract.
 
 ## Code runner (internal)
-Not reachable from outside the compose network. One endpoint, `POST /run`, takes the code, the tests and the limits, and returns per-test results, captured output (truncated at 1 MB) and whether a limit was hit. It keeps no state between requests.
+Not reachable from outside the compose network. One endpoint, `POST /run`, takes the code and the tests, and returns an outcome (`completed`, or the limit or error that stopped the code, with a message for the student), per-test results, captured output (cut at 1 MB) and the time taken. It keeps no state between requests. The full contract is in `runner/README.md`.
+
+Hidden, graded tests are **call tests**: an expression such as `bfs(graph, "A")` and the value it should return. The sandboxed process runs the expression and reports what came back; the runner's own process compares it with the expected answer, so the student's code never sees the answers and can't fake a pass. Visible examples and tests that students write are **code tests**: Python, usually asserts, that passes when it runs without an error.
 
 # BFS Engine Design
 
@@ -881,7 +887,7 @@ cos750-project/
 │  │  ├─ bfs/engine.py          BfsEngine: pure, tested in isolation (planned)
 │  │  └─ seed/                  modules, activities, hints, tests, scenarios, demo accounts (planned)
 │  └─ tests/
-├─ runner/                      code runner: Dockerfile and a minimal service (planned)
+├─ runner/                      code runner: Dockerfile, the service, the sandbox and its harness (README: the contract)
 ├─ web/
 │  ├─ Dockerfile                Vite build, then nginx
 │  ├─ nginx.conf                SPA, /api proxy, /media, /healthz
@@ -951,7 +957,7 @@ and auto-fixes first.
 - The API container applies pending migrations before serving, so schema changes reach each environment with its deploy.
 - Postgres is backed up nightly by a Coolify scheduled task (`pg_dump`, kept for 14 days).
 - Videos are stored in a `media` volume mounted into the web container and served by nginx at `/media/`, outside git and outside the image *(planned)*.
-- The runner is built and deployed with the rest of the stack, on an internal network with the API only, with the limits in NFR-S7 set in `docker-compose.yml` *(planned)*.
+- The runner is built and deployed with the rest of the stack, on an internal network with the API only, with the limits in NFR-S7 set in `docker-compose.yml`.
 - Secrets are environment variables set in Coolify (database password, JWT secret, `STAGING_PASSWORD`). None are committed (`.env` is gitignored; only `.env.example` is in the repo).
 
 # Testing strategy
@@ -966,7 +972,7 @@ Testing follows the Definition of Done (§2.4): no item is done until it has tes
 | API | Every endpoint against a freshly migrated database: correct and wrong answers, hint recording, progress and result updates; that one student can never read another's data; that no response ever contains an activity's `answer` | pytest + FastAPI `TestClient`, SQLite | Every PR (CI) |
 | Migrations | Every migration applies to an empty database, the models match the migrations, and there is one head | pytest + Alembic | Every PR (CI) |
 | Content | Every fixture file matches its schema; every code activity's reference solution passes its hidden tests, and every faulty implementation fails at least one (NFR-M5) | pytest, through the runner | Every PR that touches content (CI) |
-| Runner security | Hostile submissions fail safely: an infinite loop, a fork bomb, a memory bomb, a huge output, opening a network connection, reading environment variables and files, writing outside the temporary directory (NFR-S7) | pytest against the runner container | Every PR that touches the runner (CI, Docker); and once on staging, to confirm the network is internal |
+| Runner security | Hostile submissions fail safely: an infinite loop, a fork bomb, a memory bomb, a huge output, opening a network connection, reading environment variables and files, writing outside the temporary directory (NFR-S7) | pytest on the sandbox (at least 90% coverage); `runner/tests/container_check.py` against the real image with the compose limits | Every PR (CI); and once on staging, to confirm the network is internal |
 | End-to-end | The student's path in a real browser against the full stack: register, module 0 and its diagnostic, a video checkpoint, a code submission, the mastery report and a review path; plus logging in as each demo account | Playwright, in Chromium, Firefox and WebKit | Every PR into `staging` (CI); on staging before each sprint review |
 | Accessibility | Automated checks on every page (no WCAG 2.1 AA violations); one module completed with the keyboard only | oxlint jsx-a11y; axe-core in Playwright; a manual pass | Every PR (automated); once per sprint (manual) |
 | Exploratory | The item's acceptance criteria tried by hand on staging, by someone other than its author | Staging | Every item, before it is accepted (DoD) |
@@ -1129,7 +1135,7 @@ Before the feature freeze, on 10 and 11 November, team members pilot the app on 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | A student submission escapes the runner or exhausts the server | Low | High | Separate container with no network, secrets or data; Docker and per-process limits; concurrency cap (NFR-S7). Tested with hostile submissions (infinite loop, fork bomb, huge output, network and file access) before the pilot. |
-| Coolify doesn't honour the `internal` network, giving the runner internet access | Medium | High | Checked on staging with a submission that tries to reach the internet; if it can, the runner drops all network access and the API reaches it another way. |
+| Coolify doesn't honour the `internal` network, giving the runner internet access | Medium | High | Student code has no network access either way: a seccomp filter refuses it every socket. Checked on staging with a submission that tries to reach the internet (#25). |
 | Content arrives late: seven modules, about 75 minutes of activities, hints and tests | High | High | Engineers build against placeholder fixtures from Sprint 1; content is a tracked backlog item per module; the demo path needs modules 0, 3 and 6 first. |
 | Narrated videos not recorded in time | Medium | Medium | Videos are screen recordings of our own visualiser with a voice-over, so no filming; every video also has a transcript, so a segment works as text if the video is late. |
 | Video gating behaves differently across browsers | Medium | Low | The player enforces checkpoints itself from `timeupdate` and `seeking` events and is tested in Chromium, Firefox and WebKit with Playwright. |

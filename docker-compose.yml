@@ -40,9 +40,33 @@ services:
   # Whatever student code does, only running code is affected: the caps below are the runner's
   # alone, it yields the CPU to everything else, and it is the first thing the kernel kills if the
   # server runs short of memory.
+  # Hands the socket volume to the runner's user and clears a stale socket, once per deploy, then
+  # exits. Volume options can't do this: Coolify renames volumes and drops their driver options.
+  runner-socket:
+    image: busybox:1.37
+    network_mode: none
+    user: "0:0"
+    # Take the folder back first: root has no capability to override permissions, so it can only
+    # clear a stale socket from a folder it owns.
+    command: ["sh", "-c", "chown 0:0 /run/runner && rm -f /run/runner/runner.sock && chown 10002:10002 /run/runner && chmod 0711 /run/runner"]
+    volumes:
+      - runner-socket:/run/runner
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - FOWNER
+    security_opt:
+      - no-new-privileges:true
+    restart: "no"
+
   runner:
     build: ./runner
     network_mode: none
+    depends_on:
+      runner-socket:
+        condition: service_completed_successfully
     volumes:
       - runner-socket:/run/runner
     read_only: true
@@ -79,11 +103,6 @@ services:
 
 volumes:
   db-data:
-  # Only the socket between the API and the runner: in memory, owned by the runner's user, and
-  # nothing else mounts it.
+  # Only the socket between the API and the runner; nothing else mounts it. The runner-socket
+  # service gives it to the runner's user (Coolify drops volume driver options).
   runner-socket:
-    driver: local
-    driver_opts:
-      type: tmpfs
-      device: tmpfs
-      o: size=1m,uid=10002,gid=10002,mode=0711

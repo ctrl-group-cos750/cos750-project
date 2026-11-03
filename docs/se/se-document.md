@@ -251,7 +251,7 @@ The four containers are defined in `docker-compose.yml`, and Coolify deploys tha
 nginx serves the SPA and forwards `/api` to the API, so the browser only ever talks to one origin.
 That removes the need for CORS and for an API base URL in the frontend. The runner has no network
 at all (`network_mode: none`, only its loopback interface): the API reaches it through a Unix socket
-on a small in-memory volume that only the two of them mount. An `internal` Docker network was tried
+on a small volume that only the two of them mount. An `internal` Docker network was tried
 first, but Coolify adds its own network to every service it deploys, which gave the runner the
 internet and the database (#25).
 

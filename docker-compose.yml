@@ -24,9 +24,35 @@ services:
       SECRET_KEY: ${SECRET_KEY:-}
       # "off" in production: hides /api/docs and /api/openapi.json. Staging keeps them for the team.
       API_DOCS: ${API_DOCS:-on}
+      RUNNER_URL: http://runner:8000
+    networks:
+      - default
+      - sandbox
     depends_on:
       db:
         condition: service_healthy
+      runner:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Runs students' Python (SE document NFR-S7). Only on the internal `sandbox` network, which
+  # has no route to the internet and holds only the API; no secrets, no volumes, no database.
+  runner:
+    build: ./runner
+    expose:
+      - "8000"
+    networks:
+      - sandbox
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777,noexec,nosuid,nodev
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    cpus: 0.5
+    mem_limit: 256m
+    pids_limit: 64
     restart: unless-stopped
 
   db:
@@ -43,6 +69,10 @@ services:
       timeout: 5s
       retries: 10
     restart: unless-stopped
+
+networks:
+  sandbox:
+    internal: true
 
 volumes:
   db-data:

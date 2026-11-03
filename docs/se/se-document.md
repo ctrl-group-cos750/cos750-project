@@ -1139,6 +1139,18 @@ A second break-out round the same day, after those fixes, went after the doors t
 
 Table: The code runner, second break-out round.
 
+A third round, after those fixes reached staging:
+
+| Attempt | Result | Action |
+|---|---|---|
+| The 32-bit system-call table (`int 0x80` socketcall), from a few bytes of machine code | Refused by the filter (`EPERM`; `EFAULT` would have meant it reached the kernel) | None needed |
+| Replace itself with another program (`execve /bin/sh`) | **Allowed**, and the new program would no longer be non-dumpable | Fixed: `execve` and `execveat` refused |
+| `sync` and `syncfs` | **Allowed**: they flush every filesystem on the server, which other applications on it would feel in a loop | Fixed: refused (flushing its own files still works) |
+| Locking memory (`mlock`, `mlockall`) | Refused by the locked-memory limit | None needed |
+| Deeply nested JSON on the report pipe | **The runner's reader thread died** with `RecursionError` (the student's own run failed; the runner survived) | Fixed: such a line is ignored |
+
+Table: The code runner, third break-out round.
+
 **Branch protection.** All seven members have write access, and nothing stops a direct push to `master`. Until the organisation has a plan with branch protection (GitHub's education offer gives organisations of students the Team plan free), the team relies on the rule that every change goes through a PR into `staging`, and production deploys are started deliberately rather than on every push.
 
 **For later features.** Every free-text field a student sends (answers, code, feedback) adds `NoHiddenCharacters` or strips NUL before it is stored: Postgres refuses NUL in `text` and `jsonb` alike.

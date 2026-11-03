@@ -161,6 +161,12 @@ _KERNEL = {
     "migrate_pages": (256, 238),
     "move_pages": (279, 239),
     "set_mempolicy_home_node": (450, 450),
+    # Running another program: never needed, and it would undo "non-dumpable".
+    "execve": (59, 221),
+    "execveat": (322, 281),
+    # Flushing every filesystem on the server: other apps on it would feel a loop of these.
+    "sync": (162, 81),
+    "syncfs": (306, 267),
     "iopl": (172, None),
     "ioperm": (173, None),
     "modify_ldt": (154, None),

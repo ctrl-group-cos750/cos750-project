@@ -95,7 +95,7 @@ def _read_events(fd: int, limit: int, events: list[dict[str, Any]], ready: threa
                     continue
                 try:
                     event = json.loads(line)
-                except ValueError:
+                except (ValueError, RecursionError):  # not JSON, or nested too deep to parse
                     continue
                 if isinstance(event, dict):
                     events.append(event)

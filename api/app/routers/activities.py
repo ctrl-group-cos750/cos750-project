@@ -27,9 +27,7 @@ def get_activity(activity_id: int, session: DbSession, _user: CurrentUser) -> Ac
     return _activity_or_404(session, activity_id)
 
 
-@router.post(
-    "/{activity_id}/attempts", status_code=status.HTTP_201_CREATED
-)
+@router.post("/{activity_id}/attempts", status_code=status.HTTP_201_CREATED)
 def submit_attempt(
     activity_id: int, body: AttemptIn, user: CurrentUser, session: DbSession
 ) -> AttemptOut:

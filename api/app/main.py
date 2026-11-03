@@ -9,7 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from starlette.middleware.base import RequestResponseEndpoint
 
 from app.db import engine
-from app.routers import activities, auth
+from app.routers import activities, auth, graphs
 
 # Every route lives under /api: nginx in the web container forwards that prefix here unchanged.
 
@@ -33,6 +33,7 @@ app = FastAPI(
 )
 app.include_router(auth.router)
 app.include_router(activities.router)
+app.include_router(graphs.router)
 
 
 # Admission control. A request takes its database connection in one thread job and runs its handler

@@ -206,7 +206,7 @@ def test_subprocesses_cannot_be_started() -> None:
 def test_the_environment_holds_nothing_from_the_runner() -> None:
     result = execute("import os, json\nprint(json.dumps(dict(os.environ)))", [])
     env = json.loads(result.stdout)
-    assert set(env) == {"HOME", "LANG", "PATH", "RESULT_FD"}
+    assert set(env) == {"HOME", "LANG", "PATH", "RESULT_FD", "RUNNER_PID"}
 
 
 def test_the_code_runs_in_its_own_empty_folder_that_is_removed_afterwards() -> None:
@@ -444,8 +444,8 @@ def test_a_run_cannot_see_into_another_run_happening_at_the_same_time() -> None:
         "import os, time\ntime.sleep(0.5)\nseen = []\n"
         "for pid in os.listdir('/proc'):\n"
         "    if not pid.isdigit() or int(pid) == os.getpid():\n        continue\n"
-        "    try:\n        cmd = open(f'/proc/{pid}/cmdline').read()\n    except OSError:\n        continue\n"
-        "    if 'harness.py' not in cmd:\n        continue\n"
+        "    try:\n        argv = open(f'/proc/{pid}/cmdline').read().split(chr(0))\n    except OSError:\n        continue\n"
+        "    if argv[1:3] != ['-I', '-B'] or not argv[3:4] or not argv[3].endswith('runner/harness.py'):\n        continue\n"
         "    for part in ['cwd', 'environ', 'fd', 'mem', 'maps']:\n"
         "        try:\n"
         "            os.readlink(f'/proc/{pid}/cwd') if part == 'cwd' else (os.listdir(f'/proc/{pid}/fd') if part == 'fd' else open(f'/proc/{pid}/{part}', 'rb').read(1))\n"
@@ -479,7 +479,12 @@ def _wait_for_locked_run(seconds: float = 5) -> bool:
             if not proc.name.isdigit():
                 continue
             try:
-                if "harness.py" not in (proc / "cmdline").read_text():
+                argv = (proc / "cmdline").read_text().split(chr(0))
+                if (
+                    argv[1:3] != ["-I", "-B"]
+                    or not argv[3:4]
+                    or not argv[3].endswith("runner/harness.py")
+                ):
                     continue
                 (proc / "environ").read_bytes()  # readable: not locked yet
             except PermissionError:

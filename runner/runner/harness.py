@@ -163,7 +163,8 @@ def make_undumpable() -> None:
     # Dies with the runner, so no run can outlive the wall clock the runner enforces.
     if libc.prctl(pr_set_pdeathsig, signal.SIGKILL, 0, 0, 0) != 0:
         raise OSError(ctypes.get_errno(), "PR_SET_PDEATHSIG")
-    if os.getppid() == 1:  # the runner was already gone
+    # The runner was already gone. (Not "parent is PID 1": in the container the runner is PID 1.)
+    if os.getppid() != int(os.environ["RUNNER_PID"]):
         os._exit(1)
 
 

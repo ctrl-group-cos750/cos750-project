@@ -112,7 +112,7 @@ check("written" not in out, "nothing outside its own folder can be written", out
 
 out = stdout_of("import os\nprint(sorted(os.environ))")
 check(
-    out.strip() == "['HOME', 'LANG', 'PATH', 'RESULT_FD']",
+    out.strip() == "['HOME', 'LANG', 'PATH', 'RESULT_FD', 'RUNNER_PID']",
     "the environment holds no secrets",
     out.strip(),
 )

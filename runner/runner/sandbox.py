@@ -106,7 +106,13 @@ def execute(code: str, tests: list[TestCase], limits: Limits = LIMITS) -> RunRes
                 "output_bytes": limits.output_bytes,
             },
         }
-        env = {"RESULT_FD": str(write_fd), "HOME": work_dir, "LANG": "C.UTF-8", "PATH": "/usr/bin"}
+        env = {
+            "RESULT_FD": str(write_fd),
+            "RUNNER_PID": str(os.getpid()),
+            "HOME": work_dir,
+            "LANG": "C.UTF-8",
+            "PATH": "/usr/bin",
+        }
         # Output files with no name (O_TMPFILE): only this process and the run hold them, so
         # another run can't open them, and nothing is left behind.
         with tempfile.TemporaryFile(dir=work) as out, tempfile.TemporaryFile(dir=work) as err:

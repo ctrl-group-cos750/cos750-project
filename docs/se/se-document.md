@@ -240,17 +240,20 @@ web container: nginx
                     routers → services → SQLAlchemy models
                     BfsEngine, answer checkers, mastery rules
                       │                         │
-                      ▼                         ▼  internal network only
+                      ▼                         ▼  Unix socket on a shared volume
                   db container:             runner container: executes student
-                  PostgreSQL 18             Python against tests; no internet,
-                  (persistent volume,       no database, no secrets
+                  PostgreSQL 18             Python against tests; no network at
+                  (persistent volume,       all, no database, no secrets
                   nightly pg_dump)
 ```
 
 The four containers are defined in `docker-compose.yml`, and Coolify deploys that file as it is.
 nginx serves the SPA and forwards `/api` to the API, so the browser only ever talks to one origin.
-That removes the need for CORS and for an API base URL in the frontend. The runner is reachable
-only from the API, over a Docker network marked `internal`, which has no route to the internet.
+That removes the need for CORS and for an API base URL in the frontend. The runner has no network
+at all (`network_mode: none`, only its loopback interface): the API reaches it through a Unix socket
+on a small in-memory volume that only the two of them mount. An `internal` Docker network was tried
+first, but Coolify adds its own network to every service it deploys, which gave the runner the
+internet and the database (#25).
 
 ```mermaid
 sequenceDiagram
@@ -459,7 +462,7 @@ Table: Which part of the ID document each functional requirement delivers.
 - **NFR-S5** No secrets in the repository; configuration via environment variables.
 - **NFR-S6** Standard protections: the session cookie is httpOnly, Secure and SameSite=Lax; state-changing requests require JSON bodies (blocking cross-site form posts); parameterised queries via the ORM; rate limiting on login (per address and account, and per address), registration and code submission, keyed on the student's real address (Cloudflare's `CF-Connecting-IP`, believed only from Cloudflare's own servers); security headers on every page (a Content Security Policy allowing only our own scripts, styles and fonts, no framing, HSTS, `nosniff`). The app and the API share one origin, so no CORS is configured.
 - **NFR-S7** **Code runner isolation.** Student code is untrusted and runs only in the runner container, which:
-  - is on an internal Docker network with no route to the internet, reachable only from the API;
+  - has no network at all, only loopback (`network_mode: none`), and is reached by the API through a Unix socket on a volume only the two of them mount;
   - has no database credentials, no secrets and no volumes;
   - runs as an unprivileged user, with a read-only filesystem except a small temporary directory, all Linux capabilities dropped and `no-new-privileges` set;
   - is capped by Docker at 2 CPUs, 768 MB of memory and 64 processes, enough for four runs at once and the runner itself, so the kernel never has to choose between them;
@@ -958,7 +961,7 @@ and auto-fixes first.
 - The API container applies pending migrations before serving, so schema changes reach each environment with its deploy.
 - Postgres is backed up nightly by a Coolify scheduled task (`pg_dump`, kept for 14 days).
 - Videos are stored in a `media` volume mounted into the web container and served by nginx at `/media/`, outside git and outside the image *(planned)*.
-- The runner is built and deployed with the rest of the stack, on an internal network with the API only, with the limits in NFR-S7 set in `docker-compose.yml`.
+- The runner is built and deployed with the rest of the stack, with no network and the limits in NFR-S7 set in `docker-compose.yml`; the API reaches it through the `runner-socket` volume.
 - Secrets are environment variables set in Coolify (database password, JWT secret, `STAGING_PASSWORD`). None are committed (`.env` is gitignored; only `.env.example` is in the repo).
 
 # Testing strategy
@@ -1136,7 +1139,7 @@ Before the feature freeze, on 10 and 11 November, team members pilot the app on 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | A student submission escapes the runner or exhausts the server | Low | High | Separate container with no network, secrets or data; Docker and per-process limits; concurrency cap (NFR-S7). Tested with hostile submissions (infinite loop, fork bomb, huge output, network and file access) before the pilot. |
-| Coolify doesn't honour the `internal` network, giving the runner internet access | Medium | High | Student code has no network access either way: a seccomp filter refuses it every socket. Checked on staging with a submission that tries to reach the internet (#25). |
+| Coolify doesn't honour the `internal` network, giving the runner internet access | **Happened** | High | Found on staging (#25): Coolify added its own network, and the runner could reach the internet and the database. Student code was still blocked by the seccomp filter. Fixed by giving the runner no network at all (`network_mode: none`) and a Unix socket to the API; `runner/tests/network_check.py` checks it in CI and on staging. |
 | Content arrives late: seven modules, about 75 minutes of activities, hints and tests | High | High | Engineers build against placeholder fixtures from Sprint 1; content is a tracked backlog item per module; the demo path needs modules 0, 3 and 6 first. |
 | Narrated videos not recorded in time | Medium | Medium | Videos are screen recordings of our own visualiser with a voice-over, so no filming; every video also has a transcript, so a segment works as text if the video is late. |
 | Video gating behaves differently across browsers | Medium | Low | The player enforces checkpoints itself from `timeupdate` and `seeking` events and is tested in Chromium, Firefox and WebKit with Playwright. |

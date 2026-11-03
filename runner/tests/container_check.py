@@ -1,36 +1,67 @@
 """Hostile code against the real runner container, with docker-compose.yml's limits (NFR-S7).
 
-CI starts the runner on its internal network and runs this, standard library only, from a second
-container on that network:
+CI starts the runner (which has no network) and runs this, standard library only, from a second
+container that mounts the runner's socket volume:
 
-    python container_check.py http://runner:8000
+    python container_check.py unix:/run/runner/runner.sock
 
 It checks what only the container can enforce (no network, a read-only filesystem, Docker's
 memory and process limits) and that the runner is still healthy after every attack.
 """
 
+import http.client
 import json
+import socket
 import sys
 import threading
 import time
-import urllib.error
-import urllib.request
+import urllib.parse
 from typing import Any
 
-BASE = sys.argv[1].rstrip("/") if len(sys.argv) > 1 else "http://runner:8000"
+# unix:/run/runner/runner.sock (the runner has no network), or http://host:port for a local run.
+BASE = sys.argv[1].rstrip("/") if len(sys.argv) > 1 else "unix:/run/runner/runner.sock"
 failures: list[str] = []
 
 
-def run(code: str, tests: list[dict[str, Any]] | None = None) -> tuple[int, dict[str, Any]]:
-    body = json.dumps({"code": code, "tests": tests or []}).encode()
-    req = urllib.request.Request(
-        f"{BASE}/run", data=body, headers={"Content-Type": "application/json"}, method="POST"
+class UnixConnection(http.client.HTTPConnection):
+    def __init__(self, path: str, timeout: float) -> None:
+        super().__init__("runner", timeout=timeout)
+        self.socket_path = path
+
+    def connect(self) -> None:
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock.settimeout(self.timeout)
+        try:
+            sock.connect(self.socket_path)
+        except OSError:
+            sock.close()
+            raise
+        self.sock = sock
+
+
+def connection(timeout: float) -> http.client.HTTPConnection:
+    if BASE.startswith("unix:"):
+        return UnixConnection(BASE[len("unix:") :], timeout)
+    parts = urllib.parse.urlsplit(BASE)
+    return http.client.HTTPConnection(
+        parts.hostname or "localhost", parts.port or 80, timeout=timeout
     )
+
+
+def call(method: str, path: str, body: object = None, timeout: float = 60) -> tuple[int, bytes]:
+    conn = connection(timeout)
     try:
-        with urllib.request.urlopen(req, timeout=60) as res:
-            return res.status, json.loads(res.read())
-    except urllib.error.HTTPError as e:
-        return e.code, json.loads(e.read() or b"{}")
+        headers = {"Content-Type": "application/json"} if body is not None else {}
+        conn.request(method, path, body=None if body is None else json.dumps(body), headers=headers)
+        res = conn.getresponse()
+        return res.status, res.read()
+    finally:
+        conn.close()
+
+
+def run(code: str, tests: list[dict[str, Any]] | None = None) -> tuple[int, dict[str, Any]]:
+    status, raw = call("POST", "/run", {"code": code, "tests": tests or []})
+    return status, json.loads(raw or b"{}")
 
 
 def check(ok: bool, name: str, detail: object = "") -> None:
@@ -41,8 +72,7 @@ def check(ok: bool, name: str, detail: object = "") -> None:
 
 def healthy() -> bool:
     try:
-        with urllib.request.urlopen(f"{BASE}/health", timeout=10) as res:
-            return bool(res.status == 200)
+        return call("GET", "/health", timeout=10)[0] == 200
     except OSError:
         return False
 

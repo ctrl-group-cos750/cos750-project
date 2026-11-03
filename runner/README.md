@@ -1,7 +1,10 @@
 # Code runner
 
 Runs students' Python where it can't harm anything (SE document NFR-S7). An internal service: only
-the API can reach it, at `http://runner:8000` (`RUNNER_URL`).
+the API can reach it. **It has no network at all** (`network_mode: none`): it listens on the Unix
+socket `/run/runner/runner.sock` (`RUNNER_SOCKET`), on a small in-memory volume that only the runner
+and the API mount. The API's client is `api/app/runner_client.py` (`run_code`, which raises
+`RunnerUnavailable` with a message for the student).
 
 ## Contract
 
@@ -53,7 +56,7 @@ ends." Show `message` as it is. When four runs are already going, the answer is
 
 | Layer | What |
 |---|---|
-| Container (`docker-compose.yml`) | Internal network shared only with the API; no secrets, volumes or database; read-only filesystem except a 64 MB `/tmp`; unprivileged user; all capabilities dropped; `no-new-privileges`; 2 CPUs, 768 MB (four runs and the runner), 64 processes |
+| Container (`docker-compose.yml`) | **No network** (`network_mode: none`, only loopback); reached through its socket volume; no secrets or database; read-only filesystem except a 64 MB `/tmp`; unprivileged user; all capabilities dropped; `no-new-privileges`; 2 CPUs, 768 MB (four runs and the runner), 64 processes |
 | The rest of the app | Only running code is ever affected: the runner's caps are its own, it has a quarter of the default CPU weight, no swap, and is the first thing killed if the server runs out of memory; the API doesn't wait for it to start |
 | Process (`runner/harness.py`, set before any student code runs, as hard limits) | 3 s CPU, 128 MB memory, 1 MB per output file, no new processes or threads, 32 open files |
 | Kernel filter (seccomp, in `harness.py`) | No network sockets at all, whatever the Docker network allows; no creating, writing, renaming or deleting files (reading and imports still work), so `/tmp` can't be filled; signals and resource limits only for the run's own process, so it can't kill or cripple the runner or another run; nothing that reaches into other processes (pidfd, ptrace, process_vm, priorities); no calls from another architecture |
@@ -68,6 +71,9 @@ ends." Show `message` as it is. When four runs are already going, the answer is
 - `pytest --cov` in `runner/`: grading, messages and hostile code run directly (at least 90%
   coverage).
 - `tests/container_check.py`: hostile code against the real image with the compose limits, from a
-  second container on the internal network. CI runs it on every PR.
+  second container that mounts the socket volume. CI runs it on every PR.
+- `tests/network_check.py`: runs inside the runner container, outside the sandbox filter, and fails
+  unless the container has nothing but loopback. CI runs it on every PR; on staging it runs through
+  a Coolify scheduled task.
 - `tests/isolation_check.py`: with the whole stack up, measures the app at rest, then while the
   sandbox is flooded with hostile code, then with the runner stopped. CI runs it on every PR.

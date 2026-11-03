@@ -100,20 +100,21 @@ jobs:
       # container on the runner's internal network (NFR-S7).
       - name: Start the whole stack
         run: docker compose -p ctrlci up -d --wait
+      # The runner has no network: the checks reach it, like the API, through its socket volume.
+      - name: The runner container has no network at all
+        run: docker compose -p ctrlci exec -T runner python - < runner/tests/network_check.py
       - name: Hostile code against the runner container
         run: >-
-          docker run --rm --network ctrlci_sandbox
+          docker run --rm -v ctrlci_runner-socket:/run/runner
           -v "$PWD/runner/tests/container_check.py:/check.py:ro"
-          python:3.12-slim python /check.py http://runner:8000
+          python:3.12-slim python /check.py unix:/run/runner/runner.sock
       # Whatever the sandbox does, only running code is affected: the app is measured at rest,
       # then while the sandbox is flooded with hostile code, then with the runner stopped.
       - name: The app keeps working while the sandbox is flooded
         run: |
-          docker create --name isolation --network ctrlci_default \
+          docker run --rm --network ctrlci_default -v ctrlci_runner-socket:/run/runner \
             -v "$PWD/runner/tests/isolation_check.py:/check.py:ro" \
-            python:3.12-slim python /check.py flood http://web http://runner:8000
-          docker network connect ctrlci_sandbox isolation
-          docker start -a isolation
+            python:3.12-slim python /check.py flood http://web unix:/run/runner/runner.sock
       - name: The app works with the runner stopped
         run: |
           docker compose -p ctrlci stop runner

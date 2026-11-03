@@ -2,6 +2,7 @@
 execution: these mirror the grading a student submission gets."""
 
 import pytest
+from pydantic import ValidationError
 
 from app.schemas.activities import (
     FillInConfig,
@@ -127,3 +128,53 @@ def test_dispatch_fill_in_from_plain_data() -> None:
 def test_dispatch_unknown_kind_raises() -> None:
     with pytest.raises(ValueError, match="unknown code activity kind"):
         checking.check_code_activity("freeform", {}, {}, {})
+
+
+# --- Hardening: the checker is the untrusted boundary now, so malformed input must be graded,
+# --- never crash, and the solution must never leak into the result.
+
+
+def test_parsons_config_requires_at_least_one_line() -> None:
+    with pytest.raises(ValidationError):
+        ParsonsConfig.model_validate({"lines": []})
+
+
+def test_parsons_config_rejects_too_many_lines() -> None:
+    with pytest.raises(ValidationError):
+        ParsonsConfig.model_validate({"lines": [{"id": i, "text": "x"} for i in range(101)]})
+
+
+def test_fill_in_config_requires_blanks_and_options() -> None:
+    with pytest.raises(ValidationError):
+        FillInConfig.model_validate({"code": "x", "blanks": [], "options": ["a"]})
+    with pytest.raises(ValidationError):
+        FillInConfig.model_validate({"code": "x", "blanks": [1], "options": []})
+
+
+def test_parsons_duplicate_ids_in_a_submission_are_graded_by_position_not_crash() -> None:
+    result = checking.check_parsons(PARSONS, PARSONS_SOLUTION, ParsonsSubmission(order=[0, 0, 2]))
+    assert [p.correct for p in result.parts] == [True, False, True]
+    assert result.parts[1].message == checking.OUT_OF_PLACE
+
+
+def test_parsons_unknown_line_id_in_submission_is_marked_as_not_belonging() -> None:
+    result = checking.check_parsons(PARSONS, PARSONS_SOLUTION, ParsonsSubmission(order=[0, 7, 2]))
+    assert result.parts[1].message == checking.EXTRA_LINE  # 7 isn't even a line in this activity
+
+
+def test_fill_in_ignores_submitted_blanks_that_are_not_in_the_activity() -> None:
+    result = checking.check_fill_in(
+        FILL_IN, FILL_IN_SOLUTION, FillInSubmission(answers={1: "start", 2: "set()", 99: "junk"})
+    )
+    assert result.correct  # the stray blank 99 is ignored; only configured blanks are graded
+    assert [p.ref for p in result.parts] == [1, 2]
+
+
+def test_the_result_never_contains_the_solution() -> None:
+    # Even a fully wrong answer: the response the API would send carries no solution token.
+    result = checking.check_fill_in(
+        FILL_IN, FILL_IN_SOLUTION, FillInSubmission(answers={1: "wrong", 2: "wrong"})
+    )
+    blob = result.model_dump_json()
+    assert "start" not in blob
+    assert "set()" not in blob

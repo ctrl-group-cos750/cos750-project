@@ -1,0 +1,70 @@
+{
+  "activities": [
+    {
+      "id": 9001,
+      "kind": "multiple_choice",
+      "title": "Placeholder: which vertex leaves the queue?",
+      "config": {
+        "prompt": "A queue holds A, B and C, with A at the front. You dequeue once. Which vertex comes out?",
+        "options": [
+          { "id": "a", "label": "A" },
+          { "id": "b", "label": "B" },
+          { "id": "c", "label": "C" }
+        ]
+      },
+      "solution": {
+        "correct": "a",
+        "feedback": {
+          "b": "B is in the middle of the queue. A queue only ever gives up the vertex at its front.",
+          "c": "C was added last. Taking the newest item first is what a stack does, not a queue."
+        }
+      },
+      "hints": [
+        { "level": 1, "body": "A queue is first in, first out." },
+        { "level": 2, "body": "Which vertex has been waiting in the queue the longest?" },
+        { "level": 3, "body": "The front of the queue is the vertex that was added first." },
+        { "level": 4, "body": "A is at the front, so dequeuing returns A. The queue is then B, C." }
+      ]
+    },
+    {
+      "id": 9002,
+      "kind": "multiple_choice",
+      "title": "Placeholder: the order neighbours join the queue",
+      "config": {
+        "prompt": "BFS starts at A. A's neighbours are C and B. In which order are they added to the queue?",
+        "options": [
+          { "id": "bc", "label": "B, then C" },
+          { "id": "cb", "label": "C, then B" },
+          { "id": "b", "label": "Only B" }
+        ]
+      },
+      "solution": {
+        "correct": "bc",
+        "feedback": {
+          "cb": "In this course neighbours are always taken in alphabetical order of their labels, whatever order they are listed in.",
+          "b": "BFS adds every neighbour it has not discovered yet, not only the first one."
+        }
+      },
+      "hints": [
+        { "level": 1, "body": "BFS adds all of a vertex's undiscovered neighbours before moving on." },
+        { "level": 2, "body": "The order neighbours are listed in does not decide the order they are taken in." },
+        { "level": 3, "body": "Neighbours are taken in alphabetical order of their labels." },
+        { "level": 4, "body": "B comes before C alphabetically, so B is added first, then C. The queue is B, C." }
+      ]
+    }
+  ],
+  "videos": [
+    {
+      "id": 9001,
+      "title": "Placeholder video (recording pending, #37)",
+      "media_path": "/media/demo/placeholder.mp4",
+      "captions_path": "/media/demo/placeholder.vtt",
+      "transcript": "This is a placeholder for a narrated video, so the player and its checkpoints can be tested before the real recordings exist. At 20 seconds the video stops for a question about which vertex leaves a queue. At 45 seconds it stops for a question about the order BFS adds neighbours in.",
+      "duration_seconds": 60,
+      "checkpoints": [
+        { "id": 9001, "at_seconds": 20, "activity_id": 9001 },
+        { "id": 9002, "at_seconds": 45, "activity_id": 9002 }
+      ]
+    }
+  ]
+}

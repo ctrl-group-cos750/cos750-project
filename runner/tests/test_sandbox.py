@@ -688,3 +688,60 @@ def test_no_shared_memory_is_left_behind_by_a_run() -> None:
     )
     execute(probe, [])
     assert segments() == before
+
+
+# Round five: the 32-bit table, other programs, the whole server, the report reader
+
+
+@pytest.mark.skipif(__import__("platform").machine() != "x86_64", reason="x86-64 only")
+def test_the_32_bit_system_call_table_is_refused() -> None:
+    # socketcall(SYS_SOCKET) through int 0x80, from a few bytes of machine code. EFAULT would mean
+    # the call reached the kernel, which with a real argument would make a socket.
+    probe = (
+        "import ctypes, mmap\n"
+        "code = bytes([0xB8, 0x66, 0, 0, 0, 0xBB, 1, 0, 0, 0, 0x31, 0xC9, 0xCD, 0x80, 0xC3])\n"
+        "mem = mmap.mmap(-1, 4096, prot=mmap.PROT_READ | mmap.PROT_WRITE | mmap.PROT_EXEC)\n"
+        "mem.write(code)\n"
+        "address = ctypes.addressof(ctypes.c_char.from_buffer(mem))\n"
+        "print(ctypes.CFUNCTYPE(ctypes.c_int)(address)())"
+    )
+    assert execute(probe, []).stdout == "-1\n"  # -EPERM from the filter, not -EFAULT (-14)
+
+
+@pytest.mark.parametrize(
+    ("attempt", "name", "args"),
+    [
+        ("replace itself with a shell", "execve", "b'/bin/sh', None, None"),
+        ("the same through execveat", "execveat", "-100, b'/bin/sh', None, None, 0"),
+        ("flush every filesystem on the server", "sync", ""),
+        ("flush a whole filesystem", "syncfs", "1"),
+    ],
+)
+def test_other_programs_and_server_wide_flushes_are_refused(
+    attempt: str, name: str, args: str
+) -> None:
+    from runner import harness
+
+    number = harness._KERNEL[name][0 if __import__("platform").machine() == "x86_64" else 1]
+    probe = (
+        "import ctypes\nlibc = ctypes.CDLL(None, use_errno=True)\n"
+        f"print(libc.syscall({number}{', ' + args if args else ''}), ctypes.get_errno(), flush=True)"
+    )
+    assert execute(probe, []).stdout == "-1 13\n"
+
+
+def test_its_own_file_can_still_be_flushed() -> None:
+    assert execute("import os\nos.fsync(1)\nprint('ok')", []).stdout == "ok\n"
+
+
+def test_nested_json_on_the_report_pipe_is_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
+    # It used to raise RecursionError in the runner's reader thread.
+    import threading
+
+    errors: list[BaseException | None] = []
+    monkeypatch.setattr(threading, "excepthook", lambda args: errors.append(args.exc_value))
+    nested = "import os\nos.write(int(os.environ['RESULT_FD']), b'[' * 200000 + b'\\n')\nprint('still here')"
+    result = execute(nested, [code("after it", "assert True", visible=True)])
+    assert errors == []
+    assert result.outcome == "completed"
+    assert result.tests[0].passed

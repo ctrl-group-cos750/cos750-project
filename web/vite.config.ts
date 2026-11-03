@@ -21,6 +21,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': 'http://localhost:8000',
+      // Uploaded videos, served by the API when it runs with SERVE_MEDIA=1 (api/app/main.py).
+      '/media': 'http://localhost:8000',
     },
   },
   test: {

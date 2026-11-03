@@ -48,3 +48,12 @@ export function GuestOnly({ children }: { children: ReactNode }) {
   if (user) return <Navigate to="/" replace />
   return children
 }
+
+/** Staff pages (the video editor). Inside RequireAuth; a student gets a plain refusal. */
+export function RequireStaff({ children }: { children: ReactNode }) {
+  const { data: user } = useCurrentUser()
+  if (!user?.isStaff) {
+    return <Alert tone="danger">Only team members can open this page.</Alert>
+  }
+  return children
+}

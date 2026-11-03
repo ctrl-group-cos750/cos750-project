@@ -30,3 +30,14 @@ def get_current_user(session: DbSession, token: SessionCookie = None) -> User:
 
 # Use in a route as `user: CurrentUser`. Scope every query to `user.id` (NFR-S2, FR-1.3).
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+def get_staff_user(user: CurrentUser) -> User:
+    """Team members only (`users.is_staff`). Grant it with `python -m app.staff grant <email>`."""
+    if not user.is_staff:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Only team members can do this.")
+    return user
+
+
+# Use in a staff route as `staff: StaffUser`.
+StaffUser = Annotated[User, Depends(get_staff_user)]

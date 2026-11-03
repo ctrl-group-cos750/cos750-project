@@ -9,6 +9,9 @@ services:
     environment:
       # Set in Coolify for staging only: the whole site then sits behind a team-password page.
       STAGING_PASSWORD: ${STAGING_PASSWORD:-}
+    volumes:
+      # Uploaded videos and captions, served at /media/. Read-only here: only the API writes.
+      - media:/srv/media:ro
     depends_on:
       api:
         condition: service_healthy
@@ -24,6 +27,10 @@ services:
       SECRET_KEY: ${SECRET_KEY:-}
       # "off" in production: hides /api/docs and /api/openapi.json. Staging keeps them for the team.
       API_DOCS: ${API_DOCS:-on}
+      # Where staff uploads go (app/media.py). The same volume the web container serves.
+      MEDIA_DIR: /media
+    volumes:
+      - media:/media
     depends_on:
       db:
         condition: service_healthy
@@ -46,3 +53,6 @@ services:
 
 volumes:
   db-data:
+  # Narrated videos and captions, uploaded by staff in the app (/staff/videos). On Coolify this
+  # is a persistent volume: it survives deploys and is not in git or any image.
+  media:

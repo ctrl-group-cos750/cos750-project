@@ -9,13 +9,12 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, Checkpoint, Hint, User, Video
+from app.models import Activity, Attempt, Hint, User
 from app.seed import load, read_fixtures
 
 
 def test_every_committed_fixture_is_valid() -> None:
-    content = read_fixtures()
-    assert content.videos, "expected at least the placeholder video"
+    read_fixtures()  # raises, naming the file, if any fixture is invalid
 
 
 def write(folder: Path, data: dict[str, Any]) -> Path:
@@ -38,19 +37,6 @@ def activity(**overrides: Any) -> dict[str, Any]:
     }
 
 
-def video(**overrides: Any) -> dict[str, Any]:
-    return {
-        "id": 1,
-        "title": "V",
-        "media_path": "/media/v.mp4",
-        "captions_path": "/media/v.vtt",
-        "transcript": "T",
-        "duration_seconds": 60,
-        "checkpoints": [{"id": 1, "at_seconds": 20, "activity_id": 1}],
-        **overrides,
-    }
-
-
 @pytest.mark.parametrize(
     ("data", "problem"),
     [
@@ -68,22 +54,8 @@ def video(**overrides: Any) -> dict[str, Any]:
         ),
         ({"activities": [activity(hints=[{"level": 5, "body": "a"}])]}, "level"),
         ({"activities": [activity(), activity()]}, "used twice"),
-        (
-            {
-                "activities": [activity()],
-                "videos": [video(media_path="https://evil.example/x.mp4")],
-            },
-            "media_path",
-        ),
-        (
-            {
-                "activities": [activity()],
-                "videos": [video(checkpoints=[{"id": 1, "at_seconds": 99, "activity_id": 1}])],
-            },
-            "after the end",
-        ),
-        ({"videos": [video()]}, "no fixture defines"),
         ({"activities": [activity(extra="x")]}, "extra"),
+        ({"videos": []}, "videos"),  # videos are made in the editor, not in fixtures
     ],
 )
 def test_invalid_fixtures_are_refused(tmp_path: Path, data: dict[str, Any], problem: str) -> None:
@@ -94,7 +66,7 @@ def test_invalid_fixtures_are_refused(tmp_path: Path, data: dict[str, Any], prob
 def test_load_creates_content_and_a_rerun_updates_it_without_touching_attempts(
     tmp_path: Path, db: Session
 ) -> None:
-    folder = write(tmp_path, {"activities": [activity()], "videos": [video()]})
+    folder = write(tmp_path, {"activities": [activity()]})
     load(db, folder)
     user = User(email="ada@example.com", display_name="Ada", password_hash="not-a-real-hash")  # noqa: S106
     db.add(user)
@@ -104,24 +76,16 @@ def test_load_creates_content_and_a_rerun_updates_it_without_touching_attempts(
     )
     db.commit()
 
-    write(
-        tmp_path,
-        {
-            "activities": [activity(title="Q2", hints=[{"level": 1, "body": "new"}])],
-            "videos": [video(checkpoints=[{"id": 1, "at_seconds": 30, "activity_id": 1}])],
-        },
-    )
+    write(tmp_path, {"activities": [activity(title="Q2", hints=[{"level": 1, "body": "new"}])]})
     load(db, folder)
     db.expire_all()
     assert db.get(Activity, 1).title == "Q2"  # type: ignore[union-attr]
     assert [h.body for h in db.scalars(select(Hint))] == ["new"]
-    assert [c.at_seconds for c in db.scalars(select(Checkpoint))] == [30]
-    assert len(db.scalars(select(Video)).all()) == 1
     assert len(db.scalars(select(Attempt)).all()) == 1
 
 
 def test_a_bad_fixture_writes_nothing(tmp_path: Path, db: Session) -> None:
-    folder = write(tmp_path, {"videos": [video()]})
-    with pytest.raises(ValueError, match="no fixture defines"):
+    folder = write(tmp_path, {"activities": [activity(kind="essay")]})
+    with pytest.raises(ValueError, match="kind"):
         load(db, folder)
-    assert db.scalars(select(Video)).all() == []
+    assert db.scalars(select(Activity)).all() == []

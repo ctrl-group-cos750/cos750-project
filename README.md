@@ -31,6 +31,26 @@ cd api && python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 cd web && npm install && npm run dev               # http://localhost:5173, proxies /api to :8000
 ```
 
+For video uploads without Docker, start the API with `MEDIA_DIR=./media SERVE_MEDIA=1` so it
+stores uploads in `api/media/` and serves them at `/media/` (Vite proxies that to it too).
+
+## Videos and checkpoints
+
+Videos live on the `media` volume (in `docker-compose.yml`), not in git: the API writes uploads
+there and nginx serves them at `/media/`. On Coolify the volume persists across deploys.
+
+1. Register an account in the app, then make it staff:
+   `docker compose exec api python -m app.staff grant you@example.com`
+   (on Coolify, in the api container's terminal). Log out and in again if the page was open.
+2. Open **Videos** in the header (`/staff/videos`) → **New video**.
+3. Upload the MP4 (up to 95 MB, H.264) and its WebVTT captions, fill in the title and transcript.
+4. Play the preview, pause where it should stop and press **Add checkpoint at the current time**.
+   Write the question, mark the correct option, say why each wrong one is wrong, add up to four
+   hints. Save.
+5. **Open as a student** (`/videos/<id>`) to try it.
+
+Editing a checkpoint keeps its attempts; removing one keeps its activity if students answered it.
+
 ## Checks
 
 CI runs these on every PR, for the parts it touches (not again on the merge). Run them before you push:

@@ -5,4 +5,4 @@ from app.seed import load
 
 with SessionLocal() as session:
     content = load(session)
-print(f"seed: {len(content.activities)} activities, {len(content.videos)} videos")
+print(f"seed: {len(content.activities)} activities")

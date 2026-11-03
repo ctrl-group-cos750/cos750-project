@@ -33,7 +33,7 @@ cd web && npm install && npm run dev               # http://localhost:5173, prox
 
 ## Checks
 
-CI runs these on every PR and on every push to `staging` and `master`. Run them before you push:
+CI runs these on every PR, for the parts it touches (not again on the merge). Run them before you push:
 
 ```
 scripts/check.sh          # everything below
@@ -55,7 +55,7 @@ Tests sit next to the code: `web/src/**/*.test.tsx` and `api/tests/test_*.py`. A
 database for in-memory SQLite (`api/tests/conftest.py`), so they don't need Postgres running.
 Coverage: `cd web && npm run coverage`.
 
-Dependabot opens weekly update PRs into `staging`.
+Dependabot opens monthly update PRs into `staging`; security updates come at once.
 
 ## Database
 

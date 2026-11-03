@@ -24,66 +24,9 @@ services:
       SECRET_KEY: ${SECRET_KEY:-}
       # "off" in production: hides /api/docs and /api/openapi.json. Staging keeps them for the team.
       API_DOCS: ${API_DOCS:-on}
-      # The runner has no network; it listens on this socket (runner/README.md).
-      RUNNER_SOCKET: /run/runner/runner.sock
-    volumes:
-      - runner-socket:/run/runner
-    # Not on the runner: the app starts and works without it; only running code needs it.
     depends_on:
       db:
         condition: service_healthy
-    restart: unless-stopped
-
-  # Runs students' Python (SE document NFR-S7). No network at all: not even an internal one,
-  # because Coolify adds its own network to every service it deploys (#25). It holds no secrets
-  # and no data; the API talks to it over a Unix socket on the `runner-socket` volume.
-  # Whatever student code does, only running code is affected: the caps below are the runner's
-  # alone, it yields the CPU to everything else, and it is the first thing the kernel kills if the
-  # server runs short of memory.
-  # Hands the socket volume to the runner's user and clears a stale socket, once per deploy, then
-  # exits. Volume options can't do this: Coolify renames volumes and drops their driver options.
-  runner-socket:
-    image: busybox:1.37
-    network_mode: none
-    user: "0:0"
-    # Take the folder back first: root has no capability to override permissions, so it can only
-    # clear a stale socket from a folder it owns.
-    command: ["sh", "-c", "chown 0:0 /run/runner && rm -f /run/runner/runner.sock && chown 10002:10002 /run/runner && chmod 0711 /run/runner"]
-    volumes:
-      - runner-socket:/run/runner
-    read_only: true
-    cap_drop:
-      - ALL
-    cap_add:
-      - CHOWN
-      - FOWNER
-    security_opt:
-      - no-new-privileges:true
-    restart: "no"
-
-  runner:
-    build: ./runner
-    network_mode: none
-    depends_on:
-      runner-socket:
-        condition: service_completed_successfully
-    volumes:
-      - runner-socket:/run/runner
-    read_only: true
-    tmpfs:
-      - /tmp:size=64m,mode=1777,noexec,nosuid,nodev
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    # Four runs at once, each up to 0.5 CPU and 128 MB, plus the runner and its 64 MB /tmp: the
-    # kernel never has to choose between a student's run and the runner itself.
-    cpus: 2
-    cpu_shares: 256  # a quarter of the default weight: the API and database win any contest
-    mem_limit: 768m
-    memswap_limit: 768m  # no swap: it can't push the server into swapping
-    oom_score_adj: 1000  # if the server runs out of memory, the runner goes first
-    pids_limit: 64
     restart: unless-stopped
 
   db:
@@ -103,6 +46,3 @@ services:
 
 volumes:
   db-data:
-  # Only the socket between the API and the runner; nothing else mounts it. The runner-socket
-  # service gives it to the runner's user (Coolify drops volume driver options).
-  runner-socket:

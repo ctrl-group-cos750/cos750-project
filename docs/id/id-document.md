@@ -125,8 +125,8 @@ A student is ready for the lecture when no objective is marked "Not yet". The st
 | 3 | Apply | Matching 4 real-world situations to a graph model. The student names the vertices, the edges and the direction. | At least 3 of 4 situations modelled correctly. |
 | 4 | Understand | Choosing when BFS is suitable in 4 short scenarios. The student picks the correct reason for each choice. | At least 3 of 4 choices and reasons correct. |
 | 5 | Apply | Tracing BFS on an unseen graph of 6 to 8 vertices by filling in a table. | Correct queue, visited set and next vertex at every step, with at most one error. |
-| 6 | Apply | Writing BFS in Python on the student's own graph class. | Passes all hidden test cases, including the expected traversal order. |
-| 7 | Analyse, evaluate | Fixing 2 faulty versions of BFS. Writing 2 test cases: a disconnected graph and a graph with a cycle. | Both bugs fixed. Both tests are valid and each faulty version fails at least one test. |
+| 6 | Apply | Constructing BFS on the student's own graph class by ordering shuffled lines and filling in missing tokens. | The ordered and completed code matches the reference solution, including the expected traversal order. |
+| 7 | Analyse, evaluate | Fixing 2 faulty versions of BFS by selecting and ordering the corrections. Choosing, for a disconnected graph and a graph with a cycle, the test cases that expose each bug. | Both faulty versions corrected to match the solution. For each bug, a chosen test case fails the faulty version and passes the correct one. |
 
 Table: Level, evidence and success criterion for each learning objective.
 
@@ -163,8 +163,8 @@ We use Gagné's Nine Events of Instruction as a step-by-step guide to structure 
 | 3. Stimulate recall of prior learning | A quick queue refresher that uses COS110 knowledge: add an item, remove an item and first in, first out. |
 | 4. Present the content | A narrated walkthrough that shows the graph, the queue and the visited set together. Each segment covers one idea. |
 | 5. Provide learning guidance | A worked example first. Then partly completed code. Then a blank task. A four-level hint ladder is always available. |
-| 6. Elicit performance | Checkpoints where the student predicts, traces, completes or writes code before the lesson continues. |
-| 7. Provide feedback | Instant and specific feedback from trace checks and test cases. The feedback explains why an answer is wrong. |
+| 6. Elicit performance | Checkpoints where the student predicts, traces, completes or orders code before the lesson continues. |
+| 7. Provide feedback | Instant and specific feedback from trace checks and comparison with the solution. The feedback explains why an answer is wrong. |
 | 8. Assess performance | A final mastery check with unseen graphs. The result is shown for each objective. |
 | 9. Enhance retention and transfer | Opening questions that recall earlier modules. A closing task that applies BFS to a new problem. An optional bonus quest. |
 
@@ -174,16 +174,18 @@ Table: Gagné's nine events applied to the BFS lessons.
 
 The application has seven short modules, each focused on one main idea. This keeps every part small enough to complete in one sitting. The total duration is approximately 75 minutes. Students can stop after any module and the application saves their progress. Table 4 shows each module, the objectives it covers and its activities.
 
-Constructive alignment means that objectives, learning activities and assessment point to the same skill [4]. For example, learning objective 6 asks students to write BFS. So the activity is writing BFS, and the assessment runs the student's code against tests. A multiple-choice question about BFS would not show that a student can write it. The alignment keeps the application honest about what it teaches and what it measures.
+Constructive alignment means that objectives, learning activities and assessment point to the same skill [4]. For example, learning objective 6 asks students to implement BFS. So the activity is constructing BFS — ordering shuffled lines and filling in the missing tokens — and the assessment compares the result with the reference solution. Parsons problems are a validated proxy for code-writing ability (§5.3), so this keeps the objective at its level while running no student-written code. A multiple-choice question about BFS would not show that a student can build it. The alignment keeps the application honest about what it teaches and what it measures.
+
+> **Revision (3 November 2026).** Code activities were changed from free-text code writing to ordering (Parsons) and fill-in-the-blank, checked by comparison with the solution. This was a software-security decision (the freeform code runner was removed; see SE document §15.3): it removes all execution of untrusted student code. The learning objectives and their Bloom's levels are unchanged. The exact shape of objective 7's activities (fixing faulty BFS and selecting test cases) is still being settled by the ID team and should be ratified before the pilot.
 
 | Module | Learning objectives | Main learning activities | Assessment evidence | Duration (minutes) |
 |---|---|---|---|---|
 | 0. Warm-up and queue refresher | Prior knowledge | Short quiz on queues and basic Python. The application picks the refreshers the student needs. | Diagnostic score | 5 |
 | 1. What is a graph? | 1, 2, 3 | Build a campus graph by adding vertices and edges. Classify directed and undirected graphs. Match real situations to graphs. | Labelling and matching checkpoints | 12 |
-| 2. A graph in Python | 2, 6 | Complete `add_vertex` and `add_edge` in a `Graph` class. Make the class handle directed and undirected edges. | Code checkpoints with test cases | 10 |
+| 2. A graph in Python | 2, 6 | Complete `add_vertex` and `add_edge` in a `Graph` class by filling in missing tokens. Make the class handle directed and undirected edges. | Completed code checked against the solution | 10 |
 | 3. Meet BFS | 4, 5 | Watch BFS on the campus graph. Predict the next vertex. Fill in the queue, the visited set and the traversal order. | Trace checkpoints | 12 |
-| 4. Write BFS | 6 | Put shuffled lines of code in order. Fill in missing lines. Write BFS in a blank function. | Hidden test cases | 15 |
-| 5. Test and debug | 7 | Find and fix bugs in faulty BFS code. Write tests for a disconnected graph and for a graph with a cycle. | Bug-fix and test-writing tasks | 10 |
+| 4. Build BFS | 6 | Put shuffled lines of code in order (Parsons). Fill in the missing tokens. | Line order and tokens checked against the solution | 15 |
+| 5. Test and debug | 7 | Find and fix bugs in faulty BFS code by selecting and ordering the corrections. Choose the test cases (a disconnected graph, a graph with a cycle) that expose each bug. | Fixes and test choices checked against the solution | 10 |
 | 6. Mastery check and report | 1–7 | Unseen items on every objective. A report for each objective with next steps. | Criteria in Table 1 | 10 |
 
 Table: The lesson sequence, in which each row links objectives, activities and evidence. This follows constructive alignment [4].
@@ -210,7 +212,7 @@ We use four groups of ideas to explain our design: active learning, cognitive lo
 
 ## Active learning
 
-Students learn more when they do something with the content. The ICAP framework ranks learning activities as passive, active, constructive and interactive, and it links deeper activity to deeper learning [6]. A large review of science, engineering and mathematics courses found that active learning raised exam scores and lowered failure rates compared with lectures [8]. Our checkpoints ask students to drag, trace and write code. These are active and constructive tasks. The application cannot offer peer discussion, so the lecture will provide the interactive part.
+Students learn more when they do something with the content. The ICAP framework ranks learning activities as passive, active, constructive and interactive, and it links deeper activity to deeper learning [6]. A large review of science, engineering and mathematics courses found that active learning raised exam scores and lowered failure rates compared with lectures [8]. Our checkpoints ask students to drag, trace and complete code. These are active and constructive tasks. The application cannot offer peer discussion, so the lecture will provide the interactive part.
 
 Active learning does not mean unguided learning. Kirschner, Sweller and Clark argue that minimal guidance works poorly for novices [11]. Our students are new to graphs. For this reason every task is guided. Each task has a worked example before it, small steps and hints. The student is active, but the student is not alone.
 
@@ -240,7 +242,7 @@ New ideas stick best when they link to what students already know. Ausubel argue
 
 Recalling information strengthens memory. Roediger and Karpicke found that taking memory tests led to better long-term retention than repeated study [18]. For this reason each module opens with one or two questions on earlier modules. This practice helps students remember. It also shows them which ideas are still weak.
 
-Students need to trace code before they can write it well. Lister and colleagues found that many novice programmers could not trace short pieces of code correctly. They suggested that reading and tracing are skills students need before they write code [13]. For this reason students trace BFS by hand in module 3, before they write it in module 4.
+Students need to trace code before they can write it well. Lister and colleagues found that many novice programmers could not trace short pieces of code correctly. They suggested that reading and tracing are skills students need before they write code [13]. For this reason students trace BFS by hand in module 3, before they build it in module 4.
 
 Showing BFS on screen helps only if students take part. Hundhausen, Douglas and Stasko found that how students use a visualisation matters more than what it shows [9]. Naps and colleagues reached a similar view. They concluded that visualisations help when they make learners active [16]. For this reason students predict the next vertex before the animation shows it. The animation then confirms or corrects the prediction.
 
@@ -264,7 +266,7 @@ Instead, we follow Universal Design for Learning (UDL), which gives every studen
 | UDL principle | How the application applies it |
 |---|---|
 | Multiple means of representation | Each idea appears as a narrated video, a transcript, a graph diagram, a panel showing the queue and visited set, and code. |
-| Multiple means of action and expression |	Students answer by choosing, matching, labelling, building graphs, filling in trace tables, ordering lines and writing code. |
+| Multiple means of action and expression |	Students answer by choosing, matching, labelling, building graphs, filling in trace tables, ordering lines and completing code. |
 | Multiple means of engagement |	Students control their pace, skip refreshers and worked examples they do not need, ask for hints only when they choose, and can take optional bonus quests. |
 
 Table: Universal Design for Learning applied to the application [31].
@@ -276,7 +278,7 @@ The examination specification asks which learning styles the application caters 
 | Visual | Graph diagrams, the BFS animation with the current vertex highlighted, and the panel showing the queue and visited set. |
 | Aural | Narrated videos for each walkthrough. |
 | Read/write | Transcripts, short definitions of each key term, code, and the per-objective report. |
-| Kinesthetic | Building the campus graph, filling in trace tables, ordering Parsons lines and writing code. |
+| Kinesthetic | Building the campus graph, filling in trace tables, ordering Parsons lines and completing code. |
 
 Table: Learning-style categories covered by the application's representations.
 

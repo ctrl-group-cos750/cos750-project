@@ -952,7 +952,7 @@ and auto-fixes first.
 
 - Work happens on a feature branch, which goes into `staging` through a reviewed PR. `staging` goes into `master` through another PR.
 - CI must pass before merging. A PR into `master` from any branch other than `staging` fails the `branch-flow` check.
-- Branch rules (`.github/rulesets/`): `staging` and `master` change only through a PR with one approval from someone other than the last person to push and green `web`, `api`, `runner` and `compose` checks (`master` also `source-is-staging`); no force-pushes or deletion. They take effect once the organisation is on GitHub Team (free for students through GitHub Education). Until then the `push-guard` workflow flags any push to either branch that isn't a PR merge, and production deploys only when started deliberately.
+- Branch rules (`.github/rulesets/`): `staging` and `master` change only through a PR with one approval from someone other than the last person to push and a green `checks` job (`master` also `source-is-staging`); no force-pushes or deletion. They take effect once the organisation is on GitHub Team (free for students through GitHub Education). Until then the `push-guard` workflow flags any push to either branch that isn't a PR merge, and production deploys only when started deliberately.
 - A merge into `staging` deploys to staging.ctrlacademy.co.za, where the team checks it behind the team password before it is promoted.
 
 ## Deployment

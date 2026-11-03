@@ -43,7 +43,7 @@ Answer:
 
 `outcome` is `completed` (see each test), or one of `syntax_error`, `error`, `timeout`,
 `memory_limit`, `output_limit` and `crashed`, with `message` saying what happened in words for the
-student (FR-5.6), for example "Your code took longer than 5 seconds. Check for a loop that never
+student (FR-5.6), for example "Your code took longer than 3 seconds. Check for a loop that never
 ends." Show `message` as it is. When four runs are already going, the answer is
 `503 {"detail": "The code runner is busy. Try again in a moment."}` with `Retry-After: 2`.
 
@@ -51,11 +51,12 @@ ends." Show `message` as it is. When four runs are already going, the answer is
 
 | Layer | What |
 |---|---|
-| Container (`docker-compose.yml`) | Internal network shared only with the API; no secrets, volumes or database; read-only filesystem except a 64 MB `/tmp`; unprivileged user; all capabilities dropped; `no-new-privileges`; 0.5 CPU, 256 MB, 64 processes |
-| Process (`runner/harness.py`, set before any student code runs, as hard limits) | 5 s CPU, 128 MB memory, 1 MB per output file, no new processes or threads, 32 open files |
-| Kernel filter (seccomp, in `harness.py`) | No network sockets at all, whatever the Docker network allows |
+| Container (`docker-compose.yml`) | Internal network shared only with the API; no secrets, volumes or database; read-only filesystem except a 64 MB `/tmp`; unprivileged user; all capabilities dropped; `no-new-privileges`; 2 CPUs, 768 MB (four runs and the runner), 64 processes |
+| Process (`runner/harness.py`, set before any student code runs, as hard limits) | 3 s CPU, 128 MB memory, 1 MB per output file, no new processes or threads, 32 open files |
+| Kernel filter (seccomp, in `harness.py`) | No network sockets at all, whatever the Docker network allows; signals and resource limits only for the run's own process, so it can't kill or cripple the runner or another run; nothing that reaches into other processes (pidfd, ptrace, process_vm, priorities); no calls from another architecture |
 | Runner (`runner/sandbox.py`) | Fresh temporary folder and empty environment per run; 10 s wall clock, then the whole process group is killed; the runner process is non-dumpable, so student code can't read its memory or environment |
 | Service (`runner/app.py`) | At most four runs at once |
+| API (#21, to build) | One run at a time per student and at most 20 a minute, so one student can't keep every slot busy; wait at most 15 s for the runner; show the 503 "busy" message as it is |
 
 ## Checks
 

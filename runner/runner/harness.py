@@ -35,36 +35,93 @@ def set_limits(limits: dict[str, int]) -> None:
     hard(resource.RLIMIT_NOFILE, 32)
 
 
-# seccomp: the kernel refuses socket(2) to this process from now on, so the student's code can't
-# open any network connection (internet, DNS, the API, the database), whatever the Docker network
-# allows. It can't be undone. Calls from another architecture's system call table are refused too,
-# so they can't be used to get around the rule. (Linux: <linux/seccomp.h>, <linux/filter.h>.)
-_ARCH = {"x86_64": (0xC000003E, 41), "aarch64": (0xC00000B7, 198)}  # audit arch, __NR_socket
+# seccomp: rules the kernel enforces on this process from here on, which can't be undone:
+# - no network sockets, so no connection anywhere (internet, DNS, the API, the database), whatever
+#   the Docker network allows;
+# - signals and resource limits only for this process itself: student code runs as the same user as
+#   the runner, so it could otherwise kill the runner or every other student's run (kill(-1)), or
+#   cripple the runner with prlimit;
+# - nothing that reaches into other processes: pidfd, ptrace, process_vm_*, priorities, scheduling;
+# - no calls from another architecture's table, which could be used to get around all of this.
+# (Linux: <linux/seccomp.h>, <linux/filter.h>.)
+_ARCH: dict[str, dict[str, int]] = {
+    "x86_64": {
+        "audit": 0xC000003E, "socket": 41, "kill": 62, "tkill": 200, "tgkill": 234,
+        "prlimit64": 302, "ptrace": 101, "setpriority": 141, "sched_setparam": 142,
+        "sched_setscheduler": 144, "sched_setaffinity": 203, "ioprio_set": 251,
+        "process_vm_readv": 310, "process_vm_writev": 311, "pidfd_send_signal": 424,
+        "pidfd_open": 434, "pidfd_getfd": 438,
+    },
+    "aarch64": {
+        "audit": 0xC00000B7, "socket": 198, "kill": 129, "tkill": 130, "tgkill": 131,
+        "prlimit64": 261, "ptrace": 117, "setpriority": 140, "sched_setparam": 118,
+        "sched_setscheduler": 119, "sched_setaffinity": 122, "ioprio_set": 30,
+        "process_vm_readv": 270, "process_vm_writev": 271, "pidfd_send_signal": 424,
+        "pidfd_open": 434, "pidfd_getfd": 438,
+    },
+}  # fmt: skip
+_REFUSED = (
+    "socket", "ptrace", "setpriority", "sched_setparam", "sched_setscheduler", "sched_setaffinity",
+    "ioprio_set", "process_vm_readv", "process_vm_writev", "pidfd_send_signal", "pidfd_open",
+    "pidfd_getfd",
+)  # fmt: skip
 _LD_W_ABS, _JEQ, _JGE, _RET = 0x20, 0x15, 0x35, 0x06
 _ALLOW, _ERRNO = 0x7FFF0000, 0x00050000
+_ARG0 = 16  # seccomp_data.args[0], low 32 bits (pid_t is an int)
 
 
-def block_network() -> None:
-    audit_arch, nr_socket = _ARCH[platform.machine()]
-    refuse = _ERRNO | errno.EACCES
-    program = [
+def _assemble(program: list[tuple[object, ...]]) -> bytes:
+    """BPF with named jump targets: ("label", name) marks a place; jumps name their targets."""
+    places, count = {}, 0
+    for item in program:
+        if item[0] == "label":
+            places[item[1]] = count
+        else:
+            count += 1
+    raw, at = b"", 0
+    for item in program:
+        if item[0] == "label":
+            continue
+        code, jt, jf, k = item
+        jumps = [t if isinstance(t, int) else places[t] - at - 1 for t in (jt, jf)]
+        raw += struct.pack("HBBI", code, *jumps, k)
+        at += 1
+    return raw
+
+
+def sandbox_syscalls() -> None:
+    nr = _ARCH[platform.machine()]
+    me = os.getpid()
+    program: list[tuple[object, ...]] = [
         (_LD_W_ABS, 0, 0, 4),  # seccomp_data.arch
-        (_JEQ, 1, 0, audit_arch),
-        (_RET, 0, 0, refuse),  # another architecture's calls
+        (_JEQ, 0, "refuse", nr["audit"]),
         (_LD_W_ABS, 0, 0, 0),  # seccomp_data.nr
-        (_JGE, 0, 1, 0x40000000),
-        (_RET, 0, 0, refuse),  # x32 calls
-        (_JEQ, 0, 1, nr_socket),
-        (_RET, 0, 0, refuse),
+        (_JGE, "refuse", 0, 0x40000000),  # x32 calls
+        *[(_JEQ, "refuse", 0, nr[name]) for name in _REFUSED],
+        (_JEQ, "self_or_group", 0, nr["kill"]),  # kill(0) is its own group: only itself
+        (_JEQ, "self_or_group", 0, nr["prlimit64"]),  # prlimit64(0) is itself (setrlimit)
+        (_JEQ, "self", 0, nr["tkill"]),
+        (_JEQ, "self", 0, nr["tgkill"]),
+        (_RET, 0, 0, _ALLOW),
+        ("label", "self_or_group"),
+        (_LD_W_ABS, 0, 0, _ARG0),
+        (_JEQ, "allow", 0, 0),
+        (_JEQ, "allow", "refuse", me),
+        ("label", "self"),
+        (_LD_W_ABS, 0, 0, _ARG0),
+        (_JEQ, "allow", "refuse", me),
+        ("label", "refuse"),
+        (_RET, 0, 0, _ERRNO | errno.EPERM),
+        ("label", "allow"),
         (_RET, 0, 0, _ALLOW),
     ]
-    raw = b"".join(struct.pack("HBBI", *ins) for ins in program)
+    raw = _assemble(program)
     buf = ctypes.create_string_buffer(raw)
 
     class Prog(ctypes.Structure):
         _fields_ = [("len", ctypes.c_ushort), ("filter", ctypes.c_void_p)]
 
-    prog = Prog(len(program), ctypes.addressof(buf))
+    prog = Prog(len(raw) // 8, ctypes.addressof(buf))
     libc = ctypes.CDLL(None, use_errno=True)
     pr_set_no_new_privs, pr_set_seccomp, seccomp_mode_filter = 38, 22, 2
     if libc.prctl(pr_set_no_new_privs, 1, 0, 0, 0) != 0:
@@ -107,7 +164,7 @@ def main() -> None:
         report.write(json.dumps(event) + "\n")
 
     job = json.loads(sys.stdin.read())
-    block_network()  # fails closed: if it can't be set up, no student code runs
+    sandbox_syscalls()  # fails closed: if it can't be set up, no student code runs
     set_limits(job["limits"])
     sys.stdout.reconfigure(errors="replace")  # type: ignore[union-attr]
 

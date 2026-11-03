@@ -292,8 +292,8 @@ def test_no_network_connection_can_be_opened() -> None:
         "try:\n    socket.getaddrinfo('example.com', 443)\n    out.append('dns')\n"
         "except OSError:\n    out.append('no dns')\nprint(out)"
     )
-    # 13 (EACCES) from the filter, not 111 (connection refused): the socket is never even created.
-    assert execute(probe, []).stdout == "[13, 13, 'no dns']\n"
+    # 1 (EPERM) from the filter, not 111 (connection refused): the socket is never even created.
+    assert execute(probe, []).stdout == "[1, 1, 'no dns']\n"
 
 
 def test_the_raw_system_call_is_refused_too() -> None:
@@ -302,7 +302,7 @@ def test_the_raw_system_call_is_refused_too() -> None:
         "nr = {'x86_64': 41, 'aarch64': 198}[platform.machine()]\n"
         "print(libc.syscall(nr, 2, 1, 0), ctypes.get_errno())"
     )
-    assert execute(raw, []).stdout == "-1 13\n"
+    assert execute(raw, []).stdout == "-1 1\n"
 
 
 def test_the_filter_cannot_be_removed() -> None:
@@ -311,3 +311,41 @@ def test_the_filter_cannot_be_removed() -> None:
         "print(libc.prctl(38, 0, 0, 0, 0), ctypes.get_errno())"  # clear no_new_privs: refused
     )
     assert execute(undo, []).stdout == "-1 22\n"
+
+
+# Other processes are out of reach: student code runs as the same user as the runner
+
+
+@pytest.mark.parametrize(
+    ("attempt", "call"),
+    [
+        ("kill the runner", "os.kill(os.getppid(), signal.SIGKILL)"),
+        ("kill every process of this user", "os.kill(-1, signal.SIGKILL)"),
+        (
+            "cripple the runner's limits",
+            "resource.prlimit(os.getppid(), resource.RLIMIT_NOFILE, (0, 0))",
+        ),
+        ("lower the runner's priority", "os.setpriority(os.PRIO_PROCESS, os.getppid(), 19)"),
+        ("get a handle on the runner", "os.pidfd_open(os.getppid())"),
+    ],
+)
+def test_the_runner_and_other_runs_are_out_of_reach(attempt: str, call: str) -> None:
+    # If the filter failed, the first two would kill this test process: the runner here.
+    probe = (
+        "import os, resource, signal\ntry:\n    " + call + "\n    print('done')\n"
+        "except OSError as e:\n    print('refused', e.errno)"
+    )
+    assert execute(probe, []).stdout == "refused 1\n"
+
+
+def test_its_own_process_is_still_its_own() -> None:
+    probe = (
+        "import os, resource\nos.kill(os.getpid(), 0)\nos.kill(0, 0)\n"
+        "resource.setrlimit(resource.RLIMIT_NOFILE, (16, 16))\nprint('fine')"
+    )
+    assert execute(probe, []).stdout == "fine\n"
+
+
+def test_ending_its_own_process_with_a_signal_is_a_crash_not_a_problem() -> None:
+    result = execute("import os, signal\nos.kill(os.getpid(), signal.SIGTERM)", [])
+    assert result.outcome == "crashed"

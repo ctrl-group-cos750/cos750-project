@@ -50,8 +50,10 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
-    cpus: 0.5
-    mem_limit: 256m
+    # Four runs at once, each up to 0.5 CPU and 128 MB, plus the runner and its 64 MB /tmp: the
+    # kernel never has to choose between a student's run and the runner itself.
+    cpus: 2
+    mem_limit: 768m
     pids_limit: 64
     restart: unless-stopped
 

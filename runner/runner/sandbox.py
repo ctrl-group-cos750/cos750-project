@@ -28,7 +28,7 @@ MIB = 1024 * 1024
 
 @dataclass(frozen=True)
 class Limits:
-    cpu_seconds: int = 5
+    cpu_seconds: int = 3
     wall_seconds: float = 10
     memory_bytes: int = 128 * MIB
     output_bytes: int = 1 * MIB

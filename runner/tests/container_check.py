@@ -129,6 +129,14 @@ check(
     out.split() == ["10002", "0000000000000000"], "unprivileged user, no capabilities", out.strip()
 )
 
+out = stdout_of(
+    "import os, signal\nfor target in [os.getppid(), 1, -1]:\n    try:\n"
+    "        os.kill(target, signal.SIGKILL)\n        print('killed', target)\n"
+    "    except OSError:\n        print('refused', target)"
+)
+check("killed" not in out, "student code can't kill the runner or anything else", out.split())
+check(healthy(), "the runner is healthy after the kill attempts")
+
 bomb = "import os\nwhile True:\n    try:\n        os.fork()\n    except OSError:\n        pass"
 status, body = run(bomb)
 check(

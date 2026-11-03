@@ -371,7 +371,7 @@ Figure: Use cases. The student takes part in every use case in both groups excep
 - **FR-5.3** **Submit** executes the code against the activity's hidden tests and records a graded attempt. The student sees which tests failed and a message for each, but not the hidden test code.
 - **FR-5.4** Parsons problems are checked by the order of the lines; completing and writing code are checked by tests.
 - **FR-5.5** For "write tests" activities, run the student's tests against the correct implementation (they must all pass) and against each faulty implementation (each must fail at least one test), as the ID document's objective 7 criterion requires.
-- **FR-5.6** All student code runs in the code runner under the limits of NFR-S7. A run that exceeds them returns a clear message ("Your code took longer than 5 seconds — check for a loop that never ends"), not an error page.
+- **FR-5.6** All student code runs in the code runner under the limits of NFR-S7. A run that exceeds them returns a clear message ("Your code took longer than 3 seconds. Check for a loop that never ends."), not an error page.
 
 ## BFS visualiser (FR-6)
 - **FR-6.1** Load a graph scenario (vertices, edges, directed or not, start vertex) and its BFS steps from the backend.
@@ -462,10 +462,11 @@ Table: Which part of the ID document each functional requirement delivers.
   - is on an internal Docker network with no route to the internet, reachable only from the API;
   - has no database credentials, no secrets and no volumes;
   - runs as an unprivileged user, with a read-only filesystem except a small temporary directory, all Linux capabilities dropped and `no-new-privileges` set;
-  - is capped by Docker at 0.5 CPU, 256 MB of memory and 64 processes;
-  - runs each submission in a fresh temporary directory, as a separate Python process (`python -I`) with its own limits: 5 seconds of CPU, 10 seconds wall time, 128 MB of memory, 1 MB of output; the whole process group is killed when a limit is reached;
+  - is capped by Docker at 2 CPUs, 768 MB of memory and 64 processes, enough for four runs at once and the runner itself, so the kernel never has to choose between them;
+  - runs each submission in a fresh temporary directory, as a separate Python process (`python -I`) with its own limits: 3 seconds of CPU, 10 seconds wall time, 128 MB of memory, 1 MB of output, no new processes or threads; the whole process group is killed when a limit is reached;
   - runs at most four submissions at a time; further requests get "busy, try again in a moment";
-  - refuses every network socket to student code with a seccomp filter set before the code runs, so it can't reach the internet, the API or the database even though it shares a network with the API.
+  - sets a seccomp filter before the student's code runs, which the code can't remove: no network sockets, so it can't reach the internet, the API or the database even though it shares a network with the API; and signals and resource limits only for its own process, so it can't kill or slow the runner or another student's run (student code and the runner run as the same user);
+  - and the API lets each student have one run at a time and at most 20 a minute, so one student can't keep all four slots busy (#21).
 - **NFR-S8** **Privacy (POPIA [8]).** The app stores only what it needs: email (to log in), a display name, and learning data. It shows no student's data to another student, and exports only internal IDs (FR-10.3). Test and demo data never uses real students' details.
 
 ## Maintainability

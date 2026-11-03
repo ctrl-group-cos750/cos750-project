@@ -33,7 +33,7 @@ cd web && npm install && npm run dev               # http://localhost:5173, prox
 
 ## Checks
 
-CI runs these on every PR and on every push to `staging` and `master`. Run them before you push:
+CI runs these on every PR, for the parts it touches (not again on the merge). Run them before you push:
 
 ```
 scripts/check.sh          # everything below
@@ -55,7 +55,7 @@ Tests sit next to the code: `web/src/**/*.test.tsx` and `api/tests/test_*.py`. A
 database for in-memory SQLite (`api/tests/conftest.py`), so they don't need Postgres running.
 Coverage: `cd web && npm run coverage`.
 
-Dependabot opens weekly update PRs into `staging`.
+Dependabot opens monthly update PRs into `staging`; security updates come at once.
 
 ## Database
 
@@ -97,5 +97,16 @@ Tests never need Postgres: the `working_db` fixture in `api/tests/conftest.py` s
 `feature/*` → PR into `staging` → PR from `staging` into `master`. A PR into `master` from any
 other branch fails the `branch-flow` check.
 
-Coolify deploys on push: `staging` → staging.ctrlacademy.co.za, `master` → ctrlacademy.co.za.
+- **Rules** (`.github/rulesets/`, applied by `scripts/apply-branch-rules.sh`): `staging` and
+  `master` change only through a PR with one approving review from someone other than the last
+  person to push, and a green `checks` job (CI's one job); `master` also needs
+  `source-is-staging`. No force-pushes, no deleting either branch. They need the organisation on
+  GitHub Team (free for student organisations through GitHub Education).
+- **Until then**, the `push-guard` workflow checks every push to `staging` and `master`: anything
+  that isn't the merge of a PR, or is a force-push, fails and opens an issue for the Scrum Master;
+  and `delete-guard` does the same if `master` is deleted, with the commit to restore it from.
+  (GitHub never allows deleting the default branch, `staging`.)
+
+Coolify deploys `staging` to staging.ctrlacademy.co.za on every push. Production (`master` →
+ctrlacademy.co.za) is deployed deliberately after a release PR, not automatically on push.
 Setup: [docs/deploy/coolify.md](docs/deploy/coolify.md).

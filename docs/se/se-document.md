@@ -18,15 +18,14 @@ The COS212 app, Ctrl Academy, is a pre-lecture, tutor-style learning application
 What the app teaches, in what order, and how it assesses the student is designed in the ID document [5]: seven short modules (0 to 6), seven learning objectives, a four-level hint ladder, and a mastery check that reports each objective separately. This document specifies the software that delivers that design.
 
 From an engineering standpoint, the system is a web application composed of:
-- a **TypeScript + React frontend** that plays narrated videos, renders interactive activities, a code editor and the BFS visualiser, and shows each student their progress, points and mastery report;
+- a **TypeScript + React frontend** that plays narrated videos, renders interactive activities (including drag-and-drop and fill-in-the-blank code) and the BFS visualiser, and shows each student their progress, points and mastery report;
 - a **Python backend** that serves content, manages accounts, checks answers, computes BFS traversals, records every attempt, and decides mastery and scaffolding;
-- a **code runner**, an isolated service that executes student Python against test cases;
 - a **PostgreSQL database** holding users, content, attempts, progress and results.
 
 ## Engineering goals
 - Every activity type in the ID document can be expressed as **data**, so the ID team adds or changes content without code changes.
 - Answers, mastery and points are decided **on the server**; the browser only reports what the student did.
-- Student code runs in a **sandbox** that cannot reach the network, the database or any secret.
+- Code activities are checked by **comparing the student's answer with the solution**, so no student-written code is ever executed on the server (decision §15.3).
 - Deterministic, inspectable BFS step generation, so animations, predictions and trace tables all agree with what the lessons teach.
 - Every attempt and hint is **logged**, so the ID team's pilot and evaluation have the data they need.
 
@@ -112,7 +111,7 @@ learning outcomes. The Product Owner's duties are shared instead:
 | Sprint | Dates | Goal |
 |---|---|---|
 | Sprint 0 | 22 Oct – 1 Nov | Foundation. Spec issued 22 Oct, group registered 23 Oct, topic chosen (graphs + BFS), repository and branch flow, CI, hosting on staging and production, database layer with migrations, backups, staging login. |
-| Sprint 1 | 2 – 8 Nov | **A complete path through the app.** A student can register, open a lesson, answer a checkpoint question in a video, step through BFS on a predefined graph, write and submit BFS through the code runner, take the mastery check, and be sent to the review path for any objective marked "not yet", all with placeholder content, deployed to staging. |
+| Sprint 1 | 2 – 8 Nov | **A complete path through the app.** A student can register, open a lesson, answer a checkpoint question in a video, step through BFS on a predefined graph, arrange and complete BFS in a code activity, take the mastery check, and be sent to the review path for any objective marked "not yet", all with placeholder content, deployed to staging. |
 | Sprint 2 | 9 – 15 Nov | **Real content and the full feature set.** The ID team's content, questions and scaffolds loaded; all activity kinds, hints, points and badges; narrated videos; pilot by team members on 10–11 Nov (§14.5); end-to-end tests; accessibility pass. |
 | Release | 12 – 16 Nov | Feature freeze **Thu 12 Nov**. `staging` → `master` (production) **Fri 13 Nov**. Demo rehearsals on production 14–15 Nov. SE and ID documents submitted before **08:00 on Mon 16 Nov**. Presentation and demo on 16 or 17 Nov. |
 
@@ -139,7 +138,7 @@ learning outcomes. The Product Owner's duties are shared instead:
 
 | Event | When and how | Output |
 |---|---|---|
-| Daily stand-up | Asynchronous, a short message in the team's Discord stand-up channel every day: done since last time, doing next, blocked by. | Dated record of progress and blockers. |
+| Daily stand-up | Asynchronous, a short message in the team's Discord #general channel every day: done since last time, doing next, blocked by. | Dated record of progress and blockers. |
 | Weekly check-in | Thursday team call at 19:00, mid-sprint. What is done so far is shown on staging; progress against the sprint goal, blockers, and dependencies between the ID and SE work; the sprint backlog is adjusted if the goal is at risk. | Updated sprint backlog; decisions noted in Discord. |
 | Sprint review | Sunday, asynchronous. Each engineer posts what they merged with its staging link; team members, including the ID members, check each item on staging and accept or reject it against its acceptance criteria on the board by Monday morning. | Accepted items; feedback added to the backlog. |
 | Retrospective | Sunday to Monday, a Discord thread: what went well, what to change, one concrete action for the next sprint. | Retro notes kept with the sprint (`docs/se/sprints/`). |
@@ -167,7 +166,7 @@ These are what make a working increment at the end of every week possible. Detai
 | Claim | Where to see it |
 |---|---|
 | Backlog, sprints, estimates, burn-up | GitHub Project board: <https://github.com/orgs/ctrl-group-cos750/projects/1> |
-| Daily stand-ups | Discord stand-up channel (exported for the appendix) |
+| Daily stand-ups | Discord #general channel (exported for the appendix) |
 | Reviews, retros and planning | `docs/se/sprints/` in the repository |
 | Code review and Definition of Done | Merged PRs and their reviews on GitHub |
 | CI and continuous delivery | GitHub Actions history; Coolify deployment log |
@@ -179,7 +178,7 @@ These are what make a working increment at the end of every week possible. Detai
 2. The seven modules of the ID document (0 to 6), in order, with progress saved after each one.
 3. Narrated videos (screen recordings with voice-over, no presenter) that pause at checkpoints for an activity.
 4. Every activity type in the ID document, with immediate feedback and a four-level hint ladder.
-5. Code activities that run student Python against test cases in a sandboxed code runner.
+5. Code activities — ordering shuffled lines (Parsons problems) and filling in missing tokens — checked on the server by comparison, running no student-written code.
 6. The BFS visualiser, with step controls, next-vertex prediction and trace tables.
 7. The mastery check, a per-objective report, and a review path for objectives marked "not yet".
 8. The module 0 diagnostic that picks refreshers, skippable worked examples, and optional bonus quests.
@@ -197,7 +196,7 @@ These are what make a working increment at the end of every week possible. Detai
 ## Success criteria (engineering)
 - A new student can complete all seven modules and receive a mastery report on the deployed production site.
 - A student with a "not yet" objective is sent to that objective's review path, and can reach "ready for the lecture" after it.
-- Student code that loops forever, uses too much memory, or tries to reach the network fails safely within the time limit and affects no one else.
+- Every code activity is checked on the server by comparison with the solution, so no student-written code runs anywhere and a malformed answer can at worst be marked wrong.
 - The ID team can export the pilot's attempts and results as CSV without help from an engineer.
 
 ## Stakeholders
@@ -239,47 +238,46 @@ web container: nginx
   └─ /api/*  ──►  api container: FastAPI on Uvicorn
                     routers → services → SQLAlchemy models
                     BfsEngine, answer checkers, mastery rules
-                      │                         │
-                      ▼                         ▼  internal network only
-                  db container:             runner container: executes student
-                  PostgreSQL 18             Python against tests; no internet,
-                  (persistent volume,       no database, no secrets
+                      │
+                      ▼
+                  db container:
+                  PostgreSQL 18
+                  (persistent volume,
                   nightly pg_dump)
 ```
 
-The four containers are defined in `docker-compose.yml`, and Coolify deploys that file as it is.
+The three containers are defined in `docker-compose.yml`, and Coolify deploys that file as it is.
 nginx serves the SPA and forwards `/api` to the API, so the browser only ever talks to one origin.
-That removes the need for CORS and for an API base URL in the frontend. The runner is reachable
-only from the API, over a Docker network marked `internal`, which has no route to the internet.
+That removes the need for CORS and for an API base URL in the frontend. Code activities are checked
+in the API by comparing the student's answer with the stored solution, so no student-written code is
+executed anywhere; the separate, network-isolated code runner that earlier executed student Python
+was removed when the team dropped freeform code writing (§15.3).
 
 ```mermaid
 sequenceDiagram
     actor S as Student
     participant W as Browser (SPA)
     participant A as API
-    participant R as Runner
     participant D as Database
-    S->>W: Writes BFS, presses Submit
-    W->>A: POST /api/activities/{id}/attempts {code}
-    A->>D: Load the activity's hidden tests
-    A->>R: Run code + tests (time and memory limits)
-    R-->>A: Result per test, output (truncated)
+    S->>W: Orders the lines / fills the blanks, presses Submit
+    W->>A: POST /api/activities/{id}/attempts {submitted}
+    A->>D: Load the activity's solution (never sent to the browser)
+    A->>A: Compare the submission with the solution
     A->>D: Save the attempt, update objective result and points
-    A-->>W: Pass/fail per test, feedback, next hint level
-    W-->>S: Shows which tests failed and why
+    A-->>W: Pass/fail per line or blank, feedback, next hint level
+    W-->>S: Shows what was wrong and why
 ```
 
-Figure: Submitting a code activity. The browser never sees the hidden tests, and the API never runs student code itself.
+Figure: Submitting a code activity. The browser never sees the solution, and the check is a comparison in the API — no code is executed.
 
 ## Tier responsibilities
 - **Frontend (client tier):** presentation, interaction, animation and video playback. It holds no authority over answers, mastery or points: it reports what the student did, and the backend decides and persists.
-- **Backend (application tier):** authentication, content delivery, answer checking, BFS computation, hint and attempt logging, mastery and review-path rules, points and badges, and the evaluation export.
-- **Code runner:** executes untrusted student code against tests and returns the results. It stores nothing and knows nothing about users.
+- **Backend (application tier):** authentication, content delivery, answer checking (code activities included, by comparison with the solution), BFS computation, hint and attempt logging, mastery and review-path rules, points and badges, and the evaluation export.
 - **Data tier:** durable storage of structured data. Media is served by nginx from a volume, not stored in the database.
 
 ## Key architectural decisions
 - **Thin client for authority-bearing logic.** Answers, mastery and points are decided server-side, so the rules live in one place and the browser can't award itself a result.
-- **Student code runs in a separate, locked-down container.** Isolating it in its own service, rather than in the API process, means a hostile or broken submission can at worst crash the runner, which holds no data and has no network. See NFR-S7.
+- **Code activities checked by comparison, never executed.** Students order shuffled lines (Parsons) or fill in missing tokens; the server compares the submission with the solution. No student-written code runs on the server, which removes the whole untrusted-code-execution attack surface (decision §15.3, superseding the earlier sandboxed runner).
 - **BFS computed server-side.** One tested implementation produces the animation steps and checks predictions and trace tables, so they can never disagree.
 - **Stateless API with token auth.** The token travels in an httpOnly cookie (§5).
 - **Content as data.** Modules, activities, hints, tests and graph scenarios are fixture files the ID team can edit; adding content needs no frontend or API change.
@@ -302,15 +300,14 @@ Figure: Submitting a code activity. The browser never sees the hidden tests, and
 | Server state | **TanStack Query** | Data fetching and caching against the REST API. |
 | Graph rendering | **SVG via D3** | For graphs of up to about 50 vertices, SVG is simpler than Canvas (one DOM element per node and edge, easy per-element transitions, highlighting and click handling). |
 | Video | **HTML5 `<video>`**, self-hosted MP4 (H.264) with WebVTT captions; narrated screen recordings, no presenter | The player needs full control to pause at checkpoints and block seeking past them. An embedded YouTube player would add adverts, recommendations and a dependency outside our control during the demo. Captions also provide the `text` mode for each video. |
-| Code editor | **CodeMirror 6** with the Python language package | Small, accessible and keyboard-friendly, unlike heavier editors built for IDEs. Used by every code activity. |
-| Drag and drop | **dnd-kit** | Parsons problems; supports keyboard dragging, which NFR-A1 requires. |
-| Code runner | **Python 3.12** in its own container, a minimal FastAPI service, each submission in a separate process with `resource` limits | Runs untrusted student code away from the API, the database and the internet (NFR-S7). |
+| Code display | **CodeMirror 6** (read-only) with the Python language package | Syntax-highlighted, accessible rendering of code snippets for Parsons and fill-in-the-blank activities. Not an editor: students never type free Python. |
+| Drag and drop | **dnd-kit** | Parsons problems and token placement; supports keyboard dragging, which NFR-A1 requires. The main input for code activities. |
 | Testing (backend) | **pytest** with FastAPI `TestClient`, warnings treated as errors | Unit tests for the BfsEngine and services, plus API tests against a fresh SQLite database that every migration has been applied to. |
 | Testing (frontend) | **Vitest** + **React Testing Library** | Native fit with Vite; component and logic tests, with coverage reported in CI. |
 | End-to-end testing | **Playwright** | Walks through the full student flow (register, a module, a video checkpoint, a code submission, the mastery report, a review path) in a real browser against a running stack. |
 | Lint and format (Python) | **ruff** (format + lint, including the bandit security rules and the FastAPI rules) and **mypy --strict** | Enforced in CI. |
 | Lint and format (TypeScript) | **oxlint** (correctness, suspicious and perf rules plus the React, import, jsx-a11y and Vitest plugins; warnings fail the build) and **Prettier** | oxlint replaces ESLint: it is already configured and runs in under a second. The `jsx-a11y` plugin enforces part of the accessibility requirements (NFR-A). |
-| CI | **GitHub Actions** | On every PR and on every push to `staging` and `master`: format, lint, types, tests and builds for both apps, and a build of the Docker images. A `branch-flow` check rejects PRs into `master` that don't come from `staging`. Dependabot opens weekly update PRs into `staging`. |
+| CI | **GitHub Actions** | On every PR into `staging` or `master`, for the parts it touches: format, lint, types, tests and builds for the apps, and the Docker images for the whole stack (a docs-only PR builds only the PDFs). Not again on the merge itself, which the PR already tested; `push-guard` checks every push instead. A `branch-flow` check rejects PRs into `master` that don't come from `staging`. Dependabot opens monthly update PRs into `staging`; security fixes come at once. |
 | Hosting | **Coolify** on the team's server, **Docker Compose** build pack | Coolify builds and deploys on every push: `staging` → staging.ctrlacademy.co.za, `master` → ctrlacademy.co.za. Its Traefik proxy terminates HTTPS. Staging sits behind a team-password page so the public can't see unfinished work. |
 
 # Functional Requirements
@@ -322,7 +319,7 @@ flowchart TB
     student[Student]
     subgraph app[Ctrl Academy]
         subgraph learn[Learning]
-            uc1([Register and log in · FR-1]) ~~~ uc2([Work through a module · FR-2, FR-8]) ~~~ uc3([Watch a narrated video · FR-3]) ~~~ uc4([Answer an activity · FR-4]) ~~~ uc5([Ask for a hint · FR-4.4]) ~~~ uc6([Write, run and submit code · FR-5])
+            uc1([Register and log in · FR-1]) ~~~ uc2([Work through a module · FR-2, FR-8]) ~~~ uc3([Watch a narrated video · FR-3]) ~~~ uc4([Answer an activity · FR-4]) ~~~ uc5([Ask for a hint · FR-4.4]) ~~~ uc6([Arrange and complete code · FR-5])
         end
         subgraph assess[Assessment and progress]
             uc7([Step through and predict BFS · FR-6]) ~~~ uc8([Take the mastery check · FR-7]) ~~~ uc9([Follow a review path · FR-7.5]) ~~~ uc10([See progress, points and badges · FR-2.6, FR-9]) ~~~ uc11([Export evaluation data · FR-10])
@@ -330,11 +327,10 @@ flowchart TB
     end
     student --- learn
     student --- assess
-    uc6 --- runner[Code runner]
     uc11 --- staff[Team member with staff access]
 ```
 
-Figure: Use cases. The student takes part in every use case in both groups except the export; the code runner is a system actor that runs submitted code and returns the results.
+Figure: Use cases. The student takes part in every use case in both groups except the export, which is staff-only.
 
 ## Accounts (FR-1)
 - **FR-1.1** Register with an email address, a password and a display name. The display name is shown only to the student.
@@ -359,19 +355,22 @@ Figure: Use cases. The student takes part in every use case in both groups excep
 
 ## Activities, feedback and hints (FR-4)
 - **FR-4.1** Support these activity kinds, each defined entirely by content data:
-  multiple choice; matching; labelling vertices and edges on a diagram; classifying graphs (directed or undirected); building a graph by adding vertices and edges; predicting the next BFS vertex; filling in a BFS trace table (current vertex, queue, visited set, order); Parsons problems (ordering shuffled lines of code); completing code; writing code; fixing a faulty implementation; writing test cases.
+  multiple choice; matching; labelling vertices and edges on a diagram; classifying graphs (directed or undirected); building a graph by adding vertices and edges; predicting the next BFS vertex; filling in a BFS trace table (current vertex, queue, visited set, order); Parsons problems (ordering shuffled lines of code); completing code by choosing a token for each blank; fixing a faulty BFS; choosing the test cases that expose a bug.
 - **FR-4.2** Check every answer on the server and return feedback straight away. Feedback says why an answer is wrong, not only that it is wrong.
 - **FR-4.3** Tag every activity with the learning objective it gives evidence for (1 to 7) and its purpose: practice, diagnostic, retrieval, mastery, review or bonus.
 - **FR-4.4** Offer a four-level hint ladder on every activity, one level at a time. Level 4 is the worked solution.
 - **FR-4.5** Record every attempt with the answer, the result and the highest hint level used. Hint levels 3 and 4 make a later correct answer count as "with support" (FR-7.2).
 
 ## Code activities (FR-5)
-- **FR-5.1** Provide a code editor with Python syntax highlighting, indentation and line numbers.
-- **FR-5.2** **Run** executes the student's code against the activity's visible example tests and shows the output. Runs are practice and are not graded.
-- **FR-5.3** **Submit** executes the code against the activity's hidden tests and records a graded attempt. The student sees which tests failed and a message for each, but not the hidden test code.
-- **FR-5.4** Parsons problems are checked by the order of the lines; completing and writing code are checked by tests.
-- **FR-5.5** For "write tests" activities, run the student's tests against the correct implementation (they must all pass) and against each faulty implementation (each must fail at least one test), as the ID document's objective 7 criterion requires.
-- **FR-5.6** All student code runs in the code runner under the limits of NFR-S7. A run that exceeds them returns a clear message ("Your code took longer than 5 seconds — check for a loop that never ends"), not an error page.
+
+Code activities never execute student-written code. The student constructs code by **ordering shuffled lines (Parsons problems)** or **filling in missing tokens/lines from a given set**, and the server checks the result by comparison with the stored solution. This runs no untrusted code at all (decision §15.3; the earlier sandboxed code runner was removed).
+
+- **FR-5.1** Render the activity's code with Python syntax highlighting and line numbers (read-only display), and present the lines to reorder or the blanks to fill. Blanks are filled by choosing from a given set of tokens, not by free typing.
+- **FR-5.2** **Check** compares the student's arrangement against the solution and shows which lines or blanks are wrong, with a message for each. There is no code execution, so there are no run-time limits or output to show. A check is practice: it is not graded and not recorded as an attempt.
+- **FR-5.3** **Submit** records a graded attempt: the server compares the submission with the solution (which the browser never receives) and returns which lines or blanks were wrong and a message for each, without revealing the full solution.
+- **FR-5.4** Parsons problems are checked by the order of the lines; fill-in activities are checked token by token against the expected tokens.
+- **FR-5.5** Objective 7 uses two more kinds, also checked by comparison. **Fix the bug** shows a faulty BFS: the student marks each faulty line and chooses its correction from a given set of lines, or moves a line that is in the wrong place, as in a Parsons problem. **Choose tests** shows a faulty BFS and four to six test cases, each a small graph, a start vertex and the expected order: the student selects every test case that the faulty version fails and the correct version passes. No student code or student-written test runs.
+- **FR-5.6** Because nothing is executed, a code activity always returns promptly with per-line or per-blank feedback, never a run-time error page.
 
 ## BFS visualiser (FR-6)
 - **FR-6.1** Load a graph scenario (vertices, edges, directed or not, start vertex) and its BFS steps from the backend.
@@ -400,7 +399,7 @@ Figure: Use cases. The student takes part in every use case in both groups excep
 - **FR-9.3** Award badges for milestones (first module, every objective met, all bonus quests).
 - **FR-9.4** Points and badges are **private**: each student sees only their own. There is no public leaderboard, because public ranking discourages the students who most need the app (those motivated by avoiding failure, L05 [4]).
 
-Default rules **[PROVISIONAL]** until the ID document's motivation section is written:
+The rules, as confirmed by the ID document (§7.2):
 
 | Event | Points |
 |---|---|
@@ -410,7 +409,7 @@ Default rules **[PROVISIONAL]** until the ID document's motivation section is wr
 | Objective met independently / with support | 30 / 15 |
 | Bonus quest completed | 20 |
 
-Table: Default points rules, stored on the server and tunable without a code change.
+Table: Points rules, stored on the server and tunable without a code change.
 
 ## Evaluation data (FR-10)
 - **FR-10.1** Log every event (segment viewed, video checkpoint reached, attempt, hint requested, module completed, result changed) with the user and time.
@@ -430,7 +429,7 @@ Section and table numbers refer to the ID document [5].
 | FR-6 BFS visualiser | Objectives 4 and 5; signalling and segmenting (§5.2); prediction before animation (§5.4) |
 | FR-7 Mastery and scaffolding | Three result states and readiness rule (§3.2); review path (§7); the specification's requirement for extra scaffolding |
 | FR-8 Diagnostic and fading | Warm-up and refreshers (module 0); fading support and bonus quests (§5.2) |
-| FR-9 Points and badges | Motivation and gamification (§7, still to be written) |
+| FR-9 Points and badges | Motivation and gamification (§7.1, §7.2) |
 | FR-10 Evaluation data | ADDIE Implement and Evaluate phases (§4.2, Table 2); evaluation (§8) |
 
 Table: Which part of the ID document each functional requirement delivers.
@@ -440,7 +439,7 @@ Table: Which part of the ID document each functional requirement delivers.
 ## Performance
 - **NFR-P1** BFS computation for scenario sizes up to about 50 vertices returns in well under 200 ms server-side.
 - **NFR-P2** Answer checks for non-code activities return in under 300 ms under light load. **[PROVISIONAL target]**
-- **NFR-P3** A code submission returns its results within 6 seconds, including the runner's 5-second limit.
+- **NFR-P3** A code activity is checked and returns its result within 1 second: the check is a comparison in the API, with no code execution.
 - **NFR-P4** The BFS animation runs from precomputed steps, with no server calls per frame.
 - **NFR-P6** Under more load than it can serve, the API stays up and answers every request, at worst with a quick "busy" (503 within 5 seconds), and recovers as soon as the load drops. It never stalls (see §14, "Load testing").
 - **NFR-P5** Videos are served by nginx from a volume with range requests, so seeking doesn't download the whole file and video never passes through the API.
@@ -457,14 +456,10 @@ Table: Which part of the ID document each functional requirement delivers.
 - **NFR-S3** All traffic over HTTPS in deployed environments.
 - **NFR-S4** Server-side validation of all inputs (Pydantic schemas); answers, results and points are never accepted from the client.
 - **NFR-S5** No secrets in the repository; configuration via environment variables.
-- **NFR-S6** Standard protections: the session cookie is httpOnly, Secure and SameSite=Lax; state-changing requests require JSON bodies (blocking cross-site form posts); parameterised queries via the ORM; rate limiting on login (per address and account, and per address), registration and code submission, keyed on the student's real address (Cloudflare's `CF-Connecting-IP`, believed only from Cloudflare's own servers); security headers on every page (a Content Security Policy allowing only our own scripts, styles and fonts, no framing, HSTS, `nosniff`). The app and the API share one origin, so no CORS is configured.
-- **NFR-S7** **Code runner isolation.** Student code is untrusted and runs only in the runner container, which:
-  - is on an internal Docker network with no route to the internet, reachable only from the API;
-  - has no database credentials, no secrets and no volumes;
-  - runs as an unprivileged user, with a read-only filesystem except a small temporary directory, all Linux capabilities dropped and `no-new-privileges` set;
-  - is capped by Docker at 0.5 CPU, 256 MB of memory and 64 processes;
-  - runs each submission in a fresh temporary directory, as a separate Python process (`python -I`) with its own limits: 5 seconds of CPU, 10 seconds wall time, 128 MB of memory, 1 MB of output; the whole process group is killed when a limit is reached;
-  - runs at most four submissions at a time; further requests get "busy, try again in a moment".
+- **NFR-S6** Standard protections: the session cookie is httpOnly, Secure and SameSite=Lax; state-changing requests require JSON bodies (blocking cross-site form posts); parameterised queries via the ORM; rate limiting on login (per address and account, and per address), registration and answer submission, keyed on the student's real address (Cloudflare's `CF-Connecting-IP`, believed only from Cloudflare's own servers); security headers on every page (a Content Security Policy allowing only our own scripts, styles and fonts, no framing, HSTS, `nosniff`). The app and the API share one origin, so no CORS is configured.
+- **NFR-S7** **No untrusted code execution.** Code activities run no student-written code anywhere in the system. The student constructs code by ordering shuffled lines (Parsons) or filling in tokens from a given set, and the server checks the submission by comparison with the solution (FR-5). This removes the untrusted-code-execution attack surface entirely, rather than trying to contain it.
+
+  An isolated code runner was built and hardened earlier (a network-less container running each submission as a separate seccomp-confined process) and was pentested on staging across several rounds (see the security review under §14). Those rounds confirmed the escape defences held but also found that the in-process grading channel could be forged to fake a pass, and — because staging shares a personal server with unrelated personal data — the residual risk of executing arbitrary student code was judged not worth the marks a freeform editor earned. The team therefore dropped freeform code writing and removed the runner (decision §15.3, 3 November). The runner's code is preserved in git history (tag `archive/code-runner`) should the decision be revisited with a stronger sandbox (gVisor or a per-submission microVM — §15.4).
 - **NFR-S8** **Privacy (POPIA [8]).** The app stores only what it needs: email (to log in), a display name, and learning data. It shows no student's data to another student, and exports only internal IDs (FR-10.3). Test and demo data never uses real students' details.
 
 ## Maintainability
@@ -520,13 +515,13 @@ Figure: Entities and relationships.
 
 **Checkpoint**: `id`, `video_id`, `at_seconds`, `activity_id`.
 
-**Activity**: `id`, `module_id`, `objective_id` (nullable for diagnostic items), `purpose` (`practice` | `diagnostic` | `retrieval` | `mastery` | `review` | `bonus`), `kind` (one of the kinds in FR-4.1), `prompt` (Markdown), `config` (JSON, shape depends on the kind: options, diagram, starter code, line order, scenario ID …), `answer` (JSON, never sent to the browser: correct options, expected order, or hidden tests and faulty implementations for code kinds), `feedback` (JSON: messages for common wrong answers).
+**Activity**: `id`, `module_id`, `objective_id` (nullable for diagnostic items), `purpose` (`practice` | `diagnostic` | `retrieval` | `mastery` | `review` | `bonus`), `kind` (one of the kinds in FR-4.1), `prompt` (Markdown), `config` (JSON, shape depends on the kind: options, diagram, starter code, line order, scenario ID …), `answer` (JSON, never sent to the browser: correct options, expected line order or tokens, the faulty lines and their corrections, or the test cases that expose a bug), `feedback` (JSON: messages for common wrong answers).
 
 **Hint**: `activity_id`, `level` (1 to 4), `body` (Markdown). Level 4 is the worked solution.
 
 **GraphScenario**: `id`, `name`, `directed`, `vertices` (JSON), `edges` (JSON), `start_vertex`. Neighbours are always taken in alphabetical order of their labels (FR-6.5).
 
-**Attempt** (append-only): `id`, `user_id`, `activity_id`, `submitted` (JSON: the answer, or the code), `correct`, `score` (0 to 1, for partial results such as trace tables), `hint_level` (highest level shown before this attempt), `detail` (JSON: per-test results for code), `created_at`.
+**Attempt** (append-only): `id`, `user_id`, `activity_id`, `submitted` (JSON: the answer — for a code activity, the chosen line order or filled-in tokens), `correct`, `score` (0 to 1, for partial results such as trace tables), `hint_level` (highest level shown before this attempt), `detail` (JSON: per-line or per-blank results for a code activity), `created_at`.
 
 **Event** (append-only): `id`, `user_id`, `type` (`segment_viewed` | `checkpoint_reached` | `hint_shown` | `module_completed` | `result_changed` …), `ref` (the segment, activity, module or objective), `payload` (JSON), `created_at`.
 
@@ -540,7 +535,7 @@ Figure: Entities and relationships.
 
 ## Notes
 - **Attempts and events are the source of truth.** Module progress, objective results, points and badges are derived from them by the services, and can be recomputed if a rule changes (FR-7.6).
-- **Answers never leave the server.** The API strips `answer` from every activity it sends; hidden tests go only to the runner.
+- **Answers never leave the server.** The API strips `answer` from every activity it sends; a code activity's solution (the correct line order and the expected tokens) stays on the server and is only ever compared against, never returned.
 - **JSON columns** hold the parts that differ by activity kind (`config`, `answer`, `feedback`, `submitted`, `detail`). Each kind has a Pydantic schema, so the JSON is still validated when fixtures load and when attempts arrive.
 - **Content is loaded from fixtures** (`api/app/seed/`), versioned in the repository and validated in CI (NFR-M5). Re-running the seed updates content without touching users' attempts.
 
@@ -568,24 +563,24 @@ Base path: `/api`. JSON over HTTPS. Auth via the session cookie set by `/api/aut
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
 | POST | `/api/activities/{activityId}/hints` | user | Reveal the next hint level and record it. Returns the hint. |
-| POST | `/api/activities/{activityId}/run` | user | Code kinds only: run the code against the visible example tests. Not graded (FR-5.2). |
-| POST | `/api/activities/{activityId}/attempts` | user | Submit an answer or code. The server checks it (code goes to the runner with the hidden tests), records the attempt, updates progress, results and points, and returns the outcome. |
+| POST | `/api/activities/{activityId}/check` | user | Practice: compare the submission with the solution and report which parts are wrong. Not graded or recorded (FR-5.2). |
+| POST | `/api/activities/{activityId}/attempts` | user | Submit an answer. The server checks it (a code activity is compared against its stored solution), records the attempt, updates progress, results and points, and returns the outcome. |
 
-Example `POST /api/activities/{activityId}/attempts` for a code activity:
+Example `POST /api/activities/{activityId}/attempts` for a code activity (lines ordered as a Parsons problem):
 ```json
 // request
-{ "code": "def bfs(graph, start):\n    ..." }
+{ "submitted": { "order": [0, 2, 1, 3, 4] } }
 
 // response
 {
   "correct": false,
   "score": 0.6,
-  "tests": [
-    { "name": "visits every vertex of a connected graph", "passed": true },
-    { "name": "handles a cycle", "passed": false,
-      "message": "Vertex B was visited twice. Is it marked as visited when it is added to the queue?" }
+  "lines": [
+    { "position": 0, "correct": true },
+    { "position": 1, "correct": false,
+      "message": "This line marks the vertex visited before it is dequeued. Should it come later?" }
   ],
-  "feedback": "3 of 5 tests passed.",
+  "feedback": "3 of 5 lines are in the right place.",
   "nextHintLevel": 2,
   "pointsAwarded": 0
 }
@@ -635,11 +630,13 @@ Progress, results and points change only as a side effect of attempts and segmen
 | GET | `/api/staff/export/{table}.csv` | staff | `events`, `attempts` or `objective_results` as CSV, students identified by internal ID only (FR-10). |
 
 ## Conventions **[PROVISIONAL]**
-- Standard HTTP status codes; error bodies `{ "detail": "..." }`. `429` with a retry hint when the runner is busy or a rate limit is reached.
+- Standard HTTP status codes; error bodies `{ "detail": "..." }`. `429` with a retry hint when a rate limit is reached.
 - OpenAPI/Swagger auto-published at `/api/docs` (FastAPI) and used as the frontend contract.
 
-## Code runner (internal)
-Not reachable from outside the compose network. One endpoint, `POST /run`, takes the code, the tests and the limits, and returns per-test results, captured output (truncated at 1 MB) and whether a limit was hit. It keeps no state between requests.
+## Code activity checking (internal)
+Code activities are checked inside the API, with no separate service and no code execution. A **Parsons** submission is a permutation of the activity's line IDs; the checker compares it with the solution order and reports, per line, whether it is in the right place. A **fill-in** submission is a map from each blank to a chosen token; the checker compares each against the expected token. The solution (the correct order, the expected tokens) lives only on the server and is never sent to the browser, so the student cannot read it or fake a pass. There is nothing to run, so there are no run-time limits.
+
+An earlier design executed student Python in a sandboxed code runner (`POST /run`); it was removed when the team dropped freeform code writing (§15.3).
 
 # BFS Engine Design
 
@@ -679,7 +676,7 @@ The returned payload (see §9.4) contains:
 
 ## Testing
 - Unit tests over known graphs with asserted `order` and `steps` (directed and undirected; disconnected graph handling; single-node; start-node validation).
-- The same graphs are used by the hidden tests of the code activities, so the engine and the reference solution can't disagree.
+- The test cases in choose-tests activities (FR-5.5) are checked against the engine in CI, so the engine and the stored answers can't disagree.
 
 # Frontend Component Breakdown (React + TypeScript)
 
@@ -701,7 +698,7 @@ The returned payload (see §9.4) contains:
   - `Transcript`: the text version below the video.
 - **Activities**
   - `ActivityRenderer`: chooses the component for the activity's kind, and wraps every activity with `HintLadder` and `FeedbackPanel`.
-  - One component per kind: `MultipleChoice`, `Matching`, `LabelGraph`, `ClassifyGraphs`, `BuildGraph`, `PredictNextVertex`, `TraceTable`, `ParsonsProblem` (drag or arrow keys), `CodeActivity` (CodeMirror editor, Run and Submit, per-test results), `FixTheBug` and `WriteTests` (both built on `CodeActivity`).
+  - One component per kind: `MultipleChoice`, `Matching`, `LabelGraph`, `ClassifyGraphs`, `BuildGraph`, `PredictNextVertex`, `TraceTable`, `ParsonsProblem` (reorder lines, drag or arrow keys), `FillInCode` (drop tokens from a given set into blanks in a read-only, syntax-highlighted snippet; per-blank results), `FixTheBug` and `ChooseTests` (both built on ordering/selection, checked by comparison — no code execution).
   - `HintLadder`: reveals hints one level at a time and warns before levels 3 and 4 that the result will count as "with support".
   - `FeedbackPanel`: shows why an answer is wrong, and the points awarded.
 - **BFS visualiser**
@@ -797,29 +794,33 @@ Figure: The BFS visualiser in prediction mode (FR-6).
 +----------------------------------------------------------------------------------------+
 | Ctrl Academy    Modules · Report                       * 240 points   Account v        |
 +----------------------------------------------------------------------------------------+
-| Module 4 · Write BFS                                   Task 3 of 4: blank function     |
-| Write bfs(graph, start) so it returns the vertices in the order BFS visits them.       |
+| Module 4 · Build BFS                                 Task 2 of 3: fill in the blanks   |
+| Complete bfs(graph, start) by choosing a token for each blank.                         |
 |                                                                                        |
 | +----------------------------------------------+  +----------------------------------+ |
-| |  1  from collections import deque            |  | Results (submitted)              | |
-| |  2                                           |  |                                  | |
-| |  3  def bfs(graph, start):                   |  | + visits every vertex            | |
-| |  4      visited = {start}                    |  | + start vertex first             | |
-| |  5      queue = deque([start])               |  | x handles a cycle                | |
-| |  6      order = []                           |  |   B was visited twice.           | |
-| |  7      while queue:                         |  |   Is it marked as visited        | |
-| |  8          v = queue.popleft()              |  |   when it is queued?             | |
-| |  9          order.append(v)                  |  | + disconnected graph             | |
-| | 10          _                                |  |                                  | |
-| |                                              |  | 3 of 4 passed                    | |
-| | [ Run examples ]   [ Submit ]                |  |                                  | |
+| |   1  from collections import deque           |  | Results (submitted)              | |
+| |   2                                          |  |                                  | |
+| |   3  def bfs(graph, start):                  |  | + blank 1  deque                 | |
+| |   4      visited = {start}                   |  | + blank 2  popleft               | |
+| |   5      queue = [1 deque  ]([start])        |  | x blank 3  visited.add(v)        | |
+| |   6      order = []                          |  |   v is already visited. Mark n   | |
+| |   7      while queue:                        |  |   as visited when it is queued,  | |
+| |   8          v = queue.[2 popleft]()         |  |   not when it leaves the queue.  | |
+| |   9          order.append(v)                 |  |                                  | |
+| |  10          for n in sorted(graph[v]):      |  | 2 of 3 blanks correct            | |
+| |  11              if n not in visited:        |  |                                  | |
+| |  12                  [3 visited.add(v) ]     |  |                                  | |
+| |  13                  queue.append(n)         |  |                                  | |
+| |                                              |  |                                  | |
+| | Tokens: deque  popleft  pop  visited.add(n)  |  |                                  | |
+| | [ Check ]   [ Submit ]                       |  |                                  | |
 | +----------------------------------------------+  +----------------------------------+ |
 |                                                                                        |
 | [ Hint 2 of 4 ]   Hints 3 and 4 mark this objective as "met with support".             |
 +----------------------------------------------------------------------------------------+
 ```
 
-Figure: A code activity after a submission, with per-test results and the hint ladder (FR-5, FR-4.4).
+Figure: A fill-in code activity after a submission, with per-blank results and the hint ladder (FR-5, FR-4.4).
 
 ```
 +----------------------------------------------------------------------------------------+
@@ -852,7 +853,7 @@ Repository: `ctrl-group-cos750/cos750-project`. Folders marked *(planned)* don't
 ```
 cos750-project/
 ├─ README.md                    run it, checks, database, branches and deploys
-├─ docker-compose.yml           web + api + db + runner, deployed by Coolify as it is
+├─ docker-compose.yml           web + api + db, deployed by Coolify as it is
 ├─ docker-compose.local.yml     publishes ports for local use
 ├─ .env.example
 ├─ .github/
@@ -877,11 +878,10 @@ cos750-project/
 │  │  ├─ auth.py                CurrentUser: the logged-in user, for any route that needs one
 │  │  ├─ security.py            Argon2 hashing, session JWTs, the session cookie
 │  │  ├─ rate_limit.py          per-client limits on login and registration
-│  │  ├─ services/              content, checking (one checker per activity kind), mastery, points, runner client (planned)
+│  │  ├─ services/              content, checking (one checker per activity kind), mastery, points (planned)
 │  │  ├─ bfs/engine.py          BfsEngine: pure, tested in isolation (planned)
 │  │  └─ seed/                  modules, activities, hints, tests, scenarios, demo accounts (planned)
 │  └─ tests/
-├─ runner/                      code runner: Dockerfile and a minimal service (planned)
 ├─ web/
 │  ├─ Dockerfile                Vite build, then nginx
 │  ├─ nginx.conf                SPA, /api proxy, /media, /healthz
@@ -943,6 +943,7 @@ and auto-fixes first.
 
 - Work happens on a feature branch, which goes into `staging` through a reviewed PR. `staging` goes into `master` through another PR.
 - CI must pass before merging. A PR into `master` from any branch other than `staging` fails the `branch-flow` check.
+- Branch rules (`.github/rulesets/`): `staging` and `master` change only through a PR with one approval from someone other than the last person to push and a green `checks` job (`master` also `source-is-staging`); no force-pushes or deletion. They take effect once the organisation is on GitHub Team (free for students through GitHub Education). Until then the `push-guard` workflow flags any push to either branch that isn't a PR merge, and production deploys only when started deliberately.
 - A merge into `staging` deploys to staging.ctrlacademy.co.za, where the team checks it behind the team password before it is promoted.
 
 ## Deployment
@@ -951,7 +952,6 @@ and auto-fixes first.
 - The API container applies pending migrations before serving, so schema changes reach each environment with its deploy.
 - Postgres is backed up nightly by a Coolify scheduled task (`pg_dump`, kept for 14 days).
 - Videos are stored in a `media` volume mounted into the web container and served by nginx at `/media/`, outside git and outside the image *(planned)*.
-- The runner is built and deployed with the rest of the stack, on an internal network with the API only, with the limits in NFR-S7 set in `docker-compose.yml` *(planned)*.
 - Secrets are environment variables set in Coolify (database password, JWT secret, `STAGING_PASSWORD`). None are committed (`.env` is gitignored; only `.env.example` is in the repo).
 
 # Testing strategy
@@ -965,9 +965,8 @@ Testing follows the Definition of Done (§2.4): no item is done until it has tes
 | Unit | The BFS engine, one answer checker per activity kind, the mastery rules, the points rules; React components and hooks, including every activity component | pytest; Vitest + React Testing Library | Every PR (CI) |
 | API | Every endpoint against a freshly migrated database: correct and wrong answers, hint recording, progress and result updates; that one student can never read another's data; that no response ever contains an activity's `answer` | pytest + FastAPI `TestClient`, SQLite | Every PR (CI) |
 | Migrations | Every migration applies to an empty database, the models match the migrations, and there is one head | pytest + Alembic | Every PR (CI) |
-| Content | Every fixture file matches its schema; every code activity's reference solution passes its hidden tests, and every faulty implementation fails at least one (NFR-M5) | pytest, through the runner | Every PR that touches content (CI) |
-| Runner security | Hostile submissions fail safely: an infinite loop, a fork bomb, a memory bomb, a huge output, opening a network connection, reading environment variables and files, writing outside the temporary directory (NFR-S7) | pytest against the runner container | Every PR that touches the runner (CI, Docker); and once on staging, to confirm the network is internal |
-| End-to-end | The student's path in a real browser against the full stack: register, module 0 and its diagnostic, a video checkpoint, a code submission, the mastery report and a review path; plus logging in as each demo account | Playwright, in Chromium, Firefox and WebKit | Every PR into `staging` (CI); on staging before each sprint review |
+| Content | Every fixture file matches its schema; every code activity's solution is consistent with its own checker (the solution order and expected tokens are marked correct), and each choose-tests answer is confirmed by running the team's own reference and faulty BFS on its test cases, in CI only and never in the app (NFR-M5) | pytest | Every PR that touches content (CI) |
+| End-to-end | The student's path in a real browser against the full stack: register, module 0 and its diagnostic, a video checkpoint, a code activity (ordering and completing code), the mastery report and a review path; plus logging in as each demo account | Playwright, in Chromium, Firefox and WebKit | Every PR into `staging` (CI); on staging before each sprint review |
 | Accessibility | Automated checks on every page (no WCAG 2.1 AA violations); one module completed with the keyboard only | oxlint jsx-a11y; axe-core in Playwright; a manual pass | Every PR (automated); once per sprint (manual) |
 | Exploratory | The item's acceptance criteria tried by hand on staging, by someone other than its author | Staging | Every item, before it is accepted (DoD) |
 | Pilot | Usability and defects across modules 0 to 6 (§14.5) | Staging, the event export, a short survey | 10–11 Nov |
@@ -976,7 +975,7 @@ Table: Test levels.
 
 ## Coverage
 
-CI enforces **at least 90% line and branch coverage** on the code that decides results: the BFS engine, the answer checkers, the mastery rules, the points rules and the runner. Everywhere else, coverage is reported on every PR but not enforced, so effort goes into tests that protect results rather than into covering UI wiring. The threshold is enforced from the PR that first adds each of these modules.
+CI enforces **at least 90% line and branch coverage** on the code that decides results: the BFS engine, the answer checkers (code activities included), the mastery rules and the points rules. Everywhere else, coverage is reported on every PR but not enforced, so effort goes into tests that protect results rather than into covering UI wiring. The threshold is enforced from the PR that first adds each of these modules.
 
 ## Acceptance testing
 
@@ -1098,9 +1097,59 @@ Round five:
 | A password containing the student's own email name or display name | **Accepted** | Fixed: one of the rules |
 | Many logins at once | Each Argon2 hash takes 64 MiB, so 40 at once would need 2.5 GiB | Fixed: at most four hashes run at a time; the rest wait their turn (12 at once answered in under a second) |
 | A 12 kB cookie header, a 312-character email, `HEAD` requests | Refused, never a server error | None needed |
-| Who can change `staging` and `master` | **Anyone with write access can push straight to either**, without a PR or CI: GitHub's free plan has no branch protection for private repositories | Open: see below |
+| Who can change `staging` and `master` | **Anyone with write access can push straight to either**, without a PR or CI: GitHub's free plan has no branch protection for private repositories | Rules written (`.github/rulesets/`), applied once the plan allows; meanwhile `push-guard` flags any push that isn't a PR merge, and production no longer deploys on push |
 
 Table: Security review, round five.
+
+**The code runner, pentested on staging (3 November).** With the runner deployed, the team tried to break out of it from inside the real containers, through Coolify scheduled tasks:
+
+| Attempt | Result | Action |
+|---|---|---|
+| Reach the internet, DNS, the database or the host from the runner container itself (outside the sandbox) | **Reached the internet and the database**: Coolify adds its own network to every service | Fixed (#53, #54): no network at all (`network_mode: none`), a Unix socket to the API; staging now shows only loopback |
+| Every hostile-code check (26) from the API, over the socket | All passed | None needed |
+| io_uring, namespaces, mounts, chroot, keyrings, eBPF, perf, userfaultfd, kernel modules, file handles, fanotify | Refused, but **only by Docker's default seccomp profile**, which an older Docker or a changed setting would not apply | Fixed: the runner's own filter refuses them all |
+| Write to the harness's report pipe without a newline | **The runner held it all in memory** (13.7 GB in 16 s locally; on staging the container's limit stopped it) | Fixed: the pipe is read in bounded chunks and closed at 1 MB |
+| Write to a memory file (memfd) | **Not held to the file-size limit** or counted by the memory limit, so it could fill the container | Fixed: memory files can't be made |
+| Kernel buffers held in pipes and socket pairs | Bounded by the open-file limit | Lowered from 32 to 16 files |
+| The server's kernel version (`uname`, `/proc/version`) | Visible | Accepted: the server is kept patched |
+
+Table: The code runner, pentested.
+
+A second break-out round the same day, after those fixes, went after the doors the filter didn't name:
+
+| Attempt | Result | Action |
+|---|---|---|
+| A queued signal (`rt_sigqueueinfo` with `SI_QUEUE`) to the runner | **Allowed**: the kernel lets it reach any process of the same user, so with `SIGKILL` it could kill the runner around the `kill` rule | Fixed: queued signals only to the run's own process |
+| Make the runner the owner of a pipe (`F_SETOWN`), pick `SIGKILL` (`F_SETSIG`), then write to it | **Allowed**: the kernel would signal the runner | Fixed: file owners and their signals are refused (`fcntl` and `ioctl`) |
+| SysV shared memory, semaphores, message queues; POSIX message queues | **Allowed, and they outlive the run**: an 8 MB segment was still there afterwards, so runs could fill the container over time | Fixed: all refused |
+| Change the runner's scheduling (`sched_setattr`); read its robust-futex list | **Allowed** (the older scheduling calls were already refused) | Fixed: refused |
+| Page migration of another process | Refused, but only by Docker's profile | Now refused by the runner's own filter too |
+| Grow an output file past 1 MB with `fallocate` or `ftruncate` | Refused (`EFBIG`) | None needed |
+
+Table: The code runner, second break-out round.
+
+A third round, after those fixes reached staging:
+
+| Attempt | Result | Action |
+|---|---|---|
+| The 32-bit system-call table (`int 0x80` socketcall), from a few bytes of machine code | Refused by the filter (`EPERM`; `EFAULT` would have meant it reached the kernel) | None needed |
+| Replace itself with another program (`execve /bin/sh`) | **Allowed**, and the new program would no longer be non-dumpable | Fixed: `execve` and `execveat` refused |
+| `sync` and `syncfs` | **Allowed**: they flush every filesystem on the server, which other applications on it would feel in a loop | Fixed: refused (flushing its own files still works) |
+| Locking memory (`mlock`, `mlockall`) | Refused by the locked-memory limit | None needed |
+| Deeply nested JSON on the report pipe | **The runner's reader thread died** with `RecursionError` (the student's own run failed; the runner survived) | Fixed: such a line is ignored |
+
+Table: The code runner, third break-out round.
+
+A fourth round turned from breaking *out* of the sandbox to breaking the *grading*, which matters more for a marked activity:
+
+| Attempt | Result | Action |
+|---|---|---|
+| `membarrier(GLOBAL)` and inotify watches | **Allowed**, and both reach past the container (a host-wide memory barrier; a per-user kernel resource shared across the box) | Would be fixed: both refused by the filter |
+| Forge the result channel: write `{"event":"passed"}` for every test and `{"event":"done"}`, then `os._exit(0)`, so the real tests never run | **All tests reported passed** on staging with the function never defined — the grader trusted a `passed` line it should only have accepted for a visible code test, bypassing the hidden-answer comparison entirely | Drove the decision below |
+
+Table: The code runner, fourth round (grading integrity).
+
+The fourth round is why the runner was removed rather than patched further. The escape defences held across every round, but the grading channel ran inside the student's own process, and a forged "passed" faked a clean pass without solving anything. That hole was fixable, but it showed the grader's trust boundary was inside untrusted code; combined with staging sharing a personal server with unrelated personal data, the team dropped freeform code writing in favour of ordering and fill-in activities checked by comparison, and removed the runner (decision §15.3, 3 November). The tables above are kept as the record of that assessment.
 
 **Branch protection.** All seven members have write access, and nothing stops a direct push to `master`. Until the organisation has a plan with branch protection (GitHub's education offer gives organisations of students the Team plan free), the team relies on the rule that every change goes through a PR into `staging`, and production deploys are started deliberately rather than on every push.
 
@@ -1128,8 +1177,8 @@ Before the feature freeze, on 10 and 11 November, team members pilot the app on 
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| A student submission escapes the runner or exhausts the server | Low | High | Separate container with no network, secrets or data; Docker and per-process limits; concurrency cap (NFR-S7). Tested with hostile submissions (infinite loop, fork bomb, huge output, network and file access) before the pilot. |
-| Coolify doesn't honour the `internal` network, giving the runner internet access | Medium | High | Checked on staging with a submission that tries to reach the internet; if it can, the runner drops all network access and the API reaches it another way. |
+| A student submission escapes the sandbox or exhausts the server | **Retired** | High | Removed at the source: the code runner was dropped and code activities now run no student-written code at all (decision §15.3, NFR-S7). Previously mitigated by a network-less, limited container; the pentest record is under §14. |
+| Coolify doesn't honour the `internal` network, giving a service internet access | **Happened** | High | Found on staging (#25) while the runner existed: Coolify added its own network, and the runner reached the internet and the database. Then fixed with `network_mode: none` and a Unix socket; now moot, as the runner has been removed. The lesson stands for any future service that must be network-isolated on Coolify. |
 | Content arrives late: seven modules, about 75 minutes of activities, hints and tests | High | High | Engineers build against placeholder fixtures from Sprint 1; content is a tracked backlog item per module; the demo path needs modules 0, 3 and 6 first. |
 | Narrated videos not recorded in time | Medium | Medium | Videos are screen recordings of our own visualiser with a voice-over, so no filming; every video also has a transcript, so a segment works as text if the video is late. |
 | Video gating behaves differently across browsers | Medium | Low | The player enforces checkpoints itself from `timeupdate` and `seeking` events and is tested in Chromium, Firefox and WebKit with Playwright. |
@@ -1144,7 +1193,7 @@ Table: Risk register.
 3. **Deployment** → **Docker Compose on Coolify**, already live: staging.ctrlacademy.co.za and ctrlacademy.co.za, with Traefik terminating HTTPS and nginx serving the app and proxying `/api` (§13.4).
 4. **Video** → **narrated screen recordings**, no presenter on camera, with captions and a transcript; checkpoints use `retry_until_correct`: feedback and hints on a wrong answer, no lockout (FR-3).
 5. **Assessment and scaffolding** → **per objective**, three results (met independently, met with support, not yet), as the ID document defines; a review path for every "not yet" objective (FR-7).
-6. **Running student code** → **on our server, in an isolated runner container**, so hidden tests stay hidden (FR-5, NFR-S7). Running Python in the browser (Pyodide) was the alternative; it would avoid running untrusted code on the server, but every test would be visible in the browser.
+6. **Code activities** → **no code execution; checked by comparison** (FR-5, NFR-S7). The student orders shuffled lines (Parsons) or fills in tokens from a given set, and the server compares the result with the solution. This **supersedes the 1 November decision** to run student Python in an isolated code runner: pentesting on staging (§14) found the in-process grader could be forged to fake a pass, and the residual risk of executing arbitrary code on a shared personal server outweighed what a freeform editor added, so on 3 November the team dropped freeform code writing and removed the runner. Running Python in the browser (Pyodide) was considered and rejected for the same era, as every test would then be visible in the browser; comparison-based activities avoid both problems. The ID document's objectives 6 and 7 are unchanged — Parsons performance is an established proxy for code-writing ability (ID document §5) ; objective 7 uses the fix-the-bug and choose-tests activities (FR-5.5).
 7. **Gamification** → **private points and badges, no public leaderboard** (FR-9). The initial meeting on 25 October included leaderboards; on 1 November the team replaced them with private points, because public ranking discourages students who are motivated by avoiding failure [4].
 8. **Accounts** → **email and password**, JWT in an httpOnly cookie (FR-1, §5).
 9. **Content** → **fixture files in the repository**, validated in CI; no authoring interface (§3, NFR-M5).
@@ -1154,7 +1203,7 @@ Table: Risk register.
 - Password reset and refresh tokens; sign-in with the university account, which needs UP's IT to register the app.
 - An authoring interface for the ID team, replacing fixture files.
 - Student-built graphs in the visualiser, and topics beyond BFS (DFS, Dijkstra, trees).
-- A stronger sandbox for the runner (gVisor or a per-submission microVM) if the app is opened to all COS212 students.
+- If freeform code writing is reintroduced (for example to assess objective 6 by writing rather than ordering), run it in a stronger sandbox than the removed in-process runner — gVisor or a per-submission microVM — and move the grading decision out of the process that runs the student's code. The removed runner is preserved at git tag `archive/code-runner`.
 
 # References
 

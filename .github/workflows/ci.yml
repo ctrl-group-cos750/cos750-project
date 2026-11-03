@@ -1,80 +1,111 @@
 name: ci
 
+# On PRs only: a PR tests exactly what its merge puts on staging or master, so running again on
+# the push that merge makes would only repeat it. (push-guard checks every push.)
 on:
   pull_request:
-    branches: [staging, master]
-  push:
     branches: [staging, master]
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  web:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: web
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version-file: web/.nvmrc
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-      - run: npm ci
-      - run: npm run format:check
-      - run: npm run lint
-      - run: npm run coverage
-      - run: npm run build
-
-  api:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:18-alpine
-        env:
-          POSTGRES_USER: ctrl
-          POSTGRES_PASSWORD: ctrl
-          POSTGRES_DB: ctrl
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U ctrl -d ctrl"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    defaults:
-      run:
-        working-directory: api
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: api/requirements-dev.txt
-      - run: pip install -r requirements-dev.txt
-      - run: ruff format --check .
-      - run: ruff check --output-format=github .
-      - run: mypy
-      - run: pytest
-      # Again on Postgres, as deployed: SQLite accepts things Postgres refuses (NUL in text).
-      - name: pytest on Postgres
-        run: pytest
-        env:
-          TEST_DATABASE_URL: postgresql+psycopg://ctrl:ctrl@localhost:5432/ctrl
-
-  # Builds the images Coolify will build, so a broken Dockerfile fails here, not on deploy.
-  compose:
+  # One job, not one per part: GitHub bills each job rounded up to a whole minute, so four short
+  # jobs cost twice what one does. Each part's steps run only when the PR touches that part; a
+  # change to this file runs them all.
+  checks:
     runs-on: ubuntu-latest
     env:
       POSTGRES_PASSWORD: ci
     steps:
       - uses: actions/checkout@v5
-      - run: docker compose config --quiet
-      - run: docker compose build
+
+      - name: Which parts the PR touches
+        id: paths
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          files=$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[].filename')
+          echo "$files"
+          touched() { echo "$files" | grep -qE "$1" && echo true || echo false; }
+          all=$(touched '^\.github/workflows/ci\.yml$')
+          # The API's tests also scan web/src and scripts for hidden characters.
+          for area in web api compose; do
+            case $area in
+              web) pattern='^web/' ;;
+              api) pattern='^(api|scripts|web/src)/' ;;
+              compose) pattern='^(api|web)/|^docker-compose[^/]*\.yml$|^\.env\.example$' ;;
+            esac
+            value=$(touched "$pattern")
+            [ "$all" = true ] && value=true
+            echo "$area=$value" >> "$GITHUB_OUTPUT"
+            echo "$area: $value"
+          done
+
+      # web
+      - if: steps.paths.outputs.web == 'true'
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: web
+        if: steps.paths.outputs.web == 'true'
+        working-directory: web
+        run: |
+          npm ci
+          npm run format:check
+          npm run lint
+          npm run coverage
+          npm run build
+
+      # api
+      - if: steps.paths.outputs.api == 'true'
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: api/requirements-dev.txt
+      - name: Postgres for the API's tests
+        if: steps.paths.outputs.api == 'true'
+        run: |
+          docker run -d --name pg -p 5432:5432 -e POSTGRES_USER=ctrl -e POSTGRES_PASSWORD=ctrl \
+            -e POSTGRES_DB=ctrl postgres:18-alpine
+          until docker exec pg pg_isready -U ctrl -d ctrl; do sleep 1; done
+      - name: api
+        if: steps.paths.outputs.api == 'true'
+        working-directory: api
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -r requirements-dev.txt
+          .venv/bin/ruff format --check .
+          .venv/bin/ruff check --output-format=github .
+          .venv/bin/mypy
+          .venv/bin/pytest
+      # Again on Postgres, as deployed: SQLite accepts things Postgres refuses (NUL in text).
+      - name: api on Postgres
+        if: steps.paths.outputs.api == 'true'
+        working-directory: api
+        env:
+          TEST_DATABASE_URL: postgresql+psycopg://ctrl:ctrl@localhost:5432/ctrl
+        run: .venv/bin/pytest
+
+      # The images Coolify will build, so a broken Dockerfile fails here, not on deploy.
+      - name: Build and start the whole stack
+        if: steps.paths.outputs.compose == 'true'
+        run: |
+          docker compose config --quiet
+          docker compose build
+          docker compose -p ctrlci up -d --wait
+      - name: Logs
+        if: always() && steps.paths.outputs.compose == 'true'
+        run: docker compose -p ctrlci logs --tail 50
+      - if: always() && steps.paths.outputs.compose == 'true'
+        run: docker compose -p ctrlci down -v

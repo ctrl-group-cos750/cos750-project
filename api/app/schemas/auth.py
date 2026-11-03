@@ -1,27 +1,16 @@
 from typing import Annotated
 
 from pydantic import (
-    BaseModel,
-    ConfigDict,
     EmailStr,
     Field,
     StringConstraints,
     ValidationInfo,
     field_validator,
 )
-from pydantic.alias_generators import to_camel
 
 from app.passwords import password_problem
+from app.schemas.base import ApiModel
 from app.schemas.text import NoHiddenCharacters
-
-
-class ApiModel(BaseModel):
-    """camelCase in JSON, snake_case in Python. Unknown fields are refused."""
-
-    model_config = ConfigDict(
-        alias_generator=to_camel, populate_by_name=True, from_attributes=True, extra="forbid"
-    )
-
 
 # The rules (length included) are in app/passwords.py, so each failure gets its own message.
 Password = Annotated[str, Field(max_length=128)]

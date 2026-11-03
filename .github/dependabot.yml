@@ -1,11 +1,12 @@
-# Weekly update PRs, into staging like every other change. Minor and patch bumps are grouped
+# Monthly update PRs, into staging like every other change (each one costs CI minutes; security
+# fixes still arrive at once as Dependabot security updates). Minor and patch bumps are grouped
 # into one PR per ecosystem; majors come one at a time.
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /web
     target-branch: staging
-    schedule: { interval: weekly }
+    schedule: { interval: monthly }
     groups:
       web-minor:
         update-types: [minor, patch]
@@ -13,7 +14,7 @@ updates:
   - package-ecosystem: pip
     directory: /api
     target-branch: staging
-    schedule: { interval: weekly }
+    schedule: { interval: monthly }
     groups:
       api-minor:
         update-types: [minor, patch]
@@ -21,9 +22,9 @@ updates:
   - package-ecosystem: docker
     directories: [/web, /api]
     target-branch: staging
-    schedule: { interval: weekly }
+    schedule: { interval: monthly }
 
   - package-ecosystem: github-actions
     directory: /
     target-branch: staging
-    schedule: { interval: weekly }
+    schedule: { interval: monthly }

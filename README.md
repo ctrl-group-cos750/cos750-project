@@ -99,7 +99,7 @@ other branch fails the `branch-flow` check.
 
 - **Rules** (`.github/rulesets/`, applied by `scripts/apply-branch-rules.sh`): `staging` and
   `master` change only through a PR with one approving review from someone other than the last
-  person to push, and green `web`, `api`, `runner` and `compose` checks; `master` also needs
+  person to push, and a green `checks` job (CI's one job); `master` also needs
   `source-is-staging`. No force-pushes, no deleting either branch. They need the organisation on
   GitHub Team (free for student organisations through GitHub Education).
 - **Until then**, the `push-guard` workflow checks every push to `staging` and `master`: anything

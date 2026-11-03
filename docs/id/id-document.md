@@ -146,7 +146,7 @@ Table 2 shows how each phase applies to this project. The software engineering s
 |---|---|---|---|
 | Analyse | Study the learners, their prior knowledge and the differences between them (Section 2). Check what CS2023 lists for graphs and BFS. | Learner profile | TBD |
 | Design | Write the objectives, success criteria, assessments and lesson plan. Choose the motivation and gamification design. | Objectives, assessment plan and storyboards | TBD |
-| Develop | Build the lessons, tasks, hints and feedback messages. Write the Python tasks and their test cases. | Working prototype | TBD |
+| Develop | Build the lessons, tasks, hints and feedback messages. Write the code activities (Parsons, fill-in, fix the bug, choose tests) and their solutions. | Working prototype | TBD |
 | Implement | Run the prototype with a small group of peers. Fix urgent problems. | Pilot session and usage logs | TBD |
 | Evaluate | Collect survey and test results. Review the data and update the design. Finish this document. | Evaluation summary | TBD |
 
@@ -176,7 +176,7 @@ The application has seven short modules, each focused on one main idea. This kee
 
 Constructive alignment means that objectives, learning activities and assessment point to the same skill [4]. For example, learning objective 6 asks students to implement BFS. So the activity is constructing BFS — ordering shuffled lines and filling in the missing tokens — and the assessment compares the result with the reference solution. Parsons problems are a validated proxy for code-writing ability (§5.3), so this keeps the objective at its level while running no student-written code. A multiple-choice question about BFS would not show that a student can build it. The alignment keeps the application honest about what it teaches and what it measures.
 
-> **Revision (3 November 2026).** Code activities were changed from free-text code writing to ordering (Parsons) and fill-in-the-blank, checked by comparison with the solution. This was a software-security decision (the freeform code runner was removed; see SE document §15.3): it removes all execution of untrusted student code. The learning objectives and their Bloom's levels are unchanged. The exact shape of objective 7's activities (fixing faulty BFS and selecting test cases) is still being settled by the ID team and should be ratified before the pilot.
+> **Revision (3 November 2026).** Code activities were changed from free-text code writing to ordering (Parsons) and fill-in-the-blank, checked by comparison with the solution. This was a software-security decision (the freeform code runner was removed; see SE document §15.3): it removes all execution of untrusted student code. The learning objectives and their Bloom's levels are unchanged. Objective 7 uses two activities of the same kind. In *fix the bug*, the student marks each faulty line of a BFS and chooses its correction from a given set, or moves a line that is in the wrong place. In *choose tests*, the student selects every test case (a small graph, a start vertex and the expected order) that the faulty version fails and the correct version passes.
 
 | Module | Learning objectives | Main learning activities | Assessment evidence | Duration (minutes) |
 |---|---|---|---|---|
@@ -248,7 +248,7 @@ Showing BFS on screen helps only if students take part. Hundhausen, Douglas and 
 
 | Theory | Key idea | How the application applies it |
 |---|---|---|
-| Active learning [6] | Deeper activity leads to deeper learning. | Checkpoints ask students to predict, trace and write code. |
+| Active learning [6] | Deeper activity leads to deeper learning. | Checkpoints ask students to predict, trace, order and complete code. |
 | Cognitive load [21, 15] | Working memory is limited. | Worked examples first. One idea per segment. The graph, queue and visited set shown together. |
 | Scaffolding [27, 28] | Support lets students do more than they can alone. It fades over time. | A four-level hint ladder. Parsons problems. Less help in later modules. |
 | Retrieval practice [18] | Recalling information strengthens memory. | Opening questions on earlier modules. A final mastery check. |
@@ -368,7 +368,7 @@ Good feedback answers three questions: Where am I going? How am I going? Where t
 
 Example for a trace error: “Not quite. You added C to the queue, but C is already in the visited set. BFS adds only unvisited vertices. Check the neighbours of B again.”
 
-Feedback on code comes from the test cases. The student sees which tests failed and a message for each one, for example: “Vertex B was visited twice. Is it marked as visited when it is added to the queue?” A wrong answer at a video checkpoint can be tried again with hints, and the video continues once the answer is correct.
+Feedback on code is given line by line. The student sees which lines or blanks are wrong and a message for each one, for example: “Vertex B was visited twice. Is it marked as visited when it is added to the queue?” A wrong answer at a video checkpoint can be tried again with hints, and the video continues once the answer is correct.
 
 ## Scaffolding: the four-level hint ladder
 
@@ -381,7 +381,7 @@ Every activity offers a four-level hint ladder. Hints are shown one level at a t
 
 Before level 3, the application warns the student that using it will mark the objective as “Met with support”. This keeps the student in control and keeps the result honest (Section 3.2).
 
-Support also fades through the lesson [26]. Modules 1 to 3 start with worked examples. Module 4 moves from a Parsons problem, to filling in missing lines, to a blank function. Module 5 starts from faulty code with less given. A student who passes a short check can skip a worked example, because guidance that helps beginners can slow down stronger students [10].
+Support also fades through the lesson [26]. Modules 1 to 3 start with worked examples. Module 4 moves from a Parsons problem, to filling in missing lines, to a version with most of the lines left blank. Module 5 starts from faulty code with less given. A student who passes a short check can skip a worked example, because guidance that helps beginners can slow down stronger students [10].
 
 ## The review path for “Not yet” results
 

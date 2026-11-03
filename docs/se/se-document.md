@@ -138,7 +138,7 @@ learning outcomes. The Product Owner's duties are shared instead:
 
 | Event | When and how | Output |
 |---|---|---|
-| Daily stand-up | Asynchronous, a short message in the team's Discord stand-up channel every day: done since last time, doing next, blocked by. | Dated record of progress and blockers. |
+| Daily stand-up | Asynchronous, a short message in the team's Discord #general channel every day: done since last time, doing next, blocked by. | Dated record of progress and blockers. |
 | Weekly check-in | Thursday team call at 19:00, mid-sprint. What is done so far is shown on staging; progress against the sprint goal, blockers, and dependencies between the ID and SE work; the sprint backlog is adjusted if the goal is at risk. | Updated sprint backlog; decisions noted in Discord. |
 | Sprint review | Sunday, asynchronous. Each engineer posts what they merged with its staging link; team members, including the ID members, check each item on staging and accept or reject it against its acceptance criteria on the board by Monday morning. | Accepted items; feedback added to the backlog. |
 | Retrospective | Sunday to Monday, a Discord thread: what went well, what to change, one concrete action for the next sprint. | Retro notes kept with the sprint (`docs/se/sprints/`). |
@@ -166,7 +166,7 @@ These are what make a working increment at the end of every week possible. Detai
 | Claim | Where to see it |
 |---|---|
 | Backlog, sprints, estimates, burn-up | GitHub Project board: <https://github.com/orgs/ctrl-group-cos750/projects/1> |
-| Daily stand-ups | Discord stand-up channel (exported for the appendix) |
+| Daily stand-ups | Discord #general channel (exported for the appendix) |
 | Reviews, retros and planning | `docs/se/sprints/` in the repository |
 | Code review and Definition of Done | Merged PRs and their reviews on GitHub |
 | CI and continuous delivery | GitHub Actions history; Coolify deployment log |
@@ -355,7 +355,7 @@ Figure: Use cases. The student takes part in every use case in both groups excep
 
 ## Activities, feedback and hints (FR-4)
 - **FR-4.1** Support these activity kinds, each defined entirely by content data:
-  multiple choice; matching; labelling vertices and edges on a diagram; classifying graphs (directed or undirected); building a graph by adding vertices and edges; predicting the next BFS vertex; filling in a BFS trace table (current vertex, queue, visited set, order); Parsons problems (ordering shuffled lines of code); completing code; writing code; fixing a faulty implementation; writing test cases.
+  multiple choice; matching; labelling vertices and edges on a diagram; classifying graphs (directed or undirected); building a graph by adding vertices and edges; predicting the next BFS vertex; filling in a BFS trace table (current vertex, queue, visited set, order); Parsons problems (ordering shuffled lines of code); completing code by choosing a token for each blank; fixing a faulty BFS; choosing the test cases that expose a bug.
 - **FR-4.2** Check every answer on the server and return feedback straight away. Feedback says why an answer is wrong, not only that it is wrong.
 - **FR-4.3** Tag every activity with the learning objective it gives evidence for (1 to 7) and its purpose: practice, diagnostic, retrieval, mastery, review or bonus.
 - **FR-4.4** Offer a four-level hint ladder on every activity, one level at a time. Level 4 is the worked solution.
@@ -366,10 +366,10 @@ Figure: Use cases. The student takes part in every use case in both groups excep
 Code activities never execute student-written code. The student constructs code by **ordering shuffled lines (Parsons problems)** or **filling in missing tokens/lines from a given set**, and the server checks the result by comparison with the stored solution. This runs no untrusted code at all (decision §15.3; the earlier sandboxed code runner was removed).
 
 - **FR-5.1** Render the activity's code with Python syntax highlighting and line numbers (read-only display), and present the lines to reorder or the blanks to fill. Blanks are filled by choosing from a given set of tokens, not by free typing.
-- **FR-5.2** **Check** compares the student's arrangement against the solution and shows which lines or blanks are wrong, with a message for each. There is no code execution, so there are no run-time limits or output to show. Practice checks against the activity's visible examples are not graded.
+- **FR-5.2** **Check** compares the student's arrangement against the solution and shows which lines or blanks are wrong, with a message for each. There is no code execution, so there are no run-time limits or output to show. A check is practice: it is not graded and not recorded as an attempt.
 - **FR-5.3** **Submit** records a graded attempt: the server compares the submission with the solution (which the browser never receives) and returns which lines or blanks were wrong and a message for each, without revealing the full solution.
 - **FR-5.4** Parsons problems are checked by the order of the lines; fill-in activities are checked token by token against the expected tokens.
-- **FR-5.5** For objective 7, "fix the faulty BFS" and "choose the test cases that expose each bug" are expressed as ordering/selection activities checked by comparison, so no student code or student-written test runs on the server. *(Exact activity shapes for objective 7 are being settled with the ID team — see §15.3.)*
+- **FR-5.5** Objective 7 uses two more kinds, also checked by comparison. **Fix the bug** shows a faulty BFS: the student marks each faulty line and chooses its correction from a given set of lines, or moves a line that is in the wrong place, as in a Parsons problem. **Choose tests** shows a faulty BFS and four to six test cases, each a small graph, a start vertex and the expected order: the student selects every test case that the faulty version fails and the correct version passes. No student code or student-written test runs.
 - **FR-5.6** Because nothing is executed, a code activity always returns promptly with per-line or per-blank feedback, never a run-time error page.
 
 ## BFS visualiser (FR-6)
@@ -399,7 +399,7 @@ Code activities never execute student-written code. The student constructs code 
 - **FR-9.3** Award badges for milestones (first module, every objective met, all bonus quests).
 - **FR-9.4** Points and badges are **private**: each student sees only their own. There is no public leaderboard, because public ranking discourages the students who most need the app (those motivated by avoiding failure, L05 [4]).
 
-Default rules **[PROVISIONAL]** until the ID document's motivation section is written:
+The rules, as confirmed by the ID document (§7.2):
 
 | Event | Points |
 |---|---|
@@ -409,7 +409,7 @@ Default rules **[PROVISIONAL]** until the ID document's motivation section is wr
 | Objective met independently / with support | 30 / 15 |
 | Bonus quest completed | 20 |
 
-Table: Default points rules, stored on the server and tunable without a code change.
+Table: Points rules, stored on the server and tunable without a code change.
 
 ## Evaluation data (FR-10)
 - **FR-10.1** Log every event (segment viewed, video checkpoint reached, attempt, hint requested, module completed, result changed) with the user and time.
@@ -429,7 +429,7 @@ Section and table numbers refer to the ID document [5].
 | FR-6 BFS visualiser | Objectives 4 and 5; signalling and segmenting (§5.2); prediction before animation (§5.4) |
 | FR-7 Mastery and scaffolding | Three result states and readiness rule (§3.2); review path (§7); the specification's requirement for extra scaffolding |
 | FR-8 Diagnostic and fading | Warm-up and refreshers (module 0); fading support and bonus quests (§5.2) |
-| FR-9 Points and badges | Motivation and gamification (§7, still to be written) |
+| FR-9 Points and badges | Motivation and gamification (§7.1, §7.2) |
 | FR-10 Evaluation data | ADDIE Implement and Evaluate phases (§4.2, Table 2); evaluation (§8) |
 
 Table: Which part of the ID document each functional requirement delivers.
@@ -515,7 +515,7 @@ Figure: Entities and relationships.
 
 **Checkpoint**: `id`, `video_id`, `at_seconds`, `activity_id`.
 
-**Activity**: `id`, `module_id`, `objective_id` (nullable for diagnostic items), `purpose` (`practice` | `diagnostic` | `retrieval` | `mastery` | `review` | `bonus`), `kind` (one of the kinds in FR-4.1), `prompt` (Markdown), `config` (JSON, shape depends on the kind: options, diagram, starter code, line order, scenario ID …), `answer` (JSON, never sent to the browser: correct options, expected order, or hidden tests and faulty implementations for code kinds), `feedback` (JSON: messages for common wrong answers).
+**Activity**: `id`, `module_id`, `objective_id` (nullable for diagnostic items), `purpose` (`practice` | `diagnostic` | `retrieval` | `mastery` | `review` | `bonus`), `kind` (one of the kinds in FR-4.1), `prompt` (Markdown), `config` (JSON, shape depends on the kind: options, diagram, starter code, line order, scenario ID …), `answer` (JSON, never sent to the browser: correct options, expected line order or tokens, the faulty lines and their corrections, or the test cases that expose a bug), `feedback` (JSON: messages for common wrong answers).
 
 **Hint**: `activity_id`, `level` (1 to 4), `body` (Markdown). Level 4 is the worked solution.
 
@@ -563,7 +563,7 @@ Base path: `/api`. JSON over HTTPS. Auth via the session cookie set by `/api/aut
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
 | POST | `/api/activities/{activityId}/hints` | user | Reveal the next hint level and record it. Returns the hint. |
-| POST | `/api/activities/{activityId}/check` | user | Practice: compare the submission against the activity's visible example and report what is wrong. Not graded (FR-5.2). |
+| POST | `/api/activities/{activityId}/check` | user | Practice: compare the submission with the solution and report which parts are wrong. Not graded or recorded (FR-5.2). |
 | POST | `/api/activities/{activityId}/attempts` | user | Submit an answer. The server checks it (a code activity is compared against its stored solution), records the attempt, updates progress, results and points, and returns the outcome. |
 
 Example `POST /api/activities/{activityId}/attempts` for a code activity (lines ordered as a Parsons problem):
@@ -676,7 +676,7 @@ The returned payload (see §9.4) contains:
 
 ## Testing
 - Unit tests over known graphs with asserted `order` and `steps` (directed and undirected; disconnected graph handling; single-node; start-node validation).
-- The same graphs are used by the hidden tests of the code activities, so the engine and the reference solution can't disagree.
+- The test cases in choose-tests activities (FR-5.5) are checked against the engine in CI, so the engine and the stored answers can't disagree.
 
 # Frontend Component Breakdown (React + TypeScript)
 
@@ -794,29 +794,33 @@ Figure: The BFS visualiser in prediction mode (FR-6).
 +----------------------------------------------------------------------------------------+
 | Ctrl Academy    Modules · Report                       * 240 points   Account v        |
 +----------------------------------------------------------------------------------------+
-| Module 4 · Write BFS                                   Task 3 of 4: blank function     |
-| Write bfs(graph, start) so it returns the vertices in the order BFS visits them.       |
+| Module 4 · Build BFS                                 Task 2 of 3: fill in the blanks   |
+| Complete bfs(graph, start) by choosing a token for each blank.                         |
 |                                                                                        |
 | +----------------------------------------------+  +----------------------------------+ |
-| |  1  from collections import deque            |  | Results (submitted)              | |
-| |  2                                           |  |                                  | |
-| |  3  def bfs(graph, start):                   |  | + visits every vertex            | |
-| |  4      visited = {start}                    |  | + start vertex first             | |
-| |  5      queue = deque([start])               |  | x handles a cycle                | |
-| |  6      order = []                           |  |   B was visited twice.           | |
-| |  7      while queue:                         |  |   Is it marked as visited        | |
-| |  8          v = queue.popleft()              |  |   when it is queued?             | |
-| |  9          order.append(v)                  |  | + disconnected graph             | |
-| | 10          _                                |  |                                  | |
-| |                                              |  | 3 of 4 passed                    | |
-| | [ Run examples ]   [ Submit ]                |  |                                  | |
+| |   1  from collections import deque           |  | Results (submitted)              | |
+| |   2                                          |  |                                  | |
+| |   3  def bfs(graph, start):                  |  | + blank 1  deque                 | |
+| |   4      visited = {start}                   |  | + blank 2  popleft               | |
+| |   5      queue = [1 deque  ]([start])        |  | x blank 3  visited.add(v)        | |
+| |   6      order = []                          |  |   v is already visited. Mark n   | |
+| |   7      while queue:                        |  |   as visited when it is queued,  | |
+| |   8          v = queue.[2 popleft]()         |  |   not when it leaves the queue.  | |
+| |   9          order.append(v)                 |  |                                  | |
+| |  10          for n in sorted(graph[v]):      |  | 2 of 3 blanks correct            | |
+| |  11              if n not in visited:        |  |                                  | |
+| |  12                  [3 visited.add(v) ]     |  |                                  | |
+| |  13                  queue.append(n)         |  |                                  | |
+| |                                              |  |                                  | |
+| | Tokens: deque  popleft  pop  visited.add(n)  |  |                                  | |
+| | [ Check ]   [ Submit ]                       |  |                                  | |
 | +----------------------------------------------+  +----------------------------------+ |
 |                                                                                        |
 | [ Hint 2 of 4 ]   Hints 3 and 4 mark this objective as "met with support".             |
 +----------------------------------------------------------------------------------------+
 ```
 
-Figure: A code activity after a submission, with per-line results and the hint ladder (FR-5, FR-4.4).
+Figure: A fill-in code activity after a submission, with per-blank results and the hint ladder (FR-5, FR-4.4).
 
 ```
 +----------------------------------------------------------------------------------------+
@@ -961,7 +965,7 @@ Testing follows the Definition of Done (§2.4): no item is done until it has tes
 | Unit | The BFS engine, one answer checker per activity kind, the mastery rules, the points rules; React components and hooks, including every activity component | pytest; Vitest + React Testing Library | Every PR (CI) |
 | API | Every endpoint against a freshly migrated database: correct and wrong answers, hint recording, progress and result updates; that one student can never read another's data; that no response ever contains an activity's `answer` | pytest + FastAPI `TestClient`, SQLite | Every PR (CI) |
 | Migrations | Every migration applies to an empty database, the models match the migrations, and there is one head | pytest + Alembic | Every PR (CI) |
-| Content | Every fixture file matches its schema; every code activity's solution is consistent with its own checker (the solution order and expected tokens are marked correct) and each listed faulty version is distinguished from it (NFR-M5) | pytest | Every PR that touches content (CI) |
+| Content | Every fixture file matches its schema; every code activity's solution is consistent with its own checker (the solution order and expected tokens are marked correct), and each choose-tests answer is confirmed by running the team's own reference and faulty BFS on its test cases, in CI only and never in the app (NFR-M5) | pytest | Every PR that touches content (CI) |
 | End-to-end | The student's path in a real browser against the full stack: register, module 0 and its diagnostic, a video checkpoint, a code activity (ordering and completing code), the mastery report and a review path; plus logging in as each demo account | Playwright, in Chromium, Firefox and WebKit | Every PR into `staging` (CI); on staging before each sprint review |
 | Accessibility | Automated checks on every page (no WCAG 2.1 AA violations); one module completed with the keyboard only | oxlint jsx-a11y; axe-core in Playwright; a manual pass | Every PR (automated); once per sprint (manual) |
 | Exploratory | The item's acceptance criteria tried by hand on staging, by someone other than its author | Staging | Every item, before it is accepted (DoD) |
@@ -1189,7 +1193,7 @@ Table: Risk register.
 3. **Deployment** → **Docker Compose on Coolify**, already live: staging.ctrlacademy.co.za and ctrlacademy.co.za, with Traefik terminating HTTPS and nginx serving the app and proxying `/api` (§13.4).
 4. **Video** → **narrated screen recordings**, no presenter on camera, with captions and a transcript; checkpoints use `retry_until_correct`: feedback and hints on a wrong answer, no lockout (FR-3).
 5. **Assessment and scaffolding** → **per objective**, three results (met independently, met with support, not yet), as the ID document defines; a review path for every "not yet" objective (FR-7).
-6. **Code activities** → **no code execution; checked by comparison** (FR-5, NFR-S7). The student orders shuffled lines (Parsons) or fills in tokens from a given set, and the server compares the result with the solution. This **supersedes the 1 November decision** to run student Python in an isolated code runner: pentesting on staging (§14) found the in-process grader could be forged to fake a pass, and the residual risk of executing arbitrary code on a shared personal server outweighed what a freeform editor added, so on 3 November the team dropped freeform code writing and removed the runner. Running Python in the browser (Pyodide) was considered and rejected for the same era, as every test would then be visible in the browser; comparison-based activities avoid both problems. The ID document's objectives 6 and 7 are unchanged — Parsons performance is an established proxy for code-writing ability (ID document §5) — but the activity shapes for objective 7 are still being settled with the ID team.
+6. **Code activities** → **no code execution; checked by comparison** (FR-5, NFR-S7). The student orders shuffled lines (Parsons) or fills in tokens from a given set, and the server compares the result with the solution. This **supersedes the 1 November decision** to run student Python in an isolated code runner: pentesting on staging (§14) found the in-process grader could be forged to fake a pass, and the residual risk of executing arbitrary code on a shared personal server outweighed what a freeform editor added, so on 3 November the team dropped freeform code writing and removed the runner. Running Python in the browser (Pyodide) was considered and rejected for the same era, as every test would then be visible in the browser; comparison-based activities avoid both problems. The ID document's objectives 6 and 7 are unchanged — Parsons performance is an established proxy for code-writing ability (ID document §5) ; objective 7 uses the fix-the-bug and choose-tests activities (FR-5.5).
 7. **Gamification** → **private points and badges, no public leaderboard** (FR-9). The initial meeting on 25 October included leaderboards; on 1 November the team replaced them with private points, because public ranking discourages students who are motivated by avoiding failure [4].
 8. **Accounts** → **email and password**, JWT in an httpOnly cookie (FR-1, §5).
 9. **Content** → **fixture files in the repository**, validated in CI; no authoring interface (§3, NFR-M5).

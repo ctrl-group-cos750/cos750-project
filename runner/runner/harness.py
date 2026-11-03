@@ -33,7 +33,9 @@ def set_limits(limits: dict[str, int]) -> None:
     hard(resource.RLIMIT_FSIZE, limits["output_bytes"])  # stdout and stderr are files
     hard(resource.RLIMIT_NPROC, 0)  # no new processes or threads: a fork bomb stops at once
     hard(resource.RLIMIT_CORE, 0)
-    hard(resource.RLIMIT_NOFILE, 32)
+    hard(
+        resource.RLIMIT_NOFILE, 16
+    )  # also bounds pipe and socket buffers, which count as kernel memory
 
 
 # seccomp: rules the kernel enforces on this process from here on, which can't be undone:
@@ -46,6 +48,11 @@ def set_limits(limits: dict[str, int]) -> None:
 # - no prctl: what the harness set up (non-dumpable, dying with the runner) stays set;
 # - no creating, writing, renaming or deleting files: the code has no need to, and it can't fill the
 #   shared /tmp or touch another run's folder (opening to read is still allowed);
+# - none of the kernel's riskier interfaces, whatever Docker's own profile allows: io_uring (it can
+#   open sockets and files without the calls above), namespaces, mounts, chroot, keyrings, eBPF,
+#   perf, userfaultfd, modules, kexec, file handles, fanotify, and memfd (memory files that no
+#   per-process limit counts, so writing to one could fill the container). Refused with EACCES rather than
+#   EPERM, so tests can tell this filter refused them, not Docker's;
 # - no calls from another architecture's table, which could be used to get around all of this.
 # (Linux: <linux/seccomp.h>, <linux/filter.h>.)
 _ARCH: dict[str, dict[str, int]] = {
@@ -79,6 +86,59 @@ _REFUSED = (
 )  # fmt: skip
 # O_WRONLY | O_RDWR | O_CREAT | O_TRUNC | O_APPEND: any of these in open()'s flags is a write.
 _WRITE_FLAGS = 0o1 | 0o2 | 0o100 | 0o1000 | 0o2000
+# The kernel interfaces no student code needs (see above): x86_64, aarch64.
+_KERNEL = {
+    "io_uring_setup": (425, 425),
+    "io_uring_enter": (426, 426),
+    "io_uring_register": (427, 427),
+    "unshare": (272, 97),
+    "setns": (308, 268),
+    "mount": (165, 40),
+    "umount2": (166, 39),
+    "chroot": (161, 51),
+    "pivot_root": (155, 41),
+    "keyctl": (250, 219),
+    "add_key": (248, 217),
+    "request_key": (249, 218),
+    "bpf": (321, 280),
+    "perf_event_open": (298, 241),
+    "userfaultfd": (323, 282),
+    "kcmp": (312, 272),
+    "process_madvise": (440, 440),
+    "process_mrelease": (448, 448),
+    "fsopen": (430, 430),
+    "fsconfig": (431, 431),
+    "fsmount": (432, 432),
+    "fspick": (433, 433),
+    "open_tree": (428, 428),
+    "move_mount": (429, 429),
+    "mount_setattr": (442, 442),
+    "init_module": (175, 105),
+    "finit_module": (313, 273),
+    "delete_module": (176, 106),
+    "kexec_load": (246, 104),
+    "kexec_file_load": (320, 294),
+    "open_by_handle_at": (304, 265),
+    "name_to_handle_at": (303, 264),
+    "fanotify_init": (300, 262),
+    "syslog": (103, 116),
+    "sethostname": (170, 161),
+    "setdomainname": (171, 162),
+    "swapon": (167, 224),
+    "swapoff": (168, 225),
+    "acct": (163, 89),
+    "reboot": (169, 142),
+    "quotactl": (179, 60),
+    "personality": (135, 92),
+    "vhangup": (153, 58),
+    "lookup_dcookie": (212, 18),
+    "memfd_secret": (447, 447),
+    "memfd_create": (319, 279),
+    "iopl": (172, None),
+    "ioperm": (173, None),
+    "modify_ldt": (154, None),
+    "uselib": (134, None),
+}
 _LD_W_ABS, _JEQ, _JGE, _JSET, _RET = 0x20, 0x15, 0x35, 0x45, 0x06
 _ALLOW, _ERRNO = 0x7FFF0000, 0x00050000
 _ARG0, _ARG1, _ARG2 = 16, 24, 32  # seccomp_data.args[i], low 32 bits (pid_t, flags are ints)
@@ -106,11 +166,14 @@ def _assemble(program: list[tuple[object, ...]]) -> bytes:
 def sandbox_syscalls() -> None:
     nr = _ARCH[platform.machine()]
     me = os.getpid()
+    column = 0 if platform.machine() == "x86_64" else 1
+    kernel = [n[column] for n in _KERNEL.values() if n[column] is not None]
     program: list[tuple[object, ...]] = [
         (_LD_W_ABS, 0, 0, 4),  # seccomp_data.arch
         (_JEQ, 0, "refuse", nr["audit"]),
         (_LD_W_ABS, 0, 0, 0),  # seccomp_data.nr
         (_JGE, "refuse", 0, 0x40000000),  # x32 calls
+        *[(_JEQ, "kernel", 0, number) for number in kernel],
         *[(_JEQ, "refuse", 0, nr[name]) for name in _REFUSED if name in nr],
         *([(_JEQ, "open_flags", 0, nr["open"])] if "open" in nr else []),
         (_JEQ, "openat_flags", 0, nr["openat"]),
@@ -132,6 +195,8 @@ def sandbox_syscalls() -> None:
         ("label", "openat_flags"),
         (_LD_W_ABS, 0, 0, _ARG2),
         (_JSET, "refuse", "allow", _WRITE_FLAGS),
+        ("label", "kernel"),
+        (_RET, 0, 0, _ERRNO | errno.EACCES),
         ("label", "refuse"),
         (_RET, 0, 0, _ERRNO | errno.EPERM),
         ("label", "allow"),

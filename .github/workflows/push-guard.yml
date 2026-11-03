@@ -1,0 +1,50 @@
+# Until branch protection is on (.github/rulesets, scripts/apply-branch-rules.sh), nothing stops a
+# direct push to staging or master. This catches one straight away: every push to those branches
+# must be the merge of a PR, and a force-push is never allowed. Anything else fails here and opens
+# an issue for the Scrum Master.
+name: push-guard
+
+on:
+  push:
+    branches: [staging, master]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  came-through-a-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the push came through a merged PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          BRANCH: ${{ github.ref_name }}
+          FORCED: ${{ github.event.forced }}
+          PUSHER: ${{ github.actor }}
+        run: |
+          problem=""
+          if [ "$FORCED" = "true" ]; then
+            problem="a force-push"
+          else
+            # GitHub can take a few seconds to link a fresh merge commit to its PR.
+            merged=0
+            for attempt in 1 2 3 4 5 6; do
+              merged=$(gh api "repos/$REPO/commits/$SHA/pulls" \
+                --jq "[.[] | select(.merged_at != null and .base.ref == \"$BRANCH\")] | length")
+              [ "$merged" -gt 0 ] && break
+              sleep 10
+            done
+            [ "$merged" -gt 0 ] || problem="a direct push, not the merge of a PR"
+          fi
+          if [ -n "$problem" ]; then
+            gh issue create --repo "$REPO" --assignee MatthewEls \
+              --title "$BRANCH changed by $problem ($PUSHER, ${SHA:0:7})" \
+              --body "push-guard: \`$BRANCH\` moved to $SHA by $problem, pushed by @$PUSHER. Every change to \`$BRANCH\` goes through a PR (SE document §2). Check what changed, and revert it through a PR if it shouldn't be there."
+            echo "::error::$BRANCH changed by $problem"
+            exit 1
+          fi
+          echo "$SHA on $BRANCH is the merge of a PR."

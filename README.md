@@ -97,5 +97,14 @@ Tests never need Postgres: the `working_db` fixture in `api/tests/conftest.py` s
 `feature/*` → PR into `staging` → PR from `staging` into `master`. A PR into `master` from any
 other branch fails the `branch-flow` check.
 
-Coolify deploys on push: `staging` → staging.ctrlacademy.co.za, `master` → ctrlacademy.co.za.
+- **Rules** (`.github/rulesets/`, applied by `scripts/apply-branch-rules.sh`): `staging` and
+  `master` change only through a PR with one approving review from someone other than the last
+  person to push, and green `web`, `api`, `runner` and `compose` checks; `master` also needs
+  `source-is-staging`. No force-pushes, no deleting either branch. They need the organisation on
+  GitHub Team (free for student organisations through GitHub Education).
+- **Until then**, the `push-guard` workflow checks every push to `staging` and `master`: anything
+  that isn't the merge of a PR, or is a force-push, fails and opens an issue for the Scrum Master.
+
+Coolify deploys `staging` to staging.ctrlacademy.co.za on every push. Production (`master` →
+ctrlacademy.co.za) is deployed deliberately after a release PR, not automatically on push.
 Setup: [docs/deploy/coolify.md](docs/deploy/coolify.md).

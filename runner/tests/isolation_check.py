@@ -1,9 +1,10 @@
 """Proves that whatever happens in the sandbox, only running code is affected.
 
 CI starts the whole stack (web, api, db, runner) and runs this, standard library only, from a
-container on both networks:
+container on the app's network that also mounts the runner's socket volume (the runner itself has
+no network):
 
-    python isolation_check.py flood http://web http://runner:8000
+    python isolation_check.py flood http://web unix:/run/runner/runner.sock
     python isolation_check.py runner-down http://web
 
 "flood" measures the app at rest, then keeps the sandbox saturated with hostile code (infinite
@@ -12,7 +13,9 @@ the app must answer every request, and stay fast. "runner-down" runs after CI st
 the app must still work.
 """
 
+import http.client
 import json
+import socket
 import statistics
 import sys
 import threading
@@ -52,6 +55,37 @@ def request(
 def timed(url: str, body: object = None, cookie: str | None = None) -> tuple[int, float]:
     status, _, seconds = request(url, body, cookie)
     return status, seconds
+
+
+class UnixConnection(http.client.HTTPConnection):
+    def __init__(self, path: str, timeout: float) -> None:
+        super().__init__("runner", timeout=timeout)
+        self.socket_path = path
+
+    def connect(self) -> None:
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock.settimeout(self.timeout)
+        try:
+            sock.connect(self.socket_path)
+        except OSError:
+            sock.close()
+            raise
+        self.sock = sock
+
+
+def runner_call(runner: str, method: str, path: str, body: object = None) -> int:
+    """The runner's answer status, over its Unix socket (runner is "unix:/path")."""
+    conn = UnixConnection(runner[len("unix:") :], timeout=60)
+    try:
+        headers = {"Content-Type": "application/json"} if body is not None else {}
+        conn.request(method, path, body=None if body is None else json.dumps(body), headers=headers)
+        res = conn.getresponse()
+        res.read()
+        return res.status
+    except OSError:
+        return 0
+    finally:
+        conn.close()
 
 
 class App:
@@ -114,8 +148,7 @@ def flood(runner: str, stop: threading.Event, outcomes: list[int]) -> None:
     i = 0
     while not stop.is_set():
         body = {"code": HOSTILE[i % len(HOSTILE)], "tests": []}
-        status, _, _ = request(f"{runner}/run", body, timeout=60)
-        outcomes.append(status)
+        outcomes.append(runner_call(runner, "POST", "/run", body))
         i += 1
 
 
@@ -153,8 +186,7 @@ def flood_check(web: str, runner: str) -> None:
             f"{name} stayed fast (median under {allowed * 1000:.0f} ms)",
             f"{calm[name] * 1000:.1f} -> {loaded[name] * 1000:.1f} ms",
         )
-    status, _, _ = request(f"{runner}/health")
-    check(status == 200, "the runner itself is healthy afterwards")
+    check(runner_call(runner, "GET", "/health") == 200, "the runner itself is healthy afterwards")
 
 
 def runner_down_check(web: str) -> None:
@@ -168,7 +200,7 @@ def runner_down_check(web: str) -> None:
 def main() -> None:
     mode = sys.argv[1]
     if mode == "flood":
-        flood_check(sys.argv[2], sys.argv[3].rstrip("/"))
+        flood_check(sys.argv[2], sys.argv[3])
     else:
         runner_down_check(sys.argv[2])
     print(f"\n{len(failures)} failed" if failures else "\nall passed")

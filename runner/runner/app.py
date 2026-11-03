@@ -1,6 +1,7 @@
 """The code runner's HTTP service (SE document NFR-S7, §9 "Code runner (internal)").
 
-Only the API can reach it: it sits on an internal Docker network with no route to the internet.
+It has no network at all (network_mode none): the API reaches it through a Unix socket on a
+volume only the two of them mount.
 It keeps nothing between requests and holds no secrets.
 """
 

@@ -24,27 +24,27 @@ services:
       SECRET_KEY: ${SECRET_KEY:-}
       # "off" in production: hides /api/docs and /api/openapi.json. Staging keeps them for the team.
       API_DOCS: ${API_DOCS:-on}
-      RUNNER_URL: http://runner:8000
-    networks:
-      - default
-      - sandbox
+      # The runner has no network; it listens on this socket (runner/README.md).
+      RUNNER_SOCKET: /run/runner/runner.sock
+    volumes:
+      - runner-socket:/run/runner
     # Not on the runner: the app starts and works without it; only running code needs it.
     depends_on:
       db:
         condition: service_healthy
     restart: unless-stopped
 
-  # Runs students' Python (SE document NFR-S7). Only on the internal `sandbox` network, which
-  # has no route to the internet and holds only the API; no secrets, no volumes, no database.
+  # Runs students' Python (SE document NFR-S7). No network at all: not even an internal one,
+  # because Coolify adds its own network to every service it deploys (#25). It holds no secrets
+  # and no data; the API talks to it over a Unix socket on the `runner-socket` volume.
   # Whatever student code does, only running code is affected: the caps below are the runner's
   # alone, it yields the CPU to everything else, and it is the first thing the kernel kills if the
   # server runs short of memory.
   runner:
     build: ./runner
-    expose:
-      - "8000"
-    networks:
-      - sandbox
+    network_mode: none
+    volumes:
+      - runner-socket:/run/runner
     read_only: true
     tmpfs:
       - /tmp:size=64m,mode=1777,noexec,nosuid,nodev
@@ -77,9 +77,13 @@ services:
       retries: 10
     restart: unless-stopped
 
-networks:
-  sandbox:
-    internal: true
-
 volumes:
   db-data:
+  # Only the socket between the API and the runner: in memory, owned by the runner's user, and
+  # nothing else mounts it.
+  runner-socket:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=1m,uid=10002,gid=10002,mode=0711

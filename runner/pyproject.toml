@@ -29,6 +29,7 @@ ignore = ["E501"]  # the formatter owns line length
 # Talks to the runner over plain http on the internal network; the URL comes from CI.
 "tests/container_check.py" = ["S101", "S310"]
 "tests/isolation_check.py" = ["S105", "S310"]  # a throwaway test account on the CI stack
+"tests/network_check.py" = ["S101"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["runner"]

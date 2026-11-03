@@ -1,12 +1,16 @@
 import { fileURLToPath } from 'node:url'
+import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
 
-// https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
   build: {
-    // Two pages: the app, and the UI kit reference at /ui-kit.html.
     rollupOptions: {
       input: {
         main: fileURLToPath(new URL('index.html', import.meta.url)),
@@ -15,7 +19,6 @@ export default defineConfig({
     },
   },
   server: {
-    // In dev, /api goes to the FastAPI server. In production nginx does the same (web/nginx.conf).
     proxy: {
       '/api': 'http://localhost:8000',
     },

@@ -3,7 +3,7 @@ import type { AttemptInput, AttemptResult, Hint } from './video.types.ts'
 
 export function submitCheckpointAttempt(input: AttemptInput): Promise<AttemptResult> {
   return api<AttemptResult>(`/api/activities/${input.activityId}/attempts`, {
-    method: 'POST'
+    method: 'POST',
     body: { answer: input.answer },
   })
 }

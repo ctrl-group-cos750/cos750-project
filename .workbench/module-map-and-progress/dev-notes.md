@@ -734,3 +734,108 @@ failures (same warning); (d) the stash was popped and re-verified. No new real f
   connections in `migrations/env.py` when `alembic check` runs inside the test suite. Fixing
   them requires closing the engine in the migration check helper or suppressing
   `ResourceWarning` in `pyproject.toml` test config. Out of scope for this wave.
+
+---
+
+## Developer Notes — Wave 2c: api/tests/test_modules.py
+
+### Files Created
+- `api/tests/test_modules.py` — 21 API tests for the module map and progress endpoints.
+
+### Files Modified
+None.
+
+---
+
+### Tests Added (21 total)
+
+| # | Test | What it asserts |
+|---|------|-----------------|
+| 1 | `test_list_modules_returns_all_modules_with_initial_states` | GET /api/modules → 3 modules in position order; module 0 'open', 1 and 2 'locked' for a new student |
+| 2 | `test_list_modules_includes_estimated_minutes_and_segment_count` | Each map item has `estimatedMinutes > 0` and `segmentCount == 2` |
+| 3 | `test_get_module_detail_returns_goals_and_ordered_segments` | Detail for module 0 includes `goals`, `segments` in position order, correct `kind` values |
+| 4 | `test_get_missing_module_is_404` | GET /api/modules/9999 → 404 |
+| 5 | `test_get_locked_module_is_403` | GET on module 1 (locked) → 403 before module 0 is complete |
+| 6 | `test_get_module_2_locked_until_module_1_complete` | Module 2 stays locked even after starting module 0 |
+| 7 | `test_post_position_saves_and_returns_updated_current_segment_position` | POST /position → 200, `currentSegmentPosition` and `status` updated; idempotent |
+| 8 | `test_reaching_last_segment_completes_the_module` | segmentPosition == last_index (1 for 2-segment module) → status 'complete' |
+| 9 | `test_exceeding_last_segment_position_still_completes` | segmentPosition > last_index → still 'complete' (>= semantics) |
+| 10 | `test_completing_module_0_unlocks_module_1` | After completing module 0, list shows module 1 'open', module 2 still 'locked' |
+| 11 | `test_completing_module_0_lets_student_access_module_1_detail` | 403 before completion → 200 after |
+| 12 | `test_completing_module_1_unlocks_module_2` | Cascading unlock: completing 0 then 1 opens module 2 |
+| 13 | `test_user_b_sees_initial_locked_states_regardless_of_user_a_progress` | User A completing module 0 does not affect User B's locked state |
+| 14 | `test_user_a_position_does_not_bleed_into_user_b` | User A's saved position 1 does not appear in User B's detail |
+| 15 | `test_returning_student_sees_saved_current_segment_position` | After logout/login, GET detail reflects previously saved position |
+| 16 | `test_returning_student_sees_saved_position_on_list_endpoint` | GET /api/modules also echoes saved `currentSegmentPosition` |
+| 17 | `test_list_modules_requires_auth` | No session → 401 |
+| 18 | `test_get_module_detail_requires_auth` | No session → 401 |
+| 19 | `test_post_position_requires_auth` | No session → 401 |
+| 20 | `test_post_position_on_locked_module_is_403` | POST /position on locked module 1 → 403 |
+| 21 | `test_post_position_on_missing_module_is_404` | POST /position on module 9999 → 404 |
+
+---
+
+### Key Decisions
+
+1. **Direct ORM insertion (not seed `load()`)**: Modules and segments are inserted directly into
+   the test db session using `Module(...)` and `Segment(...)` constructors — the same pattern
+   `test_videos.py` uses for videos and `test_activities.py` uses for activities. This is faster
+   and clearer than calling `load()` (which also requires fixture JSON files).
+
+2. **3 modules (numbers 0–2) instead of 7**: Three modules are enough to exercise the full
+   unlock chain (module 0 → 1 → 2) without bloat. The real 7-module fixture is tested in
+   `test_seed.py` already.
+
+3. **2 segments per module**: `last_index = 1` makes completion tests easy to reason about.
+   `segmentPosition=0` → `in_progress`; `segmentPosition=1` → `complete`.
+
+4. **`_make_modules` flushes after module creation before inserting segments**: Required by the
+   FK constraint `Segment.module_id → modules.id`. Pattern follows `test_seed.py` reseed test.
+
+5. **Unused unpacked variables use `_m1_id` / `_m2_id` prefix**: Required by ruff `RUF059`.
+   Two tests unpack all three module IDs but only use some — the unused ones are prefixed with `_`
+   to satisfy the linter without dropping the destructuring for readability.
+
+6. **Login via `/api/auth/login` (not re-register)**: Tests 15–16 (returning student) call
+   `/api/auth/login` directly after logging out, matching how a real returning student would
+   authenticate. Other tests use `/api/auth/register` (which auto-logs-in per FR-1.1).
+
+---
+
+### Library Docs Consulted (Context7)
+None — no third-party libraries were introduced. All patterns follow existing test files
+(`test_videos.py`, `test_activities.py`, `test_seed.py`) directly.
+
+---
+
+### Build & Test Results
+
+```
+pytest -q tests/test_modules.py
+→ 21 passed in 0.90s
+
+ruff format --check tests/test_modules.py
+→ 1 file already formatted
+
+ruff check tests/test_modules.py
+→ All checks passed!
+
+mypy --strict tests/test_modules.py
+→ Success: no issues found in 1 source file
+
+pytest -q (full suite)
+→ 3 failed (pre-existing ResourceWarning: test_health, test_migrations, test_overload),
+  420 passed (+21 from this sub-task, +1 from GC-timing luck on the flap pool),
+  1 skipped, 1 error (pre-existing test_seed setup ResourceWarning — same root cause)
+  No new real failures introduced.
+```
+
+The three failures and one error are all the known pre-existing SQLite `ResourceWarning`
+flaps (unclosed connection from `migrations/env.py` NullPool) promoted to failures by
+`pytest-unraisableexception`. All pass in isolation and with `-p no:unraisableexception`.
+
+---
+
+### Open Issues
+- All pre-existing open issues from Waves 1a–2b remain unchanged.
+- No new open issues introduced by this sub-task.

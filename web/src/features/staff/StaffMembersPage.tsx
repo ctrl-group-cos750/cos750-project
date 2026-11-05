@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { UserPlus } from 'lucide-react'
+import { Search, UserPlus } from 'lucide-react'
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,72 +9,116 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useCurrentUser } from '../../auth/hooks.ts'
 import { Spinner } from '../../components'
-import { addMember, listMembers, removeMember, type StaffMember } from './staff.api.ts'
+import {
+  addMember,
+  listAccounts,
+  listMembers,
+  matchesSearch,
+  removeMember,
+  type StaffMember,
+} from './staff.api.ts'
 
 const MEMBERS = ['staff', 'members']
+const MAX_MATCHES = 8
 
-/** Make an existing account staff by its email. */
+/** Find a registered account by name or email (the list narrows as you type) and make it staff. */
 function AddMemberForm() {
   const queryClient = useQueryClient()
-  const [email, setEmail] = useState('')
+  const [query, setQuery] = useState('')
+  const accounts = useQuery({ queryKey: ['staff', 'accounts'], queryFn: listAccounts })
   const add = useMutation({
     mutationFn: addMember,
     onSuccess: () => {
-      setEmail('')
-      void queryClient.invalidateQueries({ queryKey: MEMBERS })
+      setQuery('')
+      void queryClient.invalidateQueries({ queryKey: ['staff'] })
     },
   })
-
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (email.trim()) add.mutate(email.trim())
-  }
+  const students = accounts.data?.filter((a) => !a.isStaff) ?? []
+  const matches = query.trim() ? students.filter((a) => matchesSearch(a, query)) : []
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-lg font-semibold">Add a team member</CardTitle>
         <CardDescription>
-          They need an account first: ask them to register in the app, then enter the email they
-          used.
+          Start typing their name or email. They need an account first: ask them to register in the
+          app.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <form className="grid gap-3" onSubmit={handleSubmit}>
-          <div className="grid gap-2">
-            <Label htmlFor="member-email">Email</Label>
-            <div className="flex flex-wrap gap-3">
-              <Input
-                id="member-email"
-                type="email"
-                autoComplete="off"
-                required
-                className="max-w-sm flex-1"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                aria-invalid={add.isError || undefined}
-              />
-              <Button type="submit" size="lg" disabled={add.isPending}>
-                <UserPlus aria-hidden />
-                {add.isPending ? 'Adding...' : 'Make staff'}
-              </Button>
-            </div>
+      <CardContent className="grid gap-3">
+        <div className="grid max-w-md gap-2">
+          <Label htmlFor="member-search">Name or email</Label>
+          <div className="relative">
+            <Search
+              aria-hidden
+              className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              id="member-search"
+              type="search"
+              autoComplete="off"
+              className="pl-8"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
           </div>
-          {add.isError && (
-            <Alert variant="destructive">
-              <AlertTitle>Not added</AlertTitle>
-              <AlertDescription>{add.error.message}</AlertDescription>
-            </Alert>
-          )}
-          {add.isSuccess && (
-            <Alert className="border-success bg-success/15">
-              <AlertTitle>{add.data.displayName} is a team member</AlertTitle>
-              <AlertDescription>
-                They see the staff portal the next time a page loads.
-              </AlertDescription>
-            </Alert>
-          )}
-        </form>
+        </div>
+        {accounts.isError && (
+          <Alert variant="destructive">
+            <AlertDescription>{accounts.error.message}</AlertDescription>
+          </Alert>
+        )}
+        {query.trim() && accounts.data && (
+          <div aria-live="polite" className="grid gap-2">
+            {matches.length === 0 ? (
+              <p className="text-muted-foreground">
+                No student account matches &quot;{query.trim()}&quot;. They need to register in the
+                app first.
+              </p>
+            ) : (
+              <ul aria-label="Matching accounts" className="grid list-none gap-2 p-0">
+                {matches.slice(0, MAX_MATCHES).map((a) => (
+                  <li
+                    key={a.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-background/60 px-3 py-2"
+                  >
+                    <div className="grid gap-0.5">
+                      <span className="font-semibold">{a.displayName}</span>
+                      <span className="text-muted-foreground">{a.email}</span>
+                    </div>
+                    <Button
+                      disabled={add.isPending}
+                      onClick={() => add.mutate(a.email)}
+                      aria-label={`Make ${a.displayName} staff`}
+                    >
+                      <UserPlus aria-hidden />
+                      Make staff
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {matches.length > MAX_MATCHES && (
+              <p className="text-sm text-muted-foreground">
+                {matches.length - MAX_MATCHES} more: keep typing to narrow it down.
+              </p>
+            )}
+          </div>
+        )}
+        {add.isError && (
+          <Alert variant="destructive">
+            <AlertTitle>Not added</AlertTitle>
+            <AlertDescription>{add.error.message}</AlertDescription>
+          </Alert>
+        )}
+        {add.isSuccess && (
+          <Alert className="border-success bg-success/15">
+            <AlertTitle>{add.data.displayName} is a team member</AlertTitle>
+            <AlertDescription>
+              They see the staff portal the next time a page loads.
+            </AlertDescription>
+          </Alert>
+        )}
       </CardContent>
     </Card>
   )
@@ -85,7 +130,7 @@ function MemberRow({ member, isYou }: { member: StaffMember; isYou: boolean }) {
   const [confirming, setConfirming] = useState(false)
   const remove = useMutation({
     mutationFn: removeMember,
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: MEMBERS }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['staff'] }),
   })
 
   return (
@@ -94,7 +139,9 @@ function MemberRow({ member, isYou }: { member: StaffMember; isYou: boolean }) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="grid gap-0.5">
             <span className="font-semibold">
-              {member.displayName}
+              <Link to={`/staff/accounts/${member.id}`} className="text-card-foreground">
+                {member.displayName}
+              </Link>
               {isYou && <span className="font-normal text-muted-foreground"> (you)</span>}
             </span>
             <span className="text-muted-foreground">{member.email}</span>

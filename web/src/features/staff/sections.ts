@@ -1,4 +1,4 @@
-import { Clapperboard, UsersRound, type LucideIcon } from 'lucide-react'
+import { Clapperboard, ShieldCheck, UsersRound, type LucideIcon } from 'lucide-react'
 
 /**
  * Every setup area in the staff portal. The portal's side menu and its overview page are both
@@ -22,9 +22,15 @@ export const STAFF_SECTIONS: StaffSection[] = [
     icon: Clapperboard,
   },
   {
+    path: 'accounts',
+    title: 'Accounts',
+    description: 'Every account that has been created: progress and stats, and deleting one.',
+    icon: UsersRound,
+  },
+  {
     path: 'members',
     title: 'Staff members',
     description: 'Give a registered account access to the staff portal, or take it away.',
-    icon: UsersRound,
+    icon: ShieldCheck,
   },
 ]

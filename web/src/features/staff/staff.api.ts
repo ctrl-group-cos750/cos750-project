@@ -96,3 +96,55 @@ export const addMember = (email: string) =>
 /** Takes staff access away. The API refuses (409) when it is your own. */
 export const removeMember = (id: number) =>
   api<undefined>(`/api/staff/members/${id}`, { method: 'DELETE' })
+
+/** One row of the staff portal's accounts list (api/app/schemas/accounts.py). */
+export type AccountSummary = {
+  id: number
+  email: string
+  displayName: string
+  isStaff: boolean
+  createdAt: string
+  /** The latest answer or hint; null if they have done nothing yet. */
+  lastActiveAt: string | null
+}
+
+export type AccountDetail = AccountSummary & {
+  stats: {
+    attempts: number
+    correctAttempts: number
+    activitiesTried: number
+    activitiesPassed: number
+    hintsViewed: number
+  }
+  videos: { id: number; title: string; checkpointsPassed: number; checkpointsTotal: number }[]
+  recentAttempts: {
+    id: number
+    activityTitle: string
+    kind: string
+    correct: boolean
+    hintLevel: number
+    createdAt: string
+  }[]
+}
+
+export const listAccounts = () => api<AccountSummary[]>('/api/staff/accounts')
+export const getAccount = (id: number) => api<AccountDetail>(`/api/staff/accounts/${id}`)
+/** Deletes the account and everything stored about it. The API refuses (409) your own. */
+export const deleteAccount = (id: number) =>
+  api<undefined>(`/api/staff/accounts/${id}`, { method: 'DELETE' })
+
+/** Whether an account matches what was typed in a search box: part of the name or email. */
+export function matchesSearch(account: { email: string; displayName: string }, query: string) {
+  const q = query.trim().toLowerCase()
+  return (
+    !q || account.email.toLowerCase().includes(q) || account.displayName.toLowerCase().includes(q)
+  )
+}
+
+/** "5 Nov 2026", or "5 Nov 2026, 14:30" with the time. */
+export function formatDate(iso: string, withTime = false) {
+  return new Intl.DateTimeFormat('en-ZA', {
+    dateStyle: 'medium',
+    ...(withTime ? { timeStyle: 'short' } : {}),
+  }).format(new Date(iso))
+}

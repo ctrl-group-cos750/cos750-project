@@ -5,7 +5,18 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, Checkpoint, Hint, HintView, User, Video
+from app.models import (
+    Activity,
+    Attempt,
+    Checkpoint,
+    Hint,
+    HintView,
+    PointsEntry,
+    User,
+    UserBadge,
+    Video,
+)
+from app.services import rewards
 
 PASSWORD = "Correct horse 1"  # noqa: S105 (a test account)
 
@@ -150,6 +161,9 @@ def test_delete_removes_the_account_and_its_data_and_ends_its_session(
     client: TestClient, db: Session
 ) -> None:
     ada, _ = ada_does_some_work(client, db)
+    rewards.on_objective_result(db, ada, 1, "supported", {})  # a badge and points to delete too
+    db.commit()
+    assert db.scalar(select(func.count()).where(PointsEntry.user_id == ada))
     ada_cookies = dict(client.cookies)
     grace = register(client, "grace@example.com", "Grace")
     make_staff(db, grace)
@@ -159,6 +173,8 @@ def test_delete_removes_the_account_and_its_data_and_ends_its_session(
     assert db.get(User, ada) is None
     assert db.scalar(select(func.count()).where(Attempt.user_id == ada)) == 0
     assert db.scalar(select(func.count()).where(HintView.user_id == ada)) == 0
+    assert db.scalar(select(func.count()).where(PointsEntry.user_id == ada)) == 0
+    assert db.scalar(select(func.count()).where(UserBadge.user_id == ada)) == 0
 
     client.cookies.clear()
     for name, value in ada_cookies.items():

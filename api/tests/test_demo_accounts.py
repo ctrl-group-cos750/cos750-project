@@ -11,7 +11,8 @@ from sqlalchemy.orm import Session
 
 from app.models import Attempt, HintView, User
 from app.seed import load
-from app.seed.demo_accounts import _history_tables, load_demo_accounts, read_demo_accounts
+from app.seed.demo_accounts import load_demo_accounts, read_demo_accounts
+from app.services.history import history_tables
 
 PASSWORD = "Demo pass 2026!"  # noqa: S105 (test only)
 
@@ -175,7 +176,7 @@ def test_an_existing_real_account_is_never_taken_over(tmp_path: Path, db: Sessio
 def test_the_reset_covers_every_table_of_student_history() -> None:
     # A new table of student history must point at users with `user_id`, or a reset will leave
     # rehearsal clicks in it. Update this list when you add one.
-    assert sorted(t.name for t, _ in _history_tables()) == [
+    assert sorted(t.name for t, _ in history_tables()) == [
         "attempts",
         "hint_views",
         "points_entries",

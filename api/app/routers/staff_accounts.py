@@ -4,7 +4,7 @@ Staff only. Staff access itself is granted and removed with /api/staff/members."
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import Select, delete, distinct, func, select
+from sqlalchemy import Select, distinct, func, select
 from sqlalchemy.orm import Session
 
 from app.auth import StaffUser
@@ -17,6 +17,7 @@ from app.schemas.accounts import (
     AccountSummary,
     AccountVideo,
 )
+from app.services.history import delete_history
 
 router = APIRouter(prefix="/api/staff/accounts", tags=["staff"])
 
@@ -144,7 +145,8 @@ def get_account(user_id: int, session: DbSession, _staff: StaffUser) -> AccountD
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_account(user_id: int, session: DbSession, staff: StaffUser) -> None:
-    """Delete the account and everything stored about it (attempts, hint views), in one
+    """Delete the account and everything stored about it (attempts, hint views, points, badges:
+    every table of student history, app/services/history.py), in one
     transaction. Their session stops working at once: there is no user left to load. Nobody can
     delete their own account here."""
     if user_id == staff.id:
@@ -152,7 +154,6 @@ def delete_account(user_id: int, session: DbSession, staff: StaffUser) -> None:
     user = session.get(User, user_id)
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NOT_FOUND)
-    session.execute(delete(HintView).where(HintView.user_id == user_id))
-    session.execute(delete(Attempt).where(Attempt.user_id == user_id))
+    delete_history(session, user_id)
     session.delete(user)
     session.commit()

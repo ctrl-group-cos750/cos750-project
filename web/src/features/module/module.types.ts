@@ -1,0 +1,32 @@
+export type ModuleStatus = 'locked' | 'open' | 'in_progress' | 'complete'
+
+export type SegmentKind = 'video' | 'text' | 'worked_example' | 'activity' | 'refresher'
+
+/** Matches `ModuleOut` from `GET /api/modules` and `GET /api/modules/{id}`. */
+export type ModuleSummary = {
+  id: number
+  number: number
+  slug: string
+  title: string
+  goals: string
+  estimatedMinutes: number
+  status: ModuleStatus
+  segmentCount: number
+  currentSegmentPosition: number
+}
+
+/** Matches `SegmentOut` nested inside `ModuleDetailOut`. */
+export type Segment = {
+  id: number
+  position: number
+  kind: SegmentKind
+  title: string
+  body: string | null
+  videoId: number | null
+  activityId: number | null
+}
+
+/** Matches `ModuleDetailOut` from `GET /api/modules/{id}` and `POST /api/modules/{id}/position`. */
+export type ModuleDetail = ModuleSummary & {
+  segments: Segment[]
+}

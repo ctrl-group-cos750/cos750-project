@@ -920,3 +920,33 @@ tsc -b && vite build → ✓ 469 modules transformed. Built in 194ms.
 
 ### Open Issues
 None. All checks pass clean.
+
+## Developer Notes — Wave 3d: ModulePage + SegmentView (FR-2.3, FR-2.5, AC5)
+
+### Files Created
+- `web/src/features/module/SegmentView.tsx` — dispatches on `SegmentKind` union; `text`, `worked_example`, and `refresher` → Markdown render; `video` → Link to `/videos/:videoId` (reuses the existing VideoPage/NarratedVideoPlayer flow, no rebuild); `activity` → placeholder Alert; exhaustiveness check on `never` default.
+- `web/src/features/module/ModulePage.tsx` — route component for `/modules/:moduleId`; `useQuery` for `fetchModule`; segment index driven from `currentSegmentPosition` initially, then locally on navigation; `useMutation` calls `savePosition` on every nav (Previous/Next), invalidates `['modules']` and `['module', id]`; module goals rendered as `<Markdown>`; `<ProgressBar showCount>` shows "Segment X of Y"; `<SegmentView key={segment.id}>` renders current segment; "Finish module" label on last segment (reaching end causes backend to mark complete via savePosition).
+
+### Files Modified
+- `web/src/App.tsx` — added `import { ModulePage }` and `<Route path="modules/:moduleId" element={<ModulePage />} />` inside the `RequireAuth/SignedInLayout` block, next to `videos/:videoId`. Did NOT touch the index/HomePage route (owned by parallel 3c).
+- `web/src/pages/SignedInLayout.tsx` — added `<Link to="/">Modules</Link>` in the header actions, visible to all signed-in users, above the staff-only Videos link.
+
+### Key Decisions
+- **Video segments link, don't embed**: The task allowed a minimal embed or a link to `/videos/:videoId`. Embedding NarratedVideoPlayer inline inside ModulePage would require duplicating the `fetchVideo` query and passing all callbacks down through SegmentView, coupling two separate features. A `<Link>` reuses the full VideoPage flow with zero duplication, keeps the player's own state clean, and matches the wireframe note "The module player will show videos as segments; until then this page is how a video is reached and tested." The task itself endorsed this approach explicitly.
+- **Segment index state**: `useState<number | null>` initialises as `null` so the first render picks up `currentSegmentPosition` from the server. Subsequent navigations use the local state, avoiding a fetch round-trip on every click while still resuming correctly on page load.
+- **savePosition uses `segment.position`** (1-based field from the API), not `currentIndex` (0-based), to match the backend contract in `module.types.ts`.
+- **"Finish module" on last segment**: Clicking Next from the last segment is intentionally blocked (button disabled when `isLast` and position already saved). The "Finish module" label communicates completion; the backend marks the module complete when `segmentPosition === segmentCount`.
+
+### Library Docs Consulted (Context7)
+None — all libraries used (TanStack Query, react-router) were already in use throughout the project; patterns were read directly from existing code (VideoPage.tsx, video.api.ts).
+
+### Build & Test Results
+```
+npm run lint        → Found 0 warnings and 0 errors. ✓
+npm run build       → tsc -b + vite build, ✓ built in 243ms, 0 errors
+npm run format:check → All matched files use Prettier code style! ✓
+```
+
+### Open Issues
+- Video segments open in a new page context rather than playing inline. A future story could embed `NarratedVideoPlayer` directly within ModulePage once the activity/checkpoint callbacks are wired to the module's context.
+- No unit tests added for ModulePage/SegmentView — the task spec did not require them and the test suite does not have a working DB fixture for this feature yet.

@@ -9,8 +9,8 @@ COPY app ./app
 # Run as an unprivileged user: code that breaks out of the API process can't change the image.
 RUN useradd --system --uid 10001 --no-create-home app
 # The media volume mounts here. A new named volume copies this folder's owner, so the API (and
-# only the API) can write uploads to it.
-RUN mkdir /media && chown app:app /media
+# only the API) can write uploads to it. Debian already has an empty /media, hence -p.
+RUN mkdir -p /media && chown app:app /media
 USER app
 EXPOSE 8000
 HEALTHCHECK CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')" || exit 1

@@ -79,6 +79,7 @@ function Editor({ id, initial }: { id?: number; initial: StaffVideo }) {
   // What still stops the save, said next to the button rather than leaving it silently disabled.
   const missing = [
     !draft.mediaPath && 'the video',
+    draft.mediaPath && !draft.durationSeconds && "the video's length (upload it again)",
     !draft.captionsPath && 'the captions',
     !draft.title.trim() && 'a title',
   ].filter((m) => m !== false)
@@ -109,8 +110,8 @@ function Editor({ id, initial }: { id?: number; initial: StaffVideo }) {
             label="Video (MP4, up to 95 MB)"
             accept="video/mp4"
             path={draft.mediaPath}
-            onUploaded={(path, file) =>
-              void readDuration(file).then((seconds) =>
+            onUploaded={(path) =>
+              void readDuration(path).then((seconds) =>
                 change({ mediaPath: path, durationSeconds: seconds }),
               )
             }
@@ -239,7 +240,7 @@ function MediaUpload(props: {
   label: string
   accept: string
   path: string
-  onUploaded: (path: string, file: File) => void
+  onUploaded: (path: string) => void
 }) {
   const inputId = useId()
   const [progress, setProgress] = useState<number>()
@@ -250,7 +251,7 @@ function MediaUpload(props: {
     setError('')
     setProgress(0)
     try {
-      props.onUploaded(await uploadMedia(props.kind, file, setProgress), file)
+      props.onUploaded(await uploadMedia(props.kind, file, setProgress))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'The upload failed.')
     } finally {
@@ -500,21 +501,17 @@ function forSaving(video: StaffVideo): StaffVideo {
   }
 }
 
-/** The video's length in whole seconds, read in the browser from the chosen file. */
-function readDuration(file: File): Promise<number> {
+/**
+ * The video's length in whole seconds, read in the browser from the uploaded file. From its
+ * /media/ URL, not a blob: URL of the chosen file, which the CSP (media-src 'self') blocks.
+ */
+function readDuration(path: string): Promise<number> {
   return new Promise((resolve) => {
-    const url = URL.createObjectURL(file)
     const probe = document.createElement('video')
     probe.preload = 'metadata'
-    probe.onloadedmetadata = () => {
-      URL.revokeObjectURL(url)
-      resolve(Math.ceil(probe.duration))
-    }
-    probe.onerror = () => {
-      URL.revokeObjectURL(url)
-      resolve(0)
-    }
-    probe.src = url
+    probe.onloadedmetadata = () => resolve(Math.ceil(probe.duration))
+    probe.onerror = () => resolve(0)
+    probe.src = path
   })
 }
 

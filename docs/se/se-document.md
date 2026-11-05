@@ -927,7 +927,7 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml up -d db
 
 cd api && python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/alembic upgrade head
-.venv/bin/python -m app.seed      # content fixtures and demo accounts (planned)
+DEMO_PASSWORD=... .venv/bin/python -m app.seed   # content fixtures, then the demo accounts (FR-1.4)
 .venv/bin/uvicorn app.main:app --reload            # http://localhost:8000/api/docs
 
 cd web && npm install && npm run dev               # http://localhost:5173, proxies /api to :8000

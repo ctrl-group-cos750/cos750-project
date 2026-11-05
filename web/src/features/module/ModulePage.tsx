@@ -49,7 +49,8 @@ export function ModulePage() {
   function navigateTo(newIndex: number) {
     const clamped = Math.max(0, Math.min(newIndex, segments.length - 1))
     setSegmentIndex(clamped)
-    // Save position (1-based position matches the segment's `position` field).
+    // segment.position is 0-based and equals clamped when segments are sequential,
+    // so sending it directly satisfies the backend contract (FR-2.5).
     mutation.mutate(segments[clamped].position)
   }
 
@@ -118,7 +119,7 @@ export function ModulePage() {
         <Button
           variant={isLast ? 'primary' : 'secondary'}
           onClick={handleNext}
-          disabled={(isLast && mutation.isPending) || mutation.isPending}
+          disabled={mutation.isPending}
           loading={mutation.isPending}
         >
           {isLast ? 'Finish module' : 'Next →'}

@@ -415,3 +415,24 @@ def test_post_position_on_missing_module_is_404(client: TestClient, db: Session)
     _make_modules(db)
     _register_and_login(client, ALICE)
     assert client.post("/api/modules/9999/position", json={"segmentPosition": 0}).status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# 11. Input validation: negative segmentPosition is rejected at the API boundary
+# ---------------------------------------------------------------------------
+
+
+def test_post_position_with_negative_segment_position_is_422(
+    client: TestClient, db: Session
+) -> None:
+    """A negative segmentPosition must be rejected with 422 Unprocessable Entity.
+
+    Storing -1 in module_progress.current_segment_position would cause the ModulePage
+    to access segments[-1] (undefined in JavaScript) on resume, crashing the render.
+    The PositionIn schema's ``ge=0`` constraint prevents this at the API boundary.
+    """
+    m0_id, _, _ = _make_modules(db)
+    _register_and_login(client, ALICE)
+
+    res = client.post(f"/api/modules/{m0_id}/position", json={"segmentPosition": -1})
+    assert res.status_code == 422

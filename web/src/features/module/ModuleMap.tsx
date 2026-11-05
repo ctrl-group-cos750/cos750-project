@@ -14,7 +14,7 @@ function statusDisplay(status: ModuleStatus): { tone: TagTone; label: string; ic
     case 'open':
       return { tone: 'accent', label: 'open', icon: '○' }
     case 'in_progress':
-      return { tone: 'warning', label: 'in progress', icon: '%' }
+      return { tone: 'warning', label: 'in progress', icon: '◑' }
     case 'complete':
       return { tone: 'success', label: 'complete', icon: '✓' }
   }
@@ -29,14 +29,10 @@ function formatDuration(minutes: number): string {
 function ModuleRow({ module }: { module: ModuleSummary }) {
   const { tone, label, icon } = statusDisplay(module.status)
   const isLocked = module.status === 'locked'
-  const isInteractive = !isLocked
 
   return (
     <li>
-      <Card
-        interactive={isInteractive}
-        className={`${styles.row} ${isLocked ? styles.locked : ''}`}
-      >
+      <Card interactive={!isLocked} className={`${styles.row} ${isLocked ? styles.locked : ''}`}>
         <span className={styles.number} aria-hidden="true">
           {module.number}
         </span>
@@ -45,7 +41,7 @@ function ModuleRow({ module }: { module: ModuleSummary }) {
           {module.status === 'in_progress' && module.segmentCount > 0 && (
             <ProgressBar
               label={`Module ${module.number} progress`}
-              value={module.currentSegmentPosition}
+              value={module.currentSegmentPosition + 1}
               max={module.segmentCount}
               showCount
             />

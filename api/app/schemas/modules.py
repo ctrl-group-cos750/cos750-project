@@ -10,6 +10,8 @@ All schemas subclass ``ApiModel`` (camelCase JSON, from_attributes=True, extra=f
 
 from typing import Literal
 
+from pydantic import Field
+
 from app.schemas.base import ApiModel
 
 # Allowed values for a student's progress through a module (FR-2.4 / FR-2.6).
@@ -37,6 +39,9 @@ class ModuleOut(ApiModel):
     # Computed at query time for the requesting student — not a DB column.
     status: ModuleStatus
     segment_count: int
+    # NOTE: SE §8 specifies current_segment_id (FK to segments). Using a 0-based int position
+    # instead (approved decision 5, questions.md). Segment content reordering would require a
+    # migration to convert back to ids. Seed enforces sequential 0-based positions.
     current_segment_position: int
 
 
@@ -79,6 +84,10 @@ class PositionIn(ApiModel):
 
     The client sends the zero-based position of the segment the student just
     reached; the server persists it in ``ModuleProgress.current_segment_position``.
+
+    ``ge=0`` rejects negative values at the API boundary: a negative position stored in
+    ``ModuleProgress.current_segment_position`` would cause ``segments[-1]`` (undefined
+    in JavaScript) on resume, crashing the ModulePage render.
     """
 
-    segment_position: int
+    segment_position: int = Field(ge=0)

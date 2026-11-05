@@ -90,11 +90,31 @@ def _prev_module_complete(
     """
     if module_number == 0:
         return False
-    prev_module_id = number_to_module_id.get(module_number - 1)
-    if prev_module_id is None:
+    prev_id = number_to_module_id.get(module_number - 1)
+    if prev_id is None:
         return False
-    prev_progress = all_progress.get(prev_module_id)
-    return prev_progress is not None and prev_progress.status == "complete"
+    prev = all_progress.get(prev_id)
+    return prev is not None and prev.status == "complete"
+
+
+def _is_prev_complete_for_user(session: Session, module: Module, user_id: int) -> bool:
+    """Query whether the previous module (by number) is complete for the given user.
+
+    Used by ``get_module_detail`` and ``save_position`` when they need to evaluate
+    one specific module's unlock status (not the full list).
+    """
+    if module.number == 0:
+        return False
+    prev_module = session.scalar(select(Module).where(Module.number == module.number - 1))
+    if prev_module is None:
+        return False
+    prev_prog = session.scalar(
+        select(ModuleProgress).where(
+            ModuleProgress.user_id == user_id,
+            ModuleProgress.module_id == prev_module.id,
+        )
+    )
+    return prev_prog is not None and prev_prog.status == "complete"
 
 
 # ---------------------------------------------------------------------------
@@ -184,27 +204,19 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
         )
     )
 
-    # Determine whether the previous module is complete.
-    prev_module_id: int | None = None
-    prev_progress: ModuleProgress | None = None
-    if module.number > 0:
-        prev_module = session.scalar(select(Module).where(Module.number == module.number - 1))
-        if prev_module is not None:
-            prev_module_id = prev_module.id
-            prev_progress = session.scalar(
-                select(ModuleProgress).where(
-                    ModuleProgress.user_id == user_id,
-                    ModuleProgress.module_id == prev_module_id,
-                )
-            )
-    prev_done = prev_progress is not None and prev_progress.status == "complete"
-
+    prev_done = _is_prev_complete_for_user(session, module, user_id)
     status = _compute_status(prog, module.number, prev_done)
 
     if status == "locked":
         raise ModuleLocked(f"Module {module_id} is locked for user {user_id}.")
 
     # Segments in position order.
+    # TODO (FR-8.1): The SE §9 contract says GET /api/modules/{moduleId} leaves out refresher
+    # segments that the diagnostic has ruled out. The diagnostic module is out of scope for this
+    # story and no refresher segments are seeded yet. All segments (including refreshers) are
+    # returned here for now. When FR-8.1 is implemented, replace this query with one that
+    # filters out 'refresher' segments where the diagnostic has ruled the student out — but a
+    # refresher with no diagnostic rule should still be shown.
     segments = session.scalars(
         select(Segment).where(Segment.module_id == module_id).order_by(Segment.position)
     ).all()
@@ -249,12 +261,6 @@ def save_position(
       segment index (``segment_position >= segment_count - 1``), in which case
       ``status = 'complete'`` and ``completed_at`` is recorded.
 
-    # TODO (future activity story): Gate completion on required activities being passed.
-    #   When activity-gating is implemented, only set status='complete' here if
-    #   all required Activity rows linked to this module's segments are answered
-    #   correctly by this user. Until then, reaching the last segment is sufficient
-    #   (approved decision 3).
-
     Does NOT call ``session.commit()``; the router is responsible for committing
     (repo convention).
 
@@ -284,18 +290,7 @@ def save_position(
     )
 
     # Determine whether this module is unlocked for the student.
-    prev_done = False
-    if module.number > 0:
-        prev_module = session.scalar(select(Module).where(Module.number == module.number - 1))
-        if prev_module is not None:
-            prev_progress = session.scalar(
-                select(ModuleProgress).where(
-                    ModuleProgress.user_id == user_id,
-                    ModuleProgress.module_id == prev_module.id,
-                )
-            )
-            prev_done = prev_progress is not None and prev_progress.status == "complete"
-
+    prev_done = _is_prev_complete_for_user(session, module, user_id)
     current_status = _compute_status(prog, module.number, prev_done)
     if current_status == "locked":
         raise ModuleLocked(f"Module {module_id} is locked for user {user_id}.")

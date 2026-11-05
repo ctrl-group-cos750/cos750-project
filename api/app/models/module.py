@@ -84,7 +84,10 @@ class ModuleProgress(Base):
     module_id: Mapped[int] = mapped_column(ForeignKey("modules.id"), index=True)
     # One of: open | in_progress | complete
     status: Mapped[str] = mapped_column(String(20), default="open", server_default="open")
-    # 0-based index of the segment the student is currently on (FR-2.5).
+    # NOTE: SE §8 specifies current_segment_id (FK to segments.id). Using a 0-based int position
+    # instead (approved decision 5, questions.md). This avoids a FK and is simpler, but segment
+    # content reordering would require a migration to convert positions back to ids. The seed
+    # enforces sequential 0-based positions to keep this invariant valid.
     current_segment_position: Mapped[int] = mapped_column(default=0, server_default="0")
     # Set when the student reaches the last segment and advances (FR-2.6).
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

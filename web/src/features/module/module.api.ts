@@ -13,7 +13,7 @@ export function fetchModule(id: number): Promise<ModuleDetail> {
 
 /**
  * `POST /api/modules/{moduleId}/position` — persists how far the student has reached
- * (FR-5.2) and returns the updated module detail.
+ * (FR-2.5) and returns the updated module detail.
  */
 export function savePosition(moduleId: number, segmentPosition: number): Promise<ModuleDetail> {
   return api<ModuleDetail>(`/api/modules/${moduleId}/position`, {

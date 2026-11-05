@@ -9,9 +9,18 @@ from typing import Any
 
 from app.schemas.activities import (
     CheckResult,
+    ChooseTestsConfig,
+    ChooseTestsSolution,
+    ChooseTestsSubmission,
     FillInConfig,
     FillInSolution,
     FillInSubmission,
+    FixTheBugConfig,
+    FixTheBugSolution,
+    FixTheBugSubmission,
+    MatchingConfig,
+    MatchingSolution,
+    MatchingSubmission,
     MultipleChoiceConfig,
     MultipleChoiceSolution,
     MultipleChoiceSubmission,
@@ -29,6 +38,13 @@ EMPTY_BLANK = "This blank has not been filled in."
 WRONG_OPTION = "That is not the right answer. Have another look."
 UNKNOWN_OPTION = "Choose one of the options."
 RIGHT_OPTION = "Correct."
+WRONG_MATCH = "This is not the right match."
+NO_MATCH = "This item has not been matched."
+BUG_LEFT_IN = "This line still has the bug. Replace it with one of the corrections."
+WRONG_FIX = "This correction does not fix the bug here."
+FIX_NOT_NEEDED = "This line was already right: it did not need a correction."
+MISSED_TEST = "The faulty version fails this test: it exposes the bug."
+NOT_EXPOSING = "The faulty version passes this test, so it does not expose the bug."
 
 
 def _result(parts: list[PartResult]) -> CheckResult:
@@ -106,6 +122,72 @@ def check_multiple_choice(
     )
 
 
+def check_matching(
+    config: MatchingConfig, solution: MatchingSolution, submission: MatchingSubmission
+) -> CheckResult:
+    """One part per left item, in the config's order: correct when the student paired it with the
+    solution's right item. A wrong pairing gets the content's message for that item (FR-4.2)."""
+    parts: list[PartResult] = []
+    for i, item in enumerate(config.left):
+        have = submission.pairs.get(item.id)
+        if have is None:
+            parts.append(PartResult(ref=i, correct=False, message=NO_MATCH))
+        elif have == solution.pairs.get(item.id):
+            parts.append(PartResult(ref=i, correct=True))
+        else:
+            message = solution.feedback.get(item.id, WRONG_MATCH)
+            parts.append(PartResult(ref=i, correct=False, message=message))
+    return _result(parts)
+
+
+def check_fix_the_bug(
+    config: FixTheBugConfig, solution: FixTheBugSolution, submission: FixTheBugSubmission
+) -> CheckResult:
+    """One part per position of the fixed program, as in Parsons. The message says what went
+    wrong there: a faulty line left in (with the content's reason it is faulty), the wrong
+    correction, a correction where the original line was fine, or a line in the wrong place."""
+    expected, got = solution.order, submission.order
+    corrections = {line.id for line in config.corrections}
+    in_solution = set(expected)
+    parts: list[PartResult] = []
+    for i in range(max(len(expected), len(got))):
+        want = expected[i] if i < len(expected) else None
+        have = got[i] if i < len(got) else None
+        if have == want:
+            parts.append(PartResult(ref=i, correct=True))
+            continue
+        if want is None:
+            message = EXTRA_LINE
+        elif have is None:
+            message = MISSING_LINE
+        elif have in in_solution:
+            message = OUT_OF_PLACE
+        elif have in corrections:
+            message = WRONG_FIX if want in corrections else FIX_NOT_NEEDED
+        else:  # an original line the fixed program does not use: a bug left in
+            message = solution.feedback.get(have, BUG_LEFT_IN)
+        parts.append(PartResult(ref=i, correct=False, message=message))
+    return _result(parts)
+
+
+def check_choose_tests(
+    config: ChooseTestsConfig, solution: ChooseTestsSolution, submission: ChooseTestsSubmission
+) -> CheckResult:
+    """One part per test case, in the config's order: correct when the student's choice (selected
+    or not) matches whether it exposes the bug. So selecting every test case, or none, cannot
+    pass."""
+    exposing, selected = set(solution.exposing), set(submission.selected)
+    parts: list[PartResult] = []
+    for i, test in enumerate(config.tests):
+        if (test.id in selected) == (test.id in exposing):
+            parts.append(PartResult(ref=i, correct=True))
+        else:
+            default = MISSED_TEST if test.id in exposing else NOT_EXPOSING
+            message = solution.feedback.get(test.id, default)
+            parts.append(PartResult(ref=i, correct=False, message=message))
+    return _result(parts)
+
+
 def check_activity(
     kind: str, config: dict[str, Any], solution: dict[str, Any], submission: dict[str, Any]
 ) -> CheckResult:
@@ -127,5 +209,23 @@ def check_activity(
             FillInConfig.model_validate(config),
             FillInSolution.model_validate(solution),
             FillInSubmission.model_validate(submission),
+        )
+    if kind == "matching":
+        return check_matching(
+            MatchingConfig.model_validate(config),
+            MatchingSolution.model_validate(solution),
+            MatchingSubmission.model_validate(submission),
+        )
+    if kind == "fix_the_bug":
+        return check_fix_the_bug(
+            FixTheBugConfig.model_validate(config),
+            FixTheBugSolution.model_validate(solution),
+            FixTheBugSubmission.model_validate(submission),
+        )
+    if kind == "choose_tests":
+        return check_choose_tests(
+            ChooseTestsConfig.model_validate(config),
+            ChooseTestsSolution.model_validate(solution),
+            ChooseTestsSubmission.model_validate(submission),
         )
     raise ValueError(f"unknown activity kind: {kind!r}")

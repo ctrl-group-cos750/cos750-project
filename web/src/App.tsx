@@ -2,6 +2,12 @@ import { Route, Routes } from 'react-router'
 import { GuestOnly, RequireAuth, RequireStaff } from './auth/guards.tsx'
 import { LoginPage } from './auth/LoginPage.tsx'
 import { RegisterPage } from './auth/RegisterPage.tsx'
+import { StaffAccountPage } from './features/staff/StaffAccountPage.tsx'
+import { StaffAccountsPage } from './features/staff/StaffAccountsPage.tsx'
+import { StaffLayout } from './features/staff/StaffLayout.tsx'
+import { StaffMembersPage } from './features/staff/StaffMembersPage.tsx'
+import { StaffPilotPage } from './features/staff/StaffPilotPage.tsx'
+import { StaffPortalPage } from './features/staff/StaffPortalPage.tsx'
 import { StaffVideoEditorPage } from './features/staff/StaffVideoEditorPage.tsx'
 import { StaffVideosPage } from './features/staff/StaffVideosPage.tsx'
 import { VideoPage } from './features/video/VideoPage.tsx'
@@ -39,21 +45,21 @@ function App() {
         <Route index element={<HomePage />} />
         <Route path="videos/:videoId" element={<VideoPage />} />
         <Route
-          path="staff/videos"
+          path="staff"
           element={
             <RequireStaff>
-              <StaffVideosPage />
+              <StaffLayout />
             </RequireStaff>
           }
-        />
-        <Route
-          path="staff/videos/:videoId"
-          element={
-            <RequireStaff>
-              <StaffVideoEditorPage />
-            </RequireStaff>
-          }
-        />
+        >
+          <Route index element={<StaffPortalPage />} />
+          <Route path="videos" element={<StaffVideosPage />} />
+          <Route path="videos/:videoId" element={<StaffVideoEditorPage />} />
+          <Route path="accounts" element={<StaffAccountsPage />} />
+          <Route path="accounts/:accountId" element={<StaffAccountPage />} />
+          <Route path="pilot" element={<StaffPilotPage />} />
+          <Route path="members" element={<StaffMembersPage />} />
+        </Route>
       </Route>
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

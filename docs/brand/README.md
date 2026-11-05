@@ -117,6 +117,23 @@ Table: Mastery results (ID document §3.2, SE document FR-7.2), shown with `Mast
 Table: BFS visualiser vertex states (tokens `--bfs-*`). Edges already traversed are drawn thicker in Ctrl
 blue. The `/ui-kit` page has a working example.
 
+## Badges
+
+Badges are private (FR-9.4) and drawn by `AchievementBadge` from the catalogue in
+`web/src/components/achievements.ts`; see them all on `/ui-kit`. Don't draw badges elsewhere.
+
+| Kind | Shape | Colour tokens |
+|---|---|---|
+| Objective (one per learning objective) | Hexagon. Bronze = met with support; gold adds an inner outline and a star = met independently | `--badge-bronze*`, `--badge-gold*` |
+| Milestone (Ready for the Lecture, Came Back Stronger, Solo Run) | Medal with ribbons | accent |
+| Quest | Shield | success |
+| Hidden (Off the Map) | Diamond; shows "?" until found | accent |
+| Not earned yet | The same shape, dashed and faded, with a padlock | `--color-border` |
+
+Badge wording names the skill or the strategy ("You traced BFS by hand, level by level"), never the
+student ("You're a genius"), and no badge marks a failure. There are no streak, speed, "perfect" or
+rank badges.
+
 ## Writing in the app
 
 - **Talk to the student** as "you". Short sentences, plain words. Define a term the first time it appears.

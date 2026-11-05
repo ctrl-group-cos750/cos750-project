@@ -19,6 +19,7 @@ describe('UiKitPage', () => {
       'Buttons',
       'Form fields',
       'Alerts',
+      'Badges',
       'BFS vertex states',
     ]) {
       expect(screen.getByRole('heading', { level: 2, name })).toBeInTheDocument()

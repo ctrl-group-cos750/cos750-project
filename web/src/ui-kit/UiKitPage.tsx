@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import {
+  ACHIEVEMENTS,
+  AchievementBadge,
   Alert,
   AppShell,
   Button,
@@ -63,6 +65,7 @@ export function UiKitPage() {
         <>
           <a href="#colours">Colours</a>
           <a href="#components">Components</a>
+          <a href="#badges">Badges</a>
           <a href="#bfs">BFS states</a>
         </>
       }
@@ -221,6 +224,36 @@ export function UiKitPage() {
             <Spinner label="Loading the module" />
           </Card>
         </div>
+      </section>
+
+      <section id="badges" className={styles.section}>
+        <h2>Badges</h2>
+        <p>
+          Private badges (FR-9.3). Objective badges are hexagons with two tiers: bronze when the
+          objective was met with support, gold (an inner outline and a star) when it was later met
+          independently. Milestones are medals, quests are shields, and the hidden badge is a
+          diamond that shows &ldquo;?&rdquo; until it is found. Locked badges are dashed, faded and
+          carry a padlock. Every state differs in shape, not only colour.
+        </p>
+        <ul className={styles.badges}>
+          {ACHIEVEMENTS.map((achievement) => (
+            <li key={achievement.id} className={styles.badgeItem}>
+              <div className={styles.badgeStates}>
+                {achievement.kind === 'objective' ? (
+                  <>
+                    <AchievementBadge achievement={achievement} state="gold" />
+                    <AchievementBadge achievement={achievement} state="bronze" size={40} />
+                  </>
+                ) : (
+                  <AchievementBadge achievement={achievement} state="earned" />
+                )}
+                <AchievementBadge achievement={achievement} state="locked" size={40} />
+              </div>
+              <strong>{achievement.name}</strong>
+              <span className={styles.muted}>{achievement.description}</span>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section id="bfs" className={styles.section}>

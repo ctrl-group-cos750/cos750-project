@@ -2,6 +2,8 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import {
+  ACHIEVEMENTS,
+  AchievementBadge,
   Alert,
   AppShell,
   Button,
@@ -174,5 +176,37 @@ describe('AppShell', () => {
   it('leaves out the navigation when there is none', () => {
     render(<AppShell>Page</AppShell>)
     expect(screen.queryByRole('navigation')).not.toBeInTheDocument()
+  })
+})
+
+describe('AchievementBadge', () => {
+  const byId = (id: string) => ACHIEVEMENTS.find((a) => a.id === id)!
+
+  it('names the badge and its tier, so the tier is never shown by colour alone', () => {
+    render(<AchievementBadge achievement={byId('lo5')} state="gold" />)
+    expect(
+      screen.getByRole('img', { name: 'Queue Tracer, gold, met independently' }),
+    ).toBeInTheDocument()
+  })
+
+  it('says a locked badge is not earned yet', () => {
+    render(<AchievementBadge achievement={byId('lo5')} state="locked" />)
+    expect(screen.getByRole('img', { name: 'Queue Tracer, not earned yet' })).toBeInTheDocument()
+  })
+
+  it('keeps the hidden badge secret until it is found', () => {
+    const { rerender } = render(
+      <AchievementBadge achievement={byId('off-the-map')} state="locked" />,
+    )
+    expect(screen.getByRole('img', { name: 'Hidden badge, not found yet' })).toBeInTheDocument()
+    expect(screen.queryByText(/Off the Map/)).not.toBeInTheDocument()
+    rerender(<AchievementBadge achievement={byId('off-the-map')} state="earned" />)
+    expect(screen.getByRole('img', { name: 'Off the Map, earned' })).toBeInTheDocument()
+  })
+
+  it('has one badge per learning objective, and no ids repeat', () => {
+    const objectives = ACHIEVEMENTS.filter((a) => a.kind === 'objective').map((a) => a.objective)
+    expect(objectives).toEqual([1, 2, 3, 4, 5, 6, 7, 8])
+    expect(new Set(ACHIEVEMENTS.map((a) => a.id)).size).toBe(ACHIEVEMENTS.length)
   })
 })

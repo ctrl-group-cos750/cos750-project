@@ -40,9 +40,12 @@ app has to be installed where the repo lives.)
 4. Environment Variables: set `POSTGRES_PASSWORD` to a long random value (`openssl rand -hex 24`)
    and `SECRET_KEY`, which signs the session cookies, to another (`openssl rand -hex 32`).
    `POSTGRES_USER` and `POSTGRES_DB` default to `ctrl`. Changing `SECRET_KEY` logs everyone out.
-   Optional: `DEMO_PASSWORD` (`openssl rand -base64 18`) makes the seeded demo accounts
-   (`new@demo.example.com` and the others in `api/app/seed/demo/accounts.json`). Every deploy
-   rebuilds them, undoing whatever a rehearsal did. Unset, there are none.
+   Optional: `DEMO_PASSWORD` makes the seeded demo accounts (`new@demo.example.com` and the
+   others in `api/app/seed/demo/accounts.json`). Every deploy rebuilds them, undoing whatever a
+   rehearsal did. Unset, there are none. It must pass the app's password rules (upper, lower,
+   number, symbol, 8+ characters, no account's name in it) or the seed stops and the deploy
+   fails. A passphrase is easiest to type on stage: `Purple kettle 42 harbour`. Avoid `$`, which
+   Coolify may try to expand.
 5. Optional: in the proxy settings, redirect `www` to the apex.
 6. Deploy. Enable "Auto Deploy" so each push to `master` redeploys.
 

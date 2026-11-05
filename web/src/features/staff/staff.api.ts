@@ -148,3 +148,30 @@ export function formatDate(iso: string, withTime = false) {
     ...(withTime ? { timeStyle: 'short' } : {}),
   }).format(new Date(iso))
 }
+
+/** The "Pilot data" page (api/app/schemas/evaluation.py): counts over student accounts only. */
+export type Insights = {
+  students: number
+  attempts: number
+  hintsViewed: number
+  activities: {
+    id: number
+    title: string
+    kind: string
+    students: number
+    attempts: number
+    wrongAttempts: number
+    studentsPassed: number
+    studentsWithSupport: number
+  }[]
+  videos: {
+    id: number
+    title: string
+    students: number
+    checkpoints: { id: number; atSeconds: number; activityTitle: string; studentsPassed: number }[]
+  }[]
+}
+
+export const getInsights = () => api<Insights>('/api/staff/insights')
+/** CSV downloads: a plain link, so the browser saves the file with the session cookie. */
+export const exportUrl = (table: 'attempts' | 'hints') => `/api/staff/export/${table}.csv`

@@ -9,6 +9,7 @@ import { StaffAccountPage } from './features/staff/StaffAccountPage.tsx'
 import { StaffAccountsPage } from './features/staff/StaffAccountsPage.tsx'
 import { StaffLayout } from './features/staff/StaffLayout.tsx'
 import { StaffMembersPage } from './features/staff/StaffMembersPage.tsx'
+import { StaffPilotPage } from './features/staff/StaffPilotPage.tsx'
 import { StaffPortalPage } from './features/staff/StaffPortalPage.tsx'
 import { StaffVideoImportPage } from './features/staff/StaffVideoImportPage.tsx'
 import { StaffVideoEditorPage } from './features/staff/StaffVideoEditorPage.tsx'
@@ -64,6 +65,7 @@ function App() {
           <Route path="videos/:videoId" element={<StaffVideoEditorPage />} />
           <Route path="accounts" element={<StaffAccountsPage />} />
           <Route path="accounts/:accountId" element={<StaffAccountPage />} />
+          <Route path="pilot" element={<StaffPilotPage />} />
           <Route path="members" element={<StaffMembersPage />} />
         </Route>
       </Route>

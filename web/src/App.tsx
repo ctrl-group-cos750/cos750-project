@@ -4,6 +4,7 @@ import { LoginPage } from './auth/LoginPage.tsx'
 import { RegisterPage } from './auth/RegisterPage.tsx'
 import { StaffVideoEditorPage } from './features/staff/StaffVideoEditorPage.tsx'
 import { StaffVideosPage } from './features/staff/StaffVideosPage.tsx'
+import { ModulePage } from './features/module/ModulePage.tsx'
 import { VideoPage } from './features/video/VideoPage.tsx'
 import { HomePage } from './pages/HomePage.tsx'
 import { NotFoundPage } from './pages/NotFoundPage.tsx'
@@ -38,6 +39,7 @@ function App() {
       >
         <Route index element={<HomePage />} />
         <Route path="videos/:videoId" element={<VideoPage />} />
+        <Route path="modules/:moduleId" element={<ModulePage />} />
         <Route
           path="staff/videos"
           element={

@@ -13,6 +13,7 @@ export function SignedInLayout() {
     <AppShell
       actions={
         <>
+          <Link to="/">Modules</Link>
           {user?.isStaff && <Link to="/staff/videos">Videos</Link>}
           <span className={styles.name}>{user?.displayName}</span>
           <Button

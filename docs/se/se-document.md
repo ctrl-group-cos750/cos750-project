@@ -398,6 +398,8 @@ Code activities never execute student-written code. The student constructs code 
 - **FR-9.2** Award fewer points for a correct answer reached after hint level 3 or 4, matching "met with support".
 - **FR-9.3** Award badges for milestones (first module, every objective met, all bonus quests).
 - **FR-9.4** Points and badges are **private**: each student sees only their own. There is no public leaderboard, because public ranking discourages the students who most need the app (those motivated by avoiding failure, L05 [4]).
+- **FR-9.5** A student can hide points and badges. They are still earned while hidden, and the per-objective mastery report is never hidden. About a third of students in a data-structures course found badges demotivating [9], so opting out is the student's choice.
+- **FR-9.6** Points are never taken away and each thing is rewarded once; a badge, once earned, is never removed. Recomputing results (FR-7.6) may add badges but never removes them, and an objective badge only goes up, from bronze (met with support) to gold (met independently). No badge counts hints, attempts, days or speed, so none can be earned by clicking through hints or guessing.
 
 The rules, as confirmed by the ID document (§7.2):
 
@@ -496,7 +498,6 @@ erDiagram
     ACTIVITY ||--|{ HINT : offers
     ACTIVITY ||--o{ ATTEMPT : receives
     ACTIVITY |o--o| GRAPH_SCENARIO : uses
-    BADGE ||--o{ USER_BADGE : awarded_as
 ```
 
 Figure: Entities and relationships.
@@ -529,9 +530,11 @@ Figure: Entities and relationships.
 
 **ObjectiveResult**: `user_id`, `objective_id`, `state` (`not_attempted` | `met_independently` | `met_with_support` | `not_yet`), `evidence` (IDs of the attempts the decision was based on), `updated_at`.
 
-**PointsEntry** (append-only): `user_id`, `points`, `reason`, `ref`, `created_at`. A student's total is the sum.
+**PointsRule**: `event`, `points`; the points table above, editable without a code change.
 
-**Badge** and **UserBadge**: `badge.id`, `name`, `description`, `rule`; `user_badge.user_id`, `badge_id`, `awarded_at`.
+**PointsEntry** (append-only, never negative): `user_id`, `event`, `ref`, `points`, `created_at`. `ref` names what was rewarded (`activity:12`, `objective:5`) and is unique per student, so nothing is rewarded twice. A student's total is the sum.
+
+**UserBadge** (never deleted): `user_id`, `badge`, `ref`, `tier`, `awarded_at`, `upgraded_at`, `seen_at`. `badge` is an id from the badge catalogue: the rules that award it are in `app/services/rewards.py`, and its name, wording and picture in `web/src/components/achievements.ts`. `ref` tells apart badges earned more than once (one per bonus quest). `tier` is bronze or gold for objective badges. `seen_at` stays empty until the app has announced the badge. **User** also has `hide_rewards` (FR-9.5).
 
 ## Notes
 - **Attempts and events are the source of truth.** Module progress, objective results, points and badges are derived from them by the services, and can be recomputed if a rule changes (FR-7.6).
@@ -1224,6 +1227,8 @@ Table: Risk register.
 [7] World Wide Web Consortium. *Web Content Accessibility Guidelines (WCAG) 2.1.* W3C Recommendation, 2018, updated 2023. <https://www.w3.org/TR/WCAG21/>
 
 [8] Republic of South Africa. *Protection of Personal Information Act 4 of 2013* (POPIA). Government Gazette No. 37067, 26 November 2013.
+
+[9] L. Haaranen, P. Ihantola, L. Hakulinen and A. Korhonen. How (not) to introduce badges to online exercises. In *Proceedings of the 45th ACM Technical Symposium on Computer Science Education (SIGCSE '14)*, pages 33–38. ACM, 2014. <https://doi.org/10.1145/2538862.2538921>
 
 </div>
 

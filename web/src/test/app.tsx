@@ -40,6 +40,7 @@ export function fakeApi({
       return new Response(null, { status: 204 })
     },
     'GET /api/health': () => Response.json({ status: 'ok', database: 'ok' }),
+    'GET /api/rewards': () => Response.json({ hideRewards: false, points: 0, badges: [] }),
     ...overrides,
   }
 

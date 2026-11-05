@@ -1,4 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router'
+import { buttonVariants } from '@/components/ui/button-variants'
+import { cn } from '@/lib/utils'
 import { useCurrentUser, useLogout } from '../auth/hooks.ts'
 import { Alert, AppShell, Button } from '../components'
 import styles from './SignedInLayout.module.css'
@@ -17,7 +19,10 @@ export function SignedInLayout() {
           <NavLink
             to="/staff"
             className={({ isActive }) =>
-              isActive ? `${styles.navLink} ${styles.active}` : styles.navLink
+              cn(
+                buttonVariants({ variant: isActive ? 'secondary' : 'ghost', size: 'lg' }),
+                'text-foreground',
+              )
             }
           >
             Staff portal

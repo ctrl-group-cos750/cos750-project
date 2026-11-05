@@ -23,8 +23,12 @@ def test_migrations_apply_from_scratch_and_match_the_models(tmp_path: Path) -> N
     command.upgrade(cfg, "head")
 
     head = ScriptDirectory.from_config(cfg).get_current_head()
-    with create_engine(url).connect() as conn:
-        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() == head
+    engine = create_engine(url)
+    try:
+        with engine.connect() as conn:
+            assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() == head
+    finally:
+        engine.dispose()
 
     # Fails when a model changed without a migration: run `alembic revision --autogenerate`.
     command.check(cfg)

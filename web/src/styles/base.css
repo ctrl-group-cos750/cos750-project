@@ -4,30 +4,33 @@
 @import '@fontsource/jetbrains-mono/400.css';
 @import '@fontsource/jetbrains-mono/600.css';
 
-/* In Tailwind's base layer (global.css declares it), so the element defaults here still beat the
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Outside any layer, so the brand's paper and ink always win over global.css's body rule
+ * (Tailwind's base layer), whatever order the bundler puts the two files in. Nothing styles
+ * <body> with a utility class, so it needs no layer. */
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  line-height: var(--leading-body);
+  color: var(--color-text);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Element defaults in Tailwind's base layer (global.css declares it): they still beat the
  * browser's, but a Tailwind utility class on an element (the shadcn/ui components) beats them. */
 @layer base {
-  *,
-  *::before,
-  *::after {
-    box-sizing: border-box;
-  }
-
-  html {
-    -webkit-text-size-adjust: 100%;
-  }
-
-  body {
-    margin: 0;
-    min-height: 100vh;
-    font-family: var(--font-body);
-    font-size: var(--text-md);
-    line-height: var(--leading-body);
-    color: var(--color-text);
-    background: var(--color-bg);
-    -webkit-font-smoothing: antialiased;
-  }
-
   h1,
   h2,
   h3,

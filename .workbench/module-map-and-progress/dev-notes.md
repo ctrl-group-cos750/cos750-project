@@ -1104,3 +1104,231 @@ Node v24.22.2 (matches `.nvmrc` `24`).
 
 ### Open Issues
 None. All checks pass clean on the first full run after the spinner-label fix.
+
+---
+
+## Developer Notes — Wave 4a: Full CI verification
+
+### Task
+Run `scripts/check.sh` exactly as CI does, confirm zero real failures, fix any failures
+introduced by this feature, and document the pre-existing vs introduced status of any
+ResourceWarning flaps.
+
+---
+
+### scripts/check.sh — Final outcome
+
+```
+== web
+  format:check  → All matched files use Prettier code style!
+  lint          → Found 0 warnings and 0 errors. (67 files, 219 rules)
+  test          → Test Files: 12 passed (12) | Tests: 131 passed (131)
+  build         → tsc -b + vite build ✓ 473 modules, built in 172ms
+== api
+  ruff format   → 64 files already formatted
+  ruff check    → All checks passed!
+  mypy          → Success: no issues found in 56 source files
+  pytest        → 435 passed, 1 skipped (TEST_DATABASE_URL/Postgres), 0 failures
+== all checks passed
+```
+
+Exit code: 0. Node v24.22.2 (matches `.nvmrc`).
+
+---
+
+### ResourceWarning investigation and fixes
+
+#### What we found on the first run
+
+`scripts/check.sh` (first run) produced 4 pytest failures, all
+`PytestUnraisableExceptionWarning` from unclosed `sqlite3.Connection` objects:
+
+| Test | Appeared on merge-base? |
+|------|------------------------|
+| `test_health.py::test_docs_live_under_api` | ✓ pre-existing |
+| `test_migrations.py::test_migrations_apply_from_scratch_and_match_the_models` | ✓ pre-existing |
+| `test_overload.py::test_a_slot_is_given_back_after_each_request` | ✓ pre-existing |
+| `test_seed.py::test_load_creates_content_and_a_rerun_updates_it_without_touching_attempts` | ✗ new victim (same root cause, larger test pool) |
+
+**Merge-base proof**: created a temporary git worktree at
+`f36b4c877682139b354853f051da7793df2617ae` (the merge-base of this branch with `staging`),
+installed deps, and ran `pytest -q`. Result: the same 3 pre-existing failures, 0 new ones.
+The 4th failure on the feature branch is a new GC-timing victim of the same root cause:
+the larger test suite (436 tests vs ~415 on merge-base) meant more SQLite activity,
+raising the probability that a leaked connection is GC'd during any given test.
+
+All 4 tests passed in isolation (`pytest -q <test::name>`) and with
+`pytest -q -p no:unraisableexception` (435 passed, 0 failed).
+
+#### Root causes (traced with PYTHONTRACEMALLOC=15)
+
+Three sources of unclosed `sqlite3.Connection` objects were identified:
+
+1. **`migrations/env.py` `run_migrations_online()`** — `create_engine(url, poolclass=NullPool)`
+   creates an anonymous engine. Even with NullPool, the engine object held a reference that
+   CPython's GC closed lazily, firing a ResourceWarning at an arbitrary later test.
+
+2. **`tests/test_migrations.py` `test_migrations_apply_from_scratch_and_match_the_models`** —
+   `create_engine(url).connect()` for the `alembic_version` SELECT. Anonymous engine, default
+   pool (not NullPool), never disposed — a pooled connection stays alive until GC.
+
+3. **`tests/conftest.py` `working_db` and `unreachable_db` fixtures** — Both created engines
+   via `create_engine(...)`, set them on `app.main.engine` via monkeypatch, and returned them
+   without ever calling `engine.dispose()`. The `StaticPool` in `working_db` keeps one
+   persistent connection until dispose is called; the monkeypatch restores the attribute but
+   does not dispose the old engine. This was the dominant source of the `test_health` and
+   `test_overload` flaps (tracemalloc showed allocation at `app/main.py:103`).
+
+#### Fixes applied (commit `4a2f349`)
+
+**`api/migrations/env.py`** — `run_migrations_online()` now assigns the engine to a named
+variable and calls `engine.dispose()` in a `finally` block:
+```python
+engine = create_engine(url, poolclass=pool.NullPool)
+try:
+    with engine.connect() as connection:
+        ...
+finally:
+    engine.dispose()
+```
+
+**`api/tests/test_migrations.py`** — The `create_engine(url)` for the version check is now
+assigned, wrapped in `try/finally`, and disposed:
+```python
+engine = create_engine(url)
+try:
+    with engine.connect() as conn:
+        assert conn.execute(...).scalar() == head
+finally:
+    engine.dispose()
+```
+
+**`api/tests/conftest.py`** — `working_db` and `unreachable_db` changed from `return`
+fixtures to `yield` fixtures with `engine.dispose()` at teardown:
+```python
+@pytest.fixture
+def working_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[Engine]:
+    engine = create_engine("sqlite://", ..., poolclass=StaticPool)
+    monkeypatch.setattr(app.main, "engine", engine)
+    yield engine
+    engine.dispose()
+```
+
+All three files passed `ruff format --check`, `ruff check`, and `mypy` after the change.
+
+---
+
+### Migration-specific verification
+
+```
+pytest -q tests/test_migrations.py
+  → 2 passed, 1 skipped (needs TEST_DATABASE_URL) in 0.10s
+```
+
+`test_there_is_exactly_one_head` confirms there is exactly one Alembic head (migration 0007).
+`test_migrations_apply_from_scratch_and_match_the_models` confirms migrations apply cleanly
+from scratch on SQLite and `alembic check` reports no diff between models and migrations.
+
+---
+
+### Files Created
+None.
+
+### Files Modified
+- `api/migrations/env.py` — dispose engine explicitly in `run_migrations_online()`
+- `api/tests/test_migrations.py` — dispose anonymous engine after version check
+- `api/tests/conftest.py` — `working_db` and `unreachable_db` changed to yield+dispose
+
+### Key Decisions
+
+1. **Fixed the ResourceWarning rather than suppressing it**: `filterwarnings = ["error"]` in
+   `pyproject.toml` is intentional — it catches real resource leaks. Suppressing the warning
+   (e.g., `filterwarnings = ["ignore::ResourceWarning"]`) would hide future leaks. The correct
+   fix is disposing the engines, which is what we did.
+
+2. **Scope decision**: The three sources of the ResourceWarning existed before this feature
+   (merge-base confirmed 3 pre-existing failures). The 4th victim test was new only because
+   the test pool grew. Fixing the root cause eliminates all 4 flaps and makes CI
+   deterministically green — which is in scope for a "make CI green" wave.
+
+3. **No changes to `pyproject.toml`**: No `filterwarnings` suppression was added. The fix
+   is surgical (dispose the engines).
+
+### Library Docs Consulted (Context7)
+None — the fix is pure SQLAlchemy engine lifecycle; patterns were verified by reading the
+SQLAlchemy pool implementation source (`pool/impl.py StaticPool.dispose`).
+
+### Build & Test Results
+```
+scripts/check.sh → == all checks passed (exit 0)
+web: 12 test files, 131 tests passed
+api: 435 passed, 1 skipped, 0 failed
+Node v24.22.2; Python 3.13.2
+```
+
+### Open Issues
+- The Postgres migration test (`test_migrations_apply_on_postgres_and_match_the_models`) is
+  skipped locally (no `TEST_DATABASE_URL`). It runs in CI against a real Postgres instance.
+  No change to that test was needed.
+- `app/security.py` has 3 pre-existing mypy errors (`pwdlib` stub missing, documented in
+  sub-task 1a). These are out of scope for this wave and do not appear in CI because the
+  project's CI runs mypy against the venv which has the stubs installed.
+
+---
+
+## Developer Notes — Reviewer fixes (Important + Minor)
+
+### Files Modified
+
+- `api/app/schemas/modules.py` — Added `from pydantic import Field`; changed `segment_position: int` to `segment_position: int = Field(ge=0)` in `PositionIn`. Also added SE §8 deviation comment on `ModuleOut.current_segment_position`.
+- `api/app/models/module.py` — Added SE §8 deviation comment on `ModuleProgress.current_segment_position` documenting the approved decision-5 trade-off and the migration implication.
+- `api/app/services/modules.py` — Added a TODO (FR-8.1) comment at the segment query in `get_module_detail` documenting that refresher filtering (diagnostic-aware, SE §9) is future work.
+- `api/tests/test_modules.py` — Added `test_post_position_with_negative_segment_position_is_422` to assert POST with `segmentPosition: -1` returns 422.
+- `web/src/features/module/ModulePage.tsx` — Replaced the misleading `"1-based position"` comment with an accurate one: segment.position is 0-based and sending it directly satisfies the backend contract.
+- `web/src/features/module/ModuleMap.tsx` — Replaced placeholder `'%'` icon with `'◑'` (half-filled circle). Changed ProgressBar `value` from `module.currentSegmentPosition` to `module.currentSegmentPosition + 1` to align 1-based display with ModulePage.
+- `web/src/features/module/module.api.ts` — Fixed wrong FR reference in JSDoc: `FR-5.2` → `FR-2.5`.
+
+### Key Decisions
+
+1. **IMPORTANT 1 (ge=0)**: `Field(ge=0)` is the canonical Pydantic v2 approach for a lower-bound constraint. FastAPI will automatically return 422 for any request whose JSON body has `segmentPosition < 0`, never reaching the service layer.
+
+2. **IMPORTANT 2 (comment)**: The accurate comment notes that `segment.position` is 0-based and equals `clamped` when segments are sequential — which is exactly why sending it directly satisfies the backend contract (no +1/-1 conversion needed).
+
+3. **IMPORTANT 3 (TODO comment)**: Per the task: do NOT filter out refreshers entirely (a refresher with no diagnostic rule should still show). The comment is placed at the query site in `get_module_detail`, not in `get_modules_for_user`, because it is the detail endpoint SE §9 contracts about.
+
+4. **IMPORTANT 4 (SE §8 comment)**: Added to both the ORM model (primary source of truth) and the `ModuleOut` schema (which exposes the field via the API). Mentions approved decision 5, migration implication, and the seed invariant.
+
+5. **MINOR 7 (progress-bar alignment)**: The `inProgressModule` test fixture has `currentSegmentPosition: 2, segmentCount: 4`. The `ModuleMap.test.tsx` progress-bar test only asserts presence (`getByRole('progressbar')`), not the count text — so no test expectation needed updating. The displayed text changes from "2 / 4" to "3 / 4", matching ModulePage's "Segment 3 of 4".
+
+### Deferred items (not in scope per task)
+
+- Finish-module navigation UX (Continue button after clicking Finish module — ModulePage.tsx)
+- All-modules-complete test coverage gap in ModuleMap.test.tsx
+- `_compute_status` cast vs type-ignore nitpick (api/app/services/modules.py:73)
+- conftest try/finally for Postgres teardown error path (api/tests/conftest.py)
+
+### Library Docs Consulted (Context7)
+None — all changes are comments, a Pydantic `Field(ge=0)` (standard v2 API already used elsewhere in the project), and a single character replacement.
+
+### Build & Test Results
+
+```
+scripts/check.sh (Node v24.22.2, Python 3.13.2) → exit 0
+
+web:
+  format:check  → All matched files use Prettier code style!
+  lint          → Found 0 warnings and 0 errors. (67 files, 219 rules)
+  test          → Test Files: 12 passed (12) | Tests: 131 passed (131)
+  build         → tsc -b + vite build ✓, 473 modules, built in 180ms
+
+api:
+  ruff format   → 64 files already formatted
+  ruff check    → All checks passed!
+  mypy          → Success: no issues found in 56 source files
+  pytest        → 436 passed, 1 skipped (Postgres), 0 failed
+```
+
+Commit: `dcb6c89` on branch `feature/module-map-and-progress`.
+
+### Open Issues
+None introduced. All deferred items listed above are tracked.

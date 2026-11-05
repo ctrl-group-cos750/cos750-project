@@ -997,3 +997,110 @@ Node v22.23.4 used (nvm use 22; Node 24 not yet installed locally).
 ### Open Issues
 - Node 24 (per `.nvmrc`) is not installed in this environment; Node 22 was used instead. The build and tests pass on v22; CI will use the correct version.
 - The `SegmentView.tsx` lint fixes touch 3d's code. This is intentional — the lint was blocking the whole check, and the fixes are minimal and non-behavioural.
+
+---
+
+## Developer Notes — Wave 3e: Frontend feature tests (ModuleMap + ModulePage)
+
+### Files Created
+- `web/src/features/module/ModuleMap.test.tsx` — 16 Vitest + RTL tests for the ModuleMap component
+- `web/src/features/module/ModulePage.test.tsx` — 19 Vitest + RTL tests for ModulePage + SegmentView
+
+### Files Modified
+- `web/src/test/app.tsx` — Extended `fakeApi` with parameterised-route matching (`:param` syntax)
+  and two default handlers (`GET /api/modules/:id`, `POST /api/modules/:id/position`)
+- `web/src/auth/auth.test.tsx` — Prettier line-length reformatting only (two long lines split);
+  no logic change. Included to keep `format:check` green.
+
+---
+
+### fakeApi changes (`web/src/test/app.tsx`)
+
+Added `patternToRegex(key)` — converts `"GET /api/modules/:id"` into a named-group RegExp so
+`"GET /api/modules/42"` matches and `{ id: "42" }` is passed to the handler. Override keys that
+contain no `:` are unaffected (exact-string path, no regex overhead). The `Override` type gained
+a second parameter `params: Record<string, string>` (unused by existing handlers; backward-
+compatible since callers ignore extra arguments).
+
+Two default handlers added:
+- `'GET /api/modules/:id'` → 404 (overridable)
+- `'POST /api/modules/:id/position'` → 404 (overridable)
+
+Resolution order: exact key match first, then pattern scan in definition order (override entries
+appear after defaults via object spread, so a test that passes `'GET /api/modules/:id'` in its
+override replaces the default).
+
+---
+
+### ModuleMap tests (16 tests)
+
+| Suite | Tests |
+|---|---|
+| Status tags | 3 — renders locked/open/complete/in_progress tags; shows all titles |
+| Locked vs open affordances | 3 — open module renders; locked module title is NOT inside `<a>`; map uses Continue button (no per-row links) |
+| Continue button | 4 — targets in_progress over open; targets first open when no in_progress; hidden when no target; navigates to ModulePage on click |
+| Loading and error states | 3 — spinner text visible while pending; error alert on 503; heading visible on success |
+| Duration and progress | 3 — estimated duration shown; progressbar present for in_progress; no progressbar for open |
+
+---
+
+### ModulePage tests (19 tests)
+
+| Suite | Tests |
+|---|---|
+| Goals | 4 — module title rendered; "Learning goals" label; goals Markdown h2 heading; goals list item |
+| Segment rendering | 4 — first segment title; text body as Markdown (h1 heading); bold `**nodes**` → DOM; worked_example body Markdown after navigating |
+| Navigation and position saving | 6 — POST called with correct segmentPosition on Next; UI advances; "Finish module" on last; Previous disabled on first; Previous enabled after navigating; resumes from currentSegmentPosition |
+| Video segment | 1 — "▶ Watch video" link with correct href `/videos/42` |
+| Activity segment | 1 — placeholder text "Activity — coming in a future story." |
+| Loading and error states | 3 — spinner text while loading; error alert on 404; "no segments" message |
+
+---
+
+### Key Decisions
+
+1. **Pattern-based override matching instead of test-specific exact keys**: The task said to
+   extend the override mechanism; a `:param` regex is the cleanest extension that avoids
+   per-test boilerplate like `'GET /api/modules/1'`. Tests that want all-IDs-same-response use
+   `'GET /api/modules/:id'`; tests that need ID-specific responses can still use exact keys (which
+   take precedence).
+
+2. **Spinner queried via `findByText`** (not `findByLabelText`): The `Spinner` component renders
+   the label inside a `visually-hidden` span (not an aria-label on the element). `findByLabelText`
+   looks for form-control associations and fails here; `findByText` finds the span content.
+   This mirrors the actual accessibility pattern (the `<output>` carries role="status").
+
+3. **`findByRole('button', { name: /continue module 2/i })`** — matches the exact button text
+   rendered by ModuleMap: `Continue module {n} →`. The `→` is part of the label in the real
+   component; the regex `i` flag + substring match avoids brittleness.
+
+4. **Sample data kept minimal but complete**: `twoSegmentDetail` (text + worked_example) covers
+   the common cases; `allKindsDetail` (text + video + activity + worked_example) is used only
+   for the segment-kind-specific tests. No unnecessary bloat.
+
+5. **`setupModuleApi` helper**: Extracts the three-override fakeApi pattern common to all
+   ModulePage tests. `positionResponse` defaults to the same `detail` object so the mutation
+   is always satisfied; override it when testing navigation-specific behaviour.
+
+---
+
+### Library Docs Consulted (Context7)
+None — no new third-party libraries were introduced. All patterns were verified by reading
+existing test files and component source directly.
+
+---
+
+### Build & Test Results
+
+```
+npm run lint         → Found 0 warnings and 0 errors. (67 files, 219 rules) ✓
+npm test -- --silent → Test Files: 12 passed (12) | Tests: 131 passed (131) ✓
+                       (10 pre-existing + 2 new: ModuleMap 16 tests, ModulePage 19 tests)
+npm run build        → tsc -b + vite build ✓, 0 type errors, built in 197ms
+npm run format:check → All matched files use Prettier code style! ✓
+```
+
+Node v24.22.2 (matches `.nvmrc` `24`).
+
+### Open Issues
+None. All checks pass clean on the first full run after the spinner-label fix.

@@ -1,9 +1,10 @@
-import { Link, Outlet, useNavigate } from 'react-router'
+import { NavLink, Outlet, useNavigate } from 'react-router'
 import { useCurrentUser, useLogout } from '../auth/hooks.ts'
 import { Alert, AppShell, Button } from '../components'
 import styles from './SignedInLayout.module.css'
 
-/** Every signed-in page: the header with the student's name and Log out, then the page. */
+/** Every signed-in page: the header (the staff portal link for team members, the student's name
+ * and Log out), then the page. */
 export function SignedInLayout() {
   const { data: user } = useCurrentUser()
   const logout = useLogout()
@@ -11,9 +12,20 @@ export function SignedInLayout() {
 
   return (
     <AppShell
+      nav={
+        user?.isStaff && (
+          <NavLink
+            to="/staff"
+            className={({ isActive }) =>
+              isActive ? `${styles.navLink} ${styles.active}` : styles.navLink
+            }
+          >
+            Staff portal
+          </NavLink>
+        )
+      }
       actions={
         <>
-          {user?.isStaff && <Link to="/staff/videos">Videos</Link>}
           <span className={styles.name}>{user?.displayName}</span>
           <Button
             variant="secondary"

@@ -2,13 +2,16 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { STAFF_SECTIONS } from './sections.ts'
-import { listVideos } from './staff.api.ts'
+import { listMembers, listVideos } from './staff.api.ts'
 
 /** A short live count under a section's description, where the portal has one. */
 function useSummaries(): Record<string, string | undefined> {
   const videos = useQuery({ queryKey: ['staff', 'videos'], queryFn: listVideos })
+  const members = useQuery({ queryKey: ['staff', 'members'], queryFn: listMembers })
+  const count = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
   return {
-    videos: videos.data && `${videos.data.length} video${videos.data.length === 1 ? '' : 's'}`,
+    videos: videos.data && count(videos.data.length, 'video'),
+    members: members.data && count(members.data.length, 'team member'),
   }
 }
 

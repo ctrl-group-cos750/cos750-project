@@ -85,3 +85,14 @@ export function uploadMedia(
     xhr.send(file)
   })
 }
+
+/** A team member on the "Staff members" page. */
+export type StaffMember = { id: number; email: string; displayName: string }
+
+export const listMembers = () => api<StaffMember[]>('/api/staff/members')
+/** Makes the existing account with this email staff. 404 when no account uses it. */
+export const addMember = (email: string) =>
+  api<StaffMember>('/api/staff/members', { method: 'POST', body: { email } })
+/** Takes staff access away. The API refuses (409) when it is your own. */
+export const removeMember = (id: number) =>
+  api<undefined>(`/api/staff/members/${id}`, { method: 'DELETE' })

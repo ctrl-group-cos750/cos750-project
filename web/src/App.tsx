@@ -3,6 +3,7 @@ import { GuestOnly, RequireAuth, RequireStaff } from './auth/guards.tsx'
 import { LoginPage } from './auth/LoginPage.tsx'
 import { RegisterPage } from './auth/RegisterPage.tsx'
 import { StaffLayout } from './features/staff/StaffLayout.tsx'
+import { StaffMembersPage } from './features/staff/StaffMembersPage.tsx'
 import { StaffPortalPage } from './features/staff/StaffPortalPage.tsx'
 import { StaffVideoEditorPage } from './features/staff/StaffVideoEditorPage.tsx'
 import { StaffVideosPage } from './features/staff/StaffVideosPage.tsx'
@@ -51,6 +52,7 @@ function App() {
           <Route index element={<StaffPortalPage />} />
           <Route path="videos" element={<StaffVideosPage />} />
           <Route path="videos/:videoId" element={<StaffVideoEditorPage />} />
+          <Route path="members" element={<StaffMembersPage />} />
         </Route>
       </Route>
       <Route path="*" element={<NotFoundPage />} />

@@ -107,3 +107,17 @@ class MediaOut(ApiModel):
 
     path: str
     bytes: int
+
+
+class StaffMemberOut(ApiModel):
+    """A team member, as the staff portal's "Staff members" page lists them."""
+
+    id: int
+    email: str
+    display_name: str
+
+
+class StaffMemberIn(ApiModel):
+    """Make an existing account staff. By exact email: staff never browse the student list."""
+
+    email: Annotated[str, StringConstraints(strip_whitespace=True, to_lower=True, max_length=320)]

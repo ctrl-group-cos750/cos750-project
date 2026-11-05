@@ -9,7 +9,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, Hint, User
+from app.models import Activity, Attempt, GraphScenario, Hint, User
 from app.seed import load, read_fixtures
 
 
@@ -37,6 +37,17 @@ def activity(**overrides: Any) -> dict[str, Any]:
     }
 
 
+def graph(**overrides: Any) -> dict[str, Any]:
+    return {
+        "id": 1,
+        "name": "Line",
+        "vertices": ["A", "B", "C"],
+        "edges": [{"source": "A", "target": "B"}, {"source": "B", "target": "C"}],
+        "start_vertex": "A",
+        **overrides,
+    }
+
+
 @pytest.mark.parametrize(
     ("data", "problem"),
     [
@@ -56,6 +67,13 @@ def activity(**overrides: Any) -> dict[str, Any]:
         ({"activities": [activity(), activity()]}, "used twice"),
         ({"activities": [activity(extra="x")]}, "extra"),
         ({"videos": []}, "videos"),  # videos are made in the editor, not in fixtures
+        ({"graphs": [graph(start_vertex="Z")]}, "start vertex"),
+        ({"graphs": [graph(vertices=["A", "B", "A"])]}, "same vertex"),
+        ({"graphs": [graph(edges=[{"source": "A", "target": "Z"}])]}, "not in the graph"),
+        ({"graphs": [graph(vertices=["A", ""])]}, "pattern"),
+        ({"graphs": [graph(vertices=[])]}, "vertices"),
+        ({"graphs": [graph(), graph()]}, "graph ids used twice"),
+        ({"graphs": [graph(weight=2)]}, "extra"),
     ],
 )
 def test_invalid_fixtures_are_refused(tmp_path: Path, data: dict[str, Any], problem: str) -> None:
@@ -89,3 +107,18 @@ def test_a_bad_fixture_writes_nothing(tmp_path: Path, db: Session) -> None:
     with pytest.raises(ValueError, match="kind"):
         load(db, folder)
     assert db.scalars(select(Activity)).all() == []
+
+
+def test_load_creates_graphs_the_api_can_run_and_a_rerun_updates_them(
+    tmp_path: Path, db: Session
+) -> None:
+    folder = write(tmp_path, {"graphs": [graph()]})
+    load(db, folder)
+    write(tmp_path, {"graphs": [graph(name="Line again", directed=True)]})
+    load(db, folder)
+    db.expire_all()
+    scenario = db.get(GraphScenario, 1)
+    assert scenario is not None
+    assert (scenario.name, scenario.directed) == ("Line again", True)
+    assert scenario.edges == [{"source": "A", "target": "B"}, {"source": "B", "target": "C"}]
+    assert len(db.scalars(select(GraphScenario)).all()) == 1

@@ -8,8 +8,9 @@ class Video(Base):
     """A narrated screen recording (SE document §8, FR-3). The MP4 and captions are static files
     under /media/, served by the web container; the API only knows their paths.
 
-    §8 also links a video to its Segment. Segments arrive with the module player (#14, #15), so
-    `segment_id` is added then.
+    `segment_id` links the video back to the Segment that plays it (SE §8 ER diagram,
+    `SEGMENT |o--o| VIDEO`). Segment also carries `video_id` in the other direction (decision 1,
+    approved) so the module page can load content in one query.
     """
 
     __tablename__ = "videos"
@@ -20,6 +21,9 @@ class Video(Base):
     captions_path: Mapped[str] = mapped_column(String(300))
     transcript: Mapped[str] = mapped_column(Text)  # Markdown: the text version of the video
     duration_seconds: Mapped[int] = mapped_column()
+    # The segment this video belongs to; nullable so existing videos remain valid before segments
+    # are seeded (SE §8, backward-compatible addition).
+    segment_id: Mapped[int | None] = mapped_column(ForeignKey("segments.id"), nullable=True)
 
 
 class Checkpoint(Base):

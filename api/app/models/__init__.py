@@ -2,6 +2,7 @@
 from app.db import Base
 from app.models.activity import Activity, Attempt, Hint, HintView
 from app.models.graph import GraphScenario
+from app.models.module import Module, ModuleProgress, Segment
 from app.models.user import User
 from app.models.video import Checkpoint, Video
 
@@ -13,6 +14,9 @@ __all__ = [
     "GraphScenario",
     "Hint",
     "HintView",
+    "Module",
+    "ModuleProgress",
+    "Segment",
     "User",
     "Video",
 ]

@@ -1,5 +1,5 @@
-"""Grades a code-activity submission by comparing it with the solution — never by running code
-(SE document FR-5, NFR-S7). One function per kind; `check_code_activity` dispatches by kind.
+"""Grades a submission by comparing it with the solution — never by running code (SE document
+FR-4.2, FR-5, NFR-S7). One function per kind; `check_activity` dispatches by kind.
 
 The solution stays here, on the server, and is only ever compared against: it is never returned to
 the browser, so a student cannot read it or fake a pass.
@@ -12,6 +12,9 @@ from app.schemas.activities import (
     FillInConfig,
     FillInSolution,
     FillInSubmission,
+    MultipleChoiceConfig,
+    MultipleChoiceSolution,
+    MultipleChoiceSubmission,
     ParsonsConfig,
     ParsonsSolution,
     ParsonsSubmission,
@@ -23,6 +26,9 @@ MISSING_LINE = "A line is missing from this position."
 EXTRA_LINE = "This line does not belong in the answer."
 WRONG_CHOICE = "This is not the right choice for this blank."
 EMPTY_BLANK = "This blank has not been filled in."
+WRONG_OPTION = "That is not the right answer. Have another look."
+UNKNOWN_OPTION = "Choose one of the options."
+RIGHT_OPTION = "Correct."
 
 
 def _result(parts: list[PartResult]) -> CheckResult:
@@ -77,10 +83,39 @@ def check_fill_in(
     return _result(parts)
 
 
-def check_code_activity(
+def check_multiple_choice(
+    config: MultipleChoiceConfig,
+    solution: MultipleChoiceSolution,
+    submission: MultipleChoiceSubmission,
+) -> CheckResult:
+    """One part. A wrong option gets the content's message for that option, saying why it is
+    wrong (FR-4.2). Nothing in the result names the correct option."""
+    chosen = submission.selected
+    if chosen not in {option.id for option in config.options}:
+        message = UNKNOWN_OPTION
+    elif chosen == solution.correct:
+        message = RIGHT_OPTION
+    else:
+        message = solution.feedback.get(chosen, WRONG_OPTION)
+    correct = chosen == solution.correct
+    return CheckResult(
+        correct=correct,
+        score=1.0 if correct else 0.0,
+        parts=[PartResult(ref=0, correct=correct, message=None if correct else message)],
+        feedback=message,
+    )
+
+
+def check_activity(
     kind: str, config: dict[str, Any], solution: dict[str, Any], submission: dict[str, Any]
 ) -> CheckResult:
     """Parse the stored config and solution and the student's submission for `kind`, and grade."""
+    if kind == "multiple_choice":
+        return check_multiple_choice(
+            MultipleChoiceConfig.model_validate(config),
+            MultipleChoiceSolution.model_validate(solution),
+            MultipleChoiceSubmission.model_validate(submission),
+        )
     if kind == "parsons":
         return check_parsons(
             ParsonsConfig.model_validate(config),
@@ -93,4 +128,4 @@ def check_code_activity(
             FillInSolution.model_validate(solution),
             FillInSubmission.model_validate(submission),
         )
-    raise ValueError(f"unknown code activity kind: {kind!r}")
+    raise ValueError(f"unknown activity kind: {kind!r}")

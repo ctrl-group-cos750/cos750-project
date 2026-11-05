@@ -1,4 +1,4 @@
-import { Outlet, useNavigate } from 'react-router'
+import { Link, Outlet, useNavigate } from 'react-router'
 import { useCurrentUser, useLogout } from '../auth/hooks.ts'
 import { Alert, AppShell, Button } from '../components'
 import styles from './SignedInLayout.module.css'
@@ -13,6 +13,7 @@ export function SignedInLayout() {
     <AppShell
       actions={
         <>
+          {user?.isStaff && <Link to="/staff/videos">Videos</Link>}
           <span className={styles.name}>{user?.displayName}</span>
           <Button
             variant="secondary"

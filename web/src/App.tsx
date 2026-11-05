@@ -1,7 +1,10 @@
 import { Route, Routes } from 'react-router'
-import { GuestOnly, RequireAuth } from './auth/guards.tsx'
+import { GuestOnly, RequireAuth, RequireStaff } from './auth/guards.tsx'
 import { LoginPage } from './auth/LoginPage.tsx'
 import { RegisterPage } from './auth/RegisterPage.tsx'
+import { StaffVideoEditorPage } from './features/staff/StaffVideoEditorPage.tsx'
+import { StaffVideosPage } from './features/staff/StaffVideosPage.tsx'
+import { VideoPage } from './features/video/VideoPage.tsx'
 import { HomePage } from './pages/HomePage.tsx'
 import { NotFoundPage } from './pages/NotFoundPage.tsx'
 import { SignedInLayout } from './pages/SignedInLayout.tsx'
@@ -34,6 +37,23 @@ function App() {
         }
       >
         <Route index element={<HomePage />} />
+        <Route path="videos/:videoId" element={<VideoPage />} />
+        <Route
+          path="staff/videos"
+          element={
+            <RequireStaff>
+              <StaffVideosPage />
+            </RequireStaff>
+          }
+        />
+        <Route
+          path="staff/videos/:videoId"
+          element={
+            <RequireStaff>
+              <StaffVideoEditorPage />
+            </RequireStaff>
+          }
+        />
       </Route>
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

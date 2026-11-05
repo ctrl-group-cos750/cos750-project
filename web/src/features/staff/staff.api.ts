@@ -1,0 +1,87 @@
+import { api, ApiError, OFFLINE_MESSAGE } from '../../api/client.ts'
+
+/** The staff video editor's API (api/app/routers/staff.py). Unlike the student API, questions
+ * here carry the correct option and the feedback. */
+
+export type StaffQuestion = {
+  prompt: string
+  options: { id: string; label: string }[]
+  correct: string
+  feedback: Record<string, string>
+}
+
+export type StaffHint = { level: number; body: string }
+
+export type StaffCheckpoint = {
+  /** Left out for a new checkpoint; kept for an existing one so its attempts stay linked. */
+  id?: number
+  atSeconds: number
+  question: StaffQuestion
+  hints: StaffHint[]
+}
+
+export type StaffVideo = {
+  title: string
+  mediaPath: string
+  captionsPath: string
+  transcript: string
+  durationSeconds: number
+  checkpoints: StaffCheckpoint[]
+}
+
+export type SavedVideo = StaffVideo & {
+  id: number
+  checkpoints: (StaffCheckpoint & { id: number; activityId: number })[]
+}
+
+export type VideoSummary = {
+  id: number
+  title: string
+  durationSeconds: number
+  checkpointCount: number
+}
+
+export const listVideos = () => api<VideoSummary[]>('/api/staff/videos')
+export const getVideo = (id: number) => api<SavedVideo>(`/api/staff/videos/${id}`)
+export const createVideo = (video: StaffVideo) =>
+  api<SavedVideo>('/api/staff/videos', { method: 'POST', body: video })
+export const updateVideo = (id: number, video: StaffVideo) =>
+  api<SavedVideo>(`/api/staff/videos/${id}`, { method: 'PUT', body: video })
+
+export type MediaKind = 'video' | 'captions'
+const CONTENT_TYPES: Record<MediaKind, string> = { video: 'video/mp4', captions: 'text/vtt' }
+
+/**
+ * Uploads one file to the media volume and resolves to its /media/… path. Uses XMLHttpRequest,
+ * not fetch, because fetch can't report upload progress and a video can take a while.
+ */
+export function uploadMedia(
+  kind: MediaKind,
+  file: File,
+  onProgress: (fraction: number) => void,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', `/api/staff/media?kind=${kind}`)
+    xhr.setRequestHeader('Content-Type', CONTENT_TYPES[kind])
+    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total)
+    xhr.onerror = () => reject(new ApiError(0, OFFLINE_MESSAGE))
+    xhr.onload = () => {
+      let body: { path?: string; detail?: unknown } = {}
+      try {
+        body = JSON.parse(xhr.responseText) as typeof body
+      } catch {
+        // not JSON: fall through to the generic message
+      }
+      if (xhr.status === 201 && body.path) resolve(body.path)
+      else
+        reject(
+          new ApiError(
+            xhr.status,
+            typeof body.detail === 'string' ? body.detail : 'The upload failed. Try again.',
+          ),
+        )
+    }
+    xhr.send(file)
+  })
+}

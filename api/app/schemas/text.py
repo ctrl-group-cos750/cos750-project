@@ -17,3 +17,14 @@ def _no_hidden_characters(value: str) -> str:
 
 
 NoHiddenCharacters = AfterValidator(_no_hidden_characters)
+
+
+def _no_nul(value: str) -> str:
+    if "\x00" in value:
+        raise ValueError("Remove the NUL character from this text.")
+    return value
+
+
+# For longer staff-written text (questions, hints, transcripts), where newlines are fine but NUL,
+# which Postgres refuses, is not.
+NoNul = AfterValidator(_no_nul)

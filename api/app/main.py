@@ -11,7 +11,15 @@ from starlette.staticfiles import StaticFiles
 
 from app.db import engine
 from app.media import media_dir
-from app.routers import activities, auth, graphs, staff, staff_accounts, videos
+from app.routers import (
+    activities,
+    auth,
+    graphs,
+    staff,
+    staff_accounts,
+    staff_evaluation,
+    videos,
+)
 
 # Every route lives under /api: nginx in the web container forwards that prefix here unchanged.
 
@@ -39,6 +47,7 @@ app.include_router(graphs.router)
 app.include_router(videos.router)
 app.include_router(staff.router)
 app.include_router(staff_accounts.router)
+app.include_router(staff_evaluation.router)
 
 # Development without Docker only: serve uploads at /media/ from MEDIA_DIR, which Vite's dev
 # server proxies here. In Docker, nginx serves the media volume and this stays off.

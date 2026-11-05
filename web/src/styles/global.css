@@ -1,0 +1,98 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+}
+
+:root {
+  --radius: 0.625rem;
+
+  --background: #caf0f8;
+  --foreground: #03045e;
+  --card: #ade8f4;
+  --card-foreground: #03045e;
+
+  --primary: #0077b6;
+  --primary-foreground: #ffffff;
+  --secondary: #90e0ef;
+  --secondary-foreground: #03045e;
+  --muted: #ade8f4;
+  --muted-foreground: #023e8a;
+  --accent: #48cae4;
+  --accent-foreground: #03045e;
+
+  --border: #0077b6;
+  --input: #0077b6;
+  --ring: #0096c7;
+
+  --success: #0096c7;
+  --warning: #48cae4;
+  --destructive: #b42318;
+}
+
+.dark {
+  --background: #03045e;
+  --foreground: #caf0f8;
+  --card: #023e8a;
+  --card-foreground: #caf0f8;
+
+  --primary: #48cae4;
+  --primary-foreground: #03045e;
+  --secondary: #0077b6;
+  --secondary-foreground: #caf0f8;
+  --muted: #023e8a;
+  --muted-foreground: #90e0ef;
+  --accent: #0096c7;
+  --accent-foreground: #03045e;
+
+  --border: #0077b6;
+  --input: #0077b6;
+  --ring: #48cae4;
+
+  --success: #48cae4;
+  --warning: #90e0ef;
+  --destructive: #f97066;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family:
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      sans-serif;
+  }
+
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+}

@@ -1,7 +1,17 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, false, func
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    String,
+    Text,
+    UniqueConstraint,
+    false,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -43,4 +53,33 @@ class Attempt(Base):
     correct: Mapped[bool] = mapped_column(Boolean)
     score: Mapped[float] = mapped_column()
     detail: Mapped[dict[str, Any]] = mapped_column(JSON)
+    # The highest hint level this student had seen on this activity before submitting (FR-4.5).
+    # 3 or 4 makes a correct answer count as "met with support" (FR-7.2).
+    hint_level: Mapped[int] = mapped_column(default=0, server_default="0")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Hint(Base):
+    """One rung of an activity's four-level hint ladder (SE document §8, FR-4.4). Level 4 is the
+    worked solution, so hints are only sent one at a time, after the student asks."""
+
+    __tablename__ = "hints"
+    __table_args__ = (UniqueConstraint("activity_id", "level"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    activity_id: Mapped[int] = mapped_column(ForeignKey("activities.id"), index=True)
+    level: Mapped[int] = mapped_column()
+    body: Mapped[str] = mapped_column(Text)
+
+
+class HintView(Base):
+    """A student was shown a hint (FR-4.4, FR-4.5). Append-only. The next hint a student gets, and
+    the `hint_level` stored on their next attempt, both come from these rows."""
+
+    __tablename__ = "hint_views"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    activity_id: Mapped[int] = mapped_column(ForeignKey("activities.id"), index=True)
+    level: Mapped[int] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

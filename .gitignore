@@ -42,5 +42,8 @@ Thumbs.db
 ~$*
 .~lock.*#
 
+# Media uploaded while running the API without Docker (MEDIA_DIR=./media)
+api/media/
+
 # Python tooling
 .pytest_cache/

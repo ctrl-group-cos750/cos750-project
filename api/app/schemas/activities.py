@@ -13,6 +13,34 @@ from pydantic import Field
 from app.schemas.base import ApiModel
 
 CodeActivityKind = Literal["parsons", "fill_in"]
+ActivityKind = Literal["multiple_choice", "parsons", "fill_in"]
+
+
+# --- Multiple choice: pick one option (FR-4.1) ------------------------------------------------
+
+
+class ChoiceOption(ApiModel):
+    id: str = Field(min_length=1, max_length=50)
+    label: str = Field(max_length=2_000)
+
+
+class MultipleChoiceConfig(ApiModel):
+    """Shown to the student: the question and its options, in the order to show them."""
+
+    prompt: str = Field(max_length=5_000)
+    options: list[ChoiceOption] = Field(min_length=2, max_length=10)
+
+
+class MultipleChoiceSolution(ApiModel):
+    """Server-only: the correct option, and why each wrong one is wrong (FR-4.2), keyed by option
+    id. A wrong option without a message gets a generic one."""
+
+    correct: str
+    feedback: dict[str, str] = Field(default_factory=dict)
+
+
+class MultipleChoiceSubmission(ApiModel):
+    selected: str = Field(max_length=50)
 
 
 # --- Parsons: put shuffled lines in order ------------------------------------------------------
@@ -108,3 +136,15 @@ class AttemptOut(ApiModel):
     score: float
     parts: list[PartResult]
     feedback: str
+    # The highest hint level seen before this attempt; 3 or 4 means "with support" (FR-4.5).
+    hint_level: int
+
+
+class HintOut(ApiModel):
+    """The hint just revealed. `next_counts_as_support` is true when the *next* hint would be level
+    3 or 4: show the "this counts as met with support" warning before asking for it (ID doc §7.4)."""
+
+    level: int
+    body: str
+    has_more: bool
+    next_counts_as_support: bool

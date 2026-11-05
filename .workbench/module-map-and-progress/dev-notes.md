@@ -867,3 +867,56 @@ npm run format:check → All matched files use Prettier code style!
 
 ### Open Issues
 - None. Ready for Wave 3c (ModuleMap component) and 3d (SegmentView/ModulePage).
+
+---
+
+## Developer Notes — Wave 3a: Markdown component (react-markdown wrapper)
+
+### Files Created
+- `web/src/components/Markdown.tsx` — thin wrapper around react-markdown's default export; renders markdown as React elements inside a `<div className={styles.prose}>` scoped container. No `dangerouslySetInnerHTML`, no `rehype-raw`. CSP-safe by design.
+- `web/src/components/Markdown.module.css` — scoped prose typography (headings, paragraphs, lists, code blocks, blockquotes, links). Uses `color-mix()` for background tints so it adapts to light/dark themes.
+- `web/src/components/Markdown.test.tsx` — Vitest + RTL tests: heading render, paragraph render, fenced code block (`<pre><code>`), inline code, and CSP safety assertion (raw `<script>` in markdown source must not create a live DOM `<script>` element or execute its payload).
+
+### Files Modified
+- `web/src/components/index.ts` — added `export { Markdown, type MarkdownProps } from './Markdown.tsx'` in alphabetical order between Card and MasteryStatus.
+- `web/package.json` — added `"react-markdown": "10.1.0"` (exact, no caret, via `npm install react-markdown@10.1.0 --save-exact`).
+- `web/package-lock.json` — updated by npm to record the new dependency tree.
+
+### Key Decisions
+
+**Wrapper `<div>` for prose class**: react-markdown v10's `Options` type has no `className` prop on the root element — the component renders a React fragment / array of elements, not a single root tag. Using a wrapping `<div className={styles.prose}>` is the correct pattern to apply scoped CSS-module styles.
+
+**No `skipHtml` needed**: react-markdown v10 (like v9) drops raw HTML nodes from the AST by default without `rehype-raw`. The CSP-safety test confirms this empirically — a `<script>` tag in markdown input does not appear in the DOM.
+
+**No `rehype-raw`**: explicitly not added per the task requirement and CSP constraint. Adding it would re-parse raw HTML strings into actual DOM nodes, defeating the CSP.
+
+**oxlint `no-underscore-dangle`**: the first draft of the test used `window.__xss` (double-underscore prefix) which triggered an oxlint warning (treated as error with `--deny-warnings`). Renamed to `window.xssProbe` to satisfy the rule without losing test intent.
+
+**Node version**: project's dependencies (jsdom 30, vitest 5, undici 8) require Node ≥ 22. The environment had Node 20 active; installed Node 22 via nvm to run the test suite successfully.
+
+### Library Docs Consulted (Context7)
+
+- `react-markdown` (npm view + github.com/remarkjs/react-markdown readme) — confirmed v10.1.0 is the latest stable; confirmed the default export is `Markdown`; confirmed `children` is a `string` prop in `Options`; confirmed `className` is NOT an `Options` field (wrapper div needed); confirmed raw HTML is dropped without `rehype-raw` by default.
+
+### Build & Test Results
+
+```
+# Lint
+oxlint --deny-warnings → Found 0 warnings and 0 errors. (62 files, 219 rules)
+
+# Tests (node 22.23.4)
+vitest run --silent=true
+  ✓ src/components/Markdown.test.tsx (5 tests) 109ms
+  ✓ [9 other test files] ...
+Test Files: 10 passed (10)
+Tests:      96 passed (96)
+
+# Format
+prettier --check . → All matched files use Prettier code style!
+
+# Build
+tsc -b && vite build → ✓ 469 modules transformed. Built in 194ms.
+```
+
+### Open Issues
+None. All checks pass clean.

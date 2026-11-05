@@ -493,3 +493,121 @@ pytest -q (full suite)
   check inline rather than calling `read_fixtures` directly. If the check logic in `read_fixtures`
   ever changes, this test must be updated to match. A refactor to extract the check into a
   separate helper function would make it testable without replication.
+
+---
+
+## Developer Notes — Wave 2a: api/app/services/modules.py
+
+### Files Created
+- `api/app/services/modules.py` — Pure service layer for the module map and progress.
+  No FastAPI imports. Takes a `Session` + `user_id`. Returns Pydantic schema objects directly
+  (matching `save_video` style in `videos.py`). Does not commit — router commits (confirmed by
+  reading `activities.py` and `videos.py` routers).
+
+### Files Modified
+None.
+
+---
+
+### Functions Implemented
+
+| Function | Signature | Returns |
+|---|---|---|
+| `get_modules_for_user` | `(session, user_id) → list[ModuleOut]` | All modules ordered by `position`, each with computed status, `segment_count`, `current_segment_position` |
+| `get_module_detail` | `(session, user_id, module_id) → ModuleDetailOut` | Single module + ordered `SegmentOut` list + computed status; raises `ModuleNotFound` / `ModuleLocked` |
+| `save_position` | `(session, user_id, module_id, segment_position) → ModuleProgress` | Upserts the `ModuleProgress` row, sets status, flushes; raises `ModuleNotFound` / `ModuleLocked` |
+
+Custom exceptions (no FastAPI imports — router translates):
+- `ModuleNotFound(ValueError)` → router maps to 404
+- `ModuleLocked(ValueError)` → router maps to 403
+
+---
+
+### Status / Unlock Logic (FR-2.1)
+
+`_compute_status(progress, module_number, prev_complete) → ModuleStatus`:
+
+1. If a `ModuleProgress` row exists and its `status` is `complete`, `in_progress`, or `open` → use it directly.
+2. No row (or unknown value): module 0 OR previous module complete → `"open"`; otherwise → `"locked"`.
+
+`get_modules_for_user` uses 3 queries total (all modules, all progress for user, aggregated segment counts) then resolves status in Python — no N+1.
+
+`get_module_detail` and `save_position` each do focused queries for the specific module and its predecessor only.
+
+---
+
+### save_position Completion Logic (approved decision 3)
+
+```
+segment_count = count of Segment rows for the module
+last_index    = max(segment_count - 1, 0)
+is_complete   = segment_count > 0 AND segment_position >= last_index
+```
+
+- If `is_complete`: `status = 'complete'`, `completed_at = datetime.now(UTC)` (only set on first completion, not overwritten).
+- Otherwise: `status = 'in_progress'`.
+
+Two TODOs placed in the docstring and inline at the completion check:
+> TODO (future activity story): Gate completion on required activities being passed.
+> When activity-gating is implemented, only set status='complete' here if all required
+> Activity rows linked to this module's segments are answered correctly by this user.
+> Until then, reaching the last segment is sufficient (approved decision 3).
+
+---
+
+### Key Decisions
+
+1. **Routers commit, service flushes**: Confirmed by reading `api/app/routers/activities.py`
+   (`session.add(attempt); session.commit()`) and `api/app/routers/videos.py`. `save_video` in
+   `videos.py` is a special case (commits internally because it orchestrates complex multi-step
+   mutations). For `save_position` (analogous to `submit_attempt`), the router will commit.
+
+2. **Return Pydantic schemas from service**: `get_modules_for_user` and `get_module_detail` return
+   `list[ModuleOut]` and `ModuleDetailOut` directly. `save_position` returns the ORM
+   `ModuleProgress` object (the router only needs to know it succeeded and optionally return the
+   updated status). This mirrors the videos service pattern.
+
+3. **`get_modules_for_user` uses 3 bulk queries** (not N+1): one for all modules, one for all
+   progress rows for this user, one aggregated `COUNT` per module_id. Status is resolved in Python.
+
+4. **`_compute_status` trusts the DB row first**: If a `ModuleProgress` row exists with a valid
+   status, that wins. The unlock derivation only applies when there is no row (i.e., the student
+   has never opened the module). This means `save_position` is the single source of truth for
+   transitions; `_compute_status` never regresses a `complete` module to `open`.
+
+5. **`SegmentOut.kind` type-ignore**: `Segment.kind` is `Mapped[str]` (the DB stores any string),
+   but `SegmentOut.kind` is `SegmentKind` (a `Literal`). A `# type: ignore[arg-type]` is placed
+   at the call site — the seed and migration enforce valid values; no runtime cast needed.
+
+6. **`from __future__ import annotations`**: Added for forward-reference compatibility with the
+   `|` union syntax in Python 3.10+ type hints. `ruff` sorted it to the top automatically.
+
+---
+
+### Library Docs Consulted (Context7)
+None — no new third-party libraries were introduced. All SQLAlchemy and Pydantic patterns were
+verified by reading existing project source files directly.
+
+---
+
+### Build & Test Results
+
+```
+ruff check --fix app/services/modules.py   → 5 fixed (import order, datetime.UTC aliases)
+ruff format app/services/modules.py        → 1 file left unchanged
+ruff check app/services/modules.py         → All checks passed!
+mypy --strict app/services/modules.py      → Success: no issues found in 1 source file
+
+pytest -q (full suite)
+→ 2 failed (pre-existing ResourceWarning), 398 passed, 1 skipped, 1 error (pre-existing)
+  No new failures introduced.
+```
+
+---
+
+### Open Issues
+- All pre-existing open issues from Wave 1 remain unchanged (SQLite ResourceWarning,
+  Postgres `TEST_DATABASE_URL`, `app/security.py` mypy stubs).
+- Wave 2b (router `api/app/routers/modules.py`) must be implemented next; it will import
+  `get_modules_for_user`, `get_module_detail`, `save_position`, `ModuleNotFound`, `ModuleLocked`
+  from this service and call `session.commit()` after `save_position`.

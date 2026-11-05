@@ -839,3 +839,31 @@ flaps (unclosed connection from `migrations/env.py` NullPool) promoted to failur
 ### Open Issues
 - All pre-existing open issues from Waves 1a–2b remain unchanged.
 - No new open issues introduced by this sub-task.
+
+## Developer Notes — Wave 3b: Types + API layer
+
+### Files Created
+- `web/src/features/module/module.types.ts` — TypeScript types mirroring the backend schemas: `ModuleStatus`, `SegmentKind`, `ModuleSummary` (ModuleOut), `Segment` (SegmentOut), `ModuleDetail` (ModuleOut + segments)
+- `web/src/features/module/module.api.ts` — Three named export functions using the shared `api()` client: `fetchModules`, `fetchModule`, `savePosition`
+
+### Files Modified
+- None
+
+### Key Decisions
+- `ModuleDetail` is expressed as `ModuleSummary & { segments: Segment[] }` (intersection type) to avoid repeating the summary fields and to match how the backend `ModuleDetailOut` extends `ModuleOut`.
+- `SegmentKind` and `ModuleStatus` are plain union type aliases (not enums) — consistent with the project's TypeScript style (no enums in the codebase).
+- `module.api.ts` functions all return `Promise<T>` directly (no intermediate mapping) because the backend already sends camelCase JSON matching the types exactly — same pattern as `requestCheckpointHint` in `video.api.ts`.
+- `savePosition` sends `{ segmentPosition }` as the POST body, matching the documented endpoint contract.
+
+### Library Docs Consulted (Context7)
+- None — no new third-party libraries were added. Only the project's own `api()` wrapper was used.
+
+### Build & Test Results
+```
+npm run lint         → 0 warnings, 0 errors (oxlint, 60 files)
+npm run build        → tsc -b clean + vite built in 182ms, no type errors
+npm run format:check → All matched files use Prettier code style!
+```
+
+### Open Issues
+- None. Ready for Wave 3c (ModuleMap component) and 3d (SegmentView/ModulePage).

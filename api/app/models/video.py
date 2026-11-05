@@ -23,7 +23,12 @@ class Video(Base):
     duration_seconds: Mapped[int] = mapped_column()
     # The segment this video belongs to; nullable so existing videos remain valid before segments
     # are seeded (SE §8, backward-compatible addition).
-    segment_id: Mapped[int | None] = mapped_column(ForeignKey("segments.id"), nullable=True)
+    # use_alter=True tells SQLAlchemy to emit this FK as ALTER TABLE (deferred) rather than inline
+    # in CREATE TABLE, breaking the segments <-> videos circular dependency for autogenerate.
+    segment_id: Mapped[int | None] = mapped_column(
+        ForeignKey("segments.id", use_alter=True, name="fk_videos_segment_id_segments"),
+        nullable=True,
+    )
 
 
 class Checkpoint(Base):

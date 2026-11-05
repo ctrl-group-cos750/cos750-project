@@ -611,3 +611,126 @@ pytest -q (full suite)
 - Wave 2b (router `api/app/routers/modules.py`) must be implemented next; it will import
   `get_modules_for_user`, `get_module_detail`, `save_position`, `ModuleNotFound`, `ModuleLocked`
   from this service and call `session.commit()` after `save_position`.
+
+---
+
+## Developer Notes — Wave 2b: api/app/routers/modules.py + main.py registration
+
+### Files Created
+- `api/app/routers/modules.py` — FastAPI router with three endpoints for the module map and
+  progress feature (FR-2). `APIRouter(prefix="/api/modules", tags=["modules"])`.
+
+### Files Modified
+- `api/app/main.py` — Added `modules` to the `from app.routers import …` line and added
+  `app.include_router(modules.router)` between `graphs.router` and `videos.router`.
+
+---
+
+### Endpoints
+
+| Method | Path | Response shape | Status codes |
+|--------|------|----------------|--------------|
+| `GET` | `/api/modules` | `list[ModuleOut]` | 200 |
+| `GET` | `/api/modules/{module_id}` | `ModuleDetailOut` | 200, 404, 403 |
+| `POST` | `/api/modules/{module_id}/position` | `ModuleDetailOut` | 200, 404, 403 |
+
+All three require `CurrentUser` (401 if not logged in). All queries are scoped to `user.id`
+(NFR-S2, FR-1.3).
+
+### Error / status-code mapping
+
+| Service exception | HTTP status | `detail` string (NFR-U3) |
+|-------------------|------------|--------------------------|
+| `ModuleNotFound`  | 404 | `"Module not found."` |
+| `ModuleLocked`    | 403 | `"This module is not available yet. Complete the previous module to unlock it."` |
+
+Both `raise … from None` (matching `auth.py` style) to suppress the internal exception chain
+from the HTTP response.
+
+### POST /{module_id}/position response shape decision
+
+The task left the POST response open ("simplest is 204 or updated ModuleOut"). Activities and
+videos POST endpoints both return a rich response object (`AttemptOut`, constructing it explicitly).
+Returning `ModuleDetailOut` is the most useful option for the frontend: it gives the updated
+`status`, `currentSegmentPosition`, and full segment list in one round-trip, eliminating a
+follow-up GET. The implementation:
+
+1. `save_position(session, user.id, module_id, body.segment_position)` — flushes the
+   `ModuleProgress` upsert.
+2. `session.commit()` — router commits (repo convention; services only flush).
+3. `get_module_detail(session, user.id, module_id)` — re-fetches the committed state and returns
+   `ModuleDetailOut`.
+
+Both service calls are inside the same `try/except` block so `ModuleNotFound`/`ModuleLocked` from
+either call are caught consistently.
+
+### Key Decisions
+
+1. **`from None` on exception re-raises**: `raise HTTPException(…) from None` is the right
+   choice here (not `from exc`) because the original `ModuleNotFound`/`ModuleLocked` message
+   contains internal ids (e.g. `"Module 5 is locked for user 3"`) that should not leak to the
+   student. The student-friendly constant `_NOT_FOUND` / `_LOCKED` is what goes in `detail`.
+   This matches `auth.py`'s `raise HTTPException(…) from None` pattern.
+
+2. **POST returns `ModuleDetailOut`, not 204**: Consistent with `submit_attempt` returning
+   `AttemptOut`. Returning the updated state is more useful for the frontend than a silent 204
+   and allows a single call to advance position AND display the updated progress UI.
+
+3. **No `status_code=201` on POST**: The endpoint is an upsert of a progress record, not the
+   creation of a new resource (a student can call it many times). `200 OK` is semantically
+   correct. `submit_attempt` uses 201 because each attempt is a new record; `reveal_hint` uses
+   201 because each hint view is new. `save_module_position` is a state update → 200.
+
+4. **Router is read-only about import order**: `modules` is inserted between `graphs` and
+   `videos` in `main.py` to keep the `include_router` calls loosely alphabetical, matching the
+   import line order.
+
+### Library Docs Consulted (Context7)
+None — no new third-party libraries were introduced. All FastAPI patterns were verified by reading
+existing router files (`activities.py`, `videos.py`, `auth.py`) directly.
+
+### Build & Test Results
+
+```
+ruff format app/routers/modules.py app/main.py
+→ 1 file reformatted (minor whitespace), 1 unchanged
+
+ruff format --check app/routers/modules.py app/main.py
+→ 2 files already formatted
+
+ruff check app/routers/modules.py app/main.py
+→ All checks passed!
+  (Initial run had 4 × B904 "raise … from err"; fixed with `from None` on all four.)
+
+mypy --strict app/routers/modules.py app/main.py
+→ Success: no issues found in 2 source files
+
+mypy --strict app/routers/modules.py app/main.py app/services/modules.py
+→ Success: no issues found in 3 source files
+
+pytest -q (full suite with my changes)
+→ 3 failed (all ResourceWarning/unraisable — same root cause as pre-existing 2),
+  398 passed, 1 skipped, 1 error in 10.01s
+
+pytest -q -p no:unraisableexception
+→ 402 passed, 1 skipped in 9.36s  ← zero real failures
+
+pytest -q tests/test_videos.py  (isolated — confirmed not broken by my changes)
+→ 5 passed in 0.21s
+```
+
+The third "failure" (`test_videos::test_video_never_contains_checkpoint_answers`) is the same
+pre-existing SQLite `ResourceWarning` that already causes `test_health` and `test_migrations` to
+flap in the full suite. The warning pool grows with more test files; when GC timing is unfavorable
+it attaches to an unrelated test. Confirmed by: (a) `pytest -p no:unraisableexception` shows all
+402 pass; (b) the test passes in isolation; (c) git-stash of my changes showed 2 pre-existing
+failures (same warning); (d) the stash was popped and re-verified. No new real failures.
+
+### Open Issues
+- All pre-existing open issues from Waves 1a–2a remain unchanged.
+- No `test_modules.py` exists yet (Wave 2c scope). The router is exercisable manually via
+  `/api/docs` once the app is running.
+- The `test_videos` flap (and the two pre-existing flaps) are all caused by unclosed SQLite
+  connections in `migrations/env.py` when `alembic check` runs inside the test suite. Fixing
+  them requires closing the engine in the migration check helper or suppressing
+  `ResourceWarning` in `pyproject.toml` test config. Out of scope for this wave.

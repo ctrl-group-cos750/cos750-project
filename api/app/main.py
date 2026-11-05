@@ -11,7 +11,7 @@ from starlette.staticfiles import StaticFiles
 
 from app.db import engine
 from app.media import media_dir
-from app.routers import activities, auth, graphs, staff, staff_accounts, videos
+from app.routers import activities, auth, graphs, rewards, staff, staff_accounts, videos
 
 # Every route lives under /api: nginx in the web container forwards that prefix here unchanged.
 
@@ -36,6 +36,7 @@ app = FastAPI(
 app.include_router(auth.router)
 app.include_router(activities.router)
 app.include_router(graphs.router)
+app.include_router(rewards.router)
 app.include_router(videos.router)
 app.include_router(staff.router)
 app.include_router(staff_accounts.router)

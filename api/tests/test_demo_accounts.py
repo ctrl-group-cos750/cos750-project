@@ -175,7 +175,12 @@ def test_an_existing_real_account_is_never_taken_over(tmp_path: Path, db: Sessio
 def test_the_reset_covers_every_table_of_student_history() -> None:
     # A new table of student history must point at users with `user_id`, or a reset will leave
     # rehearsal clicks in it. Update this list when you add one.
-    assert sorted(t.name for t, _ in _history_tables()) == ["attempts", "hint_views"]
+    assert sorted(t.name for t, _ in _history_tables()) == [
+        "attempts",
+        "hint_views",
+        "points_entries",
+        "user_badges",
+    ]
 
 
 def test_a_demo_account_can_log_in(tmp_path: Path, db: Session, client: TestClient) -> None:

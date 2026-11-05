@@ -76,6 +76,13 @@ function Editor({ id, initial }: { id?: number; initial: StaffVideo }) {
     },
   })
 
+  // What still stops the save, said next to the button rather than leaving it silently disabled.
+  const missing = [
+    !draft.mediaPath && 'the video',
+    !draft.captionsPath && 'the captions',
+    !draft.title.trim() && 'a title',
+  ].filter((m) => m !== false)
+
   function addCheckpointHere() {
     const at = Math.round((playerRef.current?.currentTime ?? 0) * 10) / 10
     playerRef.current?.pause()
@@ -193,11 +200,14 @@ function Editor({ id, initial }: { id?: number; initial: StaffVideo }) {
       <div className={styles.saveBar}>
         <Button
           loading={save.isPending}
-          disabled={!draft.mediaPath || !draft.captionsPath || !draft.title.trim()}
+          disabled={missing.length > 0}
           onClick={() => save.mutate(forSaving(draft))}
         >
           {id ? 'Save changes' : 'Create video'}
         </Button>
+        {missing.length > 0 && (
+          <span className={styles.muted}>Still needs {missing.join(', ')}.</span>
+        )}
         {id && <Link to={`/videos/${id}`}>Open as a student</Link>}
         {dirty && !save.isPending && <span className={styles.muted}>Unsaved changes</span>}
         {save.isSuccess && !dirty && <span className={styles.muted}>Saved.</span>}

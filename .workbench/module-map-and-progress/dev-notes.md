@@ -415,3 +415,81 @@ pytest -q (full suite)
 - Segment bodies are placeholders; Sprint 2 will replace them with real Markdown content.
 - `video_id` and `activity_id` are not set on any fixture segments (no videos or activities are
   linked yet). Sprint 2 will add `video` and `activity` kind segments when those are created.
+
+---
+
+## Developer Notes — Sub-task 1e: Module/segment seed fixture tests
+
+### Files Modified
+- `api/tests/test_seed.py` — Added 11 new tests (232 lines) for the module/segment seed.
+  Updated the import line to include `Module`, `ModuleProgress`, `Segment`.
+
+---
+
+### Tests Added
+
+| Test | What it asserts |
+|---|---|
+| `test_real_modules_fixture_loads_7_modules_and_13_segments` | `read_fixtures()` on the committed fixtures returns exactly 7 modules and 13 segments |
+| `test_real_modules_have_sequential_numbers_0_to_6` | Module numbers span exactly 0–6 |
+| `test_real_modules_have_titles_and_non_empty_goals` | Every module has a non-empty title and goals string |
+| `test_real_module_segments_are_in_sequential_position_order` | Positions within each module are `[0, 1, …, n-1]` |
+| `test_invalid_segment_kind_is_refused` | A segment with `kind="lecture"` raises `ValueError` matching `"kind"` |
+| `test_segment_without_body_is_refused[text]` | A `text` segment with `body=None` raises `ValueError` matching `"body"` |
+| `test_segment_without_body_is_refused[worked_example]` | A `worked_example` segment with `body=None` raises the same error |
+| `test_duplicate_module_ids_are_refused` | Two modules with the same `id` raise `ValueError` matching `"module ids used twice"` |
+| `test_duplicate_segment_ids_are_refused` | Two segments (across different modules) with the same `id` raise `ValueError` matching `"segment ids used twice"` |
+| `test_segment_with_unknown_module_id_is_refused` | The referential-integrity check code (replicated inline) raises `ValueError` matching `"does not reference any module"` when a segment's `module_id` points at a non-existent module |
+| `test_reseed_updates_module_content_and_leaves_progress_intact` | After creating a `User` + `ModuleProgress` row and calling `load()` a second time (with updated title/body), the `Module` and `Segment` rows are updated **and** the `ModuleProgress` row is untouched |
+
+---
+
+### Key Decisions
+
+1. **Test 6 uses `model_construct` + inline check replication**: The `inject_module_id`
+   pre-validator on `ModuleFixture` always stamps `module_id = parent.id` onto each nested
+   segment dict (using `dict(seg, module_id=module_id)`), making it impossible to pass a segment
+   with a mismatched `module_id` through the normal JSON → `read_fixtures` path. To test the
+   referential-integrity check that lives in `read_fixtures`, the test uses
+   `SegmentFixture.model_construct` (bypasses validators) to build a segment with `module_id=99`,
+   then replicates the exact check loop from `read_fixtures` inline and asserts it raises. This
+   is clearer than monkey-patching and directly documents why the check exists.
+
+2. **Two helper builder functions** (`module_fixture` / `segment_fixture`) follow the pattern of
+   the existing `activity()` / `graph()` helpers — returning minimal valid dicts with keyword
+   overrides — so invalid cases are concise one-liners.
+
+3. **No new imports beyond existing pattern**: `Module`, `ModuleProgress`, `Segment` are already
+   in `app.models.__all__`; they were simply added to the existing `from app.models import ...`
+   line.
+
+---
+
+### Library Docs Consulted (Context7)
+None — no third-party libraries were introduced. All patterns follow existing test_seed.py style.
+
+---
+
+### Build & Test Results
+
+```
+ruff format tests/test_seed.py         → 1 file reformatted
+ruff format --check tests/test_seed.py → 1 file already formatted
+ruff check tests/test_seed.py          → All checks passed!
+mypy --strict tests/test_seed.py       → Success: no issues found in 1 source file
+
+pytest -q tests/test_seed.py           → 31 passed in 0.05s (all green)
+
+pytest -q (full suite)
+→ 2 failed (pre-existing ResourceWarning: test_health, test_migrations),
+  397 passed (+11 from this sub-task), 1 skipped, 1 error (pre-existing test_overload)
+  No new failures introduced.
+```
+
+### Open Issues
+- All pre-existing open issues from sub-tasks 1a–1d remain (SQLite ResourceWarning,
+  Postgres `TEST_DATABASE_URL`, `app/security.py` mypy stubs). None introduced here.
+- Test 6 (`test_segment_with_unknown_module_id_is_refused`) replicates the referential-integrity
+  check inline rather than calling `read_fixtures` directly. If the check logic in `read_fixtures`
+  ever changes, this test must be updated to match. A refactor to extract the check into a
+  separate helper function would make it testable without replication.

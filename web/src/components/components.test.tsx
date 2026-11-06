@@ -1,18 +1,21 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
+import { Alert, AlertDescription, AlertTitle } from './ui/alert'
+import { Badge } from './ui/badge'
+import { Button } from './ui/button'
+import { Card, CardContent } from './ui/card'
+import { Progress } from './ui/progress'
+import { Spinner } from './ui/spinner'
+import { TextField } from './ui/text-field'
 import {
   ACHIEVEMENTS,
   AchievementBadge,
-  Alert,
   AppShell,
-  Button,
-  Card,
+  ErrorBoundary,
+  ErrorPage,
   MasteryStatus,
-  ProgressBar,
-  Spinner,
-  Tag,
-  TextField,
 } from './index.ts'
 
 describe('Button', () => {
@@ -82,8 +85,12 @@ describe('Alert', () => {
   it('interrupts screen readers for errors only', () => {
     render(
       <>
-        <Alert tone="danger">Could not save</Alert>
-        <Alert tone="success">Saved</Alert>
+        <Alert variant="destructive">
+          <AlertDescription>Could not save</AlertDescription>
+        </Alert>
+        <Alert variant="success">
+          <AlertDescription>Saved</AlertDescription>
+        </Alert>
       </>,
     )
     expect(screen.getByRole('alert')).toHaveTextContent('Could not save')
@@ -91,9 +98,34 @@ describe('Alert', () => {
   })
 
   it('shows a title', () => {
-    render(<Alert title="Correct">D is next.</Alert>)
+    render(
+      <Alert variant="success">
+        <AlertTitle>Correct</AlertTitle>
+        <AlertDescription>D is next.</AlertDescription>
+      </Alert>,
+    )
     expect(screen.getByText('Correct')).toBeInTheDocument()
     expect(screen.getByText('D is next.')).toBeInTheDocument()
+  })
+})
+
+describe('Alert icons', () => {
+  it('gives each tone an icon, so the meaning never relies on colour alone', () => {
+    const { container } = render(
+      <Alert variant="warning">
+        <AlertDescription>Careful</AlertDescription>
+      </Alert>,
+    )
+    expect(container.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('can leave the icon out', () => {
+    const { container } = render(
+      <Alert variant="info" icon={false}>
+        <AlertDescription>Note</AlertDescription>
+      </Alert>,
+    )
+    expect(container.querySelector('svg')).toBeNull()
   })
 })
 
@@ -108,17 +140,17 @@ describe('MasteryStatus', () => {
   })
 })
 
-describe('Tag', () => {
+describe('Badge', () => {
   it('hides its icon from screen readers', () => {
-    render(<Tag icon="✓">Done</Tag>)
+    render(<Badge icon="✓">Done</Badge>)
     expect(screen.getByText('✓')).toHaveAttribute('aria-hidden', 'true')
     expect(screen.getByText('Done')).toBeInTheDocument()
   })
 })
 
-describe('ProgressBar', () => {
+describe('Progress', () => {
   it('reports its value to assistive technology', () => {
-    render(<ProgressBar label="Module 3 progress" value={4} max={7} showCount />)
+    render(<Progress label="Module 3 progress" value={4} max={7} showCount />)
     const bar = screen.getByRole('progressbar', { name: 'Module 3 progress' })
     expect(bar).toHaveAttribute('value', '4')
     expect(bar).toHaveAttribute('max', '7')
@@ -126,12 +158,12 @@ describe('ProgressBar', () => {
   })
 
   it('keeps the value within range', () => {
-    render(<ProgressBar label="Progress" value={12} max={10} />)
+    render(<Progress label="Progress" value={12} max={10} />)
     expect(screen.getByRole('progressbar')).toHaveAttribute('value', '10')
   })
 
   it('copes with a max of zero', () => {
-    render(<ProgressBar label="Progress" value={0} max={0} />)
+    render(<Progress label="Progress" value={0} max={0} />)
     expect(screen.getByRole('progressbar')).toHaveAttribute('value', '0')
   })
 })
@@ -150,7 +182,11 @@ describe('Spinner', () => {
 
 describe('Card', () => {
   it('renders its children', () => {
-    render(<Card interactive>Module 1</Card>)
+    render(
+      <Card>
+        <CardContent>Module 1</CardContent>
+      </Card>,
+    )
     expect(screen.getByText('Module 1')).toBeInTheDocument()
   })
 })
@@ -158,9 +194,11 @@ describe('Card', () => {
 describe('AppShell', () => {
   it('has a skip link, the brand, navigation and the page in main', () => {
     render(
-      <AppShell nav={<a href="/modules">Modules</a>} actions={<Button>Log out</Button>}>
-        <h1>Module map</h1>
-      </AppShell>,
+      <MemoryRouter>
+        <AppShell nav={<a href="/modules">Modules</a>} actions={<Button>Log out</Button>}>
+          <h1>Module map</h1>
+        </AppShell>
+      </MemoryRouter>,
     )
     expect(screen.getByRole('link', { name: 'Skip to content' })).toHaveAttribute('href', '#main')
     expect(screen.getByRole('link', { name: 'Ctrl Academy' })).toHaveAttribute('href', '/')
@@ -174,7 +212,11 @@ describe('AppShell', () => {
   })
 
   it('leaves out the navigation when there is none', () => {
-    render(<AppShell>Page</AppShell>)
+    render(
+      <MemoryRouter>
+        <AppShell>Page</AppShell>
+      </MemoryRouter>,
+    )
     expect(screen.queryByRole('navigation')).not.toBeInTheDocument()
   })
 })
@@ -208,5 +250,61 @@ describe('AchievementBadge', () => {
     const objectives = ACHIEVEMENTS.filter((a) => a.kind === 'objective').map((a) => a.objective)
     expect(objectives).toEqual([1, 2, 3, 4, 5, 6, 7, 8])
     expect(new Set(ACHIEVEMENTS.map((a) => a.id)).size).toBe(ACHIEVEMENTS.length)
+  })
+})
+
+describe('ErrorPage', () => {
+  it('explains the problem and links back to the modules', () => {
+    render(
+      <MemoryRouter>
+        <ErrorPage title="We can't find that page">
+          <p>The link may be out of date.</p>
+        </ErrorPage>
+      </MemoryRouter>,
+    )
+    expect(screen.getByRole('heading', { level: 1, name: "We can't find that page" })).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Go to your modules' })).toHaveAttribute('href', '/')
+    expect(screen.queryByRole('button', { name: 'Reload the page' })).not.toBeInTheDocument()
+  })
+})
+
+describe('ErrorBoundary', () => {
+  function Broken(): never {
+    throw new Error('TypeError: cannot read properties of undefined (reading "segments")')
+  }
+
+  it('shows a message for students in place of a crashed page, never the error itself', () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    render(
+      <MemoryRouter>
+        <ErrorBoundary>
+          <Broken />
+        </ErrorBoundary>
+      </MemoryRouter>,
+    )
+    expect(screen.getByRole('heading', { name: 'Something went wrong on this page' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Reload the page' })).toBeVisible()
+    expect(screen.queryByText(/TypeError|segments/)).not.toBeInTheDocument()
+    consoleError.mockRestore()
+  })
+
+  it('recovers when the reset key changes, e.g. on navigating to another page', () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { rerender } = render(
+      <MemoryRouter>
+        <ErrorBoundary resetKey="/broken">
+          <Broken />
+        </ErrorBoundary>
+      </MemoryRouter>,
+    )
+    rerender(
+      <MemoryRouter>
+        <ErrorBoundary resetKey="/badges">
+          <p>Your badges</p>
+        </ErrorBoundary>
+      </MemoryRouter>,
+    )
+    expect(screen.getByText('Your badges')).toBeVisible()
+    consoleError.mockRestore()
   })
 })

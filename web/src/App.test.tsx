@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { ada, fakeApi, renderApp } from './test/app.tsx'
@@ -26,7 +26,8 @@ describe('routing', () => {
   it('shows a not-found page for unknown addresses', () => {
     fakeApi()
     renderApp('/no-such-page')
-    expect(screen.getByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: "We can't find that page" })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Go to your modules' })).toHaveAttribute('href', '/')
   })
 
   it('says when the API cannot be reached, and tries again on request', async () => {
@@ -61,6 +62,51 @@ describe('home page', () => {
     })
     renderApp('/')
     expect(await screen.findByText('API: unreachable')).toBeInTheDocument()
+  })
+})
+
+describe('shared header', () => {
+  it('links to the modules and to points and badges, with the points total', async () => {
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/rewards': () => Response.json({ hideRewards: false, points: 145, badges: [] }),
+      },
+    })
+    renderApp('/')
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
+    expect(within(nav).getByRole('link', { name: 'Modules' })).toHaveAttribute('href', '/')
+    expect(within(nav).getByRole('link', { name: 'Modules' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    expect(
+      await within(nav).findByRole('link', { name: /^Points and badges\s*145\s*points$/ }),
+    ).toHaveAttribute('href', '/badges')
+    expect(within(nav).queryByRole('link', { name: 'Staff portal' })).not.toBeInTheDocument()
+  })
+
+  it('leaves the total out when the student hides points and badges', async () => {
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/rewards': () => Response.json({ hideRewards: true, points: 145, badges: [] }),
+      },
+    })
+    renderApp('/')
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
+    expect(await within(nav).findByRole('link', { name: 'Points and badges' })).toBeVisible()
+    expect(within(nav).queryByText('145')).not.toBeInTheDocument()
+  })
+
+  it('shows the staff portal link to team members', async () => {
+    fakeApi({ user: { ...ada, isStaff: true } })
+    renderApp('/')
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
+    expect(within(nav).getByRole('link', { name: 'Staff portal' })).toHaveAttribute(
+      'href',
+      '/staff',
+    )
   })
 })
 

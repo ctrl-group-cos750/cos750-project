@@ -1,15 +1,16 @@
 import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router'
-import { Alert, Button, Spinner } from '../components'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { useCurrentUser } from './hooks.ts'
-import styles from './guards.module.css'
 
 /** Where to go back to after logging in. */
 export type FromState = { from?: string } | null
 
 function Checking() {
   return (
-    <div className={styles.centre}>
+    <div className="grid min-h-[60vh] place-items-center p-4">
       <Spinner label="Checking your session" />
     </div>
   )
@@ -17,12 +18,15 @@ function Checking() {
 
 function Unreachable({ retry }: { retry: () => void }) {
   return (
-    <div className={styles.centre}>
-      <Alert tone="danger" title="Can't reach Ctrl Academy">
-        <p>Check your connection and try again.</p>
-        <Button variant="secondary" size="sm" onClick={retry}>
-          Try again
-        </Button>
+    <div className="grid min-h-[60vh] place-items-center p-4">
+      <Alert variant="destructive" className="max-w-md">
+        <AlertTitle>Can't reach Ctrl Academy</AlertTitle>
+        <AlertDescription>
+          <p>Check your connection and try again.</p>
+          <Button variant="outline" size="sm" onClick={retry}>
+            Try again
+          </Button>
+        </AlertDescription>
       </Alert>
     </div>
   )
@@ -53,7 +57,11 @@ export function GuestOnly({ children }: { children: ReactNode }) {
 export function RequireStaff({ children }: { children: ReactNode }) {
   const { data: user } = useCurrentUser()
   if (!user?.isStaff) {
-    return <Alert tone="danger">Only team members can open this page.</Alert>
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>Only team members can open this page.</AlertDescription>
+      </Alert>
+    )
   }
   return children
 }

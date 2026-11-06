@@ -2,7 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useId, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { ApiError } from '../../api/client.ts'
-import { Alert, Button, Card, Spinner, TextField } from '../../components'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Spinner } from '@/components/ui/spinner'
+import { TextField } from '@/components/ui/text-field'
 import {
   createVideo,
   getVideo,
@@ -46,7 +50,12 @@ export function StaffVideoEditorPage() {
     enabled: id !== undefined,
   })
   if (id !== undefined && saved.isPending) return <Spinner label="Loading the video" />
-  if (saved.isError) return <Alert tone="danger">{saved.error.message}</Alert>
+  if (saved.isError)
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>{saved.error.message}</AlertDescription>
+      </Alert>
+    )
   return <Editor key={id ?? 'new'} id={id} initial={saved.data ?? EMPTY} />
 }
 
@@ -167,7 +176,7 @@ function Editor({ id, initial }: { id?: number; initial: StaffVideo }) {
               add a checkpoint there.
             </p>
             <div>
-              <Button variant="secondary" onClick={addCheckpointHere}>
+              <Button variant="outline" onClick={addCheckpointHere}>
                 Add checkpoint at the current time
               </Button>
             </div>
@@ -200,6 +209,7 @@ function Editor({ id, initial }: { id?: number; initial: StaffVideo }) {
 
       <div className={styles.saveBar}>
         <Button
+          size="lg"
           loading={save.isPending}
           disabled={missing.length > 0}
           onClick={() => save.mutate(forSaving(draft))}
@@ -221,16 +231,19 @@ function Editor({ id, initial }: { id?: number; initial: StaffVideo }) {
 function SaveError({ error }: { error: Error }) {
   const fields = error instanceof ApiError ? Object.values(error.fields) : []
   return (
-    <Alert tone="danger" title="Not saved">
-      {fields.length > 0 ? (
-        <ul>
-          {fields.map((message) => (
-            <li key={message}>{message}</li>
-          ))}
-        </ul>
-      ) : (
-        <p>{error.message}</p>
-      )}
+    <Alert variant="destructive">
+      <AlertTitle>Not saved</AlertTitle>
+      <AlertDescription>
+        {fields.length > 0 ? (
+          <ul>
+            {fields.map((message) => (
+              <li key={message}>{message}</li>
+            ))}
+          </ul>
+        ) : (
+          <p>{error.message}</p>
+        )}
+      </AlertDescription>
     </Alert>
   )
 }
@@ -261,25 +274,31 @@ function MediaUpload(props: {
 
   return (
     <Card>
-      <div className={styles.field}>
-        <label htmlFor={inputId} className={styles.label}>
-          {props.label}
-        </label>
-        <input
-          id={inputId}
-          type="file"
-          accept={props.accept}
-          disabled={progress !== undefined}
-          onChange={(e) => void upload(e.target.files?.[0])}
-        />
-        {progress !== undefined && (
-          <progress className={styles.progress} value={progress} max={1}>
-            {Math.round(progress * 100)}%
-          </progress>
-        )}
-        {props.path && <p className={styles.muted}>Uploaded: {props.path}</p>}
-        {error && <Alert tone="danger">{error}</Alert>}
-      </div>
+      <CardContent>
+        <div className={styles.field}>
+          <label htmlFor={inputId} className={styles.label}>
+            {props.label}
+          </label>
+          <input
+            id={inputId}
+            type="file"
+            accept={props.accept}
+            disabled={progress !== undefined}
+            onChange={(e) => void upload(e.target.files?.[0])}
+          />
+          {progress !== undefined && (
+            <progress className={styles.progress} value={progress} max={1}>
+              {Math.round(progress * 100)}%
+            </progress>
+          )}
+          {props.path && <p className={styles.muted}>Uploaded: {props.path}</p>}
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+        </div>
+      </CardContent>
     </Card>
   )
 }
@@ -319,110 +338,116 @@ function CheckpointEditor(props: {
 
   return (
     <Card>
-      <div className={styles.section}>
-        <div className={styles.checkpointHeader}>
-          <h3>Checkpoint {props.number}</h3>
-          <div className={styles.row}>
-            <TextField
-              className={styles.time}
-              label="Stops at (seconds)"
-              type="number"
-              min={0}
-              max={Math.max(props.durationSeconds - 0.1, 0)}
-              step={0.1}
-              value={checkpoint.atSeconds}
-              onChange={(e) => onChange({ ...checkpoint, atSeconds: Number(e.target.value) })}
-            />
-            <Button size="sm" variant="secondary" onClick={props.onJump}>
-              Go to {formatTime(checkpoint.atSeconds)}
-            </Button>
-            <Button size="sm" variant="secondary" onClick={props.onUseCurrentTime}>
-              Use current time
-            </Button>
-            <Button size="sm" variant="danger" onClick={props.onRemove}>
-              Remove
-            </Button>
-          </div>
-        </div>
-
-        <TextArea
-          label="Question"
-          value={q.prompt}
-          rows={2}
-          onChange={(prompt) => setQuestion({ prompt })}
-        />
-
-        <fieldset className={styles.section}>
-          <legend className={styles.label}>
-            Options: mark the correct one, and say why each wrong one is wrong
-          </legend>
-          {q.options.map((option, i) => (
-            <div key={option.id} className={styles.option}>
-              <input
-                type="radio"
-                name={groupName}
-                checked={q.correct === option.id}
-                onChange={() => setQuestion({ correct: option.id })}
-                aria-label={`Option ${i + 1} is correct`}
+      <CardContent>
+        <div className={styles.section}>
+          <div className={styles.checkpointHeader}>
+            <h3>Checkpoint {props.number}</h3>
+            <div className={styles.row}>
+              <TextField
+                className={styles.time}
+                label="Stops at (seconds)"
+                type="number"
+                min={0}
+                max={Math.max(props.durationSeconds - 0.1, 0)}
+                step={0.1}
+                value={checkpoint.atSeconds}
+                onChange={(e) => onChange({ ...checkpoint, atSeconds: Number(e.target.value) })}
               />
-              <input
-                className={styles.input}
-                value={option.label}
-                placeholder={`Option ${i + 1}`}
-                aria-label={`Option ${i + 1}`}
-                onChange={(e) => setOption(option.id, e.target.value)}
-              />
-              {q.correct === option.id ? (
-                <span className={styles.muted}>Correct answer</span>
-              ) : (
-                <input
-                  className={styles.input}
-                  value={q.feedback[option.id] ?? ''}
-                  placeholder="Why this is wrong (shown after choosing it)"
-                  aria-label={`Why option ${i + 1} is wrong`}
-                  onChange={(e) =>
-                    setQuestion({ feedback: { ...q.feedback, [option.id]: e.target.value } })
-                  }
-                />
-              )}
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={q.options.length <= 2}
-                onClick={() => removeOption(option.id)}
-                aria-label={`Remove option ${i + 1}`}
-              >
-                ×
+              <Button size="sm" variant="outline" onClick={props.onJump}>
+                Go to {formatTime(checkpoint.atSeconds)}
+              </Button>
+              <Button size="sm" variant="outline" onClick={props.onUseCurrentTime}>
+                Use current time
+              </Button>
+              <Button size="sm" variant="destructive" onClick={props.onRemove}>
+                Remove
               </Button>
             </div>
-          ))}
-          <div>
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={q.options.length >= 10}
-              onClick={() =>
-                setQuestion({ options: [...q.options, { id: nextOptionId(q.options), label: '' }] })
-              }
-            >
-              Add option
-            </Button>
           </div>
-        </fieldset>
 
-        <fieldset className={styles.section}>
-          <legend className={styles.label}>Hints, one level at a time (leave blank to skip)</legend>
-          {LEVELS.map((level) => (
-            <TextArea
-              key={level}
-              label={`Hint ${level}: ${HINT_HELP[level]}`}
-              rows={2}
-              value={checkpoint.hints.find((h) => h.level === level)?.body ?? ''}
-              onChange={(body) => setHint(level, body)}
-            />
-          ))}
-        </fieldset>
-      </div>
+          <TextArea
+            label="Question"
+            value={q.prompt}
+            rows={2}
+            onChange={(prompt) => setQuestion({ prompt })}
+          />
+
+          <fieldset className={styles.section}>
+            <legend className={styles.label}>
+              Options: mark the correct one, and say why each wrong one is wrong
+            </legend>
+            {q.options.map((option, i) => (
+              <div key={option.id} className={styles.option}>
+                <input
+                  type="radio"
+                  name={groupName}
+                  checked={q.correct === option.id}
+                  onChange={() => setQuestion({ correct: option.id })}
+                  aria-label={`Option ${i + 1} is correct`}
+                />
+                <input
+                  className={styles.input}
+                  value={option.label}
+                  placeholder={`Option ${i + 1}`}
+                  aria-label={`Option ${i + 1}`}
+                  onChange={(e) => setOption(option.id, e.target.value)}
+                />
+                {q.correct === option.id ? (
+                  <span className={styles.muted}>Correct answer</span>
+                ) : (
+                  <input
+                    className={styles.input}
+                    value={q.feedback[option.id] ?? ''}
+                    placeholder="Why this is wrong (shown after choosing it)"
+                    aria-label={`Why option ${i + 1} is wrong`}
+                    onChange={(e) =>
+                      setQuestion({ feedback: { ...q.feedback, [option.id]: e.target.value } })
+                    }
+                  />
+                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={q.options.length <= 2}
+                  onClick={() => removeOption(option.id)}
+                  aria-label={`Remove option ${i + 1}`}
+                >
+                  ×
+                </Button>
+              </div>
+            ))}
+            <div>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={q.options.length >= 10}
+                onClick={() =>
+                  setQuestion({
+                    options: [...q.options, { id: nextOptionId(q.options), label: '' }],
+                  })
+                }
+              >
+                Add option
+              </Button>
+            </div>
+          </fieldset>
+
+          <fieldset className={styles.section}>
+            <legend className={styles.label}>
+              Hints, one level at a time (leave blank to skip)
+            </legend>
+            {LEVELS.map((level) => (
+              <TextArea
+                key={level}
+                label={`Hint ${level}: ${HINT_HELP[level]}`}
+                rows={2}
+                value={checkpoint.hints.find((h) => h.level === level)?.body ?? ''}
+                onChange={(body) => setHint(level, body)}
+              />
+            ))}
+          </fieldset>
+        </div>
+      </CardContent>
     </Card>
   )
 }

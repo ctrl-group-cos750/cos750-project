@@ -6,7 +6,7 @@ instructional design team writing content, recording videos and making slides.
 | What | Where |
 |---|---|
 | Live reference of every component, colour and state | `/ui-kit` on staging: <https://staging.ctrlacademy.co.za/ui-kit> |
-| Components (React) | `web/src/components/` |
+| Components (React) | `web/src/components/ui/` (shadcn/ui) and `web/src/components/` (app-level) |
 | Design tokens (colours, type, spacing) | `web/src/styles/tokens.css` |
 | Logo pack (SVG and PNG) | `assets/`, with its own `assets/README.md` |
 
@@ -72,28 +72,37 @@ says what the section is.
 
 ## Components
 
-Import from `web/src/components`:
+The app has one component kit: **shadcn/ui** (style `base-nova`, on Base UI primitives) with Tailwind
+CSS, in `web/src/components/ui/`. Its theme in `web/src/styles/global.css` only points at the tokens in
+`tokens.css`, so every control uses the brand palette and follows dark mode. Never give the theme a raw
+colour, and don't build a control that the kit already has.
 
 ```tsx
-import { AppShell, Button, Card, TextField } from '../components'
+import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { AppShell, MasteryStatus } from '../components' // app-level pieces built from the kit
 ```
 
 | Component | When to use it |
 |---|---|
-| `AppShell` | The frame of every signed-in page: header, skip link, `<main>`. `width="reading"` for text-heavy pages. |
-| `Button` | `primary` for the one main action on a screen; `secondary` for other actions; `ghost` for low-emphasis actions like "Skip example"; `danger` only for actions that delete or reset. `loading` while a request runs. |
-| `TextField` | Every text input. Always a visible `label`; `hint` for rules; `error` to say what to fix. |
-| `Card` | A module on the map, a result, a self-contained panel. `interactive` when the whole card is clickable. |
-| `Alert` | Feedback after an action: `info`, `success`, `warning` or `danger`. |
-| `Tag` | A short inline status next to what it describes ("Locked", "In progress"). |
+| `Button` (`ui/button`) | `default` for the one main action on a screen; `outline` or `secondary` for other actions; `ghost` for quiet actions like navigation or "Skip example"; `destructive` only for actions that delete or reset; `link` for an action that reads like a link. `loading` while a request runs. `size="lg"` for a page's main actions. |
+| `TextField` (`ui/text-field`) | Every text input. Always a visible `label`; `hint` for rules; `error` to say what to fix. Use `Input` and `Label` directly only for inputs `TextField` can't express (file inputs). |
+| `Card` (`ui/card`) | A module on the map, a result, a self-contained panel, with `CardHeader`, `CardTitle`, `CardDescription` and `CardContent`. |
+| `Alert` (`ui/alert`) | Feedback after an action: `info`, `success`, `warning` or `destructive`, with `AlertTitle` and `AlertDescription`. Each tone has an icon; `destructive` interrupts screen readers, the rest don't. |
+| `Badge` (`ui/badge`) | A short inline status next to what it describes ("Locked", "In progress"): `secondary`, `accent`, `success`, `warning`, `destructive`. Pass `icon` when the colour carries meaning. |
+| `Progress` (`ui/progress`) | Progress through a module or the whole course. Always give it a `label`. |
+| `Spinner` (`ui/spinner`) | While something loads. Its `label` says what. |
+| `RadioGroup`, `Separator`, `Input`, `Label` | As in shadcn/ui. |
+| `AppShell` | The frame of every page: header, skip link, `<main>`. `width="reading"` for text-heavy pages. Signed-in pages get it, with the shared navigation, from `SignedInLayout`. |
 | `MasteryStatus` | Every place an objective's result is shown. Fixes the wording and colours of the three results. |
-| `ProgressBar` | Progress through a module or the whole course. Always give it a `label`. |
-| `Spinner` | While something loads. Its `label` says what. |
+| `ErrorPage`, `ErrorBoundary` | What a student sees when a page is missing or crashes: plain words and a way back, never a stack trace (NFR-U3). |
 
 Table: The components in the UI kit.
 
-To add a component or a token, open a PR that adds it to `web/src/components/` (with tests), to the
-`/ui-kit` page and to this guide.
+To add a control, add it with `npx shadcn add <name>` (it lands in `web/src/components/ui/`), check it
+uses only theme colours, and add it to the `/ui-kit` page and this guide. A new colour goes into
+`tokens.css` first; `web/src/styles/tokens.test.ts` checks every text and control pair against WCAG AA
+in light and dark mode. Page-specific layout may use Tailwind classes or a CSS module.
 
 ## Learning states
 

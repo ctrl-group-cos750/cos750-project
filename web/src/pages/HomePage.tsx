@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useCurrentUser } from '../auth/hooks.ts'
-import { Card } from '../components'
-import styles from './HomePage.module.css'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 type Health = { status: string; database: string }
 
@@ -21,10 +20,16 @@ export function HomePage() {
     <>
       <h1>Welcome, {user?.displayName}</h1>
       <Card>
-        <h2 className={styles.cardTitle}>Graphs and breadth-first search</h2>
-        <p>The modules are on their way. You'll find them here soon.</p>
+        <CardHeader>
+          <CardTitle className="text-xl">
+            <h2 className="m-0 text-xl">Graphs and breadth-first search</h2>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="m-0">The modules are on their way. You'll find them here soon.</p>
+        </CardContent>
       </Card>
-      <p className={styles.status}>
+      <p className="mt-8 font-mono text-sm text-muted-foreground">
         API:{' '}
         {health === null
           ? 'checking…'

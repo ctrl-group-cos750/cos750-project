@@ -1,7 +1,17 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it } from 'vitest'
 import { UiKitPage } from './UiKitPage.tsx'
+
+/** The kit page's header links home, so it needs a router. */
+function renderPage() {
+  render(
+    <MemoryRouter>
+      <UiKitPage />
+    </MemoryRouter>,
+  )
+}
 
 afterEach(() => {
   delete document.documentElement.dataset.theme
@@ -9,7 +19,7 @@ afterEach(() => {
 
 describe('UiKitPage', () => {
   it('shows every section of the kit', () => {
-    render(<UiKitPage />)
+    renderPage()
     expect(
       screen.getByRole('heading', { level: 1, name: 'Ctrl Academy UI kit' }),
     ).toBeInTheDocument()
@@ -28,7 +38,7 @@ describe('UiKitPage', () => {
   })
 
   it('switches between light, dark and the system theme', async () => {
-    render(<UiKitPage />)
+    renderPage()
     await userEvent.click(screen.getByRole('button', { name: 'Dark' }))
     expect(document.documentElement.dataset.theme).toBe('dark')
     expect(screen.getByRole('button', { name: 'Dark' })).toHaveAttribute('aria-pressed', 'true')
@@ -39,7 +49,7 @@ describe('UiKitPage', () => {
   })
 
   it('confirms the sample form without sending anything', async () => {
-    render(<UiKitPage />)
+    renderPage()
     await userEvent.click(screen.getByRole('button', { name: 'Log in' }))
     expect(screen.getByText('This is only a sample form.')).toBeInTheDocument()
   })

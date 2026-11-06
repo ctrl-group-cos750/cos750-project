@@ -1,17 +1,12 @@
 import { useState, type FormEvent } from 'react'
-import {
-  ACHIEVEMENTS,
-  AchievementBadge,
-  Alert,
-  AppShell,
-  Button,
-  Card,
-  MasteryStatus,
-  ProgressBar,
-  Spinner,
-  Tag,
-  TextField,
-} from '../components'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Progress } from '@/components/ui/progress'
+import { Spinner } from '@/components/ui/spinner'
+import { TextField } from '@/components/ui/text-field'
+import { ACHIEVEMENTS, AchievementBadge, AppShell, MasteryStatus } from '../components'
 import { BfsStatesSample } from './BfsStatesSample.tsx'
 import styles from './UiKitPage.module.css'
 
@@ -63,10 +58,16 @@ export function UiKitPage() {
     <AppShell
       nav={
         <>
-          <a href="#colours">Colours</a>
-          <a href="#components">Components</a>
-          <a href="#badges">Badges</a>
-          <a href="#bfs">BFS states</a>
+          {[
+            ['#colours', 'Colours'],
+            ['#components', 'Components'],
+            ['#badges', 'Badges'],
+            ['#bfs', 'BFS states'],
+          ].map(([href, text]) => (
+            <a key={href} href={href} className="px-2 py-1">
+              {text}
+            </a>
+          ))}
         </>
       }
       actions={
@@ -76,7 +77,7 @@ export function UiKitPage() {
             <Button
               key={t}
               size="sm"
-              variant={theme === t ? 'primary' : 'secondary'}
+              variant={theme === t ? 'default' : 'outline'}
               aria-pressed={theme === t}
               onClick={() => chooseTheme(t)}
             >
@@ -89,8 +90,9 @@ export function UiKitPage() {
       <h1>Ctrl Academy UI kit</h1>
       <p className={styles.lead}>
         The shared look of the app. Build screens from these components and tokens rather than new
-        colours or one-off styles. Code: <code>web/src/components/</code> and{' '}
-        <code>web/src/styles/tokens.css</code>. Guidance: <code>docs/brand/README.md</code>.
+        colours or one-off styles. Controls are shadcn/ui components in{' '}
+        <code>web/src/components/ui/</code>, themed from <code>web/src/styles/tokens.css</code>.
+        Guidance: <code>docs/brand/README.md</code>.
       </p>
 
       <section id="colours" className={styles.section}>
@@ -113,7 +115,7 @@ export function UiKitPage() {
       <section className={styles.section}>
         <h2>Type</h2>
         <p>Headings use Space Grotesk, body text the system font, and code JetBrains Mono.</p>
-        <Card>
+        <Card className="px-4">
           {typeScale.map(({ token, sample, tag: Element }) => (
             <div key={token} className={styles.typeRow}>
               <code className={styles.muted}>{token}</code>
@@ -130,16 +132,33 @@ export function UiKitPage() {
       <section id="components" className={styles.section}>
         <h2>Buttons</h2>
         <p>
-          One primary button per screen, for the main action. Danger only for things that delete.
+          One default (primary) button per screen, for the main action. Destructive only for things
+          that delete.
         </p>
         <div className={styles.row}>
-          <Button>Start module</Button>
-          <Button variant="secondary">Show a hint</Button>
-          <Button variant="ghost">Skip example</Button>
-          <Button variant="danger">Reset progress</Button>
-          <Button loading>Submitting</Button>
-          <Button disabled>Locked</Button>
-          <Button size="sm" variant="secondary">
+          <Button size="lg">Start module</Button>
+          <Button size="lg" variant="outline">
+            Show a hint
+          </Button>
+          <Button size="lg" variant="secondary">
+            Back
+          </Button>
+          <Button size="lg" variant="ghost">
+            Skip example
+          </Button>
+          <Button size="lg" variant="destructive">
+            Reset progress
+          </Button>
+          <Button size="lg" variant="link">
+            Read the worked example
+          </Button>
+          <Button size="lg" loading>
+            Submitting
+          </Button>
+          <Button size="lg" disabled>
+            Locked
+          </Button>
+          <Button size="sm" variant="outline">
             Small
           </Button>
         </div>
@@ -149,46 +168,64 @@ export function UiKitPage() {
         <h2>Form fields</h2>
         <p>Every field has a visible label. Errors say what to do next.</p>
         <Card className={styles.form}>
-          <form onSubmit={onSubmit} noValidate>
-            <TextField
-              label="Email"
-              type="email"
-              autoComplete="email"
-              defaultValue="student@"
-              error="Enter an email address like name@tuks.co.za."
-            />
-            <TextField
-              label="Password"
-              type="password"
-              autoComplete="current-password"
-              hint="At least 8 characters."
-            />
-            <Button type="submit">Log in</Button>
-          </form>
-          {submitted && <Alert tone="success">This is only a sample form.</Alert>}
+          <CardContent>
+            <form onSubmit={onSubmit} noValidate className="grid gap-4">
+              <TextField
+                label="Email"
+                type="email"
+                autoComplete="email"
+                defaultValue="student@"
+                error="Enter an email address like name@tuks.co.za."
+              />
+              <TextField
+                label="Password"
+                type="password"
+                autoComplete="current-password"
+                hint="At least 8 characters."
+              />
+              <Button type="submit" size="lg" className="justify-self-start">
+                Log in
+              </Button>
+            </form>
+            {submitted && (
+              <Alert variant="success" className="mt-4">
+                <AlertDescription>This is only a sample form.</AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
         </Card>
       </section>
 
       <section className={styles.section}>
         <h2>Alerts</h2>
-        <Alert tone="info" title="Before you start">
-          This module takes about 10 minutes. Your progress is saved as you go.
-        </Alert>
-        <Alert tone="success" title="Correct">
-          D is next: it was queued before E. +10 points.
-        </Alert>
-        <Alert tone="warning" title="This hint shows part of the answer">
-          Using it now counts this objective as "met with support".
-        </Alert>
-        <Alert tone="danger" title="Could not save">
-          Check your connection and try again.
-        </Alert>
+        <div className="grid gap-3">
+          <Alert variant="info">
+            <AlertTitle>Before you start</AlertTitle>
+            <AlertDescription>
+              This module takes about 10 minutes. Your progress is saved as you go.
+            </AlertDescription>
+          </Alert>
+          <Alert variant="success">
+            <AlertTitle>Correct</AlertTitle>
+            <AlertDescription>D is next: it was queued before E. +10 points.</AlertDescription>
+          </Alert>
+          <Alert variant="warning">
+            <AlertTitle>This hint shows part of the answer</AlertTitle>
+            <AlertDescription>
+              Using it now counts this objective as "met with support".
+            </AlertDescription>
+          </Alert>
+          <Alert variant="destructive">
+            <AlertTitle>Could not save</AlertTitle>
+            <AlertDescription>Check your connection and try again.</AlertDescription>
+          </Alert>
+        </div>
       </section>
 
       <section className={styles.section}>
-        <h2>Status tags and mastery</h2>
+        <h2>Status badges and mastery</h2>
         <p>
-          Tags sit inline next to what they describe. Mastery results always use{' '}
+          Badges sit inline next to what they describe. Mastery results always use{' '}
           <code>MasteryStatus</code> so the wording matches the ID document.
         </p>
         <div className={styles.row}>
@@ -197,31 +234,43 @@ export function UiKitPage() {
           <MasteryStatus mastery="not-yet" />
         </div>
         <div className={styles.row}>
-          <Tag>Locked</Tag>
-          <Tag tone="accent">In progress</Tag>
-          <Tag tone="success" icon="✓">
+          <Badge variant="secondary">Locked</Badge>
+          <Badge variant="accent">In progress</Badge>
+          <Badge variant="success" icon="✓">
             Done
-          </Tag>
-          <Tag tone="warning">Review</Tag>
+          </Badge>
+          <Badge variant="warning">Review</Badge>
         </div>
       </section>
 
       <section className={styles.section}>
         <h2>Cards and progress</h2>
         <div className={styles.grid}>
-          <Card interactive>
-            <h3>3. Meet BFS</h3>
-            <p className={styles.muted}>About 12 minutes</p>
-            <ProgressBar label="Module 3 progress" value={4} max={7} showCount />
+          <Card>
+            <CardHeader>
+              <CardTitle>3. Meet BFS</CardTitle>
+              <CardDescription>About 12 minutes</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Progress label="Module 3 progress" value={4} max={7} showCount />
+            </CardContent>
           </Card>
           <Card>
-            <h3>Mastery check</h3>
-            <p className={styles.muted}>Unlocks after module 5</p>
-            <Tag>Locked</Tag>
+            <CardHeader>
+              <CardTitle>Mastery check</CardTitle>
+              <CardDescription>Unlocks after module 5</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Badge variant="secondary">Locked</Badge>
+            </CardContent>
           </Card>
           <Card>
-            <h3>Loading</h3>
-            <Spinner label="Loading the module" />
+            <CardHeader>
+              <CardTitle>Loading</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Spinner label="Loading the module" />
+            </CardContent>
           </Card>
         </div>
       </section>
@@ -263,7 +312,9 @@ export function UiKitPage() {
           alone. Tokens: <code>--bfs-*</code>.
         </p>
         <Card>
-          <BfsStatesSample />
+          <CardContent>
+            <BfsStatesSample />
+          </CardContent>
         </Card>
       </section>
     </AppShell>

@@ -4,7 +4,8 @@ import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, Spinner } from '../../components'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Spinner } from '@/components/ui/spinner'
 import { formatTime } from './formatTime.ts'
 import { getVideo, listVideos } from './staff.api.ts'
 import { exportFileName, toExport } from './videoTransfer.ts'
@@ -89,7 +90,11 @@ export function StaffVideosPage() {
         </div>
       </div>
       {videos.isPending && <Spinner label="Loading videos" />}
-      {videos.isError && <Alert tone="danger">{videos.error.message}</Alert>}
+      {videos.isError && (
+        <Alert variant="destructive">
+          <AlertDescription>{videos.error.message}</AlertDescription>
+        </Alert>
+      )}
       {videos.data?.length === 0 && (
         <p className="text-muted-foreground">
           No videos yet. Upload one with &quot;New video&quot;.

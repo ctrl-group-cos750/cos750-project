@@ -10,19 +10,36 @@ const badgeVariants = cva(
         default: 'bg-primary text-primary-foreground',
         secondary: 'bg-secondary text-secondary-foreground',
         outline: 'border-border text-foreground',
-        destructive: 'bg-destructive/10 text-destructive',
+        accent: 'bg-accent text-accent-foreground',
+        success: 'bg-success-soft text-success',
+        warning: 'bg-warning-soft text-warning',
+        destructive: 'bg-destructive-soft text-destructive',
       },
     },
     defaultVariants: { variant: 'default' },
   },
 )
 
+type BadgeVariant = NonNullable<VariantProps<typeof badgeVariants>['variant']>
+
+/**
+ * A short inline status, e.g. a module's state or an objective's result. Not a heading label.
+ * Pass `icon` (a symbol such as ✓) when the colour carries meaning, so it never relies on
+ * colour alone.
+ */
 function Badge({
   className,
   variant,
+  icon,
+  children,
   ...props
-}: React.ComponentProps<'span'> & VariantProps<typeof badgeVariants>) {
-  return <span data-slot="badge" className={cn(badgeVariants({ variant }), className)} {...props} />
+}: React.ComponentProps<'span'> & VariantProps<typeof badgeVariants> & { icon?: string }) {
+  return (
+    <span data-slot="badge" className={cn(badgeVariants({ variant }), className)} {...props}>
+      {icon && <span aria-hidden="true">{icon}</span>}
+      {children}
+    </span>
+  )
 }
 
-export { Badge }
+export { Badge, type BadgeVariant }

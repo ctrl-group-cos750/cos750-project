@@ -1,8 +1,28 @@
 @import 'tailwindcss';
 
-@custom-variant dark (&:where(.dark, .dark *));
+/*
+ * shadcn/ui's theme. Every colour points at a brand token in tokens.css, so the shadcn
+ * components in components/ui use the brand palette and follow tokens.css into dark mode.
+ * Never put a raw colour here: add it to tokens.css and point at it.
+ */
+
+/* Matches tokens.css: dark when the system asks for it unless a page sets data-theme="light",
+ * or whenever a page sets data-theme="dark". */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme='light']), :root:not([data-theme='light']) *) {
+      @slot;
+    }
+  }
+  &:where([data-theme='dark'], [data-theme='dark'] *) {
+    @slot;
+  }
+}
 
 @theme inline {
+  --font-sans: var(--font-body);
+  --font-heading: var(--font-display);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -19,76 +39,51 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-destructive: var(--destructive);
+  --color-destructive-soft: var(--destructive-soft);
   --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-link: var(--link);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
 :root {
   --radius: 0.625rem;
 
-  --background: #caf0f8;
-  --foreground: #03045e;
-  --card: #ade8f4;
-  --card-foreground: #03045e;
+  --background: var(--color-bg);
+  --foreground: var(--color-text);
+  --card: var(--color-surface);
+  --card-foreground: var(--color-text);
 
-  --primary: #0077b6;
-  --primary-foreground: #ffffff;
-  --secondary: #90e0ef;
-  --secondary-foreground: #03045e;
-  --muted: #ade8f4;
-  --muted-foreground: #023e8a;
-  --accent: #48cae4;
-  --accent-foreground: #03045e;
+  --primary: var(--color-accent);
+  --primary-foreground: var(--color-on-accent);
+  --secondary: var(--color-surface-sunken);
+  --secondary-foreground: var(--color-text);
+  --muted: var(--color-surface-sunken);
+  --muted-foreground: var(--color-text-muted);
+  --accent: var(--color-accent-soft);
+  --accent-foreground: var(--color-accent-soft-text);
 
-  --border: #0077b6;
-  --input: #0077b6;
-  --ring: #0096c7;
+  --border: var(--color-line);
+  --input: var(--color-border);
+  --ring: var(--color-accent);
+  --link: var(--color-accent-text);
 
-  --success: #0096c7;
-  --warning: #48cae4;
-  --destructive: #b42318;
-}
-
-.dark {
-  --background: #03045e;
-  --foreground: #caf0f8;
-  --card: #023e8a;
-  --card-foreground: #caf0f8;
-
-  --primary: #48cae4;
-  --primary-foreground: #03045e;
-  --secondary: #0077b6;
-  --secondary-foreground: #caf0f8;
-  --muted: #023e8a;
-  --muted-foreground: #90e0ef;
-  --accent: #0096c7;
-  --accent-foreground: #03045e;
-
-  --border: #0077b6;
-  --input: #0077b6;
-  --ring: #48cae4;
-
-  --success: #48cae4;
-  --warning: #90e0ef;
-  --destructive: #f97066;
+  --destructive: var(--color-danger);
+  --destructive-soft: var(--color-danger-soft);
+  --success: var(--color-success);
+  --success-soft: var(--color-success-soft);
+  --warning: var(--color-warning);
+  --warning-soft: var(--color-warning-soft);
 }
 
 @layer base {
   * {
     @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
-    font-family:
-      system-ui,
-      -apple-system,
-      BlinkMacSystemFont,
-      'Segoe UI',
-      sans-serif;
   }
 
   button:not(:disabled),

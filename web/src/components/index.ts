@@ -1,4 +1,6 @@
-// The shared UI kit. Import from here: `import { Button, TextField } from '../components'`.
+// App-level components, built only from the shadcn/ui controls in ./ui. Import controls
+// (Button, Card, Alert, Badge, TextField, ...) from '@/components/ui/<name>', and these from
+// here: `import { AppShell, MasteryStatus } from '../components'`.
 // Every component is shown on /ui-kit.html; see docs/brand/README.md for when to use which.
 export {
   AchievementBadge,
@@ -11,12 +13,7 @@ export {
   type AchievementGlyph,
   type AchievementKind,
 } from './achievements.ts'
-export { Alert, type AlertProps, type AlertTone } from './Alert.tsx'
 export { AppShell, type AppShellProps } from './AppShell.tsx'
-export { Button, type ButtonProps } from './Button.tsx'
-export { Card, type CardProps } from './Card.tsx'
+export { ErrorBoundary } from './errors/ErrorBoundary.tsx'
+export { ErrorPage, type ErrorPageProps } from './errors/ErrorPage.tsx'
 export { MasteryStatus, type Mastery } from './MasteryStatus.tsx'
-export { ProgressBar, type ProgressBarProps } from './ProgressBar.tsx'
-export { Spinner, type SpinnerProps } from './Spinner.tsx'
-export { Tag, type TagProps, type TagTone } from './Tag.tsx'
-export { TextField, type TextFieldProps } from './TextField.tsx'

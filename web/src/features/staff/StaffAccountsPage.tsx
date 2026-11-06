@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Spinner } from '../../components'
+import { Spinner } from '@/components/ui/spinner'
 import { formatDate, listAccounts, matchesSearch } from './staff.api.ts'
 
 /** /staff/accounts — every account that has been created, narrowed as you type. */

@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { ApiError } from '../api/client.ts'
-import { Alert, Button, TextField } from '../components'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { TextField } from '@/components/ui/text-field'
 import { AuthLayout } from './AuthLayout.tsx'
 import { PasswordChecklist } from './PasswordChecklist.tsx'
-import styles from './AuthLayout.module.css'
 import { useRegister } from './hooks.ts'
 import {
   displayNameError,
@@ -91,8 +92,12 @@ export function RegisterPage() {
         </>
       }
     >
-      {generalError && <Alert tone="danger">{generalError}</Alert>}
-      <form onSubmit={onSubmit} noValidate className={styles.form}>
+      {generalError && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{generalError}</AlertDescription>
+        </Alert>
+      )}
+      <form onSubmit={onSubmit} noValidate className="grid gap-4">
         <TextField
           id={ids.displayName}
           label="Your name"
@@ -127,7 +132,7 @@ export function RegisterPage() {
           email={values.email.trim()}
           name={values.displayName.trim()}
         />
-        <Button type="submit" loading={register.isPending}>
+        <Button type="submit" size="lg" className="w-full" loading={register.isPending}>
           Create account
         </Button>
       </form>

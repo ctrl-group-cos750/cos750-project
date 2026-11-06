@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useParams } from 'react-router'
-import { Alert, Spinner } from '../../components'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Spinner } from '@/components/ui/spinner'
 import { useRefreshRewards } from '../rewards/hooks.ts'
 import { NarratedVideoPlayer } from './NarratedVideoPlayer.tsx'
 import { fetchVideo, requestCheckpointHint, submitCheckpointAttempt } from './video.api.ts'
@@ -12,7 +13,12 @@ export function VideoPage() {
   const query = useQuery({ queryKey: ['video', id], queryFn: () => fetchVideo(id) })
   const refreshRewards = useRefreshRewards()
   if (query.isPending) return <Spinner label="Loading the video" />
-  if (query.isError) return <Alert tone="danger">{query.error.message}</Alert>
+  if (query.isError)
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>{query.error.message}</AlertDescription>
+      </Alert>
+    )
   return (
     <NarratedVideoPlayer
       key={id}

@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { AchievementBadge, Button } from '../../components'
+import { Button } from '@/components/ui/button'
+import { AchievementBadge } from '../../components'
 import { useMarkRewardsSeen, useRewards } from './hooks.ts'
 import { unseen, type ShelfItem } from './shelf.ts'
 import styles from './BadgeAnnouncer.module.css'

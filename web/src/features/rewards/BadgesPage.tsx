@@ -1,5 +1,8 @@
 import { useId } from 'react'
-import { AchievementBadge, Alert, Card, Spinner } from '../../components'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Card, CardContent } from '@/components/ui/card'
+import { Spinner } from '@/components/ui/spinner'
+import { AchievementBadge } from '../../components'
 import { useRewards, useRewardsSettings } from './hooks.ts'
 import { buildShelf, type ShelfItem } from './shelf.ts'
 import styles from './BadgesPage.module.css'
@@ -46,7 +49,12 @@ export function BadgesPage() {
   const toggleId = useId()
 
   if (rewards.isPending) return <Spinner label="Loading your badges" />
-  if (rewards.isError) return <Alert tone="danger">{rewards.error.message}</Alert>
+  if (rewards.isError)
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>{rewards.error.message}</AlertDescription>
+      </Alert>
+    )
 
   const { hideRewards, points, badges } = rewards.data
   const shelf = buildShelf(badges)
@@ -60,21 +68,27 @@ export function BadgesPage() {
       </p>
 
       <Card className={styles.settings}>
-        <div className={styles.toggle}>
-          <input
-            id={toggleId}
-            type="checkbox"
-            checked={hideRewards}
-            disabled={settings.isPending}
-            onChange={(e) => settings.mutate({ hideRewards: e.target.checked })}
-          />
-          <label htmlFor={toggleId}>Hide points and badges</label>
-        </div>
-        <p className={styles.muted}>
-          You'll still earn them, and you can turn them back on at any time. Your results for each
-          objective are always shown.
-        </p>
-        {settings.isError && <Alert tone="danger">{settings.error.message}</Alert>}
+        <CardContent>
+          <div className={styles.toggle}>
+            <input
+              id={toggleId}
+              type="checkbox"
+              checked={hideRewards}
+              disabled={settings.isPending}
+              onChange={(e) => settings.mutate({ hideRewards: e.target.checked })}
+            />
+            <label htmlFor={toggleId}>Hide points and badges</label>
+          </div>
+          <p className={styles.muted}>
+            You'll still earn them, and you can turn them back on at any time. Your results for each
+            objective are always shown.
+          </p>
+          {settings.isError && (
+            <Alert variant="destructive">
+              <AlertDescription>{settings.error.message}</AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
       </Card>
 
       {hideRewards ? (

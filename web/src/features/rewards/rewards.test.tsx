@@ -70,7 +70,7 @@ describe('Badges page', () => {
     })
     renderApp('/badges')
     expect(await screen.findByRole('heading', { level: 1, name: 'Your badges' })).toBeVisible()
-    expect(screen.getByText('145')).toBeInTheDocument()
+    expect(within(screen.getByRole('main')).getByText('145')).toBeInTheDocument()
     expect(screen.getByRole('img', { name: 'Queue Tracer, gold, met independently' })).toBeVisible()
     expect(
       screen.getByRole('img', { name: 'Edge Spotter, bronze, met with support' }),
@@ -86,16 +86,19 @@ describe('Badges page', () => {
     const toggle = await screen.findByRole('checkbox', { name: 'Hide points and badges' })
     await userEvent.click(toggle)
     expect(await screen.findByText('Points and badges are hidden.')).toBeVisible()
-    expect(screen.queryByText('30')).not.toBeInTheDocument()
+    expect(screen.queryByText('30')).not.toBeInTheDocument() // nor in the header
     expect(api.callsTo('PUT /api/rewards/settings')[0].body).toEqual({ hideRewards: true })
     await userEvent.click(screen.getByRole('checkbox', { name: 'Hide points and badges' }))
-    expect(await screen.findByText('30')).toBeVisible()
+    expect(await within(screen.getByRole('main')).findByText('30')).toBeVisible()
   })
 
   it('is linked from the header', async () => {
     withRewards({ hideRewards: false, points: 0, badges: [] })
     renderApp('/')
-    expect(await screen.findByRole('link', { name: 'Badges' })).toHaveAttribute('href', '/badges')
+    expect(await screen.findByRole('link', { name: /^Points and badges/ })).toHaveAttribute(
+      'href',
+      '/badges',
+    )
   })
 })
 

@@ -297,6 +297,7 @@ Figure: Submitting a code activity. The browser never sees the solution, and the
 | Frontend framework | **React 19** | Team decision, and what the scaffold already uses. |
 | Build tool | **Vite 8** | Fast dev server with hot reload; the dev server proxies `/api` to the local API, so dev also uses one origin. |
 | Routing | **React Router** | Client-side routing for the multi-view SPA. nginx already serves `index.html` for unknown paths. |
+| UI components | **shadcn/ui** (Base UI primitives) + **Tailwind CSS 4** | Team decision (NFR-U2). Accessible, keyboard-ready controls the team owns as source in `web/src/components/ui/`, so they can be changed freely. The theme points at the brand tokens in `tokens.css`, so every control uses the brand palette and dark mode, and a test checks WCAG AA contrast for every pairing (NFR-A2). Replaced the earlier hand-written CSS-module kit, so there is one way to build a screen. |
 | Server state | **TanStack Query** | Data fetching and caching against the REST API. |
 | Graph rendering | **SVG via D3** | For graphs of up to about 50 vertices, SVG is simpler than Canvas (one DOM element per node and edge, easy per-element transitions, highlighting and click handling). |
 | Video | **HTML5 `<video>`**, self-hosted MP4 (H.264) with WebVTT captions; narrated screen recordings, no presenter | The player needs full control to pause at checkpoints and block seeking past them. An embedded YouTube player would add adverts, recommendations and a dependency outside our control during the demo. Captions also provide the `text` mode for each video. |
@@ -715,7 +716,7 @@ The returned payload (see §9.4) contains:
 - **Points and badges**
   - `PointsIndicator`, `BadgeShelf`. Private to the student; there is no leaderboard.
 - **Shared**
-  - The UI kit in `web/src/components/` (`AppShell`, `Button`, `TextField`, `Card`, `Alert`, `Tag`, `MasteryStatus`, `ProgressBar`, `Spinner`), built on the design tokens in `web/src/styles/tokens.css`. Every screen is built from these; the live reference is `/ui-kit` and the rules are in `docs/brand/README.md`.
+  - The UI kit: shadcn/ui controls in `web/src/components/ui/` (`Button`, `TextField`, `Card`, `Alert`, `Badge`, `Progress`, `Spinner`, `RadioGroup`, ...), themed from the design tokens in `web/src/styles/tokens.css`, and the app-level `AppShell`, `MasteryStatus`, `AchievementBadge`, `ErrorPage` and `ErrorBoundary` in `web/src/components/`. Every screen is built from these; the live reference is `/ui-kit` and the rules are in `docs/brand/README.md`.
   - `Markdown` (renders prompts, hints and text segments), `ErrorBoundary`, `Toast`.
 
 ## Main screens
@@ -895,7 +896,7 @@ cos750-project/
 │     ├─ api/                   API client: JSON, errors as ApiError
 │     ├─ auth/                  log-in and register pages, session hooks, route guards
 │     ├─ pages/                 signed-in layout, home, not found
-│     ├─ components/            the shared UI kit: AppShell, Button, TextField, Card, Alert, Tag, ...
+│     ├─ components/            AppShell, MasteryStatus, ErrorPage...; ui/ holds the shadcn/ui kit
 │     ├─ styles/                tokens.css (design tokens, light and dark), base.css
 │     ├─ ui-kit/                the /ui-kit reference page
 │     ├─ features/              modules, video, activities, bfs, mastery, points (planned)

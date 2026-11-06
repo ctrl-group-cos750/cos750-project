@@ -1,4 +1,4 @@
-import { Alert } from '../../components'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useRef, useState } from 'react'
 import { findFirstUnansweredCheckpoint, findReachedCheckpoint } from './checkpointGate.ts'
 import { CheckpointQuestion } from './CheckpointQuestion.tsx'
@@ -101,7 +101,11 @@ export function NarratedVideoPlayer(props: NarratedVideoPlayerProps) {
       </video>
 
       {activeCheckpoint && !activity && (
-        <Alert tone="danger">This checkpoint could not load. Please refresh the page.</Alert>
+        <Alert variant="destructive">
+          <AlertDescription>
+            This checkpoint could not load. Please refresh the page.
+          </AlertDescription>
+        </Alert>
       )}
       {activeCheckpoint && activity && (
         <section className="grid gap-3" aria-labelledby="checkpoint-heading">

@@ -1,13 +1,13 @@
-import { Link } from 'react-router'
 import { AppShell } from '../components'
+import { ErrorPage } from '../components/errors/ErrorPage.tsx'
 
+/** Any address the app doesn't know, e.g. a mistyped or old link. */
 export function NotFoundPage() {
   return (
     <AppShell width="reading">
-      <h1>Page not found</h1>
-      <p>
-        This page doesn't exist. <Link to="/">Go to the start</Link>.
-      </p>
+      <ErrorPage title="We can't find that page">
+        <p>The link may be mistyped or out of date. Your modules are where you left them.</p>
+      </ErrorPage>
     </AppShell>
   )
 }

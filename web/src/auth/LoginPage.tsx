@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
-import { Alert, Button, TextField } from '../components'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { TextField } from '@/components/ui/text-field'
 import { AuthLayout } from './AuthLayout.tsx'
-import styles from './AuthLayout.module.css'
 import type { FromState } from './guards.tsx'
 import { useLogin } from './hooks.ts'
 import { emailError, focusFirstError, type FieldErrors } from './validation.ts'
@@ -45,8 +46,12 @@ export function LoginPage() {
         </>
       }
     >
-      {login.error && <Alert tone="danger">{login.error.message}</Alert>}
-      <form onSubmit={onSubmit} noValidate className={styles.form}>
+      {login.error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{login.error.message}</AlertDescription>
+        </Alert>
+      )}
+      <form onSubmit={onSubmit} noValidate className="grid gap-4">
         <TextField
           id={ids.email}
           label="Email"
@@ -65,7 +70,7 @@ export function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           error={errors.password}
         />
-        <Button type="submit" loading={login.isPending}>
+        <Button type="submit" size="lg" className="w-full" loading={login.isPending}>
           Log in
         </Button>
       </form>

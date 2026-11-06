@@ -32,6 +32,7 @@ function renderGraph(input: { svgElement: SVGSVGElement; scenario: BfsScenario; 
   const vertices = vertexById({ scenario: input.scenario })
   const width = 420
   const height = 280
+  const markerId = `arrow-${input.scenario.id}`
 
   svg.attr('viewBox', `0 0 ${width} ${height}`)
   svg.selectAll('*').remove()

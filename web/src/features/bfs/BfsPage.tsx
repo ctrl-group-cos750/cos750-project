@@ -27,7 +27,7 @@ export function BfsPage() {
   if (query.isPending) {
     return (
       <div className="flex min-h-48 items-center justify-center gap-2 text-muted-foreground">
-        <LoadCircle className="size-5 animate-spin" aria-hidden="true" />
+        <LoaderCircle className="size-5 animate-spin" aria-hidden="true" />
         Loading graph...
       </div>
     )

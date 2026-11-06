@@ -39,7 +39,7 @@ export function expectedVertex(input: {
 
 export function stateForVertex(input: { vertexId: VertexId; frame: BfsFrame }): VertexState {
   if (input.frame.current === input.vertexId) return 'current'
-  if (input.frame.queue.inclues(input.vertexId)) return 'queued'
+  if (input.frame.queue.includes(input.vertexId)) return 'queued'
   if (input.frame.visited.includes(input.vertexId)) return 'visited'
   return 'unvisited'
 }

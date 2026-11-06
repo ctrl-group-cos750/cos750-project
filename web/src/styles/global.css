@@ -50,6 +50,18 @@
   --success: #0096c7;
   --warning: #48cae4;
   --destructive: #b42318;
+
+  --bfs-unvisited-fill: var(--card);
+  --bfs-unvisited-stroke: var(--border);
+  --bfs-current-fill: var(--primary);
+  --bfs-current-stroke: var(--foreground);
+  --bfs-current-text: var(--primary-foreground);
+  --bfs-queued-fill: var(--secondary);
+  --bfs-queued-stroke: var(--primary);
+  --bfs-visited-fill: var(--accent);
+  --bfs-visited-stroke: var(--foreground);
+  --bfs-edge: var(--border);
+  --bfs-edge-traversed: var(--primary);
 }
 
 .dark {

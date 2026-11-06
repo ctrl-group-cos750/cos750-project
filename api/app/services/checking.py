@@ -19,7 +19,11 @@ from app.schemas.activities import (
     ParsonsSolution,
     ParsonsSubmission,
     PartResult,
+    TraceConfig,
+    TraceSubmission,
 )
+from app.schemas.graphs import GraphScenarioOut
+from app.services.bfs import run_bfs
 
 OUT_OF_PLACE = "This line is in the wrong place."
 MISSING_LINE = "A line is missing from this position."
@@ -29,6 +33,9 @@ EMPTY_BLANK = "This blank has not been filled in."
 WRONG_OPTION = "That is not the right answer. Have another look."
 UNKNOWN_OPTION = "Choose one of the options."
 RIGHT_OPTION = "Correct."
+WRONG_TRACE_STEP = "This step does not match the traversal."
+MISSING_TRACE_STEP = "The traversal has more steps than this."
+EXTRA_TRACE_STEP = "The traversal is already finished by this step."
 
 
 def _result(parts: list[PartResult]) -> CheckResult:
@@ -83,6 +90,42 @@ def check_fill_in(
     return _result(parts)
 
 
+def check_trace(config: TraceConfig, submission: TraceSubmission) -> CheckResult:
+    """One part per step: a step is correct when the student's visited vertex, queue, visited set
+    and order all match the engine's step at that position (FR-6.6). The traversal is the engine's,
+    not a stored answer, so a trace is always graded against what the lessons teach (SE document
+    decision "BFS computed server-side"); no `solution` is kept for this kind. A short answer leaves
+    its missing steps wrong and a long one leaves its extra steps wrong, so both lower the score."""
+    scenario = GraphScenarioOut(
+        id=0,
+        name="",
+        directed=config.directed,
+        vertices=config.vertices,
+        edges=config.edges,
+        start_vertex=config.start_vertex,
+    )
+    expected = run_bfs(scenario).steps  # raises InvalidGraph for a bad stored graph
+    got = submission.rows
+    parts: list[PartResult] = []
+    for i in range(max(len(expected), len(got))):
+        want = expected[i] if i < len(expected) else None
+        have = got[i] if i < len(got) else None
+        if want is None:
+            parts.append(PartResult(ref=i, correct=False, message=EXTRA_TRACE_STEP))
+        elif have is None:
+            parts.append(PartResult(ref=i, correct=False, message=MISSING_TRACE_STEP))
+        elif (
+            have.visited_vertex == want.visited_vertex
+            and have.queue == want.queue
+            and have.visited == want.visited
+            and have.order == want.order
+        ):
+            parts.append(PartResult(ref=i, correct=True))
+        else:
+            parts.append(PartResult(ref=i, correct=False, message=WRONG_TRACE_STEP))
+    return _result(parts)
+
+
 def check_multiple_choice(
     config: MultipleChoiceConfig,
     solution: MultipleChoiceSolution,
@@ -127,5 +170,11 @@ def check_activity(
             FillInConfig.model_validate(config),
             FillInSolution.model_validate(solution),
             FillInSubmission.model_validate(submission),
+        )
+    if kind == "trace":
+        # No stored solution: the engine derives the answer from the graph in `config` (FR-6.6).
+        return check_trace(
+            TraceConfig.model_validate(config),
+            TraceSubmission.model_validate(submission),
         )
     raise ValueError(f"unknown activity kind: {kind!r}")

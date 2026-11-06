@@ -14,13 +14,11 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
-/* Outside any layer, so the brand's paper and ink always win over global.css's body rule
- * (Tailwind's base layer), whatever order the bundler puts the two files in. Nothing styles
- * <body> with a utility class, so it needs no layer. */
+/* Outside any layer so these document defaults apply to the legacy component CSS too. */
 body {
   margin: 0;
   min-height: 100vh;
-  font-family: var(--font-body);
+  font-family: var(--font-sans);
   font-size: var(--text-md);
   line-height: var(--leading-body);
   color: var(--color-text);
@@ -35,7 +33,7 @@ body {
   h2,
   h3,
   h4 {
-    font-family: var(--font-display);
+    font-family: var(--font-sans);
     font-weight: 700;
     line-height: var(--leading-tight);
     margin: 0 0 var(--space-3);

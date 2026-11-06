@@ -38,14 +38,20 @@ export function BfsVisualizer({ scenario }: BfsVisualizerProps) {
   const predictionRequired = playback.predictionMode && expected !== null
 
   useEffect(() => {
-    if (!playback.playing) return
+    if (!playback.playing || playback.frameIndex === playback.lastFrameIndex) return
 
     const timer = window.setTimeout(() => {
       dispatch({ type: 'REQUEST_NEXT', predictionRequired })
     }, playback.speedMs)
 
     return () => window.clearTimeout(timer)
-  }, [playback.frameIndex, playback.playing, playback.speedMs, predictionRequired])
+  }, [
+    playback.frameIndex,
+    playback.lastFrameIndex,
+    playback.playing,
+    playback.speedMs,
+    predictionRequired,
+  ])
 
   function requestNext() {
     dispatch({ type: 'REQUEST_NEXT', predictionRequired })
@@ -65,7 +71,10 @@ export function BfsVisualizer({ scenario }: BfsVisualizerProps) {
   }
 
   return (
-    <section className="mx-auto w-full max-w-6xl space-y-5" aria-labelledby="bfs-title">
+    <section
+      className="mx-auto w-full max-w-6xl space-y-5 px-4 py-6 sm:px-6"
+      aria-labelledby="bfs-title"
+    >
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -157,7 +166,7 @@ export function BfsVisualizer({ scenario }: BfsVisualizerProps) {
               <Alert
                 className={
                   playback.feedback.correct
-                    ? 'border-success bg-success/15'
+                    ? 'border-[color:var(--color-success)] bg-[color:var(--color-success-soft)]'
                     : 'border-destructive/50 bg-destructive/10'
                 }
               >

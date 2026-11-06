@@ -109,7 +109,7 @@ function renderGraph(input: { svgElement: SVGSVGElement; scenario: BfsScenario; 
     .attr('font-weight', 600)
     .attr('fill', (vertex) => {
       const state = stateForVertex({ vertexId: vertex.id, frame: input.frame })
-      return state === 'current' ? 'var(--bfs-current-text)' : 'var(--color-text)'
+      return state === 'current' ? 'var(--bfs-current-text)' : 'var(--foreground)'
     })
     .text((vertex) => vertex.label)
 
@@ -119,7 +119,7 @@ function renderGraph(input: { svgElement: SVGSVGElement; scenario: BfsScenario; 
     .attr('y', -17)
     .attr('font-size', 16)
     .attr('font-weight', 700)
-    .attr('fill', 'var(--color-text)')
+    .attr('fill', 'var(--foreground)')
     .text((vertex) => {
       const state = stateForVertex({ vertexId: vertex.id, frame: input.frame })
       return stateMarker[state]
@@ -139,6 +139,8 @@ export function GraphCanvas({ scenario, frame }: GraphCanvasProps) {
     <svg
       ref={svgRef}
       className="block min-h-72 w-full rounded-lg bg-muted/40 ring-1 ring-border"
+      // An SVG needs role="img" to expose its text alternative as one accessible graphic.
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
       role="img"
       aria-label={graphLabel({ scenario, frame })}
     />

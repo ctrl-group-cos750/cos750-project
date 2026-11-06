@@ -28,6 +28,12 @@ echo "== api"
   .venv/bin/ruff check .
   .venv/bin/mypy
   .venv/bin/pytest
+  # 90% gate on the code that decides a student's results (issue #67). Add each new result
+  # module's --cov target and its test file here in the PR that adds it.
+  .venv/bin/pytest -o addopts="" \
+    --cov=app.services.bfs --cov=app.services.checking --cov=app.services.rewards \
+    --cov-branch --cov-fail-under=90 --cov-report=term-missing \
+    tests/test_bfs.py tests/test_checking.py tests/test_rewards.py
 )
 
 echo "== all checks passed"

@@ -15,6 +15,7 @@ import { VideoPage } from './features/video/VideoPage.tsx'
 import { HomePage } from './pages/HomePage.tsx'
 import { NotFoundPage } from './pages/NotFoundPage.tsx'
 import { SignedInLayout } from './pages/SignedInLayout.tsx'
+import { BfsPage } from './features/bfs/BfsPage.tsx'
 
 /** Every route in the app. Signed-in pages go inside the RequireAuth route. */
 function App() {
@@ -44,6 +45,7 @@ function App() {
         }
       >
         <Route index element={<HomePage />} />
+        <Route path="/graphs/:scenarioId" element={<BfsPage />} />
         <Route path="videos/:videoId" element={<VideoPage />} />
         <Route path="badges" element={<BadgesPage />} />
         <Route

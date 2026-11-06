@@ -21,15 +21,13 @@ function graphLabel(input: { scenario: BfsScenario; frame: BfsFrame }): string {
   return `${input.scenario.title}. Current vertex: ${current}. Queue: ${queue}.`
 }
 
-function vertexById(input: { scenario: BfsScenario }): Map<string, BfsScenario['vertices'][number]> {
+function vertexById(input: {
+  scenario: BfsScenario
+}): Map<string, BfsScenario['vertices'][number]> {
   return new Map(input.scenario.vertices.map((vertex) => [vertex.id, vertex]))
 }
 
-function renderGraph(input: {
-  svgElement: SVGSVGElement
-  scenario: BfsScenario
-  frame: BfsFrame
-}) {
+function renderGraph(input: { svgElement: SVGSVGElement; scenario: BfsScenario; frame: BfsFrame }) {
   const svg = d3.select(input.svgElement)
   const vertices = vertexById({ scenario: input.scenario })
   const width = 420
@@ -37,6 +35,22 @@ function renderGraph(input: {
 
   svg.attr('viewBox', `0 0 ${width} ${height}`)
   svg.selectAll('*').remove()
+
+  if (input.scenario.directed) {
+    svg
+      .append('defs')
+      .append('marker')
+      .attr('id', markerId)
+      .attr('viewBox', '0 -5 10 10')
+      .attr('refX', 29)
+      .attr('refY', 0)
+      .attr('markerWidth', 6)
+      .attr('markerHeight', 6)
+      .attr('orient', 'auto')
+      .append('path')
+      .attr('d', 'M0,-5L10,0L0,5')
+      .attr('fill', 'var(--bfs-edge)')
+  }
 
   const edges = input.scenario.edges.filter((edge) => {
     return vertices.has(edge.from) && vertices.has(edge.to)
@@ -54,6 +68,9 @@ function renderGraph(input: {
     .attr('y2', (edge) => vertices.get(edge.to)!.y)
     .attr('stroke', 'var(--bfs-edge)')
     .attr('stroke-width', 2)
+    .attr('marker-end', () => {
+      return input.scenario.directed ? `url(#${markerId})` : null
+    })
 
   const nodes = svg
     .append('g')

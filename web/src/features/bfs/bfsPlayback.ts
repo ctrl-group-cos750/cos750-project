@@ -53,10 +53,7 @@ function cancelPrompt(state: PlaybackState): PlaybackState {
   return { ...state, phase: 'ready', feedback: null, playing: false }
 }
 
-export function playbackReducer(
-  state: PlaybackState,
-  action: PlaybackAction,
-): PlaybackState {
+export function playbackReducer(state: PlaybackState, action: PlaybackAction): PlaybackState {
   switch (action.type) {
     case 'REQUEST_NEXT':
       if (state.phase !== 'ready' || state.frameIndex === state.lastFrameIndex) return state
@@ -94,7 +91,7 @@ export function playbackReducer(
     case 'SET_SPEED':
       return { ...state, speedMs: action.speedMs }
 
-    case 'SET_PRODICTION_MODE':
+    case 'SET_PREDICTION_MODE':
       return { ...state, predictionMode: action.enabled }
 
     default:

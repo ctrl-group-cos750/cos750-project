@@ -103,9 +103,15 @@ export function BfsVisualizer({ scenario }: BfsVisualizerProps) {
               className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground"
               aria-label="Graph legend"
             >
-              <span><strong>▶ Current</strong> — being processed</span>
-              <span><strong>… Queued</strong> — waiting</span>
-              <span><strong>✓ Visited</strong> — processed</span>
+              <span>
+                <strong>▶ Current</strong> — being processed
+              </span>
+              <span>
+                <strong>… Queued</strong> — waiting
+              </span>
+              <span>
+                <strong>✓ Visited</strong> — processed
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -179,11 +185,7 @@ export function BfsVisualizer({ scenario }: BfsVisualizerProps) {
 
       <Card className="border">
         <CardContent className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => dispatch({ type: 'RESET' })}
-          >
+          <Button type="button" variant="outline" onClick={() => dispatch({ type: 'RESET' })}>
             <RotateCcw aria-hidden="true" />
             Reset
           </Button>

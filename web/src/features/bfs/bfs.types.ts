@@ -20,7 +20,7 @@ export type BfsFrame = {
 }
 
 export type BfsScenario = {
-  id: string
+  id: number
   title: string
   directed: boolean
   vertices: readonly BfsVertex[]
@@ -37,10 +37,7 @@ export function expectedVertex(input: {
   return input.scenario.frames[input.frameIndex + 1]?.current ?? null
 }
 
-export function stateForVertex(input: {
-  vertexId: VertexId
-  frame: BfsFrame
-}): VertexState {
+export function stateForVertex(input: { vertexId: VertexId; frame: BfsFrame }): VertexState {
   if (input.frame.current === input.vertexId) return 'current'
   if (input.frame.queue.inclues(input.vertexId)) return 'queued'
   if (input.frame.visited.includes(input.vertexId)) return 'visited'

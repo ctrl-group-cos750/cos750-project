@@ -3,10 +3,14 @@ import { buttonVariants } from '@/components/ui/button-variants'
 import { cn } from '@/lib/utils'
 import { useCurrentUser, useLogout } from '../auth/hooks.ts'
 import { Alert, AppShell, Button } from '../components'
+import { BadgeAnnouncer } from '../features/rewards/BadgeAnnouncer.tsx'
 import styles from './SignedInLayout.module.css'
 
-/** Every signed-in page: the header (the staff portal link for team members, the student's name
- * and Log out), then the page. */
+const navClass = ({ isActive }: { isActive: boolean }) =>
+  cn(buttonVariants({ variant: isActive ? 'secondary' : 'ghost', size: 'lg' }), 'text-foreground')
+
+/** Every signed-in page: the header (Badges, the staff portal link for team members, the
+ * student's name and Log out), then the page, and new badges announced as they are earned. */
 export function SignedInLayout() {
   const { data: user } = useCurrentUser()
   const logout = useLogout()
@@ -15,19 +19,16 @@ export function SignedInLayout() {
   return (
     <AppShell
       nav={
-        user?.isStaff && (
-          <NavLink
-            to="/staff"
-            className={({ isActive }) =>
-              cn(
-                buttonVariants({ variant: isActive ? 'secondary' : 'ghost', size: 'lg' }),
-                'text-foreground',
-              )
-            }
-          >
-            Staff portal
+        <>
+          <NavLink to="/badges" className={navClass}>
+            Badges
           </NavLink>
-        )
+          {user?.isStaff && (
+            <NavLink to="/staff" className={navClass}>
+              Staff portal
+            </NavLink>
+          )}
+        </>
       }
       actions={
         <>
@@ -53,6 +54,7 @@ export function SignedInLayout() {
         </Alert>
       )}
       <Outlet />
+      <BadgeAnnouncer />
     </AppShell>
   )
 }

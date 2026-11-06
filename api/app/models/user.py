@@ -30,3 +30,6 @@ class User(Base):
     # Every session token carries this number. Logging out adds one, so every token issued before
     # stops working at once, even a copy someone took of the cookie.
     session_version: Mapped[int] = mapped_column(default=0, server_default="0")
+    # The student chose to hide points and badges (FR-9.5). They are still earned, so turning them
+    # back on shows everything; the mastery report is never hidden.
+    hide_rewards: Mapped[bool] = mapped_column(default=False, server_default=false())

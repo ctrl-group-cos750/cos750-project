@@ -14,13 +14,25 @@
           "id": 601,
           "kind": "text",
           "title": "Placeholder: about the mastery check",
-          "body": "Placeholder until the module 6 content (#28) lands.\n\nThese questions are new. Hints are there if you need them; using the last two levels marks an objective as met with support."
+          "body": "Placeholder until the module 6 content (#28) lands.\n\nThese questions are new, and each one counts once: your first answer is the one your report uses. Hints are there if you need them; using the last two levels marks an objective as met with support."
         },
         {
           "id": 602,
           "kind": "activity",
           "title": "Placeholder: what is a graph?",
           "activity_id": 601
+        },
+        {
+          "id": 605,
+          "kind": "activity",
+          "title": "Placeholder: vertices and edges",
+          "activity_id": 604
+        },
+        {
+          "id": 606,
+          "kind": "activity",
+          "title": "Placeholder: which graph fits?",
+          "activity_id": 605
         },
         {
           "id": 603,
@@ -33,6 +45,24 @@
           "kind": "activity",
           "title": "Placeholder: trace an unseen graph",
           "activity_id": 603
+        },
+        {
+          "id": 607,
+          "kind": "activity",
+          "title": "Placeholder: put BFS in order",
+          "activity_id": 606
+        },
+        {
+          "id": 608,
+          "kind": "activity",
+          "title": "Placeholder: fix the faulty BFS",
+          "activity_id": 607
+        },
+        {
+          "id": 609,
+          "kind": "activity",
+          "title": "Placeholder: choose the tests that catch the bug",
+          "activity_id": 608
         }
       ]
     }
@@ -153,6 +183,412 @@
         "start_vertex": "P"
       },
       "solution": {}
+    },
+    {
+      "id": 604,
+      "kind": "matching",
+      "title": "Placeholder: vertices and edges",
+      "module_id": 6,
+      "purpose": "mastery",
+      "objective_id": 2,
+      "config": {
+        "prompt": "Match each part of a train map or a town to what it is in a graph.",
+        "left": [
+          {
+            "id": "station",
+            "label": "A station on the train map"
+          },
+          {
+            "id": "line",
+            "label": "The track between two neighbouring stations"
+          },
+          {
+            "id": "oneway",
+            "label": "A one-way street from one corner to another"
+          },
+          {
+            "id": "path",
+            "label": "A footpath you can walk in both directions"
+          },
+          {
+            "id": "person",
+            "label": "A person in a friendship network"
+          }
+        ],
+        "right": [
+          {
+            "id": "vertex",
+            "label": "A vertex"
+          },
+          {
+            "id": "edge",
+            "label": "An edge"
+          },
+          {
+            "id": "directed",
+            "label": "A directed edge"
+          },
+          {
+            "id": "undirected",
+            "label": "An undirected edge"
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "station": "vertex",
+          "line": "edge",
+          "oneway": "directed",
+          "path": "undirected",
+          "person": "vertex"
+        },
+        "feedback": {
+          "line": "The track connects two stations, so it is an edge.",
+          "oneway": "You can only travel one way, so the edge has a direction."
+        }
+      }
+    },
+    {
+      "id": 605,
+      "kind": "matching",
+      "title": "Placeholder: which graph fits?",
+      "module_id": 6,
+      "purpose": "mastery",
+      "objective_id": 3,
+      "config": {
+        "prompt": "Match each situation to the model that fits it best.",
+        "left": [
+          {
+            "id": "roads",
+            "label": "Towns and the two-way roads between them"
+          },
+          {
+            "id": "follows",
+            "label": "Who follows whom on a social app"
+          },
+          {
+            "id": "friends",
+            "label": "Which students are friends with each other"
+          },
+          {
+            "id": "bank",
+            "label": "People waiting in line at a bank"
+          }
+        ],
+        "right": [
+          {
+            "id": "undirected",
+            "label": "An undirected graph"
+          },
+          {
+            "id": "directed",
+            "label": "A directed graph"
+          },
+          {
+            "id": "list",
+            "label": "Not a graph: a list in order is enough"
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "roads": "undirected",
+          "follows": "directed",
+          "friends": "undirected",
+          "bank": "list"
+        },
+        "feedback": {
+          "follows": "Following someone doesn't mean they follow you back, so the edges have a direction.",
+          "bank": "Nobody is connected to anyone else; only the order matters."
+        }
+      }
+    },
+    {
+      "id": 606,
+      "kind": "parsons",
+      "title": "Placeholder: put BFS in order",
+      "module_id": 6,
+      "purpose": "mastery",
+      "objective_id": 6,
+      "config": {
+        "lines": [
+          {
+            "id": 5,
+            "text": "    while queue:"
+          },
+          {
+            "id": 12,
+            "text": "    return order"
+          },
+          {
+            "id": 1,
+            "text": "def bfs(graph, start):"
+          },
+          {
+            "id": 8,
+            "text": "        for neighbour in sorted(graph[vertex]):"
+          },
+          {
+            "id": 13,
+            "text": "        vertex = queue.pop()"
+          },
+          {
+            "id": 3,
+            "text": "    queue = deque([start])"
+          },
+          {
+            "id": 10,
+            "text": "                visited.add(neighbour)"
+          },
+          {
+            "id": 6,
+            "text": "        vertex = queue.popleft()"
+          },
+          {
+            "id": 2,
+            "text": "    visited = {start}"
+          },
+          {
+            "id": 11,
+            "text": "                queue.append(neighbour)"
+          },
+          {
+            "id": 7,
+            "text": "        order.append(vertex)"
+          },
+          {
+            "id": 4,
+            "text": "    order = []"
+          },
+          {
+            "id": 9,
+            "text": "            if neighbour not in visited:"
+          }
+        ]
+      },
+      "solution": {
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      }
+    },
+    {
+      "id": 607,
+      "kind": "fix_the_bug",
+      "title": "Placeholder: fix the faulty BFS",
+      "module_id": 6,
+      "purpose": "mastery",
+      "objective_id": 7,
+      "config": {
+        "prompt": "This BFS visits the vertices in the wrong order. Replace the faulty line.",
+        "lines": [
+          {
+            "id": 1,
+            "text": "def bfs(graph, start):"
+          },
+          {
+            "id": 2,
+            "text": "    visited = {start}"
+          },
+          {
+            "id": 3,
+            "text": "    queue = deque([start])"
+          },
+          {
+            "id": 4,
+            "text": "    order = []"
+          },
+          {
+            "id": 5,
+            "text": "    while queue:"
+          },
+          {
+            "id": 6,
+            "text": "        vertex = queue.pop()"
+          },
+          {
+            "id": 7,
+            "text": "        order.append(vertex)"
+          },
+          {
+            "id": 8,
+            "text": "        for neighbour in sorted(graph[vertex]):"
+          },
+          {
+            "id": 9,
+            "text": "            if neighbour not in visited:"
+          },
+          {
+            "id": 10,
+            "text": "                visited.add(neighbour)"
+          },
+          {
+            "id": 11,
+            "text": "                queue.append(neighbour)"
+          },
+          {
+            "id": 12,
+            "text": "    return order"
+          }
+        ],
+        "corrections": [
+          {
+            "id": 20,
+            "text": "        vertex = queue.popleft()"
+          },
+          {
+            "id": 21,
+            "text": "        vertex = queue[0]"
+          }
+        ]
+      },
+      "solution": {
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          20,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "feedback": {
+          "6": "pop() takes the newest vertex from the right-hand end, so this explores depth first."
+        }
+      }
+    },
+    {
+      "id": 608,
+      "kind": "choose_tests",
+      "title": "Placeholder: choose the tests that catch the bug",
+      "module_id": 6,
+      "purpose": "mastery",
+      "objective_id": 7,
+      "config": {
+        "prompt": "This BFS takes vertices with queue.pop(). Choose every test case it fails.",
+        "code": "def bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        vertex = queue.pop()\n        order.append(vertex)\n        for neighbour in sorted(graph[vertex]):\n            if neighbour not in visited:\n                visited.add(neighbour)\n                queue.append(neighbour)\n    return order",
+        "tests": [
+          {
+            "id": "path",
+            "vertices": [
+              "A",
+              "B",
+              "C"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "B",
+                "target": "C"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "id": "branch",
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "A",
+                "target": "C"
+              },
+              {
+                "source": "B",
+                "target": "D"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          {
+            "id": "single",
+            "vertices": [
+              "A"
+            ],
+            "edges": [],
+            "start_vertex": "A",
+            "expected": [
+              "A"
+            ]
+          },
+          {
+            "id": "cycle",
+            "vertices": [
+              "A",
+              "B",
+              "C"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "B",
+                "target": "C"
+              },
+              {
+                "source": "C",
+                "target": "A"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B",
+              "C"
+            ]
+          }
+        ]
+      },
+      "solution": {
+        "exposing": [
+          "branch",
+          "cycle"
+        ],
+        "feedback": {
+          "path": "Each vertex has only one new neighbour, so a stack and a queue visit it in the same order.",
+          "single": "With one vertex there is no order to get wrong."
+        }
+      }
     }
   ]
 }

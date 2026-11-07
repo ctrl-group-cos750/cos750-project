@@ -179,6 +179,7 @@ def test_the_reset_covers_every_table_of_student_history() -> None:
     assert sorted(t.name for t, _ in history_tables()) == [
         "attempts",
         "hint_views",
+        "objective_results",
         "points_entries",
         "user_badges",
     ]

@@ -152,6 +152,27 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/events': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Report Event
+     * @description Log something only the browser sees, for the pilot's evaluation (FR-10.1). The server adds
+     *     who and when. 404 if the video, checkpoint or segment doesn't exist; 429 past 120 a minute.
+     */
+    post: operations['report_event_api_events_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/graphs/{scenario_id}': {
     parameters: {
       query?: never
@@ -497,6 +518,57 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/staff/export/{table}.csv': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Export Csv
+     * @description Download one table as CSV for every real student (FR-10.2), oldest first:
+     *
+     *     - `attempts`: each answer; `submitted` and `detail` are what was answered and the per-part
+     *       result, as JSON.
+     *     - `hints`: each hint shown.
+     *     - `events`: the timeline (app/services/events.py): videos started and finished, checkpoints
+     *       reached, segments viewed, hints shown, results changing; `payload` as JSON.
+     *     - `objective_results`: each student's current result per objective, with the attempts it was
+     *       decided from (`evidence`).
+     */
+    get: operations['export_csv_api_staff_export__table__csv_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/staff/insights': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Insights
+     * @description The pilot at a glance (ID document §8.4): per activity, how many students tried it, wrong
+     *     attempts, and how many needed hint 3 or 4; per video, how many started it, passed each
+     *     checkpoint and finished it, which shows where students stopped. Real students only (no staff
+     *     or demo accounts); counts only.
+     */
+    get: operations['insights_api_staff_insights_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/health': {
     parameters: {
       query?: never
@@ -611,6 +683,28 @@ export interface components {
       checkpointsTotal: number
     }
     /**
+     * ActivityInsight
+     * @description How students got on with one activity, as ID document §8.4 analyses it.
+     */
+    ActivityInsight: {
+      /** Id */
+      id: number
+      /** Title */
+      title: string
+      /** Kind */
+      kind: string
+      /** Students */
+      students: number
+      /** Attempts */
+      attempts: number
+      /** Wrongattempts */
+      wrongAttempts: number
+      /** Studentspassed */
+      studentsPassed: number
+      /** Studentswithsupport */
+      studentsWithSupport: number
+    }
+    /**
      * ActivityOut
      * @description An activity as the browser sees it. There is deliberately no `solution` field: the answer
      *     stays on the server (SE document §8 "Answers never leave the server").
@@ -693,6 +787,17 @@ export interface components {
       /** Frontieredges */
       frontierEdges: components['schemas']['GraphEdge'][]
     }
+    /** CheckpointInsight */
+    CheckpointInsight: {
+      /** Id */
+      id: number
+      /** Atseconds */
+      atSeconds: number
+      /** Activitytitle */
+      activityTitle: string
+      /** Studentspassed */
+      studentsPassed: number
+    }
     /**
      * CheckpointOut
      * @description Where playback stops, and the activity to answer there. `passed` is true once this student
@@ -736,6 +841,20 @@ export interface components {
       upgradedAt: string | null
       /** Seen */
       seen: boolean
+    }
+    /**
+     * EventIn
+     * @description What the browser saw: `video_started` or `video_completed` (`targetId` is the video),
+     *     `checkpoint_reached` (the checkpoint) or `segment_viewed` (the segment).
+     */
+    EventIn: {
+      /**
+       * Type
+       * @enum {string}
+       */
+      type: 'video_started' | 'video_completed' | 'checkpoint_reached' | 'segment_viewed'
+      /** Targetid */
+      targetId: number
     }
     /**
      * GraphEdge
@@ -786,6 +905,19 @@ export interface components {
       hasMore: boolean
       /** Nextcountsassupport */
       nextCountsAsSupport: boolean
+    }
+    /** Insights */
+    Insights: {
+      /** Students */
+      students: number
+      /** Attempts */
+      attempts: number
+      /** Hintsviewed */
+      hintsViewed: number
+      /** Activities */
+      activities: components['schemas']['ActivityInsight'][]
+      /** Videos */
+      videos: components['schemas']['VideoInsight'][]
     }
     /** LoginIn */
     LoginIn: {
@@ -1088,6 +1220,24 @@ export interface components {
       ctx?: Record<string, never>
     }
     /**
+     * VideoInsight
+     * @description How far students got through one video: who started it (or answered one of its
+     *     checkpoints), who passed each checkpoint and who watched to the end. A drop between two steps
+     *     is where students stopped.
+     */
+    VideoInsight: {
+      /** Id */
+      id: number
+      /** Title */
+      title: string
+      /** Students */
+      students: number
+      /** Finished */
+      finished: number
+      /** Checkpoints */
+      checkpoints: components['schemas']['CheckpointInsight'][]
+    }
+    /**
      * VideoOut
      * @description `mediaPath` and `captionsPath` are same-origin URLs under /media/. Checkpoints come in the
      *     order they are reached.
@@ -1334,6 +1484,39 @@ export interface operations {
         content: {
           'application/json': components['schemas']['HintOut']
         }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  report_event_api_events_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['EventIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
       /** @description Validation Error */
       422: {
@@ -1955,6 +2138,68 @@ export interface operations {
           [name: string]: unknown
         }
         content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  export_csv_api_staff_export__table__csv_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        table: 'attempts' | 'hints' | 'events' | 'objective_results'
+      }
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  insights_api_staff_insights_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['Insights']
+        }
       }
       /** @description Validation Error */
       422: {

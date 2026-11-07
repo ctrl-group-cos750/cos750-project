@@ -48,6 +48,18 @@ def graph(**overrides: Any) -> dict[str, Any]:
     }
 
 
+def trace_activity(**overrides: Any) -> dict[str, Any]:
+    """A trace activity: the graph lives in `config`, the solution is empty (the engine derives
+    the traversal, FR-6.6)."""
+    base = {
+        "directed": False,
+        "vertices": ["A", "B", "C"],
+        "edges": [{"source": "A", "target": "B"}, {"source": "B", "target": "C"}],
+        "start_vertex": "A",
+    }
+    return activity(kind="trace", config=base, solution={}) | overrides
+
+
 @pytest.mark.parametrize(
     ("data", "problem"),
     [
@@ -74,11 +86,28 @@ def graph(**overrides: Any) -> dict[str, Any]:
         ({"graphs": [graph(vertices=[])]}, "vertices"),
         ({"graphs": [graph(), graph()]}, "graph ids used twice"),
         ({"graphs": [graph(weight=2)]}, "extra"),
+        # Trace activities: the graph in config is run through the engine at load (FR-6.6).
+        (
+            {
+                "activities": [
+                    trace_activity(config={**trace_activity()["config"], "start_vertex": "Z"})
+                ]
+            },
+            "start vertex",
+        ),
+        (
+            {"activities": [trace_activity(solution={"order": ["A"]})]},
+            "extra",
+        ),  # trace keeps no solution
     ],
 )
 def test_invalid_fixtures_are_refused(tmp_path: Path, data: dict[str, Any], problem: str) -> None:
     with pytest.raises(ValueError, match=problem):
         read_fixtures(write(tmp_path, data))
+
+
+def test_a_valid_trace_activity_loads(tmp_path: Path) -> None:
+    read_fixtures(write(tmp_path, {"activities": [trace_activity()]}))  # must not raise
 
 
 def test_load_creates_content_and_a_rerun_updates_it_without_touching_attempts(

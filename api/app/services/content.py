@@ -21,9 +21,17 @@ from app.schemas.activities import (
     MultipleChoiceSolution,
     ParsonsConfig,
     ParsonsSolution,
+    TraceConfig,
 )
+from app.schemas.base import ApiModel
 from app.schemas.graphs import GraphScenarioOut
 from app.services.bfs import InvalidGraph, run_bfs
+
+
+class NoSolution(ApiModel):
+    """A kind with no stored answer: the server derives it (trace is checked against the BFS
+    engine, FR-6.6). Its fixture solution must be empty, `{}`."""
+
 
 # The config and solution schemas for each kind (FR-4.1). Add a kind here when its checker lands.
 SHAPES: dict[str, tuple[type[BaseModel], type[BaseModel]]] = {
@@ -33,6 +41,7 @@ SHAPES: dict[str, tuple[type[BaseModel], type[BaseModel]]] = {
     "fill_in": (FillInConfig, FillInSolution),
     "fix_the_bug": (FixTheBugConfig, FixTheBugSolution),
     "choose_tests": (ChooseTestsConfig, ChooseTestsSolution),
+    "trace": (TraceConfig, NoSolution),
 }
 
 
@@ -97,6 +106,15 @@ def _choose_tests(config: ChooseTestsConfig, solution: ChooseTestsSolution) -> N
             )
 
 
+def _trace(config: TraceConfig) -> None:
+    # The traversal is the engine's, so a graph it refuses would only fail when a student opens
+    # it; catch it at load, as the seed does for graph scenarios (FR-6.6).
+    try:
+        run_bfs(GraphScenarioOut(id=0, name="", **config.model_dump()))
+    except InvalidGraph as exc:
+        raise ValueError(str(exc)) from exc
+
+
 def validate_activity(kind: str, config: dict[str, Any], solution: dict[str, Any]) -> None:
     """Raises ValueError (pydantic's ValidationError is one) when the content can't work."""
     if kind not in SHAPES:
@@ -113,5 +131,7 @@ def validate_activity(kind: str, config: dict[str, Any], solution: dict[str, Any
             _fix_the_bug(parsed_config, parsed_solution)
         case ChooseTestsConfig(), ChooseTestsSolution():
             _choose_tests(parsed_config, parsed_solution)
+        case TraceConfig(), _:
+            _trace(parsed_config)
         case _:
             pass  # Parsons and fill-in: the shapes are the whole check

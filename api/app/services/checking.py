@@ -28,7 +28,11 @@ from app.schemas.activities import (
     ParsonsSolution,
     ParsonsSubmission,
     PartResult,
+    TraceConfig,
+    TraceSubmission,
 )
+from app.schemas.graphs import GraphScenarioOut
+from app.services.bfs import run_bfs
 
 OUT_OF_PLACE = "This line is in the wrong place."
 MISSING_LINE = "A line is missing from this position."
@@ -45,6 +49,10 @@ WRONG_FIX = "This correction does not fix the bug here."
 FIX_NOT_NEEDED = "This line was already right: it did not need a correction."
 MISSED_TEST = "The faulty version fails this test: it exposes the bug."
 NOT_EXPOSING = "The faulty version passes this test, so it does not expose the bug."
+UNKNOWN_TEST = "This is not one of the test cases."
+WRONG_TRACE_STEP = "This step does not match the traversal."
+MISSING_TRACE_STEP = "The traversal has more steps than this."
+EXTRA_TRACE_STEP = "The traversal is already finished by this step."
 
 
 def _result(parts: list[PartResult]) -> CheckResult:
@@ -99,6 +107,44 @@ def check_fill_in(
     return _result(parts)
 
 
+def check_trace(config: TraceConfig, submission: TraceSubmission) -> CheckResult:
+    """One part per step: a step is correct when the student's visited vertex, queue, visited set
+    and order all match the engine's step at that position (FR-6.6). The queue and the order are
+    sequences, so their order counts; the visited set is a set, so it is compared regardless of the
+    order the student wrote it in (a repeated vertex still makes it wrong). The traversal is the engine's,
+    not a stored answer, so a trace is always graded against what the lessons teach (SE document
+    decision "BFS computed server-side"); no `solution` is kept for this kind. A short answer leaves
+    its missing steps wrong and a long one leaves its extra steps wrong, so both lower the score."""
+    scenario = GraphScenarioOut(
+        id=0,
+        name="",
+        directed=config.directed,
+        vertices=config.vertices,
+        edges=config.edges,
+        start_vertex=config.start_vertex,
+    )
+    expected = run_bfs(scenario).steps  # raises InvalidGraph for a bad stored graph
+    got = submission.rows
+    parts: list[PartResult] = []
+    for i in range(max(len(expected), len(got))):
+        want = expected[i] if i < len(expected) else None
+        have = got[i] if i < len(got) else None
+        if want is None:
+            parts.append(PartResult(ref=i, correct=False, message=EXTRA_TRACE_STEP))
+        elif have is None:
+            parts.append(PartResult(ref=i, correct=False, message=MISSING_TRACE_STEP))
+        elif (
+            have.visited_vertex == want.visited_vertex
+            and have.queue == want.queue
+            and sorted(have.visited) == sorted(want.visited)
+            and have.order == want.order
+        ):
+            parts.append(PartResult(ref=i, correct=True))
+        else:
+            parts.append(PartResult(ref=i, correct=False, message=WRONG_TRACE_STEP))
+    return _result(parts)
+
+
 def check_multiple_choice(
     config: MultipleChoiceConfig,
     solution: MultipleChoiceSolution,
@@ -145,9 +191,11 @@ def check_fix_the_bug(
 ) -> CheckResult:
     """One part per position of the fixed program, as in Parsons. The message says what went
     wrong there: a faulty line left in (with the content's reason it is faulty), the wrong
-    correction, a correction where the original line was fine, or a line in the wrong place."""
+    correction, a correction where the original line was fine, a line in the wrong place, or an
+    id that is neither a line nor a correction."""
     expected, got = solution.order, submission.order
     corrections = {line.id for line in config.corrections}
+    lines = {line.id for line in config.lines}
     in_solution = set(expected)
     parts: list[PartResult] = []
     for i in range(max(len(expected), len(got))):
@@ -164,6 +212,8 @@ def check_fix_the_bug(
             message = OUT_OF_PLACE
         elif have in corrections:
             message = WRONG_FIX if want in corrections else FIX_NOT_NEEDED
+        elif have not in lines:  # not a line or a correction at all: made up
+            message = EXTRA_LINE
         else:  # an original line the fixed program does not use: a bug left in
             message = solution.feedback.get(have, BUG_LEFT_IN)
         parts.append(PartResult(ref=i, correct=False, message=message))
@@ -175,7 +225,8 @@ def check_choose_tests(
 ) -> CheckResult:
     """One part per test case, in the config's order: correct when the student's choice (selected
     or not) matches whether it exposes the bug. So selecting every test case, or none, cannot
-    pass."""
+    pass. A selected id that is not a test case adds a wrong part, as an unknown option does in
+    multiple choice, so padding a right answer with a made-up id does not pass."""
     exposing, selected = set(solution.exposing), set(submission.selected)
     parts: list[PartResult] = []
     for i, test in enumerate(config.tests):
@@ -185,6 +236,11 @@ def check_choose_tests(
             default = MISSED_TEST if test.id in exposing else NOT_EXPOSING
             message = solution.feedback.get(test.id, default)
             parts.append(PartResult(ref=i, correct=False, message=message))
+    unknown = selected - {test.id for test in config.tests}
+    parts.extend(
+        PartResult(ref=len(config.tests) + i, correct=False, message=UNKNOWN_TEST)
+        for i in range(len(unknown))
+    )
     return _result(parts)
 
 
@@ -227,5 +283,11 @@ def check_activity(
             ChooseTestsConfig.model_validate(config),
             ChooseTestsSolution.model_validate(solution),
             ChooseTestsSubmission.model_validate(submission),
+        )
+    if kind == "trace":
+        # No stored solution: the engine derives the answer from the graph in `config` (FR-6.6).
+        return check_trace(
+            TraceConfig.model_validate(config),
+            TraceSubmission.model_validate(submission),
         )
     raise ValueError(f"unknown activity kind: {kind!r}")

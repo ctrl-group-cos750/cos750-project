@@ -14,11 +14,13 @@ from app.models import Activity
 from app.seed import load, read_fixtures
 from app.services.checking import (
     BUG_LEFT_IN,
+    EXTRA_LINE,
     FIX_NOT_NEEDED,
     MISSED_TEST,
     NO_MATCH,
     NOT_EXPOSING,
     OUT_OF_PLACE,
+    UNKNOWN_TEST,
     WRONG_FIX,
     WRONG_MATCH,
     check_activity,
@@ -207,6 +209,12 @@ def test_fix_the_bug_a_short_or_long_answer_fails_the_positions_it_affects() -> 
     assert long[-1].message == "This line does not belong in the answer."
 
 
+def test_fix_the_bug_a_made_up_id_is_an_extra_line_not_a_bug_left_in() -> None:
+    order = [1, 20, 3, 21, 6, 7, 8, 22, 9, 99]  # 99 is neither a line nor a correction
+    parts = grade("fix_the_bug", FIX_CONFIG, FIX_SOLUTION, order=order).parts
+    assert parts[-1].message == EXTRA_LINE
+
+
 # --- Choose tests ----------------------------------------------------------------------------
 
 
@@ -229,6 +237,15 @@ def test_choose_tests_messages() -> None:
     ]
     parts = grade("choose_tests", TESTS_CONFIG, {"exposing": ["cycle"]}, selected=["path"]).parts
     assert parts[1].message == NOT_EXPOSING
+
+
+def test_choose_tests_a_made_up_test_id_cannot_pad_a_right_answer() -> None:
+    result = grade(
+        "choose_tests", TESTS_CONFIG, TESTS_SOLUTION, selected=["cycle", "diamond", "junk"]
+    )
+    assert not result.correct
+    assert [p.correct for p in result.parts] == [True, True, True, False]
+    assert (result.parts[-1].ref, result.parts[-1].message) == (3, UNKNOWN_TEST)
 
 
 # --- Content checks (run by the seed and in CI) ----------------------------------------------
@@ -294,6 +311,12 @@ def test_the_examples_are_valid_content() -> None:
             {**TESTS_CONFIG, "tests": [{**DIAMOND, "expected": ["A", "C", "B", "D"]}, PATH]},
             {"exposing": ["diamond"]},
             "but BFS visits",
+        ),
+        (
+            "choose_tests",
+            {**TESTS_CONFIG, "tests": [{**PATH, "start_vertex": "not a vertex!"}, CYCLE]},
+            {"exposing": ["cycle"]},
+            "start_vertex",
         ),
         (
             "choose_tests",

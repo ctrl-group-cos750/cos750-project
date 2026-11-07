@@ -17,15 +17,15 @@ from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, Field, ValidationError, model_validator
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db import Base
 from app.models import Activity, User
 from app.models.user import DEMO_EMAIL_DOMAIN
 from app.passwords import password_problem
 from app.security import hash_password
 from app.services.attempts import hint_level_seen, record_attempt, reveal_next_hint
+from app.services.history import delete_history
 
 DEMO_FILE = Path(__file__).parent / "demo" / "accounts.json"
 
@@ -75,21 +75,6 @@ def read_demo_accounts(path: Path = DEMO_FILE) -> list[DemoAccount]:
         raise ValueError(f"{path.name}: {exc}") from exc
 
 
-def _history_tables() -> list[tuple[Any, Any]]:
-    """Every table holding a student's own history, children first, with its `user_id` column.
-
-    Found from the models rather than listed, so a table added later (progress, mastery, events)
-    is cleared on reset without anyone remembering to add it here. The convention: a student's
-    history points at them with `user_id`. Anything else pointing at users (say, the staff member
-    who made some content) is named otherwise and is never deleted by a reset."""
-    found = []
-    for table in reversed(Base.metadata.sorted_tables):
-        for fk in table.foreign_keys:
-            if fk.column.table.name == "users" and fk.parent.name == "user_id":
-                found.append((table, fk.parent))
-    return found
-
-
 def load_demo_accounts(
     session: Session, password: str | None, path: Path = DEMO_FILE
 ) -> list[DemoAccount]:
@@ -127,8 +112,7 @@ def _rebuild(session: Session, account: DemoAccount, password_hash: str) -> None
     user.is_demo = True
     session.flush()
 
-    for table, column in _history_tables():
-        session.execute(delete(table).where(column == user.id))
+    delete_history(session, user.id)
 
     for n, step in enumerate(account.attempts, start=1):
         where = f"{account.email}, attempt {n}"

@@ -1,6 +1,7 @@
-"""Code-activity data: what the student is shown (`config`), the solution the server keeps, and
-what the student submits. Code activities run no student code (SE document FR-5, NFR-S7); each is
-graded by comparing the submission with the solution in `app/services/checking.py`.
+"""Activity data: what the student is shown (`config`), the solution the server keeps, and what
+the student submits, for each kind. Code activities run no student code (SE document FR-5,
+NFR-S7); every kind is graded by comparing the submission with the solution in
+`app/services/checking.py`.
 
 A submission carries only line IDs and tokens the student chose from a given set, never free text,
 so nothing a student sends here is ever executed or stored as free-form code.
@@ -8,13 +9,17 @@ so nothing a student sends here is ever executed or stored as free-form code.
 
 from typing import Annotated, Any, Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from app.schemas.base import ApiModel
 from app.schemas.graphs import VERTEX, GraphEdge
 
-CodeActivityKind = Literal["parsons", "fill_in"]
-ActivityKind = Literal["multiple_choice", "parsons", "fill_in", "trace"]
+Vertex = Annotated[str, Field(pattern=VERTEX)]
+
+CodeActivityKind = Literal["parsons", "fill_in", "fix_the_bug", "choose_tests"]
+ActivityKind = Literal[
+    "multiple_choice", "matching", "parsons", "fill_in", "trace", "fix_the_bug", "choose_tests"
+]
 
 
 # --- Multiple choice: pick one option (FR-4.1) ------------------------------------------------
@@ -90,6 +95,123 @@ class FillInSubmission(ApiModel):
     answers: dict[int, str] = Field(default_factory=dict)
 
 
+# --- Matching: pair each item on the left with one on the right (FR-4.1; objectives 1 and 3) --
+
+
+class MatchingItem(ApiModel):
+    id: str = Field(min_length=1, max_length=50)
+    label: str = Field(max_length=2_000)
+
+
+class MatchingConfig(ApiModel):
+    """Shown to the student: the items to match (`left`, e.g. terms or situations) and what to
+    match them with (`right`, e.g. definitions or graph models). `right` may hold more choices
+    than `left`, and a right item may fit more than one left item."""
+
+    prompt: str = Field(max_length=5_000)
+    left: list[MatchingItem] = Field(min_length=1, max_length=20)
+    right: list[MatchingItem] = Field(min_length=1, max_length=30)
+
+    @model_validator(mode="after")
+    def unique_ids(self) -> "MatchingConfig":
+        for side, items in (("left", self.left), ("right", self.right)):
+            ids = [item.id for item in items]
+            if len(ids) != len(set(ids)):
+                raise ValueError(f"two {side} items share an id")
+        return self
+
+
+class MatchingSolution(ApiModel):
+    """Server-only: the right item for each left item, and why a wrong pairing is wrong, keyed by
+    left item id (FR-4.2)."""
+
+    pairs: dict[str, str]
+    feedback: dict[str, str] = Field(default_factory=dict)
+
+
+class MatchingSubmission(ApiModel):
+    """The right item the student chose for each left item; a left item may be left unmatched."""
+
+    pairs: dict[str, str] = Field(default_factory=dict, max_length=20)
+
+
+# --- Fix the bug: correct a faulty BFS (FR-5.5; objective 7) -----------------------------------
+
+
+class FixTheBugConfig(ApiModel):
+    """Shown to the student: the faulty program as lines, in its faulty order, and a set of
+    correction lines. The student builds the fixed program: they replace each faulty line with
+    a correction and move any line that is in the wrong place. Line and correction ids are one
+    namespace, so the submission is simply the fixed program's ids in order."""
+
+    prompt: str = Field(max_length=5_000)
+    lines: list[ParsonsLine] = Field(min_length=1, max_length=100)
+    corrections: list[ParsonsLine] = Field(min_length=1, max_length=50)
+
+    @model_validator(mode="after")
+    def unique_ids(self) -> "FixTheBugConfig":
+        ids = [line.id for line in self.lines] + [line.id for line in self.corrections]
+        if len(ids) != len(set(ids)):
+            raise ValueError("every line and correction needs its own id")
+        return self
+
+
+class FixTheBugSolution(ApiModel):
+    """Server-only: the fixed program as line and correction ids in order, and why each faulty
+    line is wrong, keyed by that line's id (FR-4.2)."""
+
+    order: list[int] = Field(min_length=1, max_length=100)
+    feedback: dict[int, str] = Field(default_factory=dict)
+
+
+class FixTheBugSubmission(ApiModel):
+    order: list[int] = Field(max_length=150)
+
+
+# --- Choose tests: select the test cases that expose the bug (FR-5.5; objective 7) -------------
+
+
+class TestCase(ApiModel):
+    """A small graph, a start vertex and the order BFS should visit it in. The seed checks every
+    `expected` against the BFS engine, so the correct BFS always passes every test case."""
+
+    __test__ = False  # not a pytest test class, despite the name
+
+    id: str = Field(min_length=1, max_length=50)
+    directed: bool = False
+    vertices: list[Vertex] = Field(min_length=1, max_length=20)
+    edges: list[GraphEdge] = Field(default_factory=list, max_length=60)
+    start_vertex: Vertex
+    expected: list[Vertex] = Field(min_length=1, max_length=20)
+
+
+class ChooseTestsConfig(ApiModel):
+    """Shown to the student: the faulty BFS and four to six test cases (FR-5.5)."""
+
+    prompt: str = Field(max_length=5_000)
+    code: str = Field(max_length=20_000)
+    tests: list[TestCase] = Field(min_length=2, max_length=8)
+
+    @model_validator(mode="after")
+    def unique_ids(self) -> "ChooseTestsConfig":
+        ids = [test.id for test in self.tests]
+        if len(ids) != len(set(ids)):
+            raise ValueError("two test cases share an id")
+        return self
+
+
+class ChooseTestsSolution(ApiModel):
+    """Server-only: the test cases the faulty version fails, and a message per test case for a
+    wrong choice: why it does, or doesn't, expose the bug."""
+
+    exposing: list[str] = Field(min_length=1)
+    feedback: dict[str, str] = Field(default_factory=dict)
+
+
+class ChooseTestsSubmission(ApiModel):
+    selected: list[str] = Field(default_factory=list, max_length=8)
+
+
 # --- Trace table: fill the BFS trace step by step (FR-4.1, FR-6.6) ----------------------------
 
 
@@ -128,7 +250,8 @@ class TraceSubmission(ApiModel):
 
 
 class PartResult(ApiModel):
-    """One graded part: a position in the ordering (Parsons) or a blank id (fill-in)."""
+    """One graded part: a position in the ordering (Parsons, fix the bug), a blank id (fill-in),
+    or the index of an item in the config (matching: a left item; choose tests: a test case)."""
 
     ref: int
     correct: bool

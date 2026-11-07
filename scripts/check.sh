@@ -33,7 +33,7 @@ echo "== api"
   .venv/bin/pytest -o addopts="" \
     --cov=app.services.bfs --cov=app.services.checking --cov=app.services.rewards \
     --cov-branch --cov-fail-under=90 --cov-report=term-missing \
-    tests/test_bfs.py tests/test_checking.py tests/test_rewards.py
+    tests/test_bfs.py tests/test_checking.py tests/test_rewards.py tests/test_activity_kinds.py
 )
 
 echo "== all checks passed"

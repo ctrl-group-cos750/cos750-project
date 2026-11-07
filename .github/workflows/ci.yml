@@ -65,6 +65,7 @@ jobs:
           npm run lint
           npm run coverage
           npm run build
+          npm run check:api
 
       # api
       - if: steps.paths.outputs.api == 'true'

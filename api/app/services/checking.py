@@ -92,7 +92,9 @@ def check_fill_in(
 
 def check_trace(config: TraceConfig, submission: TraceSubmission) -> CheckResult:
     """One part per step: a step is correct when the student's visited vertex, queue, visited set
-    and order all match the engine's step at that position (FR-6.6). The traversal is the engine's,
+    and order all match the engine's step at that position (FR-6.6). The queue and the order are
+    sequences, so their order counts; the visited set is a set, so it is compared regardless of the
+    order the student wrote it in (a repeated vertex still makes it wrong). The traversal is the engine's,
     not a stored answer, so a trace is always graded against what the lessons teach (SE document
     decision "BFS computed server-side"); no `solution` is kept for this kind. A short answer leaves
     its missing steps wrong and a long one leaves its extra steps wrong, so both lower the score."""
@@ -117,7 +119,7 @@ def check_trace(config: TraceConfig, submission: TraceSubmission) -> CheckResult
         elif (
             have.visited_vertex == want.visited_vertex
             and have.queue == want.queue
-            and have.visited == want.visited
+            and sorted(have.visited) == sorted(want.visited)
             and have.order == want.order
         ):
             parts.append(PartResult(ref=i, correct=True))

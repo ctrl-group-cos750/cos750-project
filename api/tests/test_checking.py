@@ -295,6 +295,40 @@ def test_trace_wrong_visited_vertex_fails_that_step() -> None:
     assert result.parts[2].message == checking.WRONG_TRACE_STEP
 
 
+def test_trace_visited_set_is_compared_regardless_of_order() -> None:
+    rows = [dict(r) for r in CORRECT_ROWS]
+    rows[1] = {**rows[1], "visited": ["B", "A"]}  # same set as ["A", "B"]
+    result = checking.check_trace(TRACE, TraceSubmission.model_validate({"rows": rows}))
+    assert result.correct
+
+
+def test_trace_visited_set_with_a_repeated_vertex_is_wrong() -> None:
+    rows = [dict(r) for r in CORRECT_ROWS]
+    rows[1] = {**rows[1], "visited": ["A", "B", "B"]}
+    result = checking.check_trace(TRACE, TraceSubmission.model_validate({"rows": rows}))
+    assert [p.correct for p in result.parts] == [True, False, True, True]
+
+
+def test_trace_order_still_counts_order() -> None:
+    rows = [dict(r) for r in CORRECT_ROWS]
+    rows[1] = {**rows[1], "order": ["B", "A"]}  # the visit order is a sequence, not a set
+    result = checking.check_trace(TRACE, TraceSubmission.model_validate({"rows": rows}))
+    assert [p.correct for p in result.parts] == [True, False, True, True]
+
+
+def test_trace_refuses_an_overlong_vertex_label() -> None:
+    row = {"visited_vertex": "A" * 33, "queue": [], "visited": [], "order": []}
+    with pytest.raises(ValidationError):
+        TraceSubmission.model_validate({"rows": [row]})
+
+
+def test_trace_config_refuses_a_bad_vertex_label() -> None:
+    with pytest.raises(ValidationError):
+        TraceConfig.model_validate(
+            {"directed": False, "vertices": ["A b!"], "edges": [], "start_vertex": "A b!"}
+        )
+
+
 def test_trace_short_answer_reports_the_missing_steps() -> None:
     result = checking.check_trace(TRACE, TraceSubmission.model_validate({"rows": CORRECT_ROWS[:2]}))
     assert not result.correct

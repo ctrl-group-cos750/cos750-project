@@ -42,7 +42,9 @@ describe('ReportPage', () => {
     expect(row(1).getByText('Met independently')).toBeVisible()
     expect(row(1).getByText('You met this on your own.')).toBeVisible()
     expect(row(2).getByText('Met with support')).toBeVisible()
-    expect(row(2).getByText(/hint 3 or 4\. That's fine/)).toBeVisible()
+    expect(row(2).getByText('You met this after using hint 3 or 4.')).toBeVisible()
+    expect(row(1).getByText('To meet it: At least 4 of 5 items correct.')).toBeVisible()
+    expect(screen.getByText(/is fine for the lecture/)).toBeVisible()
   })
 
   it('counts the objectives to review when one is not yet met', async () => {

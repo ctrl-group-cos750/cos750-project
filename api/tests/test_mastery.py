@@ -2,6 +2,8 @@
 the stored results and what they earn, and GET /api/me/report."""
 
 import json
+import os
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -10,10 +12,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, HintView, ObjectiveResult, User
+from app.models import Activity, Attempt, HintView, ObjectiveResult, User
 from app.schemas.graphs import GraphScenarioOut
-from app.seed import ObjectiveFixture, load, read_fixtures
+from app.seed import FixtureFile, ObjectiveFixture, check_references, load, read_fixtures
 from app.services import mastery, rewards
+from app.services.attempts import record_attempt
 from app.services.bfs import run_bfs
 from app.services.mastery import Answer, Rule, decide
 
@@ -58,6 +61,19 @@ def test_every_committed_objective_has_exactly_one_rule() -> None:
 def test_an_objective_needs_exactly_one_rule(rule: dict[str, Any]) -> None:
     with pytest.raises(ValueError, match="pass_fraction or max_wrong"):
         ObjectiveFixture(id=1, text="t", bloom_level="b", criterion="c", **rule)
+
+
+def test_an_objective_needs_a_badge_so_9_is_refused() -> None:
+    # The badge catalogue has lo1 to lo8; meeting a 9th would have no badge to award.
+    with pytest.raises(ValueError, match="less than or equal to 8"):
+        ObjectiveFixture(id=9, text="t", bloom_level="b", criterion="c", pass_fraction=1.0)
+
+
+def test_every_objective_needs_a_module_6_item() -> None:
+    course = small_course()
+    course["activities"] = [a for a in course["activities"] if a["id"] != 603]
+    with pytest.raises(ValueError, match=r"no mastery item for objectives \[2\]"):
+        check_references(FixtureFile.model_validate(course))
 
 
 # --- Deciding a result (FR-7.2) ------------------------------------------------------------------
@@ -125,7 +141,8 @@ def mcq(id: int, objective: int, purpose: str = "mastery", module: int = 6) -> d
 
 
 def small_course(rule_1: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Objective 1 needs 2 of 2 MCQs (601, 602), objective 2 one MCQ (603); 301 is practice."""
+    """Objective 1 needs 2 of 2 MCQs (601, 602), objective 2 one MCQ (603). 301 is practice and
+    302 a mastery item outside module 6: neither counts."""
     return {
         "objectives": [
             {"id": 1, "text": "One", "bloom_level": "b", "criterion": "Both right."}
@@ -138,6 +155,7 @@ def small_course(rule_1: dict[str, Any] | None = None) -> dict[str, Any]:
         ],
         "activities": [
             mcq(301, 1, purpose="practice", module=3),
+            mcq(302, 1, module=3),
             mcq(601, 1),
             mcq(602, 1),
             mcq(603, 2),
@@ -203,9 +221,10 @@ def test_only_the_first_attempt_at_an_item_counts(client: TestClient, course: Pa
     assert states(client)[2] == "not_yet"
 
 
-def test_practice_items_do_not_count(client: TestClient, course: Path, db: Session) -> None:
+def test_only_module_6_mastery_items_count(client: TestClient, course: Path, db: Session) -> None:
     user = log_in(client)
     answer(client, 301)
+    answer(client, 302)
     assert states(client)[1] == "not_attempted"
     assert db.scalars(select(ObjectiveResult).where(ObjectiveResult.user_id == user)).all() == []
 
@@ -303,8 +322,6 @@ def test_recompute_all_skips_students_who_never_answered_a_mastery_item(
 
 
 def test_an_attempt_without_graded_parts_counts_as_one_part(course: Path, db: Session) -> None:
-    from app.models import Attempt
-
     student = User(email="y@example.com", display_name="Y", password_hash="x")  # noqa: S106
     db.add(student)
     db.flush()
@@ -378,3 +395,38 @@ def test_the_committed_mastery_check_can_be_passed(client: TestClient, db: Sessi
     assert {o["state"] for o in report["objectives"]} == {"met_independently"}
     assert report["ready"] is True
     assert len(report["objectives"]) == 7
+
+
+@pytest.mark.skipif(not os.environ.get("TEST_DATABASE_URL"), reason="needs Postgres row locks")
+def test_two_first_answers_at_once_both_record(course: Path, db: Session) -> None:
+    """Two mastery answers from one student in two transactions at once: the second waits for the
+    first's lock instead of failing on the unique (user, objective) row both would insert."""
+    student = User(email="z@example.com", display_name="Z", password_hash="x")  # noqa: S106
+    db.add(student)
+    db.commit()
+    engine = db.get_bind()
+    errors: list[BaseException] = []
+
+    with Session(engine) as first:
+        record_attempt(first, student.id, first.get_one(Activity, 601), {"selected": "a"})
+
+        def second() -> None:
+            try:
+                with Session(engine) as other:
+                    activity = other.get_one(Activity, 603)
+                    record_attempt(other, student.id, activity, {"selected": "a"})
+                    other.commit()
+            except BaseException as exc:  # reported below, from the test's thread
+                errors.append(exc)
+
+        racer = threading.Thread(target=second)
+        racer.start()
+        racer.join(timeout=1)
+        assert racer.is_alive(), "the second answer should wait for the first's lock"
+        first.commit()
+        racer.join(timeout=10)
+
+    assert errors == []
+    db.expire_all()
+    rows = db.scalars(select(ObjectiveResult).where(ObjectiveResult.user_id == student.id)).all()
+    assert {r.objective_id: r.state for r in rows} == {1: "not_attempted", 2: "met_independently"}

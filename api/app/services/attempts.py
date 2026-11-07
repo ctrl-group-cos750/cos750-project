@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.models import Activity, Attempt, Hint, HintView
 from app.schemas.activities import CheckResult
 from app.services.checking import check_activity
-from app.services.mastery import recompute
+from app.services.mastery import counts, recompute
 from app.services.rewards import on_attempt
 
 
@@ -44,7 +44,7 @@ def record_attempt(
     session.add(attempt)
     session.flush()
     on_attempt(session, attempt)  # points for a first correct answer (FR-9.1, FR-9.2)
-    if activity.purpose == "mastery":
+    if counts(activity):
         recompute(session, user_id)  # the objective results, and what they earn (FR-7)
     return attempt, result
 

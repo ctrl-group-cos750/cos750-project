@@ -15,7 +15,7 @@ function nextStep(o: ObjectiveReport): string {
     case 'met_independently':
       return 'You met this on your own.'
     case 'met_with_support':
-      return "You met this with hint 3 or 4. That's fine for the lecture."
+      return 'You met this after using hint 3 or 4.'
     case 'not_yet':
       return 'Review this objective before the lecture.'
     case 'not_attempted':
@@ -66,6 +66,7 @@ export function ReportPage() {
               <div>
                 <p className={styles.text}>{o.text}</p>
                 <p className={styles.next}>{nextStep(o)}</p>
+                <p className={styles.criterion}>To meet it: {o.criterion}</p>
               </div>
               <Result state={o.state} />
             </li>
@@ -75,8 +76,8 @@ export function ReportPage() {
 
       <p className={styles.note}>
         Each question in the mastery check counts once: your first answer is the one used here.
-        &ldquo;Met with support&rdquo; means you used hint 3 or 4, and that&rsquo;s fine for the
-        lecture.
+        &ldquo;Met with support&rdquo; is fine for the lecture: you don&rsquo;t need to meet every
+        objective on your own.
       </p>
     </>
   )

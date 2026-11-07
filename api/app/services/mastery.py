@@ -17,17 +17,24 @@ trace table, a pair in a matching item, a line or blank in code. The result is t
 
 Everything here is worked out from attempts, so a changed rule or item is applied by running it
 again (FR-7.6): `recompute` after each mastery attempt, `recompute_all` on every seed. The report
-(`report`) works it out on each request, so it always follows the current rules.
+(GET /api/me/report) calls `evaluate` on each request, so it always follows the current rules.
+`recompute` also stores the results in `objective_results`, for two things the report doesn't do:
+noticing that a result changed, which is what earns its badge and points, and the evaluation
+export (FR-10).
+
+The three results go by three spellings: `met_independently` here and in the API (the SE document's
+data model), `independent` in app/services/rewards.py, and `independent` / `not-yet` in the
+frontend's MasteryStatus. `_REWARD_NAMES` maps the first to the second; the frontend maps the rest.
 """
 
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from sqlalchemy import func, select
+from sqlalchemy import ColumnElement, and_, func, select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, Objective, ObjectiveResult
+from app.models import Activity, Attempt, Objective, ObjectiveResult, User
 from app.services import rewards
 
 State = Literal["not_attempted", "met_independently", "met_with_support", "not_yet"]
@@ -42,6 +49,16 @@ _REWARD_NAMES: dict[State, rewards.Mastery] = {
     "met_with_support": "supported",
     "not_yet": "not_yet",
 }
+
+
+def counts(activity: Activity) -> bool:
+    """Whether answers to this activity decide a result: a mastery item in module 6 (FR-7.1)."""
+    return activity.purpose == "mastery" and activity.module_id == MASTERY_MODULE
+
+
+def _counted() -> ColumnElement[bool]:
+    """`counts` as a query condition."""
+    return and_(Activity.purpose == "mastery", Activity.module_id == MASTERY_MODULE)
 
 
 @dataclass(frozen=True)
@@ -101,11 +118,7 @@ class Outcome:
 def evaluate(session: Session, user_id: int) -> list[Outcome]:
     """This student's result on every objective, in objective order. Reads only."""
     objectives = session.scalars(select(Objective).order_by(Objective.id)).all()
-    items = session.scalars(
-        select(Activity)
-        .where(Activity.purpose == "mastery", Activity.module_id == MASTERY_MODULE)
-        .order_by(Activity.id)
-    ).all()
+    items = session.scalars(select(Activity).where(_counted()).order_by(Activity.id)).all()
     first_ids = (
         select(func.min(Attempt.id))
         .where(Attempt.user_id == user_id, Attempt.activity_id.in_([i.id for i in items]))
@@ -128,7 +141,9 @@ def evaluate(session: Session, user_id: int) -> list[Outcome]:
 
 
 def is_ready(outcomes: Sequence[Outcome]) -> bool:
-    """Ready for the lecture: every objective met, with or without support (FR-7.4)."""
+    """Ready for the lecture: every objective met, with or without support (FR-7.4). The ID
+    document puts it as "no objective marked Not yet"; an objective not attempted yet isn't met
+    either, or a student who had answered nothing would be ready."""
     return bool(outcomes) and all(o.state in MET for o in outcomes)
 
 
@@ -136,6 +151,10 @@ def recompute(session: Session, user_id: int) -> list[Outcome]:
     """Work out this student's results again and store them (not committed). A result that is
     newly met earns its points and badge (app/services/rewards.py), which are never taken back,
     even if a later rule change lowers the result."""
+    # One recompute per student at a time: two answers submitted together would otherwise both
+    # insert the first result rows and one would fail on the unique constraint. On Postgres this
+    # row lock holds until the attempt's transaction commits; SQLite (tests) ignores it.
+    session.execute(select(User.id).where(User.id == user_id).with_for_update())
     outcomes = evaluate(session, user_id)
     stored = {
         r.objective_id: r
@@ -169,9 +188,7 @@ def recompute_all(session: Session) -> int:
     """Recompute every student who has answered a mastery item or has a stored result, after the
     rules or items changed (the seed calls this). Returns how many students. Not committed."""
     answered = (
-        select(Attempt.user_id)
-        .join(Activity, Activity.id == Attempt.activity_id)
-        .where(Activity.purpose == "mastery")
+        select(Attempt.user_id).join(Activity, Activity.id == Attempt.activity_id).where(_counted())
     )
     users = set(session.scalars(answered)) | set(session.scalars(select(ObjectiveResult.user_id)))
     for user_id in sorted(users):

@@ -38,7 +38,7 @@ from app.schemas.content import Purpose, SegmentKind
 from app.schemas.graphs import VERTEX, GraphScenarioOut
 from app.services.bfs import InvalidGraph, run_bfs
 from app.services.content import validate_activity
-from app.services.mastery import recompute_all
+from app.services.mastery import MASTERY_MODULE, recompute_all
 
 FIXTURES = Path(__file__).parent
 
@@ -80,7 +80,9 @@ class ActivityFixture(BaseModel, extra="forbid"):
 
 
 class ObjectiveFixture(BaseModel, extra="forbid"):
-    id: int = Field(ge=1, le=20)
+    # 1 to 8: each objective has a badge, and the badge catalogue has lo1 to lo8
+    # (app/services/rewards.py, web/src/components/achievements.ts). Add one there first.
+    id: int = Field(ge=1, le=8)
     text: str = Field(min_length=1)
     bloom_level: str = Field(min_length=1, max_length=100)
     criterion: str = Field(min_length=1)
@@ -174,6 +176,18 @@ def check_references(content: FixtureFile) -> None:
             raise ValueError(f"activity {a.id}: no module {a.module_id}")
         if a.objective_id is not None and a.objective_id not in objectives:
             raise ValueError(f"activity {a.id}: no objective {a.objective_id}")
+    # Module 6 is the mastery check: every objective needs an item there, or its result could
+    # never be met and no student could ever be ready for the lecture (FR-7.1, FR-7.4).
+    if MASTERY_MODULE in modules:
+        checked = {
+            a.objective_id
+            for a in content.activities
+            if a.module_id == MASTERY_MODULE and a.purpose == "mastery"
+        }
+        if missing := sorted(objectives - checked):
+            raise ValueError(
+                f"module {MASTERY_MODULE} has no mastery item for objectives {missing}"
+            )
     placed: dict[int, int] = {}  # activity id -> the segment that shows it
     for m in content.modules:
         for seg in m.segments:

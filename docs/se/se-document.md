@@ -384,7 +384,7 @@ Code activities never execute student-written code. The student constructs code 
 - **FR-7.1** Module 6 is a mastery check: unseen activities on every objective, checked against the success criteria in the ID document's Table 1.
 - **FR-7.2** Give each objective one of three results: **met independently** (criterion met without hint level 3 or 4), **met with support** (met after using level 3 or 4), or **not yet** (criterion not met).
 - **FR-7.3** Show a mastery report: each objective's result in plain words, with next steps.
-- **FR-7.4** A student is **ready for the lecture** when no objective is "not yet".
+- **FR-7.4** A student is **ready for the lecture** when no objective is "not yet". An objective whose mastery items are not all answered yet isn't met either, so in practice every objective must be met, with or without support.
 - **FR-7.5** For each "not yet" objective, open a review path: that objective's review segments and activities, followed by fresh mastery items for it. The objective's result updates when they are completed.
 - **FR-7.6** Results are computed on the server from recorded attempts, and recomputed if the rules change.
 

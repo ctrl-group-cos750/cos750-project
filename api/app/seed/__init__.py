@@ -146,10 +146,11 @@ class ReviewPathFixture(BaseModel, extra="forbid"):
     def check_segments(self) -> "ReviewPathFixture":
         if any(seg.kind == "refresher" for seg in self.segments):
             raise ValueError(f"review path {self.objective_id}: a refresher belongs in module 0")
-        if not any(seg.kind != "activity" for seg in self.segments):
+        # ID document §7.6: the path starts by teaching the objective again.
+        if self.segments[0].kind == "activity":
             raise ValueError(
-                f"review path {self.objective_id}: needs a segment that teaches the objective "
-                "again, such as a worked example"
+                f"review path {self.objective_id}: starts with a segment that teaches the "
+                "objective again, such as a worked example"
             )
         return self
 
@@ -242,8 +243,9 @@ def _check_review_paths(
 ) -> set[int]:
     """Each review path: for an objective that exists, one per objective, and every objective has
     one once module 6 does (a student marked "not yet" must have somewhere to go). Its activities
-    are that objective's, belong to no module, and are practice (`review`) before fresh items
-    (`mastery`), of which there is at least one. A mastery item is in module 6 or on a review path,
+    are that objective's and belong to no module. As the ID document's §7.6 sets out, there is
+    practice (`review`) with the full hint ladder, levels 1 to 4, then fresh items (`mastery`):
+    at least one of each, the practice first. A mastery item is in module 6 or on a review path,
     nowhere else. Returns the ids of the activities on review paths."""
     paths = [r.objective_id for r in content.review_paths]
     if repeated := sorted({o for o in paths if paths.count(o) > 1}):
@@ -277,8 +279,15 @@ def _check_review_paths(
                 )
             if a.id in on_paths:
                 raise ValueError(f"{where}: activity {a.id} is on a review path twice")
+            if a.purpose == "review" and sorted(h.level for h in a.hints) != [1, 2, 3, 4]:
+                raise ValueError(
+                    f"{where}, segment {seg.id}: practice activity {a.id} needs the full hint "
+                    "ladder, levels 1 to 4"
+                )
             on_paths.add(a.id)
             purposes.append(a.purpose)
+        if "review" not in purposes:
+            raise ValueError(f"{where}: needs at least one practice (review) activity")
         if "mastery" not in purposes:
             raise ValueError(f"{where}: needs at least one fresh mastery item")
         if "review" in purposes[purposes.index("mastery") :]:

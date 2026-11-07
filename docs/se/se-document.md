@@ -516,7 +516,7 @@ Figure: Entities and relationships.
 
 **Checkpoint**: `id`, `video_id`, `at_seconds`, `activity_id`.
 
-**Activity**: `id`, `module_id`, `objective_id` (nullable for diagnostic items), `purpose` (`practice` | `diagnostic` | `retrieval` | `mastery` | `review` | `bonus`), `kind` (one of the kinds in FR-4.1), `prompt` (Markdown), `config` (JSON, shape depends on the kind: options, diagram, starter code, line order, scenario ID …), `answer` (JSON, never sent to the browser: correct options, expected line order or tokens, the faulty lines and their corrections, or the test cases that expose a bug), `feedback` (JSON: messages for common wrong answers).
+**Activity**: `id`, `module_id` (empty for an activity on a review path, which belongs to an objective rather than a module, and for one made in the video editor), `objective_id` (nullable for diagnostic items), `purpose` (`practice` | `diagnostic` | `retrieval` | `mastery` | `review` | `bonus`), `kind` (one of the kinds in FR-4.1), `prompt` (Markdown), `config` (JSON, shape depends on the kind: options, diagram, starter code, line order, scenario ID …), `answer` (JSON, never sent to the browser: correct options, expected line order or tokens, the faulty lines and their corrections, or the test cases that expose a bug), `feedback` (JSON: messages for common wrong answers).
 
 **Hint**: `activity_id`, `level` (1 to 4), `body` (Markdown). Level 4 is the worked solution.
 

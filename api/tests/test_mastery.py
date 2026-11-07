@@ -10,9 +10,10 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, HintView, ObjectiveResult, User
+from app.models import Activity, Attempt, HintView, ObjectiveResult, Segment, User
 from app.schemas.graphs import GraphScenarioOut
 from app.seed import FixtureFile, ObjectiveFixture, check_references, load, read_fixtures
 from app.services import mastery, rewards
@@ -142,6 +143,11 @@ def mcq(
     }
 
 
+def ladder() -> list[dict[str, Any]]:
+    """The full hint ladder a practice item on a review path needs: a new list each time."""
+    return [{"level": n, "body": f"Hint {n}"} for n in (1, 2, 3, 4)]
+
+
 def review_path(objective: int, fresh: list[int]) -> dict[str, Any]:
     """A worked example, practice item `objective`01, then the fresh items."""
     base = 1000 + 100 * objective
@@ -174,10 +180,10 @@ def small_course(rule_1: dict[str, Any] | None = None) -> dict[str, Any]:
             mcq(601, 1),
             mcq(602, 1),
             mcq(603, 2),
-            mcq(1101, 1, purpose="review", module=None),
+            mcq(1101, 1, purpose="review", module=None) | {"hints": ladder()},
             mcq(1102, 1, module=None),
             mcq(1103, 1, module=None),
-            mcq(1201, 2, purpose="review", module=None),
+            mcq(1201, 2, purpose="review", module=None) | {"hints": ladder()},
             mcq(1202, 2, module=None),
         ],
         "review_paths": [review_path(1, [1102, 1103]), review_path(2, [1202])],
@@ -466,6 +472,12 @@ def _path(course: dict[str, Any], objective: int) -> dict[str, Any]:
     return next(p for p in course["review_paths"] if p["objective_id"] == objective)
 
 
+def _fresh_first(path: dict[str, Any]) -> None:
+    """Keep the worked example first, but put the fresh items before the practice."""
+    teach, *rest = path["segments"]
+    path["segments"] = [teach, *reversed(rest)]
+
+
 def _activity(course: dict[str, Any], id: int) -> dict[str, Any]:
     return next(a for a in course["activities"] if a["id"] == id)
 
@@ -480,7 +492,9 @@ def _activity(course: dict[str, Any], id: int) -> dict[str, Any]:
         (lambda c: _activity(c, 1202).update(objective_id=1), "must have no module"),
         (lambda c: _activity(c, 1201).update(purpose="practice"), "is practice"),
         (lambda c: _path(c, 2)["segments"].pop(), "at least one fresh mastery item"),
-        (lambda c: _path(c, 1)["segments"].reverse(), "after all the practice"),
+        (lambda c: _path(c, 2)["segments"].pop(1), "at least one practice"),
+        (lambda c: _activity(c, 1201)["hints"].pop(), "needs the full hint ladder"),
+        (lambda c: _fresh_first(_path(c, 1)), "after all the practice"),
         (lambda c: _path(c, 2)["segments"].append(_path(c, 2)["segments"][-1]), "path twice"),
         (lambda c: _path(c, 2)["segments"][1].update(activity_id=999), "no activity 999"),
         (
@@ -509,6 +523,13 @@ def test_a_review_path_that_cannot_work_is_refused(change: Any, message: str) ->
     [
         ([{"id": 1, "kind": "activity", "title": "x", "activity_id": 1}], "teaches the objective"),
         (
+            [
+                {"id": 1, "kind": "activity", "title": "x", "activity_id": 1},
+                {"id": 2, "kind": "worked_example", "title": "y", "body": "b"},
+            ],
+            "starts with a segment that teaches",
+        ),
+        (
             [{"id": 1, "kind": "refresher", "title": "x", "body": "b", "refresher_for": "q"}],
             "belongs in module 0",
         ),
@@ -528,10 +549,6 @@ def test_review_path_segment_ids_must_not_collide_with_modules(tmp_path: Path) -
 
 
 def test_a_segment_belongs_to_a_module_or_a_review_path(course: Path, db: Session) -> None:
-    from sqlalchemy.exc import IntegrityError
-
-    from app.models import Segment
-
     db.add(Segment(id=5000, kind="text", title="Nowhere", body="b"))
     with pytest.raises(IntegrityError):
         db.flush()
@@ -544,8 +561,6 @@ def test_a_segment_belongs_to_a_module_or_a_review_path(course: Path, db: Sessio
 
 
 def test_a_reseed_reorders_and_removes_review_segments(course: Path, db: Session) -> None:
-    from app.models import Segment
-
     changed = small_course()
     segments = _path(changed, 1)["segments"]
     segments[:] = [segments[0], segments[1], segments[3]]  # drop fresh item 1102's step

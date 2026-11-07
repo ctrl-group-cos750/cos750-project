@@ -30,8 +30,8 @@ export function Prose({ markdown }: { markdown: string }) {
   for (const block of markdown.split(/(\n\s*\n)/)) {
     const key = `${at}`
     at += block.length
-    if (block.trim() && !/^\n\s*\n$/.test(block))
-      paragraphs.push(<p key={key}>{inline(block.trim())}</p>)
+    // The separators between paragraphs are whitespace only, so this skips them too.
+    if (block.trim()) paragraphs.push(<p key={key}>{inline(block.trim())}</p>)
   }
   return <>{paragraphs}</>
 }

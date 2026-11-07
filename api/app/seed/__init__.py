@@ -8,6 +8,11 @@ Each fixture file may hold any of:
 - `activities`, each with its `hints`, and tagged with its `module_id`, `objective_id` and
   `purpose` (FR-4.3).
 - `graphs`: the scenarios the BFS visualiser loads (FR-6.1).
+- `review_paths`: one per objective, the path a student opens when the mastery check marks that
+  objective "not yet" (FR-7.5, ID document §7.6): `segments` that teach it again (a worked
+  example, with practice activities of purpose `review`), then fresh items of purpose `mastery`.
+  Its activities belong to no module. Numbered from 1000 + 100 times the objective (objective 5:
+  1501, 1502, …), in `review.json`.
 
 Everything has a fixed id, so a re-run updates the same rows. By convention a module's segments and
 activities are numbered from 100 times its number (module 3: 301, 302, …; module 0: 1, 2, …), and a
@@ -133,6 +138,22 @@ class ModuleFixture(BaseModel, extra="forbid"):
     segments: list[SegmentFixture] = Field(default_factory=list)
 
 
+class ReviewPathFixture(BaseModel, extra="forbid"):
+    objective_id: int = Field(ge=1, le=8)
+    segments: list[SegmentFixture] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def check_segments(self) -> "ReviewPathFixture":
+        if any(seg.kind == "refresher" for seg in self.segments):
+            raise ValueError(f"review path {self.objective_id}: a refresher belongs in module 0")
+        if not any(seg.kind != "activity" for seg in self.segments):
+            raise ValueError(
+                f"review path {self.objective_id}: needs a segment that teaches the objective "
+                "again, such as a worked example"
+            )
+        return self
+
+
 class GraphEdgeFixture(BaseModel, extra="forbid"):
     source: str
     target: str
@@ -163,6 +184,7 @@ class FixtureFile(BaseModel, extra="forbid"):
     modules: list[ModuleFixture] = Field(default_factory=list)
     activities: list[ActivityFixture] = Field(default_factory=list)
     graphs: list[GraphFixture] = Field(default_factory=list)
+    review_paths: list[ReviewPathFixture] = Field(default_factory=list)
 
 
 def check_references(content: FixtureFile) -> None:
@@ -176,6 +198,7 @@ def check_references(content: FixtureFile) -> None:
             raise ValueError(f"activity {a.id}: no module {a.module_id}")
         if a.objective_id is not None and a.objective_id not in objectives:
             raise ValueError(f"activity {a.id}: no objective {a.objective_id}")
+    on_paths = _check_review_paths(content, objectives, activities)
     # Module 6 is the mastery check: every objective needs an item there, or its result could
     # never be met and no student could ever be ready for the lecture (FR-7.1, FR-7.4).
     if MASTERY_MODULE in modules:
@@ -191,6 +214,10 @@ def check_references(content: FixtureFile) -> None:
     placed: dict[int, int] = {}  # activity id -> the segment that shows it
     for m in content.modules:
         for seg in m.segments:
+            if seg.activity_id in on_paths:
+                raise ValueError(
+                    f"segment {seg.id}: activity {seg.activity_id} is on a review path"
+                )
             for ref in (seg.activity_id, seg.skip_check_activity_id):
                 if ref is not None and ref not in activities:
                     raise ValueError(f"segment {seg.id}: no activity {ref}")
@@ -210,6 +237,61 @@ def check_references(content: FixtureFile) -> None:
                 )
 
 
+def _check_review_paths(
+    content: FixtureFile, objectives: set[int], activities: dict[int, ActivityFixture]
+) -> set[int]:
+    """Each review path: for an objective that exists, one per objective, and every objective has
+    one once module 6 does (a student marked "not yet" must have somewhere to go). Its activities
+    are that objective's, belong to no module, and are practice (`review`) before fresh items
+    (`mastery`), of which there is at least one. A mastery item is in module 6 or on a review path,
+    nowhere else. Returns the ids of the activities on review paths."""
+    paths = [r.objective_id for r in content.review_paths]
+    if repeated := sorted({o for o in paths if paths.count(o) > 1}):
+        raise ValueError(f"objectives with two review paths: {repeated}")
+    if unknown := sorted(set(paths) - objectives):
+        raise ValueError(f"review paths for objectives that don't exist: {unknown}")
+    has_check = MASTERY_MODULE in {m.id for m in content.modules}
+    if has_check and (missing := sorted(objectives - set(paths))):
+        raise ValueError(f"objectives with no review path: {missing}")
+    on_paths: set[int] = set()
+    for path in content.review_paths:
+        where = f"review path {path.objective_id}"
+        purposes = []
+        for seg in path.segments:
+            if seg.skip_check_activity_id is not None:
+                raise ValueError(f"{where}, segment {seg.id}: nothing on a review path is skipped")
+            if seg.activity_id is None:
+                continue
+            a = activities.get(seg.activity_id)
+            if a is None:
+                raise ValueError(f"{where}, segment {seg.id}: no activity {seg.activity_id}")
+            if a.module_id is not None or a.objective_id != path.objective_id:
+                raise ValueError(
+                    f"{where}, segment {seg.id}: activity {a.id} must have no module and "
+                    f"objective {path.objective_id}"
+                )
+            if a.purpose not in ("review", "mastery"):
+                raise ValueError(
+                    f"{where}, segment {seg.id}: activity {a.id} is {a.purpose}; a review path "
+                    "holds review (practice) and mastery (fresh) items"
+                )
+            if a.id in on_paths:
+                raise ValueError(f"{where}: activity {a.id} is on a review path twice")
+            on_paths.add(a.id)
+            purposes.append(a.purpose)
+        if "mastery" not in purposes:
+            raise ValueError(f"{where}: needs at least one fresh mastery item")
+        if "review" in purposes[purposes.index("mastery") :]:
+            raise ValueError(f"{where}: the fresh mastery items come after all the practice")
+    for a in content.activities:
+        if a.purpose == "mastery" and a.module_id != MASTERY_MODULE and a.id not in on_paths:
+            raise ValueError(
+                f"activity {a.id}: a mastery item belongs in module {MASTERY_MODULE} or on a "
+                "review path"
+            )
+    return on_paths
+
+
 def read_fixtures(folder: Path = FIXTURES) -> FixtureFile:
     """Every fixture file in `folder`, validated and merged. Raises ValueError naming the file and
     the problem if any file is invalid or if two activities, or two graphs, share an id."""
@@ -223,10 +305,15 @@ def read_fixtures(folder: Path = FIXTURES) -> FixtureFile:
         merged.modules.extend(data.modules)
         merged.activities.extend(data.activities)
         merged.graphs.extend(data.graphs)
+        merged.review_paths.extend(data.review_paths)
     for what, ids in (
         ("objective", [o.id for o in merged.objectives]),
         ("module", [m.id for m in merged.modules]),
-        ("segment", [s.id for m in merged.modules for s in m.segments]),
+        (
+            "segment",
+            [s.id for m in merged.modules for s in m.segments]
+            + [s.id for r in merged.review_paths for s in r.segments],
+        ),
         ("activity", [a.id for a in merged.activities]),
         ("graph", [g.id for g in merged.graphs]),
     ):
@@ -285,7 +372,9 @@ def load(session: Session, folder: Path = FIXTURES) -> FixtureFile:
         session.add_all(Hint(activity_id=a.id, level=h.level, body=h.body) for h in a.hints)
     session.flush()
     for m in content.modules:
-        _load_segments(session, m)
+        _load_segments(session, m.segments, module_id=m.id)
+    for r in content.review_paths:
+        _load_segments(session, r.segments, review_objective_id=r.objective_id)
     for g in content.graphs:
         session.merge(
             GraphScenario(
@@ -314,21 +403,32 @@ def load(session: Session, folder: Path = FIXTURES) -> FixtureFile:
     return content
 
 
-def _load_segments(session: Session, module: ModuleFixture) -> None:
-    """Make the module's segments exactly the fixture's, in its order. A segment the fixture no
-    longer lists is deleted, after unlinking any video that played it."""
-    keep = [seg.id for seg in module.segments]
-    gone = session.scalars(
-        select(Segment.id).where(Segment.module_id == module.id, Segment.id.not_in(keep))
-    ).all()
+def _load_segments(
+    session: Session,
+    segments: list[SegmentFixture],
+    *,
+    module_id: int | None = None,
+    review_objective_id: int | None = None,
+) -> None:
+    """Make a module's (or an objective's review path's) segments exactly the fixture's, in its
+    order. A segment the fixture no longer lists is deleted, after unlinking any video that
+    played it."""
+    keep = [seg.id for seg in segments]
+    home = (
+        Segment.module_id == module_id
+        if module_id is not None
+        else Segment.review_objective_id == review_objective_id
+    )
+    gone = session.scalars(select(Segment.id).where(home, Segment.id.not_in(keep))).all()
     if gone:
         session.execute(update(Video).where(Video.segment_id.in_(gone)).values(segment_id=None))
         session.execute(delete(Segment).where(Segment.id.in_(gone)))
-    for position, seg in enumerate(module.segments, start=1):
+    for position, seg in enumerate(segments, start=1):
         session.merge(
             Segment(
                 id=seg.id,
-                module_id=module.id,
+                module_id=module_id,
+                review_objective_id=review_objective_id,
                 position=position,
                 kind=seg.kind,
                 title=seg.title,

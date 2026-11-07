@@ -11,6 +11,7 @@ function objective(id: number, more: Partial<ObjectiveReport> = {}): ObjectiveRe
     state: 'met_independently',
     answered: 1,
     total: 1,
+    review: null,
     ...more,
   }
 }
@@ -55,7 +56,7 @@ describe('ReportPage', () => {
     renderApp('/report')
     expect(await screen.findByText('Not ready yet: 1 objective to review')).toBeVisible()
     expect(row(5).getByText('Not yet')).toBeVisible()
-    expect(row(5).getByText('Review this objective before the lecture.')).toBeVisible()
+    expect(row(5).getByText('Work through its review path before the lecture.')).toBeVisible()
   })
 
   it('tells a student who has not finished the check what is left', async () => {
@@ -93,5 +94,35 @@ describe('ReportPage', () => {
     withReport({ ready: false, objectives: [] })
     renderApp('/')
     expect(await screen.findByRole('link', { name: 'Report' })).toHaveAttribute('href', '/report')
+  })
+
+  it('links each open review path, worded for how far the student is', async () => {
+    withReport({
+      ready: false,
+      objectives: [
+        objective(2, { state: 'not_yet', review: { answered: 0, total: 2 } }),
+        objective(3, { state: 'not_yet', review: { answered: 1, total: 2 } }),
+        objective(5, { state: 'not_yet', review: { answered: 2, total: 2 } }),
+        objective(6, { state: 'met_with_support', review: { answered: 1, total: 1 } }),
+        objective(7, { review: { answered: 1, total: 1 } }),
+      ],
+    })
+    renderApp('/report')
+    const start = await screen.findByRole('link', { name: 'Start review path: objective 2' })
+    expect(start).toHaveAttribute('href', '/review/2')
+    expect(row(2).getByText('Work through its review path before the lecture.')).toBeVisible()
+    expect(row(3).getByRole('link', { name: /Continue review path/ })).toBeVisible()
+    expect(row(3).getByText('Review path: 1 of 2 fresh questions answered.')).toBeVisible()
+    expect(row(5).getByText(/Still not yet after the review path/)).toBeVisible()
+    expect(row(5).getByRole('link', { name: /Look back at the review path/ })).toBeVisible()
+    expect(row(6).getByText('You met this after the review path, using hint 3 or 4.')).toBeVisible()
+    expect(row(7).getByText('You met this on your own after the review path.')).toBeVisible()
+  })
+
+  it('has no review link for an objective whose path is not open', async () => {
+    withReport({ ready: true, objectives: [objective(1)] })
+    renderApp('/report')
+    await screen.findByText('Ready for the lecture')
+    expect(screen.queryByRole('link', { name: /review path/ })).toBeNull()
   })
 })

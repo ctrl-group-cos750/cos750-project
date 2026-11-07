@@ -29,17 +29,26 @@ from app.schemas.activities import (
     MultipleChoiceSolution,
     ParsonsConfig,
     ParsonsSolution,
+    TraceConfig,
 )
+from app.schemas.base import ApiModel
 from app.schemas.graphs import VERTEX, GraphScenarioOut
 from app.services.bfs import InvalidGraph, run_bfs
 
 FIXTURES = Path(__file__).parent
+
+
+class NoSolution(ApiModel):
+    """A kind with no stored answer: the server derives it (e.g. trace, checked against the BFS
+    engine, FR-6.6). Its fixture solution must be empty, `{}`."""
+
 
 # The config and solution schemas for each kind (FR-4.1). Add a kind here when its checker lands.
 SHAPES: dict[str, tuple[type[BaseModel], type[BaseModel]]] = {
     "multiple_choice": (MultipleChoiceConfig, MultipleChoiceSolution),
     "parsons": (ParsonsConfig, ParsonsSolution),
     "fill_in": (FillInConfig, FillInSolution),
+    "trace": (TraceConfig, NoSolution),
 }
 
 
@@ -74,6 +83,13 @@ class ActivityFixture(BaseModel, extra="forbid"):
                 raise ValueError(
                     f"activity {self.id}: feedback for unknown options {sorted(unknown)}"
                 )
+        if isinstance(config, TraceConfig):
+            # The traversal is the engine's, so a graph it refuses would only fail when a student
+            # opens it; catch it at load, like GraphFixture does (FR-6.6).
+            try:
+                run_bfs(GraphScenarioOut(id=0, name="", **config.model_dump()))
+            except InvalidGraph as exc:
+                raise ValueError(f"activity {self.id}: {exc}") from exc
         levels = [hint.level for hint in self.hints]
         if len(levels) != len(set(levels)):
             raise ValueError(f"activity {self.id}: two hints share a level")

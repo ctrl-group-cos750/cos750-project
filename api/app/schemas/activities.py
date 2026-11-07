@@ -6,14 +6,15 @@ A submission carries only line IDs and tokens the student chose from a given set
 so nothing a student sends here is ever executed or stored as free-form code.
 """
 
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import Field
 
 from app.schemas.base import ApiModel
+from app.schemas.graphs import VERTEX, GraphEdge
 
 CodeActivityKind = Literal["parsons", "fill_in"]
-ActivityKind = Literal["multiple_choice", "parsons", "fill_in"]
+ActivityKind = Literal["multiple_choice", "parsons", "fill_in", "trace"]
 
 
 # --- Multiple choice: pick one option (FR-4.1) ------------------------------------------------
@@ -87,6 +88,40 @@ class FillInSolution(ApiModel):
 
 class FillInSubmission(ApiModel):
     answers: dict[int, str] = Field(default_factory=dict)
+
+
+# --- Trace table: fill the BFS trace step by step (FR-4.1, FR-6.6) ----------------------------
+
+
+class TraceConfig(ApiModel):
+    """Shown to the student: the graph to trace, drawn the same way a scenario is (FR-6.1). The
+    traversal itself is not here — the server derives it from this graph with the one BFS engine
+    (FR-6.6), so the answer never reaches the browser."""
+
+    directed: bool
+    # Same label rule as a graph fixture, so a trace graph draws like any other scenario.
+    vertices: list[Annotated[str, Field(pattern=VERTEX)]] = Field(min_length=1, max_length=50)
+    edges: list[GraphEdge] = Field(max_length=200)
+    start_vertex: str
+
+
+# A vertex label as the student types it. Only the length is bounded (labels are at most 32
+# characters, see VERTEX): a label that is not in the graph is a wrong answer, not a 422.
+TracedVertex = Annotated[str, Field(max_length=32)]
+
+
+class TraceRow(ApiModel):
+    """One row of the student's trace table: the vertex visited (dequeued) at this step and the
+    state after it — the queue, the visited set and the visit order (the columns in FR-4.1)."""
+
+    visited_vertex: TracedVertex
+    queue: list[TracedVertex] = Field(max_length=50)
+    visited: list[TracedVertex] = Field(max_length=50)
+    order: list[TracedVertex] = Field(max_length=50)
+
+
+class TraceSubmission(ApiModel):
+    rows: list[TraceRow] = Field(max_length=50)
 
 
 # --- The result of checking a submission -------------------------------------------------------

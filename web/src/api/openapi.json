@@ -807,6 +807,119 @@
         }
       }
     },
+    "/api/me/avatar": {
+      "put": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Set Avatar",
+        "description": "Choose a profile picture from the team's set, or none (FR-1.6). Only the student sees it.",
+        "operationId": "set_avatar_api_me_avatar_put",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AvatarIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/password": {
+      "post": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Change Password",
+        "description": "Change the password (FR-1.5). The current one is required, so a session left open on a\nshared computer can't be used to take the account over; the new one must pass the same rules\nas registration (NFR-S1). Every other session is logged out, and this one carries on.\n\n400 with the reason if the current password is wrong or the new one breaks a rule; 429 after\n10 tries a minute.",
+        "operationId": "change_password_api_me_password_post",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordChangeIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/videos/{video_id}": {
       "get": {
         "tags": [
@@ -1999,6 +2112,38 @@
         "title": "AttemptOut",
         "description": "The graded result sent back. Carries per-part correctness and messages, never the solution."
       },
+      "AvatarIn": {
+        "properties": {
+          "avatar": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "vertex",
+                  "edge",
+                  "path",
+                  "cycle",
+                  "tree",
+                  "star",
+                  "grid",
+                  "queue"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "avatar"
+        ],
+        "title": "AvatarIn",
+        "description": "The picture to show, or null for the student's initial."
+      },
       "BfsResult": {
         "properties": {
           "startVertex": {
@@ -2553,6 +2698,27 @@
         "title": "PartResult",
         "description": "One graded part: a position in the ordering (Parsons, fix the bug), a blank id (fill-in),\nor the index of an item in the config (matching: a left item; choose tests: a test case)."
       },
+      "PasswordChangeIn": {
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "maxLength": 128,
+            "title": "Currentpassword"
+          },
+          "newPassword": {
+            "type": "string",
+            "maxLength": 128,
+            "title": "Newpassword"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ],
+        "title": "PasswordChangeIn"
+      },
       "RegisterIn": {
         "properties": {
           "email": {
@@ -3098,6 +3264,17 @@
           "isStaff": {
             "type": "boolean",
             "title": "Isstaff"
+          },
+          "avatar": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar"
           }
         },
         "additionalProperties": false,

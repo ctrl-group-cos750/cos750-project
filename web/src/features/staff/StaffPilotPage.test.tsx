@@ -67,6 +67,15 @@ describe('pilot data page', () => {
       'href',
       '/api/staff/export/hints.csv',
     )
+    expect(screen.getByRole('link', { name: 'Download events.csv' })).toHaveAttribute(
+      'href',
+      '/api/staff/export/events.csv',
+    )
+    expect(screen.getByRole('link', { name: 'Download objective-results.csv' })).toHaveAttribute(
+      'href',
+      '/api/staff/export/objective_results.csv',
+    )
+    expect(screen.getByText(/Staff and demo accounts are left out/)).toBeVisible()
   })
 
   it('says so before anyone has answered', async () => {

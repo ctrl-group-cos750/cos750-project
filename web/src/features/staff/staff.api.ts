@@ -174,4 +174,5 @@ export type Insights = {
 
 export const getInsights = () => api<Insights>('/api/staff/insights')
 /** CSV downloads: a plain link, so the browser saves the file with the session cookie. */
-export const exportUrl = (table: 'attempts' | 'hints') => `/api/staff/export/${table}.csv`
+export type ExportTable = 'attempts' | 'hints' | 'events' | 'objective_results'
+export const exportUrl = (table: ExportTable) => `/api/staff/export/${table}.csv`

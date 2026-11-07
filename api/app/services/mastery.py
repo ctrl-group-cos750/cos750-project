@@ -42,6 +42,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Activity, Attempt, Objective, ObjectiveResult, Segment, User
 from app.services import rewards
+from app.services.events import log_event
 
 State = Literal["not_attempted", "met_independently", "met_with_support", "not_yet"]
 
@@ -239,6 +240,15 @@ def recompute(session: Session, user_id: int) -> list[Outcome]:
         elif row.state == o.state and row.evidence == list(o.evidence):
             continue
         changed = row.state != o.state
+        before = row.state or "not_attempted"  # where every student starts
+        if before != o.state:
+            log_event(
+                session,
+                user_id,
+                "result_changed",
+                f"objective:{o.objective.id}",
+                {"from": before, "to": o.state, "viaReview": o.via_review},
+            )
         row.state = o.state
         row.evidence = list(o.evidence)
         if changed and o.state in MET:

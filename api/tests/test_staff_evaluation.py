@@ -3,13 +3,58 @@ staff only, student accounts only, internal ids only, and safe to open in a spre
 
 import csv
 import io
+import json
+from pathlib import Path
+from typing import Any
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.models import Activity, Checkpoint, Hint, User, Video
+from app.seed import load
 
 PASSWORD = "Correct horse 1"  # noqa: S105 (a test account)
+
+# One objective, checked by one multiple-choice item in module 6, with its review path.
+MASTERY_COURSE: dict[str, Any] = {
+    "objectives": [
+        {"id": 1, "text": "One", "bloom_level": "b", "criterion": "Right.", "pass_fraction": 1.0}
+    ],
+    "modules": [{"id": 6, "slug": "m6", "title": "M6", "goals": ["g"], "estimated_minutes": 5}],
+    "activities": [
+        {
+            "id": aid,
+            "kind": "multiple_choice",
+            "title": f"Q{aid}",
+            "module_id": module,
+            "objective_id": 1,
+            "purpose": purpose,
+            "config": {
+                "prompt": "Q",
+                "options": [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}],
+            },
+            "solution": {"correct": "a"},
+            "hints": [{"level": n, "body": f"h{n}"} for n in (1, 2, 3, 4)]
+            if purpose == "review"
+            else [],
+        }
+        for aid, module, purpose in (
+            (601, 6, "mastery"),
+            (1101, None, "review"),
+            (1102, None, "mastery"),
+        )
+    ],
+    "review_paths": [
+        {
+            "objective_id": 1,
+            "segments": [
+                {"id": 1100, "kind": "worked_example", "title": "Again", "body": "Like this."},
+                {"id": 1101, "kind": "activity", "title": "Practice", "activity_id": 1101},
+                {"id": 1102, "kind": "activity", "title": "Fresh", "activity_id": 1102},
+            ],
+        }
+    ],
+}
 
 
 def make_video(db: Session, first_title: str = "Which leaves first?") -> tuple[int, int, int]:
@@ -73,18 +118,40 @@ def become_staff(client: TestClient, db: Session, email: str) -> int:
     return user_id
 
 
+def become_demo(client: TestClient, db: Session, email: str) -> int:
+    """A seeded demo account (app/seed/demo_accounts.py): its history is replayed, not real."""
+    user_id = register(client, email)
+    user = db.get(User, user_id)
+    assert user is not None
+    user.is_demo = True
+    db.commit()
+    return user_id
+
+
+def event(client: TestClient, type: str, target_id: int) -> None:
+    body = {"type": type, "targetId": target_id}
+    assert client.post("/api/events", json=body).status_code == 204
+
+
 def pilot(client: TestClient, db: Session) -> dict[str, int]:
-    """Ada: wrong, hints up to 3, right, then passes the second too. Alan: right first time on the
-    first, then stops. Grace (staff) answers too, and must not be counted."""
-    _, first, second = make_video(db)
-    ids = {"first": first, "second": second}
+    """Ada: starts the video, wrong, hints up to 3, right, then passes the second too. Alan: right
+    first time on the first, then stops. Dee (a demo account) and Grace (staff) answer too, and
+    must not be counted."""
+    video, first, second = make_video(db)
+    ids = {"video": video, "first": first, "second": second}
     ids["ada"] = register(client, "ada@example.com")
+    event(client, "video_started", video)
     answer(client, first, "b")
     hints(client, first, 3)
     answer(client, first, "a")
     answer(client, second, "a")
     ids["alan"] = register(client, "alan@example.com")
     answer(client, first, "a")
+    ids["dee"] = become_demo(client, db, "dee@example.com")
+    event(client, "video_started", video)
+    answer(client, first, "b")
+    hints(client, first, 2)
+    answer(client, second, "b")
     ids["grace"] = become_staff(client, db, "grace@example.com")
     answer(client, first, "b")
     hints(client, first, 4)
@@ -182,3 +249,40 @@ def test_insights_before_the_pilot_are_empty(client: TestClient, db: Session) ->
     body = client.get("/api/staff/insights").json()
     assert (body["students"], body["attempts"], body["activities"]) == (0, 0, [])
     assert [c["studentsPassed"] for c in body["videos"][0]["checkpoints"]] == [0, 0]
+
+
+def test_events_csv_is_the_students_timeline(client: TestClient, db: Session) -> None:
+    ids = pilot(client, db)
+    events = rows(client.get("/api/staff/export/events.csv").text)
+    assert [(int(e["user_id"]), e["type"], e["ref"], e["payload"]) for e in events] == [
+        (ids["ada"], "video_started", f"video:{ids['video']}", "{}"),
+        (ids["ada"], "hint_shown", f"activity:{ids['first']}", '{"level":1}'),
+        (ids["ada"], "hint_shown", f"activity:{ids['first']}", '{"level":2}'),
+        (ids["ada"], "hint_shown", f"activity:{ids['first']}", '{"level":3}'),
+    ]
+    assert all(e["created_at"] for e in events)
+    assert "example.com" not in client.get("/api/staff/export/events.csv").text
+
+
+def test_objective_results_csv(client: TestClient, db: Session, tmp_path: Path) -> None:
+    (tmp_path / "course.json").write_text(json.dumps(MASTERY_COURSE), encoding="utf-8")
+    load(db, tmp_path)
+    ada = register(client, "ada@example.com")
+    answer(client, 601, "a")
+    dee = become_demo(client, db, "dee@example.com")
+    answer(client, 601, "a")
+    become_staff(client, db, "grace@example.com")
+    results = rows(client.get("/api/staff/export/objective_results.csv").text)
+    assert [(int(r["user_id"]), r["objective_id"], r["state"]) for r in results] == [
+        (ada, "1", "met_independently")
+    ]
+    assert results[0]["evidence"].startswith("[")
+    assert dee not in [int(r["user_id"]) for r in results]
+
+
+def test_demo_accounts_are_not_pilot_students(client: TestClient, db: Session) -> None:
+    ids = pilot(client, db)
+    for table in ("attempts", "hints", "events"):
+        users = {int(r["user_id"]) for r in rows(client.get(f"/api/staff/export/{table}.csv").text)}
+        assert ids["dee"] not in users, table
+        assert ids["grace"] not in users, table

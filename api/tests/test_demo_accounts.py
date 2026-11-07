@@ -178,6 +178,7 @@ def test_the_reset_covers_every_table_of_student_history() -> None:
     # rehearsal clicks in it. Update this list when you add one.
     assert sorted(t.name for t, _ in history_tables()) == [
         "attempts",
+        "events",
         "hint_views",
         "objective_results",
         "points_entries",

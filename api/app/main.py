@@ -14,6 +14,7 @@ from app.media import media_dir
 from app.routers import (
     activities,
     auth,
+    events,
     graphs,
     mastery,
     rewards,
@@ -45,6 +46,7 @@ app = FastAPI(
 )
 app.include_router(auth.router)
 app.include_router(activities.router)
+app.include_router(events.router)
 app.include_router(graphs.router)
 app.include_router(rewards.router)
 app.include_router(mastery.router)

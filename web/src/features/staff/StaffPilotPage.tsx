@@ -151,9 +151,27 @@ function Downloads() {
     {
       table: 'attempts',
       title: 'Attempts',
+      file: 'attempts',
       text: 'Every answer: activity, right or wrong, score, highest hint seen, what was answered.',
     },
-    { table: 'hints', title: 'Hints', text: 'Every hint shown: activity, level and time.' },
+    {
+      table: 'hints',
+      title: 'Hints',
+      file: 'hints',
+      text: 'Every hint shown: activity, level and time.',
+    },
+    {
+      table: 'events',
+      title: 'Events',
+      file: 'events',
+      text: 'The timeline: videos started and finished, checkpoints reached, hints shown, results changing.',
+    },
+    {
+      table: 'objective_results',
+      title: 'Objective results',
+      file: 'objective-results',
+      text: 'Each student’s result on each objective, and the answers it was decided from.',
+    },
   ] as const
   return (
     <section className="grid gap-3" aria-labelledby="downloads-heading">
@@ -163,7 +181,7 @@ function Downloads() {
         </h2>
         <p className="text-muted-foreground">
           CSV files for the ID team&apos;s analysis. Students appear by internal number only, never
-          by name or email, and staff accounts are left out.
+          by name or email. Staff and demo accounts are left out.
         </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -176,7 +194,7 @@ function Downloads() {
             <CardContent>
               <a href={exportUrl(f.table)} download className={buttonVariants({ size: 'lg' })}>
                 <Download aria-hidden />
-                Download {f.title.toLowerCase()}.csv
+                Download {f.file}.csv
               </a>
             </CardContent>
           </Card>

@@ -1,8 +1,9 @@
 """Evaluation data for the ID team's pilot (FR-10, ID document §8): CSV downloads and the
 "Pilot insights" page. Staff only.
 
-Students are identified by their internal id only, never by email or name (FR-10.3), and staff
-accounts are left out, because the team's own testing would skew the numbers.
+Students are identified by their internal id only, never by email or name (FR-10.3). Staff and
+demo accounts are left out: the team's own testing, and the demo accounts' replayed histories
+(app/seed/demo_accounts.py), would otherwise count as pilot students.
 """
 
 import csv
@@ -17,7 +18,16 @@ from sqlalchemy import Select, distinct, func, select
 
 from app.auth import StaffUser
 from app.db import DbSession
-from app.models import Activity, Attempt, Checkpoint, HintView, User, Video
+from app.models import (
+    Activity,
+    Attempt,
+    Checkpoint,
+    Event,
+    HintView,
+    ObjectiveResult,
+    User,
+    Video,
+)
 from app.schemas.evaluation import ActivityInsight, CheckpointInsight, Insights, VideoInsight
 
 router = APIRouter(prefix="/api/staff", tags=["staff"])
@@ -27,8 +37,8 @@ FORMULA_START = ("=", "+", "-", "@", "\t", "\r")
 
 
 def _students() -> Select[int]:
-    """The ids of every account that is not staff."""
-    return select(User.id).where(User.is_staff.is_(False))
+    """The ids of every real student: not staff, not a seeded demo account."""
+    return select(User.id).where(User.is_staff.is_(False), User.is_demo.is_(False))
 
 
 def _cell(value: Any) -> str:
@@ -60,10 +70,46 @@ def _csv(name: str, header: list[str], rows: list[list[Any]]) -> Response:
 
 @router.get("/export/{table}.csv", response_class=Response)
 def export_csv(
-    table: Literal["attempts", "hints"], session: DbSession, _staff: StaffUser
+    table: Literal["attempts", "hints", "events", "objective_results"],
+    session: DbSession,
+    _staff: StaffUser,
 ) -> Response:
-    """Download `attempts` or `hints` (hint views) as CSV, oldest first, for every student account.
-    `submitted` and `detail` are the attempt's answer and per-part result, as JSON."""
+    """Download one table as CSV for every real student (FR-10.2), oldest first:
+
+    - `attempts`: each answer; `submitted` and `detail` are what was answered and the per-part
+      result, as JSON.
+    - `hints`: each hint shown.
+    - `events`: the timeline (app/services/events.py): videos started and finished, checkpoints
+      reached, segments viewed, hints shown, results changing; `payload` as JSON.
+    - `objective_results`: each student's current result per objective, with the attempts it was
+      decided from (`evidence`).
+    """
+    if table == "events":
+        return _csv(
+            "events",
+            ["event_id", "user_id", "type", "ref", "payload", "created_at"],
+            [
+                [e.id, e.user_id, e.type, e.ref, e.payload, e.created_at]
+                for e in session.scalars(
+                    select(Event)
+                    .where(Event.user_id.in_(_students()))
+                    .order_by(Event.created_at, Event.id)
+                )
+            ],
+        )
+    if table == "objective_results":
+        return _csv(
+            "objective-results",
+            ["user_id", "objective_id", "state", "evidence", "updated_at"],
+            [
+                [r.user_id, r.objective_id, r.state, r.evidence, r.updated_at]
+                for r in session.scalars(
+                    select(ObjectiveResult)
+                    .where(ObjectiveResult.user_id.in_(_students()))
+                    .order_by(ObjectiveResult.user_id, ObjectiveResult.objective_id)
+                )
+            ],
+        )
     if table == "attempts":
         rows = session.execute(
             select(Attempt, Activity.title, Activity.kind)

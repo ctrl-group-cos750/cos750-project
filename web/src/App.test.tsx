@@ -68,7 +68,8 @@ describe('logging out', () => {
   it('ends the session and returns to the log-in page', async () => {
     const api = fakeApi({ user: ada })
     renderApp('/')
-    await userEvent.click(await screen.findByRole('button', { name: 'Log out' }))
+    await userEvent.click(await screen.findByRole('button', { name: /your account/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Log out' }))
     expect(await screen.findByRole('heading', { name: 'Log in' })).toBeInTheDocument()
     expect(api.callsTo('POST /api/auth/logout')).toHaveLength(1)
   })
@@ -81,7 +82,8 @@ describe('logging out', () => {
       },
     })
     renderApp('/')
-    await userEvent.click(await screen.findByRole('button', { name: 'Log out' }))
+    await userEvent.click(await screen.findByRole('button', { name: /your account/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Log out' }))
     expect(await screen.findByText('You are still logged in')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Welcome, Ada' })).toBeInTheDocument()
   })

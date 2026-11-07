@@ -4,6 +4,7 @@ import { LoginPage } from './auth/LoginPage.tsx'
 import { RegisterPage } from './auth/RegisterPage.tsx'
 import { ReportPage } from './features/mastery/ReportPage.tsx'
 import { ReviewPage } from './features/mastery/ReviewPage.tsx'
+import { ProfilePage } from './features/profile/ProfilePage.tsx'
 import { BadgesPage } from './features/rewards/BadgesPage.tsx'
 import { StaffAccountPage } from './features/staff/StaffAccountPage.tsx'
 import { StaffAccountsPage } from './features/staff/StaffAccountsPage.tsx'
@@ -51,6 +52,7 @@ function App() {
         <Route path="report" element={<ReportPage />} />
         <Route path="review/:objectiveId" element={<ReviewPage />} />
         <Route path="badges" element={<BadgesPage />} />
+        <Route path="profile" element={<ProfilePage />} />
         <Route
           path="staff"
           element={

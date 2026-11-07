@@ -4,7 +4,13 @@ import { describe, expect, it } from 'vitest'
 import type { User } from '../../auth/api.ts'
 import { ada, fakeApi, renderApp } from '../../test/app.tsx'
 
-const grace: User = { id: 2, email: 'grace@example.com', displayName: 'Grace', isStaff: true }
+const grace: User = {
+  id: 2,
+  email: 'grace@example.com',
+  displayName: 'Grace',
+  isStaff: true,
+  avatar: null,
+}
 
 const twoVideos = () =>
   Response.json([

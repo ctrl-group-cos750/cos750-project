@@ -17,6 +17,7 @@ from app.routers import (
     events,
     graphs,
     mastery,
+    profile,
     rewards,
     staff,
     staff_accounts,
@@ -50,6 +51,7 @@ app.include_router(events.router)
 app.include_router(graphs.router)
 app.include_router(rewards.router)
 app.include_router(mastery.router)
+app.include_router(profile.router)
 app.include_router(videos.router)
 app.include_router(staff.router)
 app.include_router(staff_accounts.router)

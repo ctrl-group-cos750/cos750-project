@@ -5,7 +5,13 @@ import { vi } from 'vitest'
 import App from '../App.tsx'
 import type { User } from '../auth/api.ts'
 
-export const ada: User = { id: 1, email: 'ada@example.com', displayName: 'Ada', isStaff: false }
+export const ada: User = {
+  id: 1,
+  email: 'ada@example.com',
+  displayName: 'Ada',
+  isStaff: false,
+  avatar: null,
+}
 
 type Call = { method: string; path: string; body: unknown }
 type Override = (body: unknown) => Response | Promise<Response>

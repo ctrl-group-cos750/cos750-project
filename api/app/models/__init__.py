@@ -1,6 +1,7 @@
 # Import every model module here, so Alembic's autogenerate sees all tables.
 from app.db import Base
 from app.models.activity import Activity, Attempt, Hint, HintView
+from app.models.content import Module, Objective, Segment
 from app.models.graph import GraphScenario
 from app.models.rewards import PointsEntry, PointsRule, UserBadge
 from app.models.user import User
@@ -14,8 +15,11 @@ __all__ = [
     "GraphScenario",
     "Hint",
     "HintView",
+    "Module",
+    "Objective",
     "PointsEntry",
     "PointsRule",
+    "Segment",
     "User",
     "UserBadge",
     "Video",

@@ -1,0 +1,153 @@
+{
+  "modules": [
+    {
+      "id": 3,
+      "slug": "meet-bfs",
+      "title": "Meet BFS",
+      "estimated_minutes": 12,
+      "goals": [
+        "Say what BFS is for and when a traversal helps.",
+        "Trace BFS by hand: the next vertex, the queue, the visited set and the order."
+      ],
+      "segments": [
+        {
+          "id": 301,
+          "kind": "video",
+          "title": "Placeholder: BFS on the campus graph",
+          "body": "Placeholder until the module 3 content (#27) lands. Staff attach the narrated video to this segment in the video editor."
+        },
+        {
+          "id": 302,
+          "kind": "activity",
+          "title": "Placeholder: when is BFS the right tool?",
+          "activity_id": 301
+        },
+        {
+          "id": 303,
+          "kind": "worked_example",
+          "title": "Placeholder: tracing BFS step by step",
+          "body": "Start at A. Neighbours are taken in alphabetical order.\n\n| Step | Visit | Queue after | Visited after |\n|---|---|---|---|\n| 1 | A | B, C | A, B, C |\n| 2 | B | C, D | A, B, C, D |\n| 3 | C | D, E | A, B, C, D, E |\n\nKeep going until the queue is empty."
+        },
+        {
+          "id": 304,
+          "kind": "activity",
+          "title": "Placeholder: trace BFS on the campus graph",
+          "activity_id": 302
+        }
+      ]
+    }
+  ],
+  "activities": [
+    {
+      "id": 301,
+      "kind": "multiple_choice",
+      "title": "Placeholder: when is BFS the right tool?",
+      "module_id": 3,
+      "purpose": "practice",
+      "objective_id": 4,
+      "config": {
+        "prompt": "You want every building reachable from the library, nearest first. Which fits?",
+        "options": [
+          {
+            "id": "bfs",
+            "label": "BFS: it visits vertices level by level"
+          },
+          {
+            "id": "sort",
+            "label": "Sorting the buildings by name"
+          },
+          {
+            "id": "none",
+            "label": "No traversal is needed"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "bfs",
+        "feedback": {
+          "sort": "Sorting orders the names but says nothing about which buildings connect.",
+          "none": "Reachability depends on the paths between buildings, so a traversal is needed."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Think about what 'nearest first' asks for."
+        },
+        {
+          "level": 2,
+          "body": "BFS explores all vertices one edge away before any two edges away."
+        }
+      ]
+    },
+    {
+      "id": 302,
+      "kind": "trace",
+      "title": "Placeholder: trace BFS on the campus graph",
+      "module_id": 3,
+      "purpose": "practice",
+      "objective_id": 5,
+      "config": {
+        "directed": false,
+        "vertices": [
+          "A",
+          "B",
+          "C",
+          "D",
+          "E",
+          "F"
+        ],
+        "edges": [
+          {
+            "source": "A",
+            "target": "B"
+          },
+          {
+            "source": "A",
+            "target": "C"
+          },
+          {
+            "source": "B",
+            "target": "D"
+          },
+          {
+            "source": "C",
+            "target": "D"
+          },
+          {
+            "source": "C",
+            "target": "E"
+          },
+          {
+            "source": "D",
+            "target": "F"
+          },
+          {
+            "source": "E",
+            "target": "F"
+          }
+        ],
+        "start_vertex": "A"
+      },
+      "solution": {},
+      "hints": [
+        {
+          "level": 1,
+          "body": "Start with A in the queue and in the visited set."
+        },
+        {
+          "level": 2,
+          "body": "Take neighbours in alphabetical order."
+        },
+        {
+          "level": 3,
+          "body": "Mark a vertex visited when you add it to the queue, not when you take it out."
+        },
+        {
+          "level": 4,
+          "body": "The order is A, B, C, D, E, F."
+        }
+      ]
+    }
+  ]
+}

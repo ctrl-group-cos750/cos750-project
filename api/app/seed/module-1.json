@@ -1,0 +1,16 @@
+{
+  "modules": [
+    {
+      "id": 1,
+      "slug": "what-is-a-graph",
+      "title": "What is a graph?",
+      "estimated_minutes": 12,
+      "goals": [
+        "Name the vertices and edges of a graph.",
+        "Tell a directed graph from an undirected one.",
+        "Match a real situation to a graph."
+      ],
+      "segments": []
+    }
+  ]
+}

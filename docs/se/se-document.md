@@ -508,11 +508,11 @@ Figure: Entities and relationships.
 
 **Objective**: `id` (1 to 7, as numbered in the ID document), `text`, `bloom_level`, `criterion` (the success criterion from the ID document's Table 1, as a rule the mastery service evaluates, e.g. "at least 4 of 5 correct").
 
-**Module**: `id`, `number` (0 to 6), `slug`, `title`, `goals` (the "By the end of this module you can …" text), `estimated_minutes`, `position`.
+**Module**: `id` (the module number, 0 to 6), `slug`, `title`, `goals` (the "By the end of this module you can …" sentences), `estimated_minutes`, `position`.
 
-**Segment**: `id`, `module_id`, `position`, `kind` (`video` | `text` | `worked_example` | `activity` | `refresher`), `title`, `body` (Markdown for text and worked examples), `skip_check_activity_id` (optional: passing this activity lets the student skip the segment, FR-8.2), `refresher_for` (optional: the diagnostic topic that makes a refresher required, FR-8.1).
+**Segment**: `id`, `module_id`, `position`, `kind` (`video` | `text` | `worked_example` | `activity` | `refresher`), `title`, `body` (Markdown for text and worked examples), `activity_id` (for an `activity` segment), `skip_check_activity_id` (optional: passing this activity lets the student skip the segment: a worked example after a short check, FR-8.2, or a refresher after its diagnostic item, FR-8.1), `refresher_for` (a refresher's diagnostic topic, e.g. `queues`).
 
-**Video**: `id`, `segment_id`, `media_path`, `captions_path`, `transcript` (Markdown), `duration_seconds`.
+**Video**: `id`, `segment_id` (the `video` segment that plays it, at most one; empty until staff place it), `media_path`, `captions_path`, `transcript` (Markdown), `duration_seconds`.
 
 **Checkpoint**: `id`, `video_id`, `at_seconds`, `activity_id`.
 
@@ -540,7 +540,7 @@ Figure: Entities and relationships.
 - **Attempts and events are the source of truth.** Module progress, objective results, points and badges are derived from them by the services, and can be recomputed if a rule changes (FR-7.6).
 - **Answers never leave the server.** The API strips `answer` from every activity it sends; a code activity's solution (the correct line order and the expected tokens) stays on the server and is only ever compared against, never returned.
 - **JSON columns** hold the parts that differ by activity kind (`config`, `answer`, `feedback`, `submitted`, `detail`). Each kind has a Pydantic schema, so the JSON is still validated when fixtures load and when attempts arrive.
-- **Content is loaded from fixtures** (`api/app/seed/`), versioned in the repository and validated in CI (NFR-M5). Re-running the seed updates content without touching users' attempts.
+- **Content is loaded from fixtures** (`api/app/seed/`), versioned in the repository and validated in CI (NFR-M5). Each module has its own file (`module-3.json`) holding the module, its segments in order and its activities; the objectives are in `objectives.json`. Re-running the seed updates content without touching users' attempts.
 
 # API Design (REST)
 

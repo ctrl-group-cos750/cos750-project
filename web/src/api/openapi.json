@@ -645,6 +645,56 @@
         }
       }
     },
+    "/api/me/report": {
+      "get": {
+        "tags": [
+          "mastery"
+        ],
+        "summary": "Get Report",
+        "description": "The logged-in student's mastery report: each objective's result and whether they are ready\nfor the lecture (FR-7.3, FR-7.4).\n\nWorked out from their attempts on every request (app/services/mastery.py), so it always follows\nthe current rules (FR-7.6). Nothing a client sends can set a result: they change only through\nattempts. Only ever the student's own.",
+        "operationId": "get_report_api_me_report_get",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MasteryReportOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/videos/{video_id}": {
       "get": {
         "tags": [
@@ -2006,6 +2056,29 @@
         ],
         "title": "LoginIn"
       },
+      "MasteryReportOut": {
+        "properties": {
+          "ready": {
+            "type": "boolean",
+            "title": "Ready"
+          },
+          "objectives": {
+            "items": {
+              "$ref": "#/components/schemas/ObjectiveReportOut"
+            },
+            "type": "array",
+            "title": "Objectives"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ready",
+          "objectives"
+        ],
+        "title": "MasteryReportOut",
+        "description": "The student's own mastery report. `ready` (for the lecture) is true when every objective is\nmet, with or without support (FR-7.4). Always shown, even when rewards are hidden (FR-9.5)."
+      },
       "MediaOut": {
         "properties": {
           "path": {
@@ -2025,6 +2098,52 @@
         ],
         "title": "MediaOut",
         "description": "Where the upload is served from. Put it in a video's `mediaPath` or `captionsPath`."
+      },
+      "ObjectiveReportOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "criterion": {
+            "type": "string",
+            "title": "Criterion"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "not_attempted",
+              "met_independently",
+              "met_with_support",
+              "not_yet"
+            ],
+            "title": "State"
+          },
+          "answered": {
+            "type": "integer",
+            "title": "Answered"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "criterion",
+          "state",
+          "answered",
+          "total"
+        ],
+        "title": "ObjectiveReportOut",
+        "description": "One objective on the mastery report (FR-7.2, FR-7.3). `answered` of `total` is how many of\nits module 6 items the student has answered; the result stays `not_attempted` until all are."
       },
       "PartResult": {
         "properties": {

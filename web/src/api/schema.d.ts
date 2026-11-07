@@ -258,6 +258,31 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/me/report': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get Report
+     * @description The logged-in student's mastery report: each objective's result and whether they are ready
+     *     for the lecture (FR-7.3, FR-7.4).
+     *
+     *     Worked out from their attempts on every request (app/services/mastery.py), so it always follows
+     *     the current rules (FR-7.6). Nothing a client sends can set a result: they change only through
+     *     attempts. Only ever the student's own.
+     */
+    get: operations['get_report_api_me_report_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/videos/{video_id}': {
     parameters: {
       query?: never
@@ -750,6 +775,17 @@ export interface components {
       password: string
     }
     /**
+     * MasteryReportOut
+     * @description The student's own mastery report. `ready` (for the lecture) is true when every objective is
+     *     met, with or without support (FR-7.4). Always shown, even when rewards are hidden (FR-9.5).
+     */
+    MasteryReportOut: {
+      /** Ready */
+      ready: boolean
+      /** Objectives */
+      objectives: components['schemas']['ObjectiveReportOut'][]
+    }
+    /**
      * MediaOut
      * @description Where the upload is served from. Put it in a video's `mediaPath` or `captionsPath`.
      */
@@ -758,6 +794,28 @@ export interface components {
       path: string
       /** Bytes */
       bytes: number
+    }
+    /**
+     * ObjectiveReportOut
+     * @description One objective on the mastery report (FR-7.2, FR-7.3). `answered` of `total` is how many of
+     *     its module 6 items the student has answered; the result stays `not_attempted` until all are.
+     */
+    ObjectiveReportOut: {
+      /** Id */
+      id: number
+      /** Text */
+      text: string
+      /** Criterion */
+      criterion: string
+      /**
+       * State
+       * @enum {string}
+       */
+      state: 'not_attempted' | 'met_independently' | 'met_with_support' | 'not_yet'
+      /** Answered */
+      answered: number
+      /** Total */
+      total: number
     }
     /**
      * PartResult
@@ -1357,6 +1415,37 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['RewardsOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  get_report_api_me_report_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['MasteryReportOut']
         }
       }
       /** @description Validation Error */

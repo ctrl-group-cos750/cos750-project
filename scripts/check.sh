@@ -17,6 +17,7 @@ echo "== web"
   npm run lint
   npm run test
   npm run build
+  npm run check:api
 )
 
 echo "== api"

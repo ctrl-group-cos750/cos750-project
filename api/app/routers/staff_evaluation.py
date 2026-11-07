@@ -226,7 +226,8 @@ def _video_insights(session: DbSession) -> list[VideoInsight]:
     activity_ids: dict[int, list[int]] = {}
     for video, checkpoint, title in rows:
         insight = videos.setdefault(
-            video.id, VideoInsight(id=video.id, title=video.title, students=0, checkpoints=[])
+            video.id,
+            VideoInsight(id=video.id, title=video.title, students=0, finished=0, checkpoints=[]),
         )
         insight.checkpoints.append(
             CheckpointInsight(
@@ -238,10 +239,21 @@ def _video_insights(session: DbSession) -> list[VideoInsight]:
         )
         activity_ids.setdefault(video.id, []).append(checkpoint.activity_id)
     for video_id, insight in videos.items():
+        ref = f"video:{video_id}"
+        started = select(Event.user_id).where(
+            Event.user_id.in_(students), Event.type == "video_started", Event.ref == ref
+        )
+        answered = select(Attempt.user_id).where(
+            Attempt.user_id.in_(students), Attempt.activity_id.in_(activity_ids[video_id])
+        )
         insight.students = (
+            session.scalar(select(func.count()).select_from(started.union(answered).subquery()))
+            or 0
+        )
+        insight.finished = (
             session.scalar(
-                select(func.count(distinct(Attempt.user_id))).where(
-                    Attempt.user_id.in_(students), Attempt.activity_id.in_(activity_ids[video_id])
+                select(func.count(distinct(Event.user_id))).where(
+                    Event.user_id.in_(students), Event.type == "video_completed", Event.ref == ref
                 )
             )
             or 0
@@ -252,8 +264,9 @@ def _video_insights(session: DbSession) -> list[VideoInsight]:
 @router.get("/insights")
 def insights(session: DbSession, _staff: StaffUser) -> Insights:
     """The pilot at a glance (ID document §8.4): per activity, how many students tried it, wrong
-    attempts, and how many needed hint 3 or 4; per video, how many passed each checkpoint, which
-    shows where students stopped. Student accounts only; counts only."""
+    attempts, and how many needed hint 3 or 4; per video, how many started it, passed each
+    checkpoint and finished it, which shows where students stopped. Real students only (no staff
+    or demo accounts); counts only."""
     students = _students()
     attempts = session.scalar(select(func.count()).where(Attempt.user_id.in_(students))) or 0
     hints = session.scalar(select(func.count()).where(HintView.user_id.in_(students))) or 0
@@ -261,7 +274,10 @@ def insights(session: DbSession, _staff: StaffUser) -> Insights:
         select(func.count()).select_from(
             select(Attempt.user_id)
             .where(Attempt.user_id.in_(students))
-            .union(select(HintView.user_id).where(HintView.user_id.in_(students)))
+            .union(
+                select(HintView.user_id).where(HintView.user_id.in_(students)),
+                select(Event.user_id).where(Event.user_id.in_(students)),
+            )
             .subquery()
         )
     )

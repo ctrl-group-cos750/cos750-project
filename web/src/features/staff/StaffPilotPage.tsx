@@ -75,7 +75,7 @@ function Activities({ data }: { data: Insights }) {
                     <td className="py-2 pr-4">
                       <span className="font-medium">{a.title}</span>
                       <span className="block text-muted-foreground">
-                        {a.kind.replace('_', ' ')}
+                        {a.kind.replaceAll('_', ' ')}
                       </span>
                     </td>
                     <td className="py-2 pr-4">
@@ -110,8 +110,8 @@ function Videos({ data }: { data: Insights }) {
           Videos
         </h2>
         <p className="text-muted-foreground">
-          Students who passed each checkpoint, out of everyone who answered one in that video. A
-          drop from one checkpoint to the next is where students stopped.
+          Out of everyone who started the video: who passed each checkpoint, and who watched to the
+          end. A drop from one step to the next is where students stopped.
         </p>
       </div>
       {data.videos.length === 0 && (
@@ -122,7 +122,7 @@ function Videos({ data }: { data: Insights }) {
           <CardHeader>
             <CardTitle className="font-semibold">{v.title}</CardTitle>
             <CardDescription>
-              {v.students} student{v.students === 1 ? '' : 's'} answered a checkpoint
+              {v.students} student{v.students === 1 ? '' : 's'} started it
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -138,6 +138,10 @@ function Videos({ data }: { data: Insights }) {
                   <Meter part={c.studentsPassed} whole={v.students} label="Students passed" />
                 </li>
               ))}
+              <li className="grid items-center gap-2 sm:grid-cols-[1fr_16rem]">
+                <span>Watched to the end</span>
+                <Meter part={v.finished} whole={v.students} label="Students who finished" />
+              </li>
             </ol>
           </CardContent>
         </Card>

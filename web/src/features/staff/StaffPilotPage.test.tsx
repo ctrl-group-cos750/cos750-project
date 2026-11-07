@@ -20,12 +20,23 @@ const insights = {
       studentsPassed: 2,
       studentsWithSupport: 1,
     },
+    {
+      id: 2,
+      title: 'Fix the queue',
+      kind: 'fix_the_bug',
+      students: 1,
+      attempts: 1,
+      wrongAttempts: 0,
+      studentsPassed: 1,
+      studentsWithSupport: 0,
+    },
   ],
   videos: [
     {
       id: 7,
       title: 'Meet BFS',
-      students: 2,
+      students: 3,
+      finished: 1,
       checkpoints: [
         { id: 1, atSeconds: 20, activityTitle: 'Which leaves first?', studentsPassed: 2 },
         { id: 2, atSeconds: 45, activityTitle: 'What stops a loop?', studentsPassed: 1 },
@@ -48,10 +59,15 @@ describe('pilot data page', () => {
     expect(within(row).getByText('1 of 3')).toBeInTheDocument() // wrong answers
     expect(within(row).getByText('1 of 2')).toBeInTheDocument() // needed hint 3 or 4
 
+    expect(within(table).getByText('fix the bug')).toBeInTheDocument() // every underscore
+
     const video = screen.getByText('Meet BFS').closest('[data-slot=card]') as HTMLElement
+    expect(within(video).getByText('3 students started it')).toBeInTheDocument()
     const checkpoints = within(video).getAllByRole('listitem')
-    expect(within(checkpoints[0]!).getByText('2 of 2')).toBeInTheDocument()
-    expect(within(checkpoints[1]!).getByText('1 of 2')).toBeInTheDocument()
+    expect(within(checkpoints[0]!).getByText('2 of 3')).toBeInTheDocument()
+    expect(within(checkpoints[1]!).getByText('1 of 3')).toBeInTheDocument()
+    expect(within(checkpoints[2]!).getByText('Watched to the end')).toBeInTheDocument()
+    expect(within(checkpoints[2]!).getByText('1 of 3')).toBeInTheDocument()
     expect(within(checkpoints[1]!).getByText('0:45')).toBeInTheDocument()
   })
 

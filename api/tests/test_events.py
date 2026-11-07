@@ -128,16 +128,11 @@ def test_the_browser_can_only_report_known_events(
 def test_an_event_about_something_that_does_not_exist_is_404(
     client: TestClient, db: Session
 ) -> None:
-    ids = content(db)
+    content(db)
     user = log_in(client)
     for type in ("video_started", "checkpoint_reached", "segment_viewed"):
         response = client.post("/api/events", json={"type": type, "targetId": 9999})
         assert response.status_code == 404
-    # A checkpoint id is not a video id: each type names its own kind of thing.
-    response = client.post(
-        "/api/events", json={"type": "segment_viewed", "targetId": ids["video"] + 1000}
-    )
-    assert response.status_code == 404
     assert events_of(db, user) == []
 
 

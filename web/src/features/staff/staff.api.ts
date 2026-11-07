@@ -167,7 +167,10 @@ export type Insights = {
   videos: {
     id: number
     title: string
+    /** Started it, or answered one of its checkpoints. */
     students: number
+    /** Watched it to the end. */
+    finished: number
     checkpoints: { id: number; atSeconds: number; activityTitle: string; studentsPassed: number }[]
   }[]
 }

@@ -286,3 +286,27 @@ def test_demo_accounts_are_not_pilot_students(client: TestClient, db: Session) -
         users = {int(r["user_id"]) for r in rows(client.get(f"/api/staff/export/{table}.csv").text)}
         assert ids["dee"] not in users, table
         assert ids["grace"] not in users, table
+
+
+def test_insights_count_who_started_and_finished_a_video(client: TestClient, db: Session) -> None:
+    """Bob starts the video and stops before the first checkpoint; Ada answers both checkpoints
+    and watches to the end. Dee (demo) does the same as Ada and must not count."""
+    video, first, second = make_video(db)
+    register(client, "bob@example.com")
+    event(client, "video_started", video)
+    register(client, "ada@example.com")
+    event(client, "video_started", video)
+    answer(client, first, "a")
+    answer(client, second, "a")
+    event(client, "video_completed", video)
+    become_demo(client, db, "dee@example.com")
+    event(client, "video_started", video)
+    answer(client, first, "a")
+    event(client, "video_completed", video)
+    become_staff(client, db, "grace@example.com")
+
+    body = client.get("/api/staff/insights").json()
+    assert body["students"] == 2  # Bob counts: he only started a video, but he was there
+    (insight,) = body["videos"]
+    assert (insight["students"], insight["finished"]) == (2, 1)
+    assert [c["studentsPassed"] for c in insight["checkpoints"]] == [1, 1]

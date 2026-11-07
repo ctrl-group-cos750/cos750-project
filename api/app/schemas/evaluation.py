@@ -25,17 +25,20 @@ class CheckpointInsight(ApiModel):
 
 
 class VideoInsight(ApiModel):
-    """How far students got through one video: who answered any of its checkpoints, and who passed
-    each one. A drop between two checkpoints is where students stopped."""
+    """How far students got through one video: who started it (or answered one of its
+    checkpoints), who passed each checkpoint and who watched to the end. A drop between two steps
+    is where students stopped."""
 
     id: int
     title: str
-    students: int
+    students: int  # started it, or answered one of its checkpoints
+    finished: int  # watched it to the end
     checkpoints: list[CheckpointInsight]
 
 
 class Insights(ApiModel):
-    students: int  # student accounts (not staff) that have answered or asked for a hint
+    students: int  # real students (not staff or demo) who did anything: answered, asked for a
+    # hint, or anything in the event log, such as starting a video
     attempts: int
     hints_viewed: int
     activities: list[ActivityInsight]

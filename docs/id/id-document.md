@@ -482,7 +482,7 @@ If the pilot shows that our choices do not work as intended, the first thing we 
 
 **Tool:** Claude Code, Anthropic's coding assistant, using the Claude Opus 5.5 model, run in the software engineers' development environment.
 
-**What it was used for:** drafting and revising the SE document; proposing options for engineering decisions, which the team then made; writing the project's tooling and infrastructure (CI checks, the database layer, deployment on Coolify, the staging login page, the "coming soon" page, the document builder and its PDF format); organising the course material in the repository; setting up the project board and its backlog; building backlog items an instructional designer took on (the seeded demo accounts, #34 and #121, and a reason for each wrong token in fill-in activities, #119); and drafting reviews of other members' pull requests, which the reviewer read, edited and posted.
+**What it was used for:** drafting and revising the SE document; proposing options for engineering decisions, which the team then made; writing the project's tooling and infrastructure (CI checks, the database layer, deployment on Coolify, the staging login page, the "coming soon" page, the document builder and its PDF format); organising the course material in the repository; setting up the project board and its backlog; and drafting reviews of other members' pull requests, which the reviewer read, edited and posted.
 
 **How its output was checked:** every change went through a pull request that a team member reviewed, and all code passes the project's automated checks (formatting, linting, type checks, tests and builds). Each decision it proposed was accepted, changed or rejected by the team; the decisions are recorded in the SE document (§2, §15.3).
 
@@ -514,16 +514,9 @@ Each instructional designer records their own use, in the same format as above. 
 
 **Tool:** Claude Code, Anthropic's coding assistant, using the Claude Opus 5.5 model.
 
-**What it was used for:**
+**What it was used for:** drafting the pilot kit (`docs/pilot/`): the plan and schedule, the survey and the think-aloud note sheet (#75); and the engineering backlog items he took on: the seeded demo accounts (#34, #121) and a reason for each wrong token in fill-in activities (#119).
 
-- drafting the pilot kit (`docs/pilot/`): the plan and schedule, the survey and the think-aloud note sheet (#75);
-
-**Main prompts**, as typed:
-
-| Date | Prompt | Used for |
-|---|---|---|
-
-Table: Generative AI prompts for instructional design work.
+How its output was checked, and the main prompts as typed, to be added by Jacobus Hoogenboezem (#74).
 
 ### Mohtashim Hussain
 

@@ -1,0 +1,114 @@
+{
+  "modules": [
+    {
+      "id": 0,
+      "slug": "warm-up",
+      "title": "Warm-up and queue refresher",
+      "estimated_minutes": 5,
+      "goals": [
+        "Add to the back of a queue and take from the front.",
+        "Read basic Python: lists, dictionaries and loops."
+      ],
+      "segments": [
+        {
+          "id": 1,
+          "kind": "text",
+          "title": "Placeholder: welcome",
+          "body": "Placeholder until the module 0 content (#26) lands.\n\nThis short quiz checks what you remember about queues and Python. You only see the refreshers you need."
+        },
+        {
+          "id": 2,
+          "kind": "activity",
+          "title": "Placeholder: queue question",
+          "activity_id": 1
+        },
+        {
+          "id": 3,
+          "kind": "activity",
+          "title": "Placeholder: Python question",
+          "activity_id": 2
+        },
+        {
+          "id": 4,
+          "kind": "refresher",
+          "title": "Placeholder: queue refresher",
+          "refresher_for": "queues",
+          "skip_check_activity_id": 1,
+          "body": "A **queue** is first in, first out: you add to the back and take from the front, like a line at a till.\n\nIn Python, `collections.deque` is a queue: `append` adds to the back and `popleft` takes from the front."
+        },
+        {
+          "id": 5,
+          "kind": "refresher",
+          "title": "Placeholder: Python refresher",
+          "refresher_for": "python-basics",
+          "skip_check_activity_id": 2,
+          "body": "A **dictionary** maps keys to values: `graph = {\"A\": [\"B\", \"C\"]}` stores the neighbours of `A` under the key `\"A\"`, and `graph[\"A\"]` reads them back."
+        }
+      ]
+    }
+  ],
+  "activities": [
+    {
+      "id": 1,
+      "kind": "multiple_choice",
+      "title": "Placeholder: which item leaves the queue?",
+      "module_id": 0,
+      "purpose": "diagnostic",
+      "config": {
+        "prompt": "The queue holds 3, 7, 2 (front first). Which item leaves first?",
+        "options": [
+          {
+            "id": "a",
+            "label": "3"
+          },
+          {
+            "id": "b",
+            "label": "2"
+          },
+          {
+            "id": "c",
+            "label": "7"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "a",
+        "feedback": {
+          "b": "2 joined last, so it leaves last: a queue is first in, first out.",
+          "c": "7 is in the middle. The front item leaves first."
+        }
+      }
+    },
+    {
+      "id": 2,
+      "kind": "multiple_choice",
+      "title": "Placeholder: reading a dictionary",
+      "module_id": 0,
+      "purpose": "diagnostic",
+      "config": {
+        "prompt": "After `graph = {\"A\": [\"B\", \"C\"]}`, what is `graph[\"A\"]`?",
+        "options": [
+          {
+            "id": "a",
+            "label": "[\"B\", \"C\"]"
+          },
+          {
+            "id": "b",
+            "label": "\"A\""
+          },
+          {
+            "id": "c",
+            "label": "An error"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "a",
+        "feedback": {
+          "b": "`graph[\"A\"]` reads the value stored under the key \"A\", not the key itself.",
+          "c": "\"A\" is a key in the dictionary, so reading it works."
+        }
+      }
+    }
+  ]
+}

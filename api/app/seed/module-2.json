@@ -1,0 +1,15 @@
+{
+  "modules": [
+    {
+      "id": 2,
+      "slug": "graph-in-python",
+      "title": "A graph in Python",
+      "estimated_minutes": 10,
+      "goals": [
+        "Store a graph in Python as a dictionary of neighbours.",
+        "Complete add_vertex and add_edge for directed and undirected graphs."
+      ],
+      "segments": []
+    }
+  ]
+}

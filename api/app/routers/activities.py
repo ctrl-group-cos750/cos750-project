@@ -7,27 +7,34 @@ from app.db import DbSession
 from app.models import Activity, Hint
 from app.schemas.activities import ActivityOut, AttemptIn, AttemptOut, HintOut
 from app.services.attempts import hint_level_seen, record_attempt, reveal_next_hint
+from app.services.mastery import review_open, review_path_of
 
 router = APIRouter(prefix="/api/activities", tags=["activities"])
 
 NOT_FOUND = "This activity does not exist."
 BAD_SUBMISSION = "This submission is not in the expected shape."
 NO_MORE_HINTS = "You have seen every hint for this activity."
+REVIEW_CLOSED = "This activity is on a review path, which opens when the mastery check marks its objective 'not yet'."
 SUPPORT_LEVEL = 3  # hint levels 3 and 4 make a correct answer count as "with support" (FR-7.2)
 
 
-def _activity_or_404(session: DbSession, activity_id: int) -> Activity:
+def _activity_or_404(session: DbSession, activity_id: int, user_id: int) -> Activity:
+    """The activity, if this student may open it. An activity on a review path is 403 until the
+    path is open (FR-7.5): its fresh items must still be unseen when the student gets there."""
     activity = session.get(Activity, activity_id)
     if activity is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NOT_FOUND)
+    objective = review_path_of(session, activity_id)
+    if objective is not None and not review_open(session, user_id, objective):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=REVIEW_CLOSED)
     return activity
 
 
 @router.get("/{activity_id}", response_model=ActivityOut)
-def get_activity(activity_id: int, session: DbSession, _user: CurrentUser) -> Activity:
+def get_activity(activity_id: int, session: DbSession, user: CurrentUser) -> Activity:
     """The activity to render. `ActivityOut` has no `solution`, so the answer never reaches the
     browser (FR-5.3, NFR-S2)."""
-    return _activity_or_404(session, activity_id)
+    return _activity_or_404(session, activity_id, user.id)
 
 
 @router.post("/{activity_id}/attempts", status_code=status.HTTP_201_CREATED)
@@ -43,7 +50,7 @@ def submit_attempt(
     per BFS step (graded against the engine, so a trace has no stored solution). A submission in the
     wrong shape is 422. No student code is executed: `check_activity` compares the submission with
     the solution, which stays in this process (NFR-S7)."""
-    activity = _activity_or_404(session, activity_id)
+    activity = _activity_or_404(session, activity_id, user.id)
     try:
         attempt, result = record_attempt(session, user.id, activity, body.submitted)
     except ValidationError as exc:  # the submission didn't match the kind's shape
@@ -65,7 +72,7 @@ def get_revealed_hints(activity_id: int, user: CurrentUser, session: DbSession) 
     """Every hint level this student has already unlocked on this activity (FR-4.4, FR-4.5).
 
     Returns an empty list if they have not asked for any hints yet."""
-    activity = _activity_or_404(session, activity_id)
+    activity = _activity_or_404(session, activity_id, user.id)
     all_hints = session.scalars(
         select(Hint).where(Hint.activity_id == activity.id).order_by(Hint.level)
     ).all()
@@ -93,7 +100,7 @@ def reveal_hint(activity_id: int, user: CurrentUser, session: DbSession) -> Hint
     No body. Each call returns the next level (1, then 2, …); once every level has been shown it
     is 409. When `nextCountsAsSupport` is true, warn the student before calling again: a correct
     answer after hint 3 or 4 counts as "met with support" (ID document §7.4)."""
-    activity = _activity_or_404(session, activity_id)
+    activity = _activity_or_404(session, activity_id, user.id)
     revealed = reveal_next_hint(session, user.id, activity)
     if revealed is None:
         raise HTTPException(status.HTTP_409_CONFLICT, detail=NO_MORE_HINTS)

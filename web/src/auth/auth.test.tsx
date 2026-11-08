@@ -30,7 +30,9 @@ describe('log-in page', () => {
     await userEvent.type(await screen.findByLabelText('Email'), ' ada@example.com ')
     await userEvent.type(screen.getByLabelText('Password'), 'Correct horse 1')
     await userEvent.click(screen.getByRole('button', { name: 'Log in' }))
-    expect(await screen.findByRole('heading', { name: 'Welcome, Ada' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Graphs and breadth-first search' }),
+    ).toBeInTheDocument()
     expect(api.callsTo('POST /api/auth/login')[0].body).toEqual({
       email: 'ada@example.com',
       password: 'Correct horse 1',
@@ -152,7 +154,9 @@ describe('register page', () => {
     const api = fakeApi()
     renderApp('/register')
     await fillRegistration('  Grace ', 'grace@example.com', 'Correct horse 1')
-    expect(await screen.findByRole('heading', { name: 'Welcome, Grace' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Graphs and breadth-first search' }),
+    ).toBeInTheDocument()
     expect(api.callsTo('POST /api/auth/register')[0].body).toEqual({
       displayName: 'Grace',
       email: 'grace@example.com',

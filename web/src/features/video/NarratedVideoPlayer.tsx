@@ -1,3 +1,4 @@
+import { reportEvent } from '../../api/events.ts'
 import { Alert } from '../../components'
 import { useRef, useState } from 'react'
 import { findFirstUnansweredCheckpoint, findReachedCheckpoint } from './checkpointGate.ts'
@@ -29,10 +30,23 @@ export function NarratedVideoPlayer(props: NarratedVideoPlayerProps) {
     () => new Set(props.initialPassedIds),
   )
   const [activeCheckpoint, setActiveCheckpoint] = useState<Checkpoint>()
+  // For the pilot's event log (FR-10.1): each is reported once per visit to the page.
+  const reported = useRef(new Set<string>())
+
+  function reportOnce(
+    type: 'video_started' | 'video_completed' | 'checkpoint_reached',
+    id: number,
+  ) {
+    const key = `${type}:${id}`
+    if (reported.current.has(key)) return
+    reported.current.add(key)
+    reportEvent(type, id)
+  }
 
   function pauseAtCheckpoint(checkpoint: Checkpoint) {
     playerRef.current?.pause()
     setActiveCheckpoint(checkpoint)
+    reportOnce('checkpoint_reached', checkpoint.id)
   }
 
   function handleTimeUpdate() {
@@ -52,6 +66,7 @@ export function NarratedVideoPlayer(props: NarratedVideoPlayerProps) {
   // or the student could watch past every later checkpoint without answering.
   function handlePlay() {
     if (activeCheckpoint) playerRef.current?.pause()
+    else reportOnce('video_started', props.video.id)
   }
 
   function handleSeeking() {
@@ -88,6 +103,7 @@ export function NarratedVideoPlayer(props: NarratedVideoPlayerProps) {
         onTimeUpdate={handleTimeUpdate}
         onSeeking={handleSeeking}
         onPlay={handlePlay}
+        onEnded={() => reportOnce('video_completed', props.video.id)}
       >
         <source src={props.video.mediaPath} type="video/mp4" />
         <track

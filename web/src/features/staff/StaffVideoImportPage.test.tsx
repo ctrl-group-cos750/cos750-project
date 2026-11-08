@@ -15,7 +15,13 @@ vi.mock('./staff.api.ts', async (importOriginal) => {
   }
 })
 
-const grace: User = { id: 2, email: 'grace@example.com', displayName: 'Grace', isStaff: true }
+const grace: User = {
+  id: 2,
+  email: 'grace@example.com',
+  displayName: 'Grace',
+  isStaff: true,
+  avatar: null,
+}
 const question = {
   prompt: 'Which leaves first?',
   options: [

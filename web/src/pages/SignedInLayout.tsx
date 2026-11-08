@@ -38,16 +38,16 @@ export function SignedInLayout() {
       actions={
         user && (
           <>
-          <ThemeToggle />
-          <AccountMenu
-            user={user}
-            loggingOut={logout.isPending}
-            onLogout={() =>
-              logout.mutate(undefined, {
-                onSuccess: () => void navigate('/login', { replace: true }),
-              })
-            }
-          />
+            <ThemeToggle />
+            <AccountMenu
+              user={user}
+              loggingOut={logout.isPending}
+              onLogout={() =>
+                logout.mutate(undefined, {
+                  onSuccess: () => void navigate('/login', { replace: true }),
+                })
+              }
+            />
           </>
         )
       }

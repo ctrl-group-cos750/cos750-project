@@ -508,7 +508,7 @@ If the pilot shows that our choices do not work as intended, the first thing we 
 | 5 Nov 2026 | "Yeah if you dont mind, can you get me started with this ? How much work is it? Is there something you need from me in order to do this for me?" | The first demo account and the seed's demo-account loader (#95) |
 | 5 Nov 2026 | "give me a guide on setting the DEMO_PASSWORD on Coolify?" | Deployment guide for the demo accounts' password |
 | 5 Nov 2026 | "while we wait for that PR, can i test this properly to see if it works? I am just trusting you blindly at this stage?" | A manual test plan for the demo accounts, run by the team member |
-| 8 Nov 2026 | "Lets disregard my draft om module 2 let mohtashim do it. Lets start with the review of #107 then." | Reviewing the content model (#107) |
+| 8 Nov 2026 | "Lets start with the review of #107 then." | Reviewing the content model (#107) |
 | 8 Nov 2026 | "Lets do #34 but review #108 and give me feedback before starting with #34" | Reviewing the mastery check (#108); the remaining demo accounts (#116) |
 | 8 Nov 2026 | "thanks. Please review #117." | Reviewing the seed fix (#117) |
 | 8 Nov 2026 | "yeah lets start with fill-in feedback" | A reason for each wrong token in fill-in activities (#119, #120) |
@@ -527,7 +527,6 @@ Each instructional designer records their own use, in the same format as above. 
 **What it was used for:**
 
 - checking what module 1 needs against the activity kinds the app supported, and preparing questions for the content model on how activities are grouped into modules and segments (#14, #83);
-- a first draft of module 2's activities, hints and feedback. It was not used: module 2 was handed to Mohtashim Hussain (#84), and the draft was discarded;
 - drafting the pilot kit (`docs/pilot/`): the plan and schedule, the survey and the think-aloud note sheet (#75);
 - drafting this record.
 
@@ -539,7 +538,6 @@ Each instructional designer records their own use, in the same format as above. 
 |---|---|---|
 | 5 Nov 2026 | "what should i ask and suggest regarding how activities get grouped?" | Questions for the content model (#14) |
 | 5 Nov 2026 | "what is required for us to start with: Content: module 1, What is a graph? #83?" | What module 1 needs, against the activity kinds available |
-| 5 Nov 2026 | "yeah lets go for module 2" | A draft of module 2's content (not used) |
 | 8 Nov 2026 | "whats required for #75? what should we do?" | Planning the pilot kit |
 | 8 Nov 2026 | "Cool, now lets do the documentation 74 and 75" | Drafting the pilot kit and this record |
 

@@ -9,7 +9,38 @@
         "Store a graph in Python as a dictionary of neighbours.",
         "Complete add_vertex and add_edge for directed and undirected graphs."
       ],
-      "segments": []
+      "segments": [
+        {
+          "id": 201,
+          "kind": "text",
+          "title": "Placeholder: adjacency lists in Python",
+          "body": "An **adjacency list** stores each vertex with the vertices connected to it. In Python, a dictionary can represent this: `graph = {\"A\": [\"B\", \"C\"]}`. The retrieval question above is a quick reminder before this lesson."
+        }
+      ]
+    }
+  ],
+  "activities": [
+    {
+      "id": 201,
+      "kind": "multiple_choice",
+      "title": "Placeholder: graph representation recall",
+      "module_id": 2,
+      "purpose": "retrieval",
+      "config": {
+        "prompt": "In an adjacency list, what does the value for a vertex usually contain?",
+        "options": [
+          { "id": "neighbors", "label": "The vertices connected to it" },
+          { "id": "weight", "label": "The number of times it was visited" },
+          { "id": "position", "label": "Its position in the graph" }
+        ]
+      },
+      "solution": {
+        "correct": "neighbors",
+        "feedback": {
+          "weight": "An adjacency list stores connections, not traversal counts.",
+          "position": "A vertex's list contains its neighbors, not a position."
+        }
+      }
     }
   ]
 }

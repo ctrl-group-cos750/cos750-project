@@ -180,6 +180,7 @@ def test_the_reset_covers_every_table_of_student_history() -> None:
         "attempts",
         "events",
         "hint_views",
+        "module_progress",
         "objective_results",
         "points_entries",
         "user_badges",

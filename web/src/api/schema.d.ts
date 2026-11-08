@@ -327,6 +327,128 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/me/avatar': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    /**
+     * Set Avatar
+     * @description Choose a profile picture from the team's set, or none (FR-1.6). Only the student sees it.
+     */
+    put: operations['set_avatar_api_me_avatar_put']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/me/password': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Change Password
+     * @description Change the password (FR-1.5). The current one is required, so a session left open on a
+     *     shared computer can't be used to take the account over; the new one must pass the same rules
+     *     as registration (NFR-S1). Every other session is logged out, and this one carries on.
+     *
+     *     400 with the reason if the current password is wrong or the new one breaks a rule; 429 after
+     *     10 tries a minute.
+     */
+    post: operations['change_password_api_me_password_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/modules': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List Modules
+     * @description All modules with the student's computed status and progress (FR-2).
+     *
+     *     Returns every module in display order.  ``status`` is one of:
+     *     ``locked | open | in_progress | complete``.  No commit needed — read-only.
+     */
+    get: operations['list_modules_api_modules_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/modules/{module_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get Module
+     * @description One module with its full ordered segment list and the student's status.
+     *
+     *     Returns 404 if the module does not exist; 403 if it is locked for this
+     *     student (the previous module has not been completed yet).
+     */
+    get: operations['get_module_api_modules__module_id__get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/modules/{module_id}/position': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Save Module Position
+     * @description Record the student's current segment position and return the updated module.
+     *
+     *     The client calls this whenever the student advances to a new segment.
+     *     The furthest segment reached is kept, so stepping back changes nothing. Reaching the last
+     *     segment marks the module ``complete`` for good.
+     *
+     *     Returns the updated ``ModuleDetailOut`` so the frontend can re-render the
+     *     module detail page with the new status in one round-trip (consistent with
+     *     ``submit_attempt`` returning ``AttemptOut``).
+     *
+     *     Returns 404 if the module does not exist; 403 if it is locked; 409 if the position is more
+     *     than one segment past the furthest the student has reached.
+     */
+    post: operations['save_module_position_api_modules__module_id__position_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/videos/{video_id}': {
     parameters: {
       query?: never
@@ -754,6 +876,14 @@ export interface components {
       hintLevel: number
     }
     /**
+     * AvatarIn
+     * @description The picture to show, or null for the student's initial.
+     */
+    AvatarIn: {
+      /** Avatar */
+      avatar: ('vertex' | 'edge' | 'path' | 'cycle' | 'tree' | 'star' | 'grid' | 'queue') | null
+    }
+    /**
      * BfsResult
      * @description The whole traversal from the start vertex: the final visit order and every step, ready for
      *     the visualiser to animate without further server calls (FR-6.1, NFR-P4).
@@ -841,6 +971,14 @@ export interface components {
       upgradedAt: string | null
       /** Seen */
       seen: boolean
+    }
+    /**
+     * ErrorOut
+     * @description An error the client shows as it is: `detail` says what went wrong, in plain words.
+     */
+    ErrorOut: {
+      /** Detail */
+      detail: string
     }
     /**
      * EventIn
@@ -951,6 +1089,72 @@ export interface components {
       bytes: number
     }
     /**
+     * ModuleDetailOut
+     * @description A module with its full ordered segment list.
+     *
+     *     Returned by ``GET /api/modules/{moduleId}``.  Extends ``ModuleOut`` so the
+     *     frontend can use the same type for map cards and detail views.
+     */
+    ModuleDetailOut: {
+      /** Id */
+      id: number
+      /** Number */
+      number: number
+      /** Slug */
+      slug: string
+      /** Title */
+      title: string
+      /** Goals */
+      goals: string[]
+      /** Estimatedminutes */
+      estimatedMinutes: number
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: 'locked' | 'open' | 'in_progress' | 'complete'
+      /** Segmentcount */
+      segmentCount: number
+      /** Currentsegmentposition */
+      currentSegmentPosition: number
+      /** Segments */
+      segments: components['schemas']['SegmentOut'][]
+      /** Retrieval */
+      retrieval: components['schemas']['RetrievalActivityOut'][]
+    }
+    /**
+     * ModuleOut
+     * @description A module as it appears on the module map.
+     *
+     *     ``status`` is computed per-student at query time (never stored directly on the
+     *     module); it is one of: locked | open | in_progress | complete.
+     *     ``segment_count`` and ``current_segment_position`` let the map show a progress
+     *     bar without loading the full segment list.
+     */
+    ModuleOut: {
+      /** Id */
+      id: number
+      /** Number */
+      number: number
+      /** Slug */
+      slug: string
+      /** Title */
+      title: string
+      /** Goals */
+      goals: string[]
+      /** Estimatedminutes */
+      estimatedMinutes: number
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: 'locked' | 'open' | 'in_progress' | 'complete'
+      /** Segmentcount */
+      segmentCount: number
+      /** Currentsegmentposition */
+      currentSegmentPosition: number
+    }
+    /**
      * ObjectiveReportOut
      * @description One objective on the mastery report (FR-7.2, FR-7.3). `answered` of `total` is how many of
      *     its module 6 items the student has answered; the result stays `not_attempted` until all are.
@@ -987,6 +1191,29 @@ export interface components {
       /** Message */
       message?: string | null
     }
+    /** PasswordChangeIn */
+    PasswordChangeIn: {
+      /** Currentpassword */
+      currentPassword: string
+      /** Newpassword */
+      newPassword: string
+    }
+    /**
+     * PositionIn
+     * @description Request body for ``POST /api/modules/{moduleId}/position`` (FR-2.5).
+     *
+     *     The client sends the zero-based position of the segment the student just
+     *     reached. The server keeps the furthest one, and refuses a position more than one past it,
+     *     so a module can't be finished by jumping to its end.
+     *
+     *     ``ge=0`` rejects negative values at the API boundary: a negative position stored in
+     *     ``ModuleProgress.current_segment_position`` would cause ``segments[-1]`` (undefined
+     *     in JavaScript) on resume, crashing the ModulePage render.
+     */
+    PositionIn: {
+      /** Segmentposition */
+      segmentPosition: number
+    }
     /** RegisterIn */
     RegisterIn: {
       /**
@@ -998,6 +1225,27 @@ export interface components {
       displayName: string
       /** Password */
       password: string
+    }
+    /**
+     * RetrievalActivityOut
+     * @description An answer-free multiple-choice item shown before the module segments.
+     */
+    RetrievalActivityOut: {
+      /** Id */
+      id: number
+      /** Title */
+      title: string
+      /** Prompt */
+      prompt: string
+      /** Options */
+      options: components['schemas']['RetrievalOptionOut'][]
+    }
+    /** RetrievalOptionOut */
+    RetrievalOptionOut: {
+      /** Id */
+      id: string
+      /** Label */
+      label: string
     }
     /**
      * ReviewPathOut
@@ -1072,6 +1320,37 @@ export interface components {
     RewardsSettingsIn: {
       /** Hiderewards */
       hideRewards: boolean
+    }
+    /**
+     * SegmentOut
+     * @description One segment of a module, in display order.
+     *
+     *     Kind-specific nullable fields:
+     *     - ``body``        — Markdown content, for ``text`` / ``worked_example`` / ``refresher``.
+     *     - ``video_id``    — FK to the video, present only for ``video`` segments.
+     *     - ``activity_id`` — FK to the activity, present only for ``activity`` segments.
+     *
+     *     ``body``, ``video_id``, and ``activity_id`` are mutually exclusive in practice;
+     *     the schema keeps them separate and nullable so the frontend can branch on ``kind``.
+     */
+    SegmentOut: {
+      /** Id */
+      id: number
+      /** Position */
+      position: number
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: 'video' | 'text' | 'worked_example' | 'activity' | 'refresher'
+      /** Title */
+      title: string
+      /** Body */
+      body?: string | null
+      /** Videoid */
+      videoId?: number | null
+      /** Activityid */
+      activityId?: number | null
     }
     /**
      * StaffCheckpointIn
@@ -1205,6 +1484,8 @@ export interface components {
       displayName: string
       /** Isstaff */
       isStaff: boolean
+      /** Avatar */
+      avatar?: string | null
     }
     /** ValidationError */
     ValidationError: {
@@ -1743,6 +2024,193 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['ReviewPathOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  set_avatar_api_me_avatar_put: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AvatarIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['UserOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  change_password_api_me_password_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PasswordChangeIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description The current password is wrong, or the new one is the same or breaks a password rule. `detail` says which. */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description More than 10 tries in a minute. */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorOut']
+        }
+      }
+    }
+  }
+  list_modules_api_modules_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ModuleOut'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  get_module_api_modules__module_id__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        module_id: number
+      }
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ModuleDetailOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  save_module_position_api_modules__module_id__position_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        module_id: number
+      }
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PositionIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ModuleDetailOut']
         }
       }
       /** @description Validation Error */

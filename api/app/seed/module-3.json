@@ -39,6 +39,28 @@
   ],
   "activities": [
     {
+      "id": 303,
+      "kind": "multiple_choice",
+      "title": "Placeholder: graph storage recall",
+      "module_id": 3,
+      "purpose": "retrieval",
+      "config": {
+        "prompt": "In the graph dictionary, what does graph[\"A\"] return?",
+        "options": [
+          { "id": "neighbors", "label": "A's neighbor list" },
+          { "id": "key", "label": "The string \"A\"" },
+          { "id": "all", "label": "Every vertex in the graph" }
+        ]
+      },
+      "solution": {
+        "correct": "neighbors",
+        "feedback": {
+          "key": "The key is used to look up its value in the dictionary.",
+          "all": "The lookup returns the value for A, not the whole dictionary."
+        }
+      }
+    },
+    {
       "id": 301,
       "kind": "multiple_choice",
       "title": "Placeholder: when is BFS the right tool?",

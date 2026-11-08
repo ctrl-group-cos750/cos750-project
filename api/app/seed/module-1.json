@@ -10,7 +10,14 @@
         "Tell a directed graph from an undirected one.",
         "Match a real situation to a graph."
       ],
-      "segments": []
+      "segments": [
+        {
+          "id": 101,
+          "kind": "text",
+          "title": "Placeholder: vertices and edges",
+          "body": "A graph has **vertices** (the things) and **edges** (the connections between them). For example, campus buildings can be vertices and walkways can be edges."
+        }
+      ]
     }
   ]
 }

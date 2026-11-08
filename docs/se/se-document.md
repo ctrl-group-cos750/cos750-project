@@ -337,6 +337,9 @@ Figure: Use cases. The student takes part in every use case in both groups excep
 - **FR-1.2** Log in and out. A session lasts until logout or 14 days, whichever is first.
 - **FR-1.3** A student sees and changes only their own progress, attempts and results.
 - **FR-1.4** Seeded demo accounts exist at different points in the course (new, mid-course, finished with a "not yet" objective, ready for the lecture), so the demo can show any stage without working through 75 minutes of content.
+- **FR-1.5** A student can change their password: they give the current one, the new one must meet the password rules (NFR-S1), and every other session is logged out.
+- **FR-1.6** A student can choose a profile picture from a set the team provides (graph shapes, never an uploaded photo), shown only to them, like the display name.
+- **FR-1.7** A profile page, reached from the account menu in the header, shows the student their own objectives met and, unless hidden (FR-9.5), points and badges.
 
 ## Modules and progress (FR-2)
 - **FR-2.1** Present the seven modules of the ID document (0 to 6) in order. A module opens once the one before it is complete; module 0 is always open.
@@ -534,7 +537,7 @@ Figure: Entities and relationships.
 
 **PointsEntry** (append-only, never negative): `user_id`, `event`, `ref`, `points`, `created_at`. `ref` names what was rewarded (`activity:12`, `objective:5`) and is unique per student, so nothing is rewarded twice. A student's total is the sum.
 
-**UserBadge** (never deleted): `user_id`, `badge`, `ref`, `tier`, `awarded_at`, `upgraded_at`, `seen_at`. `badge` is an id from the badge catalogue: the rules that award it are in `app/services/rewards.py`, and its name, wording and picture in `web/src/components/achievements.ts`. `ref` tells apart badges earned more than once (one per bonus quest). `tier` is bronze or gold for objective badges. `seen_at` stays empty until the app has announced the badge. **User** also has `hide_rewards` (FR-9.5).
+**UserBadge** (never deleted): `user_id`, `badge`, `ref`, `tier`, `awarded_at`, `upgraded_at`, `seen_at`. `badge` is an id from the badge catalogue: the rules that award it are in `app/services/rewards.py`, and its name, wording and picture in `web/src/components/achievements.ts`. `ref` tells apart badges earned more than once (one per bonus quest). `tier` is bronze or gold for objective badges. `seen_at` stays empty until the app has announced the badge. **User** also has `hide_rewards` (FR-9.5) and `avatar` (FR-1.6: the picture chosen from the set, empty for the student's initial).
 
 ## Notes
 - **Attempts and events are the source of truth.** Module progress, objective results, points and badges are derived from them by the services, and can be recomputed if a rule changes (FR-7.6).
@@ -553,6 +556,8 @@ Base path: `/api`. JSON over HTTPS. Auth via the session cookie set by `/api/aut
 | POST | `/api/auth/login` | public | Check credentials and set the session cookie. |
 | POST | `/api/auth/logout` | public | Clear the session cookie. Succeeds without a valid session, so logging out never fails. |
 | GET | `/api/auth/me` | user | The logged-in user. |
+| PUT | `/api/me/avatar` | user | Choose a profile picture from the set, or none (FR-1.6). |
+| POST | `/api/me/password` | user | Change the password: the current one, then a new one that meets the rules; every other session ends (FR-1.5). |
 
 ## Modules and content
 | Method | Path | Auth | Purpose |

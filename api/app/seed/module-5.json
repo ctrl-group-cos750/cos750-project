@@ -11,5 +11,29 @@
       ],
       "segments": []
     }
+  ],
+  "activities": [
+    {
+      "id": 501,
+      "kind": "multiple_choice",
+      "title": "Placeholder: BFS implementation recall",
+      "module_id": 5,
+      "purpose": "retrieval",
+      "config": {
+        "prompt": "When should BFS mark a neighbor as visited to avoid adding it to the queue twice?",
+        "options": [
+          { "id": "enqueue", "label": "When it is added to the queue" },
+          { "id": "dequeue", "label": "Only after it is removed from the queue" },
+          { "id": "finish", "label": "After the whole traversal finishes" }
+        ]
+      },
+      "solution": {
+        "correct": "enqueue",
+        "feedback": {
+          "dequeue": "Marking it on removal lets another vertex enqueue it first.",
+          "finish": "The visited set must be updated during traversal, not after it."
+        }
+      }
+    }
   ]
 }

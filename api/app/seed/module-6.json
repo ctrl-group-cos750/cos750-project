@@ -69,6 +69,28 @@
   ],
   "activities": [
     {
+      "id": 609,
+      "kind": "multiple_choice",
+      "title": "Placeholder: debugging recall",
+      "module_id": 6,
+      "purpose": "retrieval",
+      "config": {
+        "prompt": "Which graph is useful for checking that BFS does not visit a vertex repeatedly?",
+        "options": [
+          { "id": "cycle", "label": "A graph containing a cycle" },
+          { "id": "single", "label": "A graph with one vertex and no edges" },
+          { "id": "line", "label": "A straight path with no branches" }
+        ]
+      },
+      "solution": {
+        "correct": "cycle",
+        "feedback": {
+          "single": "A single vertex cannot reveal repeated visits through a cycle.",
+          "line": "A path is useful for order, but a cycle is needed to expose missing visited checks."
+        }
+      }
+    },
+    {
       "id": 601,
       "kind": "multiple_choice",
       "title": "Placeholder: what is a graph?",

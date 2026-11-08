@@ -17,6 +17,14 @@ def test_every_committed_fixture_is_valid() -> None:
     read_fixtures()  # raises, naming the file, if any fixture is invalid
 
 
+def test_modules_2_to_6_have_placeholder_retrieval_items() -> None:
+    content = read_fixtures()
+    retrieval = [activity for activity in content.activities if activity.purpose == "retrieval"]
+    assert {activity.module_id for activity in retrieval} == {2, 3, 4, 5, 6}
+    assert all(activity.kind == "multiple_choice" for activity in retrieval)
+    assert all(activity.objective_id is None for activity in retrieval)
+
+
 def write(folder: Path, data: dict[str, Any]) -> Path:
     (folder / "content.json").write_text(json.dumps(data), encoding="utf-8")
     return folder

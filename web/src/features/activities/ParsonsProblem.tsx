@@ -17,10 +17,20 @@ export function ParsonsProblem({ activity, result, submitting, onSubmit }: Parso
   const [available, setAvailable] = useState<number[]>([])
   const [dragged, setDragged] = useState<DraggedLine>()
   const [announcement, setAnnouncement] = useState('')
+  const [cleared, setCleared] = useState(false)
+  const [prevResult, setPrevResult] = useState(result)
+
+  if (result !== prevResult) {
+    setPrevResult(result)
+    setCleared(false)
+  }
+
   const lines = new Map(activity.config.lines.map((line) => [line.id, line]))
   const disabled = submitting || result?.correct === true
+  const checkedParts = cleared ? undefined : result?.parts
 
   function move(lineId: number, destination: number, inAnswer: boolean) {
+    setCleared(true)
     const source = inAnswer ? answerOrder : available
     const target = inAnswer ? available : answerOrder
     const from = source.indexOf(lineId)
@@ -42,6 +52,7 @@ export function ParsonsProblem({ activity, result, submitting, onSubmit }: Parso
   function reorder(lineId: number, destination: number) {
     const from = answerOrder.indexOf(lineId)
     if (from < 0 || from === destination) return
+    setCleared(true)
     const next = [...answerOrder]
     next.splice(from, 1)
     next.splice(destination, 0, lineId)
@@ -89,7 +100,7 @@ export function ParsonsProblem({ activity, result, submitting, onSubmit }: Parso
       <ol className="m-0 grid list-none gap-2 p-0" aria-label="Your answer, in order">
         {answerOrder.map((lineId, index) => {
           const line = lines.get(lineId)
-          const part = result?.parts.find((item) => item.ref === index)
+          const part = checkedParts?.find((item) => item.ref === index)
           if (!line) return null
           return (
             <li

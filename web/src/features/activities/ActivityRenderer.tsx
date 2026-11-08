@@ -11,10 +11,13 @@ type ActivityRendererProps = {
   submitting: boolean
   onSubmit: (submitted: { order: number[] } | { answers: Record<number, string> }) => Promise<void>
   requestHint: (activityId: number) => Promise<Hint>
+  loadHints?: (activityId: number) => Promise<readonly Hint[]>
 }
 
 /** Chooses the activity control and consistently adds server feedback and the hint ladder. */
 export function ActivityRenderer(props: ActivityRendererProps) {
+  const isSupported = props.activity.kind === 'parsons' || props.activity.kind === 'fill_in'
+
   return (
     <Card>
       <h1>{props.activity.title}</h1>
@@ -35,17 +38,17 @@ export function ActivityRenderer(props: ActivityRendererProps) {
       ) : (
         <Alert tone="warning">This activity kind is not available yet.</Alert>
       )}
-      <div className="mt-5 grid gap-4">
-        <FeedbackPanel
-          result={props.result}
-          partName={props.activity.kind === 'parsons' ? 'line' : 'blank'}
-        />
-        <HintLadder
-          activityId={props.activity.id}
-          disabled={props.submitting}
-          requestHint={props.requestHint}
-        />
-      </div>
+      {isSupported && (
+        <div className="mt-5 grid gap-4">
+          <FeedbackPanel result={props.result} />
+          <HintLadder
+            activityId={props.activity.id}
+            disabled={props.submitting}
+            requestHint={props.requestHint}
+            loadHints={props.loadHints}
+          />
+        </div>
+      )}
     </Card>
   )
 }

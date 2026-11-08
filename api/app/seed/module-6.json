@@ -1,0 +1,158 @@
+{
+  "modules": [
+    {
+      "id": 6,
+      "slug": "mastery-check",
+      "title": "Mastery check and report",
+      "estimated_minutes": 10,
+      "goals": [
+        "Show what you can do on every objective, on questions you have not seen.",
+        "Read your report and see what to review before the lecture."
+      ],
+      "segments": [
+        {
+          "id": 601,
+          "kind": "text",
+          "title": "Placeholder: about the mastery check",
+          "body": "Placeholder until the module 6 content (#28) lands.\n\nThese questions are new. Hints are there if you need them; using the last two levels marks an objective as met with support."
+        },
+        {
+          "id": 602,
+          "kind": "activity",
+          "title": "Placeholder: what is a graph?",
+          "activity_id": 601
+        },
+        {
+          "id": 603,
+          "kind": "activity",
+          "title": "Placeholder: when to use BFS",
+          "activity_id": 602
+        },
+        {
+          "id": 604,
+          "kind": "activity",
+          "title": "Placeholder: trace an unseen graph",
+          "activity_id": 603
+        }
+      ]
+    }
+  ],
+  "activities": [
+    {
+      "id": 601,
+      "kind": "multiple_choice",
+      "title": "Placeholder: what is a graph?",
+      "module_id": 6,
+      "purpose": "mastery",
+      "objective_id": 1,
+      "config": {
+        "prompt": "Which of these is a graph?",
+        "options": [
+          {
+            "id": "roads",
+            "label": "Towns and the roads between them"
+          },
+          {
+            "id": "list",
+            "label": "A shopping list"
+          },
+          {
+            "id": "number",
+            "label": "A single number"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "roads",
+        "feedback": {
+          "list": "A list has items in order but no connections between them.",
+          "number": "A graph needs vertices and edges that connect them."
+        }
+      }
+    },
+    {
+      "id": 602,
+      "kind": "multiple_choice",
+      "title": "Placeholder: when to use BFS",
+      "module_id": 6,
+      "purpose": "mastery",
+      "objective_id": 4,
+      "config": {
+        "prompt": "Which task needs a traversal such as BFS?",
+        "options": [
+          {
+            "id": "reach",
+            "label": "Finding every station reachable from Hatfield"
+          },
+          {
+            "id": "max",
+            "label": "Finding the largest number in a list"
+          },
+          {
+            "id": "sum",
+            "label": "Adding two numbers"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "reach",
+        "feedback": {
+          "max": "One pass over a list is enough: there are no connections to follow.",
+          "sum": "There is nothing to traverse."
+        }
+      }
+    },
+    {
+      "id": 603,
+      "kind": "trace",
+      "title": "Placeholder: trace an unseen graph",
+      "module_id": 6,
+      "purpose": "mastery",
+      "objective_id": 5,
+      "config": {
+        "directed": false,
+        "vertices": [
+          "P",
+          "Q",
+          "R",
+          "S",
+          "T",
+          "U",
+          "V"
+        ],
+        "edges": [
+          {
+            "source": "P",
+            "target": "R"
+          },
+          {
+            "source": "P",
+            "target": "Q"
+          },
+          {
+            "source": "Q",
+            "target": "S"
+          },
+          {
+            "source": "R",
+            "target": "S"
+          },
+          {
+            "source": "R",
+            "target": "T"
+          },
+          {
+            "source": "S",
+            "target": "U"
+          },
+          {
+            "source": "T",
+            "target": "V"
+          }
+        ],
+        "start_vertex": "P"
+      },
+      "solution": {}
+    }
+  ]
+}

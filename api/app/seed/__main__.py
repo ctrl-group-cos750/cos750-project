@@ -10,7 +10,11 @@ from app.seed.demo_accounts import load_demo_accounts
 with SessionLocal() as session:
     content = load(session)
     demo = load_demo_accounts(session, os.environ.get("DEMO_PASSWORD"))
-print(f"seed: {len(content.activities)} activities, {len(content.graphs)} graphs")
+segments = sum(len(m.segments) for m in content.modules)
+print(
+    f"seed: {len(content.objectives)} objectives, {len(content.modules)} modules, "
+    f"{segments} segments, {len(content.activities)} activities, {len(content.graphs)} graphs"
+)
 if demo:
     print(f"seed: demo accounts {', '.join(a.email for a in demo)}")
 else:

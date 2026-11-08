@@ -255,7 +255,7 @@ describe('code activities', () => {
   it('hides the hint ladder and feedback panel when activity kind is not supported', () => {
     const unsupported = {
       id: 99,
-      kind: 'multiple_choice' as unknown as CodeActivity['kind'],
+      kind: 'trace' as unknown as CodeActivity['kind'],
       title: 'Unsupported kind',
       visible: true,
       config: {} as unknown as CodeActivity['config'],

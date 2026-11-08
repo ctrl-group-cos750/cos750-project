@@ -309,6 +309,67 @@
       }
     },
     "/api/activities/{activity_id}/hints": {
+      "get": {
+        "tags": [
+          "activities"
+        ],
+        "summary": "Get Revealed Hints",
+        "description": "Every hint level this student has already unlocked on this activity (FR-4.4, FR-4.5).\n\nReturns an empty list if they have not asked for any hints yet.",
+        "operationId": "get_revealed_hints_api_activities__activity_id__hints_get",
+        "parameters": [
+          {
+            "name": "activity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Activity Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HintOut"
+                  },
+                  "title": "Response Get Revealed Hints Api Activities  Activity Id  Hints Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": [
           "activities"

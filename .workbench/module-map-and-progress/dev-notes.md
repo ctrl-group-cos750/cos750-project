@@ -1503,3 +1503,26 @@ Commit: `bb1fa64` on branch `feature/module-map-and-progress`.
 
 ### Open Issues
 None introduced. All pre-existing deferred items unchanged.
+
+## Push & PR — 2026-11-08
+
+### Pre-push commits
+- `refactor(module)`: removed redundant `kind` variable and unused `SegmentKind` import in `SegmentView.tsx` (minor type-narrowing cleanup)
+- `docs(module-map)`: committed as-built spec, review notes, feedback-investigation notes, and simplifier notes from `.workbench/module-map-and-progress/`
+
+`.env` inside `.workbench/` confirmed gitignored — not staged.
+
+### scripts/check.sh result
+All checks passed (Node 24 via nvm):
+- Web: 134 tests passed, 0 lint warnings, TypeScript build clean
+- API: 436 passed, 1 skipped (Postgres-only migration test)
+
+### Branch pushed
+`feature/module-map-and-progress` → `origin` (upstream tracking set)
+
+### PR opened
+**PR #115**: feat: module map, module page and progress tracking (FR-2)
+**URL**: https://github.com/ctrl-group-cos750/cos750-project/pull/115
+**Base**: `staging` ✅  **Head**: `feature/module-map-and-progress`
+
+PR not merged — awaiting human review and CI.

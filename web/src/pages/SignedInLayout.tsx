@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { useCurrentUser, useLogout } from '../auth/hooks.ts'
 import { Alert, AppShell, Button } from '../components'
 import { BadgeAnnouncer } from '../features/rewards/BadgeAnnouncer.tsx'
+import { ThemeToggle } from '../theme/ThemeToggle.tsx'
 import styles from './SignedInLayout.module.css'
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
@@ -32,6 +33,7 @@ export function SignedInLayout() {
       }
       actions={
         <>
+          <ThemeToggle />
           <span className={styles.name}>{user?.displayName}</span>
           <Button
             variant="secondary"

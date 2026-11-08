@@ -32,8 +32,11 @@ export function BfsVisualizer({ scenario }: BfsVisualizerProps) {
     createPlayback,
   )
 
-  const frame = scenario.frames[playback.frameIndex]
-  const expected = expectedVertex({ scenario, frameIndex: playback.frameIndex })
+  const frame = scenario.frames[playback.frameIndex] ?? scenario.frames[0]
+  const expected = expectedVertex({
+    scenario,
+    frameIndex: Math.min(playback.frameIndex, scenario.frames.length - 1),
+  })
   const isComplete = playback.frameIndex === playback.lastFrameIndex
   const predictionRequired = playback.predictionMode && expected !== null
 
@@ -166,7 +169,7 @@ export function BfsVisualizer({ scenario }: BfsVisualizerProps) {
               <Alert
                 className={
                   playback.feedback.correct
-                    ? 'border-[color:var(--color-success)] bg-[color:var(--color-success-soft)]'
+                    ? 'border-success bg-success-soft'
                     : 'border-destructive/50 bg-destructive/10'
                 }
               >
@@ -228,7 +231,7 @@ export function BfsVisualizer({ scenario }: BfsVisualizerProps) {
             <Gauge aria-hidden="true" className="size-4 text-muted-foreground" />
             Speed
             <select
-              className="h-8 rounded-md border bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="h-8 rounded-md border border-input bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
               value={playback.speedMs}
               onChange={(event) => {
                 dispatch({ type: 'SET_SPEED', speedMs: Number(event.target.value) })

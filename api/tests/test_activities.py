@@ -236,3 +236,27 @@ def test_an_attempt_records_the_highest_hint_level_seen_before_it(
     assert second.json()["hintLevel"] == 3
     stored = db.scalars(select(Attempt).order_by(Attempt.id)).all()
     assert [a.hint_level for a in stored] == [0, 3]
+
+
+def test_get_hints_returns_already_revealed_hints(client: TestClient, db: Session) -> None:
+    activity_id = make_choice_with_hints(db)
+    assert client.get(f"/api/activities/{activity_id}/hints").status_code == 401
+    log_in(client)
+    assert client.get("/api/activities/999/hints").status_code == 404
+
+    # Initially empty
+    empty = client.get(f"/api/activities/{activity_id}/hints")
+    assert empty.status_code == 200
+    assert empty.json() == []
+
+    # Reveal hints 1 and 2
+    client.post(f"/api/activities/{activity_id}/hints")
+    client.post(f"/api/activities/{activity_id}/hints")
+
+    revealed = client.get(f"/api/activities/{activity_id}/hints")
+    assert revealed.status_code == 200
+    hints = revealed.json()
+    assert len(hints) == 2
+    assert [h["level"] for h in hints] == [1, 2]
+    assert [h["hasMore"] for h in hints] == [True, True]
+    assert [h["nextCountsAsSupport"] for h in hints] == [False, True]

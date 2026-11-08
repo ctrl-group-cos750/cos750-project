@@ -20,9 +20,19 @@
   --accent-foreground: rgb(13, 79, 165);
   --destructive: rgb(206, 18, 18);
   --destructive-foreground: rgb(255, 255, 255);
+  /* --border is decorative (card edges, dividers). --input is the border of form controls and
+   * must reach 3:1 on the surfaces it sits on (WCAG 1.4.11): 3.7:1 on white, 3.4:1 on --muted. */
   --border: rgb(209, 209, 209);
-  --input: rgb(230, 230, 230);
+  --input: rgb(133, 133, 133);
   --ring: rgb(17, 102, 212);
+  /* Status colours. The only place they are defined: Tailwind (text-success, bg-warning/15, ...)
+   * and the legacy CSS modules (via @theme below) both read these. As text they reach 4.5:1 on
+   * the page, on --muted and on their own 15% tint. */
+  --success: rgb(20, 112, 71);
+  --success-soft: rgb(227, 248, 240);
+  --warning: rgb(143, 74, 0);
+  --warning-soft: rgb(255, 242, 225);
+  --destructive-soft: rgb(255, 232, 232);
   --chart-1: rgb(17, 102, 212);
   --chart-2: rgb(16, 183, 127);
   --chart-3: rgb(224, 115, 6);
@@ -50,41 +60,6 @@
   --shadow-2xl: 0 1px 4px rgb(0 0 0 / 13%);
   --tracking-normal: 0.0125em;
   color-scheme: light;
-
-  /* Compatibility variables for existing non-shadcn components and the BFS SVG. */
-  --color-bg: var(--background);
-  --color-surface: var(--card);
-  --color-surface-sunken: var(--muted);
-  --color-text: var(--foreground);
-  --color-text-muted: var(--muted-foreground);
-  --color-line: var(--border);
-  --color-border: var(--input);
-  --color-accent: var(--primary);
-  --color-accent-hover: rgb(13, 79, 165);
-  --color-accent-text: rgb(13, 79, 165);
-  --color-on-accent: var(--primary-foreground);
-  --color-accent-soft: var(--accent);
-  --color-accent-soft-text: var(--accent-foreground);
-  --color-success: var(--chart-2);
-  --color-success-soft: rgb(227, 248, 240);
-  --color-warning: var(--chart-3);
-  --color-warning-soft: rgb(255, 242, 225);
-  --color-danger: var(--destructive);
-  --color-danger-soft: rgb(255, 232, 232);
-  --shadow-card: var(--shadow-sm);
-  --focus-ring: 0 0 0 3px var(--background), 0 0 0 5px var(--ring);
-
-  --bfs-unvisited-fill: var(--card);
-  --bfs-unvisited-stroke: var(--border);
-  --bfs-current-fill: var(--primary);
-  --bfs-current-stroke: var(--accent-foreground);
-  --bfs-current-text: var(--primary-foreground);
-  --bfs-queued-fill: var(--accent);
-  --bfs-queued-stroke: var(--primary);
-  --bfs-visited-fill: rgb(227, 248, 240);
-  --bfs-visited-stroke: var(--chart-2);
-  --bfs-edge: var(--border);
-  --bfs-edge-traversed: var(--primary);
 }
 
 .dark,
@@ -106,8 +81,13 @@
   --destructive: rgb(223, 32, 32);
   --destructive-foreground: rgb(255, 255, 255);
   --border: rgb(64, 64, 64);
-  --input: rgb(64, 64, 64);
+  --input: rgb(120, 120, 120); /* 3.4:1 on the dark card, 3.7:1 on the dark page */
   --ring: rgb(128, 187, 255);
+  --success: rgb(71, 209, 163);
+  --success-soft: rgb(22, 65, 53);
+  --warning: rgb(246, 193, 85);
+  --warning-soft: rgb(73, 55, 22);
+  --destructive-soft: rgb(77, 28, 28);
   --chart-1: rgb(128, 187, 255);
   --chart-2: rgb(71, 209, 163);
   --chart-3: rgb(246, 193, 85);
@@ -130,40 +110,6 @@
   --shadow-xl: 0 8px 10px -1px rgb(0 0 0 / 15%);
   --shadow-2xl: 0 2px 6px rgb(0 0 0 / 38%);
   color-scheme: dark;
-
-  --color-bg: var(--background);
-  --color-surface: var(--card);
-  --color-surface-sunken: var(--muted);
-  --color-text: var(--foreground);
-  --color-text-muted: var(--muted-foreground);
-  --color-line: var(--border);
-  --color-border: var(--input);
-  --color-accent: var(--primary);
-  --color-accent-hover: rgb(179, 214, 255);
-  --color-accent-text: rgb(179, 214, 255);
-  --color-on-accent: var(--primary-foreground);
-  --color-accent-soft: var(--accent);
-  --color-accent-soft-text: var(--accent-foreground);
-  --color-success: var(--chart-2);
-  --color-success-soft: rgb(22, 65, 53);
-  --color-warning: var(--chart-3);
-  --color-warning-soft: rgb(73, 55, 22);
-  --color-danger: var(--destructive);
-  --color-danger-soft: rgb(77, 28, 28);
-  --shadow-card: var(--shadow-sm);
-  --focus-ring: 0 0 0 3px var(--background), 0 0 0 5px var(--ring);
-
-  --bfs-unvisited-fill: var(--card);
-  --bfs-unvisited-stroke: var(--border);
-  --bfs-current-fill: var(--primary);
-  --bfs-current-stroke: var(--accent-foreground);
-  --bfs-current-text: var(--primary-foreground);
-  --bfs-queued-fill: var(--accent);
-  --bfs-queued-stroke: var(--primary);
-  --bfs-visited-fill: rgb(22, 65, 53);
-  --bfs-visited-stroke: var(--chart-2);
-  --bfs-edge: var(--border);
-  --bfs-edge-traversed: var(--primary);
 }
 
 @theme inline {
@@ -183,8 +129,11 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-  --color-success: var(--chart-2);
-  --color-warning: var(--chart-3);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-destructive-soft: var(--destructive-soft);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

@@ -1,0 +1,24 @@
+.avatar,
+.initial {
+  flex: none;
+  border-radius: 50%;
+}
+
+.ground {
+  fill: var(--color-accent-soft);
+}
+
+.drawing {
+  fill: var(--color-accent);
+  stroke: var(--color-accent);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.initial {
+  display: inline-grid;
+  place-items: center;
+  font-weight: 700;
+  color: var(--color-text);
+  background: var(--color-line);
+}

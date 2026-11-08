@@ -1,10 +1,13 @@
 import { api, ApiError } from '../api/client.ts'
+import type { AvatarId } from '../components/avatars.ts'
 
 export type User = {
   id: number
   email: string
   displayName: string
   isStaff: boolean
+  /** The profile picture they chose (FR-1.6), or null for their initial. */
+  avatar: AvatarId | null
 }
 
 export type Credentials = { email: string; password: string }

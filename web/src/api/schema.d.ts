@@ -327,6 +327,51 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/me/avatar': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    /**
+     * Set Avatar
+     * @description Choose a profile picture from the team's set, or none (FR-1.6). Only the student sees it.
+     */
+    put: operations['set_avatar_api_me_avatar_put']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/me/password': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Change Password
+     * @description Change the password (FR-1.5). The current one is required, so a session left open on a
+     *     shared computer can't be used to take the account over; the new one must pass the same rules
+     *     as registration (NFR-S1). Every other session is logged out, and this one carries on.
+     *
+     *     400 with the reason if the current password is wrong or the new one breaks a rule; 429 after
+     *     10 tries a minute.
+     */
+    post: operations['change_password_api_me_password_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/videos/{video_id}': {
     parameters: {
       query?: never
@@ -754,6 +799,14 @@ export interface components {
       hintLevel: number
     }
     /**
+     * AvatarIn
+     * @description The picture to show, or null for the student's initial.
+     */
+    AvatarIn: {
+      /** Avatar */
+      avatar: ('vertex' | 'edge' | 'path' | 'cycle' | 'tree' | 'star' | 'grid' | 'queue') | null
+    }
+    /**
      * BfsResult
      * @description The whole traversal from the start vertex: the final visit order and every step, ready for
      *     the visualiser to animate without further server calls (FR-6.1, NFR-P4).
@@ -841,6 +894,14 @@ export interface components {
       upgradedAt: string | null
       /** Seen */
       seen: boolean
+    }
+    /**
+     * ErrorOut
+     * @description An error the client shows as it is: `detail` says what went wrong, in plain words.
+     */
+    ErrorOut: {
+      /** Detail */
+      detail: string
     }
     /**
      * EventIn
@@ -986,6 +1047,13 @@ export interface components {
       correct: boolean
       /** Message */
       message?: string | null
+    }
+    /** PasswordChangeIn */
+    PasswordChangeIn: {
+      /** Currentpassword */
+      currentPassword: string
+      /** Newpassword */
+      newPassword: string
     }
     /** RegisterIn */
     RegisterIn: {
@@ -1205,6 +1273,8 @@ export interface components {
       displayName: string
       /** Isstaff */
       isStaff: boolean
+      /** Avatar */
+      avatar?: string | null
     }
     /** ValidationError */
     ValidationError: {
@@ -1752,6 +1822,92 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  set_avatar_api_me_avatar_put: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AvatarIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['UserOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  change_password_api_me_password_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PasswordChangeIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description The current password is wrong, or the new one is the same or breaks a password rule. `detail` says which. */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description More than 10 tries in a minute. */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorOut']
         }
       }
     }

@@ -5,9 +5,9 @@ import { Alert, Spinner } from '../../components'
 import { useRefreshRewards } from '../rewards/hooks.ts'
 import { fetchActivity, requestActivityHint, submitActivityAttempt } from './activities.api.ts'
 import { ActivityRenderer } from './ActivityRenderer.tsx'
-import type { AttemptResult } from './activities.types.ts'
+import type { AttemptResult, Submission } from './activities.types.ts'
 
-/** /activities/:activityId — a standalone code activity. */
+/** /activities/:activityId — a standalone activity. */
 export function ActivityPage() {
   const activityId = Number(useParams().activityId)
   const validActivityId = Number.isInteger(activityId) && activityId > 0
@@ -26,7 +26,7 @@ export function ActivityPage() {
   if (query.isPending) return <Spinner label="Loading activity" />
   if (query.isError) return <Alert tone="danger">{query.error.message}</Alert>
 
-  async function submit(submitted: { order: number[] } | { answers: Record<number, string> }) {
+  async function submit(submitted: Submission) {
     setSubmitting(true)
     setSubmitError('')
     try {

@@ -524,7 +524,7 @@ Figure: Entities and relationships.
 
 **Attempt** (append-only): `id`, `user_id`, `activity_id`, `submitted` (JSON: the answer — for a code activity, the chosen line order or filled-in tokens), `correct`, `score` (0 to 1, for partial results such as trace tables), `hint_level` (highest level shown before this attempt), `detail` (JSON: per-line or per-blank results for a code activity), `created_at`.
 
-**Event** (append-only): `id`, `user_id`, `type` (`segment_viewed` | `checkpoint_reached` | `hint_shown` | `module_completed` | `result_changed` …), `ref` (the segment, activity, module or objective), `payload` (JSON), `created_at`.
+**Event** (append-only): `id`, `user_id`, `type`, `ref` (what it was about: `video:3`, `checkpoint:12`, `segment:301`, `activity:301`, `objective:5`), `payload` (JSON: a hint's level, a result's old and new state), `created_at`. The server logs `hint_shown` and `result_changed` itself; the browser reports `video_started`, `video_completed`, `checkpoint_reached` and `segment_viewed` through `POST /api/events`, which takes only those types, each about a video, checkpoint or segment that exists, and no free text (`app/services/events.py`). `module_completed` is added with modules (#15). Answers and hints shown also have their own tables, `Attempt` and `HintView`.
 
 **ModuleProgress**: `user_id`, `module_id`, `status` (`open` | `in_progress` | `complete`), `current_segment_id`, `completed_at`.
 
@@ -631,7 +631,8 @@ Progress, results and points change only as a side effect of attempts and segmen
 ## Evaluation export (staff only)
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/api/staff/export/{table}.csv` | staff | `events`, `attempts` or `objective_results` as CSV, students identified by internal ID only (FR-10). |
+| GET | `/api/staff/export/{table}.csv` | staff | `events`, `attempts`, `hints` or `objective_results` as CSV, students identified by internal ID only, staff and demo accounts left out (FR-10). |
+| POST | `/api/events` | user | Report something only the browser sees (`video_started`, `video_completed`, `checkpoint_reached`, `segment_viewed`) for the event log (FR-10.1); 120 a minute per student. |
 
 ## Conventions **[PROVISIONAL]**
 - Standard HTTP status codes; error bodies `{ "detail": "..." }`. `429` with a retry hint when a rate limit is reached.

@@ -367,6 +367,59 @@
         }
       }
     },
+    "/api/events": {
+      "post": {
+        "tags": [
+          "events"
+        ],
+        "summary": "Report Event",
+        "description": "Log something only the browser sees, for the pilot's evaluation (FR-10.1). The server adds\nwho and when. 404 if the video, checkpoint or segment doesn't exist; 429 past 120 a minute.",
+        "operationId": "report_event_api_events_post",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/graphs/{scenario_id}": {
       "get": {
         "tags": [
@@ -1441,6 +1494,114 @@
         }
       }
     },
+    "/api/staff/export/{table}.csv": {
+      "get": {
+        "tags": [
+          "staff"
+        ],
+        "summary": "Export Csv",
+        "description": "Download one table as CSV for every real student (FR-10.2), oldest first:\n\n- `attempts`: each answer; `submitted` and `detail` are what was answered and the per-part\n  result, as JSON.\n- `hints`: each hint shown.\n- `events`: the timeline (app/services/events.py): videos started and finished, checkpoints\n  reached, segments viewed, hints shown, results changing; `payload` as JSON.\n- `objective_results`: each student's current result per objective, with the attempts it was\n  decided from (`evidence`).",
+        "operationId": "export_csv_api_staff_export__table__csv_get",
+        "parameters": [
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "attempts",
+                "hints",
+                "events",
+                "objective_results"
+              ],
+              "type": "string",
+              "title": "Table"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/insights": {
+      "get": {
+        "tags": [
+          "staff"
+        ],
+        "summary": "Insights",
+        "description": "The pilot at a glance (ID document §8.4): per activity, how many students tried it, wrong\nattempts, and how many needed hint 3 or 4; per video, how many started it, passed each\ncheckpoint and finished it, which shows where students stopped. Real students only (no staff\nor demo accounts); counts only.",
+        "operationId": "insights_api_staff_insights_get",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Insights"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "summary": "Health",
@@ -1688,6 +1849,56 @@
         "title": "AccountVideo",
         "description": "Progress through one video: checkpoints answered correctly, out of all its checkpoints."
       },
+      "ActivityInsight": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "students": {
+            "type": "integer",
+            "title": "Students"
+          },
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts"
+          },
+          "wrongAttempts": {
+            "type": "integer",
+            "title": "Wrongattempts"
+          },
+          "studentsPassed": {
+            "type": "integer",
+            "title": "Studentspassed"
+          },
+          "studentsWithSupport": {
+            "type": "integer",
+            "title": "Studentswithsupport"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "kind",
+          "students",
+          "attempts",
+          "wrongAttempts",
+          "studentsPassed",
+          "studentsWithSupport"
+        ],
+        "title": "ActivityInsight",
+        "description": "How students got on with one activity, as ID document §8.4 analyses it."
+      },
       "ActivityOut": {
         "properties": {
           "id": {
@@ -1874,6 +2085,35 @@
         "title": "BfsStep",
         "description": "One step of the traversal: the vertex just visited (dequeued), and the state after it\n(SE document FR-6.2). `discovered` are the vertices this step added to the queue, in the\nalphabetical order they were enqueued; `frontier_edges` are the edges along which they were\ndiscovered (from the visited vertex to each newly discovered neighbour)."
       },
+      "CheckpointInsight": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "atSeconds": {
+            "type": "number",
+            "title": "Atseconds"
+          },
+          "activityTitle": {
+            "type": "string",
+            "title": "Activitytitle"
+          },
+          "studentsPassed": {
+            "type": "integer",
+            "title": "Studentspassed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "atSeconds",
+          "activityTitle",
+          "studentsPassed"
+        ],
+        "title": "CheckpointInsight"
+      },
       "CheckpointOut": {
         "properties": {
           "id": {
@@ -1985,6 +2225,33 @@
         "title": "EarnedBadgeOut",
         "description": "A badge the student holds. `badge` is a catalogue id (web/src/components/achievements.ts);\n`ref` tells repeatable badges apart (the bonus quest's id), \"\" otherwise. `seen` is false until\nthe app has announced it; an upgrade from bronze to gold makes it unseen again."
       },
+      "EventIn": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "video_started",
+              "video_completed",
+              "checkpoint_reached",
+              "segment_viewed"
+            ],
+            "title": "Type"
+          },
+          "targetId": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Targetid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "targetId"
+        ],
+        "title": "EventIn",
+        "description": "What the browser saw: `video_started` or `video_completed` (`targetId` is the video),\n`checkpoint_reached` (the checkpoint) or `segment_viewed` (the segment)."
+      },
       "GraphEdge": {
         "properties": {
           "source": {
@@ -2093,6 +2360,46 @@
         ],
         "title": "HintOut",
         "description": "The hint just revealed. `next_counts_as_support` is true when the *next* hint would be level\n3 or 4: show the \"this counts as met with support\" warning before asking for it (ID doc §7.4)."
+      },
+      "Insights": {
+        "properties": {
+          "students": {
+            "type": "integer",
+            "title": "Students"
+          },
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts"
+          },
+          "hintsViewed": {
+            "type": "integer",
+            "title": "Hintsviewed"
+          },
+          "activities": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityInsight"
+            },
+            "type": "array",
+            "title": "Activities"
+          },
+          "videos": {
+            "items": {
+              "$ref": "#/components/schemas/VideoInsight"
+            },
+            "type": "array",
+            "title": "Videos"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "students",
+          "attempts",
+          "hintsViewed",
+          "activities",
+          "videos"
+        ],
+        "title": "Insights"
       },
       "LoginIn": {
         "properties": {
@@ -2842,6 +3149,44 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VideoInsight": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "students": {
+            "type": "integer",
+            "title": "Students"
+          },
+          "finished": {
+            "type": "integer",
+            "title": "Finished"
+          },
+          "checkpoints": {
+            "items": {
+              "$ref": "#/components/schemas/CheckpointInsight"
+            },
+            "type": "array",
+            "title": "Checkpoints"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "students",
+          "finished",
+          "checkpoints"
+        ],
+        "title": "VideoInsight",
+        "description": "How far students got through one video: who started it (or answered one of its\ncheckpoints), who passed each checkpoint and who watched to the end. A drop between two steps\nis where students stopped."
       },
       "VideoOut": {
         "properties": {

@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { useCurrentUser, useLogout } from '../auth/hooks.ts'
 import { Alert, AppShell } from '../components'
 import { BadgeAnnouncer } from '../features/rewards/BadgeAnnouncer.tsx'
+import { ThemeToggle } from '../theme/ThemeToggle.tsx'
 import { AccountMenu } from './AccountMenu.tsx'
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
@@ -36,15 +37,18 @@ export function SignedInLayout() {
       }
       actions={
         user && (
-          <AccountMenu
-            user={user}
-            loggingOut={logout.isPending}
-            onLogout={() =>
-              logout.mutate(undefined, {
-                onSuccess: () => void navigate('/login', { replace: true }),
-              })
-            }
-          />
+          <>
+            <ThemeToggle />
+            <AccountMenu
+              user={user}
+              loggingOut={logout.isPending}
+              onLogout={() =>
+                logout.mutate(undefined, {
+                  onSuccess: () => void navigate('/login', { replace: true }),
+                })
+              }
+            />
+          </>
         )
       }
     >

@@ -6,64 +6,83 @@
  *
  * Every text colour meets WCAG 2.1 AA (4.5:1) on the surfaces it is used on,
  * and control borders meet 3:1 (SE document NFR-A2).
+ *
+ * Ownership, so no colour is defined twice:
+ *   - global.css owns every raw colour value (--background, --primary, --input, --success, ...),
+ *     in :root and in .dark, and maps the ones Tailwind needs in its @theme block. That includes
+ *     the Tailwind names --color-success, --color-warning and --color-border.
+ *   - this file owns only the legacy names the CSS modules use (--color-surface, --color-line,
+ *     --color-control-border, --bfs-*, --badge-*). They are aliases of global.css values, so
+ *     dark mode follows without a second set of overrides. The only raw colours here are the
+ *     brand constants and the achievement badges.
+ * Do NOT declare a --color-* name here that @theme in global.css also declares.
  */
 
 :root {
   /* Brand (assets/README.md) */
-  --brand-accent: #2470c9;
-  --brand-edge: #184a85;
-  --brand-ink: #141413;
-  --brand-paper: #fafaf7;
+  --brand-accent: #2f72c6;
+  --brand-edge: #1d4f88;
+  --brand-ink: #141414;
+  --brand-paper: #f7f5f0;
 
-  /* Surfaces and text */
-  --color-bg: var(--brand-paper);
-  --color-surface: #ffffff;
-  --color-surface-sunken: #f2f1ec;
-  --color-text: var(--brand-ink);
-  --color-text-muted: #5c5b55;
-  --color-line: #dcdbd3; /* dividers and card edges: decorative */
-  --color-border: #8a897f; /* input and control borders: 3:1 */
+  /* Surfaces and text
+   * --color-bg / --color-surface resolve from global.css shadcn primitives so that
+   * dark mode works; the fallback values here are only used if global.css is absent.
+   */
+  --color-bg: var(--background, var(--brand-paper));
+  --color-surface: var(--card, #ffffff);
+  --color-surface-sunken: var(--muted, #e9e6de);
+  --color-text: var(--foreground, var(--brand-ink));
+  --color-text-muted: var(--muted-foreground, #595959);
+  --color-line: var(--border, #d1d1d1); /* dividers and card edges: decorative */
+  /* Border of form controls and secondary buttons: 3:1 or more on the surface (NFR-A2).
+     It is --input, not --border. (Not named --color-border: that name belongs to Tailwind.) */
+  --color-control-border: var(--input, #858585);
 
-  /* Accent: links, primary buttons, focus */
-  --color-accent: var(--brand-accent);
-  --color-accent-hover: var(--brand-edge);
-  --color-accent-text: var(--brand-accent);
-  --color-on-accent: #ffffff;
-  --color-accent-soft: #eaf1fb;
-  --color-accent-soft-text: var(--brand-edge);
+  /* Accent: links, primary buttons, focus. The brand blue is --color-primary (Tailwind theme in
+   * global.css, value in --primary); there is no --color-accent here because Tailwind's
+   * --color-accent is the soft highlight, i.e. --color-accent-soft below. */
+  --color-accent-hover: var(--primary-dark, var(--brand-edge));
+  --color-accent-text: var(--primary, var(--brand-accent));
+  --color-on-accent: var(--primary-foreground, #ffffff);
+  --color-accent-soft: var(--accent, #dce8f7);
+  --color-accent-soft-text: var(--accent-foreground, var(--brand-edge));
 
-  /* Feedback */
-  --color-success: #1e7a3c;
-  --color-success-soft: #e8f4ec;
-  --color-warning: #8f5400;
-  --color-warning-soft: #fdf1dc;
-  --color-danger: #b42318;
-  --color-danger-soft: #fdecea;
+  /* Feedback colours. --color-success(-soft) and --color-warning(-soft) come from the Tailwind
+   * theme in global.css (values in --success, --warning); only the danger aliases live here. */
+  --color-danger: var(--destructive, #c93b31);
+  --color-danger-soft: var(--destructive-soft, rgb(255, 232, 232));
+  --shadow-card: var(--shadow-sm, 0 1px 4px rgb(0 0 0 / 5%));
+  --focus-ring:
+    0 0 0 3px var(--background, var(--brand-paper)), 0 0 0 5px var(--ring, var(--brand-accent));
 
   /*
    * BFS visualiser vertex states. Never shown by colour alone: GraphCanvas also
-   * labels each vertex and marks the state with a symbol (NFR-A2).
+   * labels each vertex and marks the state with a symbol (NFR-A2). Outlines and edges carry the
+   * graph's structure, so they use the 3:1 control border, not the decorative one.
    */
-  --bfs-unvisited-fill: var(--color-surface);
-  --bfs-unvisited-stroke: var(--color-border);
-  --bfs-current-fill: var(--brand-accent);
-  --bfs-current-stroke: var(--brand-edge);
-  --bfs-current-text: #ffffff;
-  --bfs-queued-fill: var(--color-warning-soft);
-  --bfs-queued-stroke: #b26b00;
-  --bfs-visited-fill: var(--color-success-soft);
-  --bfs-visited-stroke: var(--color-success);
-  --bfs-edge: var(--color-border);
-  --bfs-edge-traversed: var(--brand-accent);
+  --bfs-unvisited-fill: var(--card, #ffffff);
+  --bfs-unvisited-stroke: var(--input, #858585);
+  --bfs-current-fill: var(--primary, var(--brand-accent));
+  --bfs-current-stroke: var(--accent-foreground, var(--brand-edge));
+  --bfs-current-text: var(--primary-foreground, #ffffff);
+  --bfs-queued-fill: var(--accent, #dce8f7);
+  --bfs-queued-stroke: var(--primary, var(--brand-accent));
+  --bfs-visited-fill: var(--success-soft, rgb(227, 248, 240));
+  --bfs-visited-stroke: var(--success, #147047);
+  --bfs-edge: var(--input, #858585);
+  --bfs-edge-traversed: var(--primary, var(--brand-accent));
 
   /*
    * Achievement badges (FR-9.3). The stroke is the badge outline and its picture (3:1 or more on
-   * the surface); the soft colour fills the shape. Tiers also differ in shape, never colour alone.
+   * the surface and on its own fill); the soft colour fills the shape. Tiers also differ in
+   * shape, never colour alone. Gold is a dark gold, not #f2c230 (1.7:1 on white).
+   * Light: gold #8a6b00 is 5.0:1 on white, 4.4:1 on its fill; bronze #c93b31 is 5.1:1 / 3.6:1.
    */
-  --badge-bronze: #9a5b24;
-  --badge-bronze-soft: #f7e9db;
-  --badge-gold: #8a6700;
-  --badge-gold-soft: #fcf0c4;
+  --badge-bronze: #c93b31;
+  --badge-bronze-soft: #f5d3ce;
+  --badge-gold: #8a6b00;
+  --badge-gold-soft: #fff0b5;
 
   /* Type */
   --font-display: 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif;
@@ -92,11 +111,9 @@
   --space-8: 4rem;
 
   /* Shape and depth */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --shadow-card: 0 1px 2px rgb(20 20 19 / 6%), 0 2px 8px rgb(20 20 19 / 6%);
-  --focus-ring: 0 0 0 3px var(--color-bg), 0 0 0 5px var(--color-accent);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
 
   /* Layout */
   --content-width: 72rem;
@@ -105,57 +122,15 @@
   color-scheme: light;
 }
 
-/* Dark mode follows the system unless a page sets data-theme. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --color-bg: var(--brand-ink);
-    --color-surface: #1f1f1d;
-    --color-surface-sunken: #191918;
-    --color-text: var(--brand-paper);
-    --color-text-muted: #a8a79f;
-    --color-line: #3a3a35;
-    --color-border: #76756d;
-    --color-accent-text: #7fb2ee;
-    --color-accent-soft: #172538;
-    --color-accent-soft-text: #7fb2ee;
-    --color-success: #5cc480;
-    --color-success-soft: #16291d;
-    --color-warning: #f0b44c;
-    --color-warning-soft: #2e2412;
-    --color-danger: #f97066;
-    --color-danger-soft: #331a17;
-    --bfs-queued-stroke: #f0b44c;
-    --badge-bronze: #e3a56d;
-    --badge-bronze-soft: #2e2115;
-    --badge-gold: #f2c94c;
-    --badge-gold-soft: #2e2810;
-    --shadow-card: 0 1px 2px rgb(0 0 0 / 40%);
-    color-scheme: dark;
-  }
-}
-
+/* Dark mode. Almost everything above follows global.css's .dark values through var(); only
+ * values that are raw here need a dark version. Pairs checked: stroke on the dark card >= 3:1
+ * and on its own fill >= 3:1 (bronze 6.6:1 / 5.3:1, gold 9.1:1 / 6.7:1). */
+.dark,
 :root[data-theme='dark'] {
-  --color-bg: var(--brand-ink);
-  --color-surface: #1f1f1d;
-  --color-surface-sunken: #191918;
-  --color-text: var(--brand-paper);
-  --color-text-muted: #a8a79f;
-  --color-line: #3a3a35;
-  --color-border: #76756d;
-  --color-accent-text: #7fb2ee;
-  --color-accent-soft: #172538;
-  --color-accent-soft-text: #7fb2ee;
-  --color-success: #5cc480;
-  --color-success-soft: #16291d;
-  --color-warning: #f0b44c;
-  --color-warning-soft: #2e2412;
-  --color-danger: #f97066;
-  --color-danger-soft: #331a17;
-  --bfs-queued-stroke: #f0b44c;
-  --badge-bronze: #e3a56d;
-  --badge-bronze-soft: #2e2115;
-  --badge-gold: #f2c94c;
-  --badge-gold-soft: #2e2810;
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 40%);
-  color-scheme: dark;
+  --color-accent-hover: rgb(179, 214, 255);
+  --color-accent-text: rgb(179, 214, 255);
+  --badge-bronze: #ff8a7a;
+  --badge-bronze-soft: #5a2622;
+  --badge-gold: #f6c155;
+  --badge-gold-soft: #4a3a14;
 }

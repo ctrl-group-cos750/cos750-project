@@ -69,7 +69,7 @@
 /* Not earned yet: muted, dashed and faded, so it reads as "still to come", not as a loss. */
 .locked {
   --fill: var(--color-surface-sunken);
-  --stroke: var(--color-border);
+  --stroke: var(--color-control-border);
 }
 
 .locked .frame {

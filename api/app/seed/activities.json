@@ -1,0 +1,55 @@
+{
+    "activities": [
+        {
+            "id": 9001,
+            "kind": "parsons",
+            "title": "Demo: order queue operations",
+            "visible": true,
+            "config": {
+                "lines": [
+                    {"id": 3, "text": "return queue.pop(0)"},
+                    {"id": 4, "text": "return queue.pop()"},
+                    {"id": 1, "text": "queue = []"},
+                    {"id": 2, "text": "queue.append(\"A\")"}
+                ]
+            },
+            "solution": {"order": [1, 2, 3]},
+            "hints": [
+                {"level": 1, "body": "A queue is created before anything can be added to it."},
+                {"level": 2, "body": "The first item added is the first item removed."},
+                {"level": 3, "body": "Put the creation line first, then the append line."},
+                {
+                    "level": 4,
+                    "body": "The answer creates the queue, appends A, then removes index 0. The pop() line is a distractor because it removes the newest item."
+                }
+            ]
+        },
+        {
+            "id": 9002,
+            "kind": "fill_in",
+            "title": "Demo: complete a queue operation",
+            "visible": true,
+            "config": {
+                "code": "queue = __1__([start])\nvertex = queue.__2__()",
+                "blanks": [1, 2],
+                "options": ["deque", "list", "popleft", "pop"]
+            },
+            "solution": {"answers": {"1": "deque", "2": "popleft"}},
+            "hints": [
+                {"level": 1, "body": "BFS removes the item that has waited longest."},
+                {
+                    "level": 2,
+                    "body": "Python's deque has an operation that removes from its left end."
+                },
+                {
+                    "level": 3,
+                    "body": "Use deque for the queue, then choose its left-removal method."
+                },
+                {
+                    "level": 4,
+                    "body": "Use deque([start]) and queue.popleft(). Together they give the first-in, first-out behaviour BFS needs."
+                }
+            ]
+        }
+    ]
+}

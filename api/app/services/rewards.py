@@ -16,7 +16,7 @@ and bonus quests (#15, #31) and the hidden badge's exploration action. Each adds
 without committing, like the rest of the services, and returns what was newly earned.
 """
 
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Literal
@@ -143,9 +143,12 @@ def on_objective_result(
     results: Mapping[int, Mastery],
     *,
     via_review: bool = False,
+    objectives: Collection[int] = OBJECTIVES,
 ) -> Earned:
-    """Call when an objective's result changes (#22). `results` is the student's result for every
-    objective, this one included; `via_review` is true when the review path (#23) got them there.
+    """Call when an objective's result changes (app/services/mastery.py). `results` is the
+    student's result on every objective they have one for; `via_review` is true when the review
+    path (#23) got them there. `objectives` is the course's objectives, the ones Ready for the
+    Lecture and Solo Run need: the mastery service passes those in the database.
 
     "Not yet" earns nothing and takes nothing away. Met with support earns the objective's bronze
     badge and its points; met independently earns gold and the full points, topping up what an
@@ -178,9 +181,9 @@ def on_objective_result(
 
     if via_review:
         earned += _award(session, user_id, CAME_BACK_STRONGER)
-    if all(results.get(n) in ("independent", "supported") for n in OBJECTIVES):
+    if all(results.get(n) in ("independent", "supported") for n in objectives):
         earned += _award(session, user_id, READY_FOR_LECTURE)
-    if all(results.get(n) == "independent" for n in OBJECTIVES):
+    if all(results.get(n) == "independent" for n in objectives):
         earned += _award(session, user_id, SOLO_RUN)
     return earned
 

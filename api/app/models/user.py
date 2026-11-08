@@ -33,3 +33,7 @@ class User(Base):
     # The student chose to hide points and badges (FR-9.5). They are still earned, so turning them
     # back on shows everything; the mastery report is never hidden.
     hide_rewards: Mapped[bool] = mapped_column(default=False, server_default=false())
+    # The profile picture the student chose from the team's set (FR-1.6): an id from
+    # app/schemas/profile.py, drawn by web/src/components/Avatar.tsx. None shows their initial.
+    # Never an uploaded photo, so it holds nothing personal.
+    avatar: Mapped[str | None] = mapped_column(String(20))

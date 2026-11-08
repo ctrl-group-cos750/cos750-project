@@ -53,7 +53,7 @@ const moduleSummary: ModuleSummary = {
   number: 0,
   slug: 'warmup',
   title: 'Warm-up and queue refresher',
-  goals: '## Goals\n\nBy the end of this module you can:\n\n- Recall how queues work.',
+  goals: ['Recall how queues work.', 'Use a queue in Python.'],
   estimatedMinutes: 5,
   status: 'open',
   segmentCount: 2,
@@ -105,26 +105,13 @@ describe('ModulePage — goals', () => {
     expect(screen.getByText(/warm-up and queue refresher/i)).toBeInTheDocument()
   })
 
-  it('renders the goals section heading', async () => {
+  it('lists the goals under "By the end of this module you can"', async () => {
     setupModuleApi(twoSegmentDetail)
     renderApp('/modules/1')
 
-    expect(await screen.findByText('Learning goals')).toBeInTheDocument()
-  })
-
-  it('renders goals markdown — the Goals h2 heading', async () => {
-    setupModuleApi(twoSegmentDetail)
-    renderApp('/modules/1')
-
-    // The goals field contains "## Goals" which react-markdown renders as an <h2>
-    expect(await screen.findByRole('heading', { name: 'Goals' })).toBeInTheDocument()
-  })
-
-  it('renders goals markdown — list items', async () => {
-    setupModuleApi(twoSegmentDetail)
-    renderApp('/modules/1')
-
-    expect(await screen.findByText('Recall how queues work.')).toBeInTheDocument()
+    expect(await screen.findByText('By the end of this module you can:')).toBeInTheDocument()
+    expect(screen.getByText('Recall how queues work.')).toBeInTheDocument()
+    expect(screen.getByText('Use a queue in Python.')).toBeInTheDocument()
   })
 })
 
@@ -207,9 +194,30 @@ describe('ModulePage — navigation and position saving', () => {
     expect(await screen.findByRole('heading', { name: 'Watch: BFS in action' })).toBeInTheDocument()
   })
 
+  it('shows the last segment when Next reaches it, and only leaves on "Finish module"', async () => {
+    const api = setupModuleApi(twoSegmentDetail)
+    renderApp('/modules/1')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Next →' }))
+
+    expect(
+      await screen.findByRole('heading', { name: 'Worked example: adjacency list' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Finish module' })).toBeInTheDocument()
+    expect(api.callsTo('POST /api/modules/1/position')).toHaveLength(1)
+  })
+
+  it('goes back without saving: the server keeps the furthest segment reached', async () => {
+    const api = setupModuleApi({ ...allKindsDetail, currentSegmentPosition: 2 })
+    renderApp('/modules/1')
+
+    await userEvent.click(await screen.findByRole('button', { name: '← Previous' }))
+
+    expect(await screen.findByRole('heading', { name: 'Watch: BFS in action' })).toBeInTheDocument()
+    expect(api.callsTo('POST /api/modules/1/position')).toHaveLength(0)
+  })
+
   it('shows "Finish module" on the last segment instead of "Next →"', async () => {
-    // Start already at the last segment via currentSegmentPosition so we don't need
-    // to navigate there (which would trigger the completion-navigate-home logic).
     const atLastSegment: ModuleDetail = {
       ...twoSegmentDetail,
       currentSegmentPosition: 1, // last segment in a 2-segment module
@@ -253,8 +261,6 @@ describe('ModulePage — navigation and position saving', () => {
   })
 
   it('clicking "Finish module" on the last segment saves the position and navigates to "/"', async () => {
-    // Start already at the last segment so we don't navigate there first (which
-    // would trigger the completion-navigate-home logic before we can click Finish).
     fakeApi({
       user: ada,
       overrides: {
@@ -303,11 +309,11 @@ describe('ModulePage — video segment', () => {
 })
 
 // ---------------------------------------------------------------------------
-// (e) Activity segment shows the placeholder
+// (e) Activity segment links to the activity page
 // ---------------------------------------------------------------------------
 
 describe('ModulePage — activity segment', () => {
-  it('shows the activity placeholder text', async () => {
+  it('links to the activity page', async () => {
     const detailAtActivity: ModuleDetail = {
       ...allKindsDetail,
       currentSegmentPosition: 2,
@@ -318,7 +324,10 @@ describe('ModulePage — activity segment', () => {
     expect(
       await screen.findByRole('heading', { name: 'Practice: BFS step by step' }),
     ).toBeInTheDocument()
-    expect(screen.getByText('Activity — coming in a future story.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Start the activity' })).toHaveAttribute(
+      'href',
+      '/activities/7',
+    )
   })
 })
 

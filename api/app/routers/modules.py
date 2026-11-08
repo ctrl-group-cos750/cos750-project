@@ -14,6 +14,7 @@ Error mapping
 ``ModuleNotFound`` (service) → 404  "Module not found."
 ``ModuleLocked``   (service) → 403  "This module is not available yet.
                                       Complete the previous module to unlock it."
+``PositionTooFar`` (service) → 409  "Work through the module one segment at a time."
 """
 
 from fastapi import APIRouter, HTTPException, status
@@ -24,6 +25,7 @@ from app.schemas.modules import ModuleDetailOut, ModuleOut, PositionIn
 from app.services.modules import (
     ModuleLocked,
     ModuleNotFound,
+    PositionTooFar,
     get_module_detail,
     get_modules_for_user,
     save_position,
@@ -34,6 +36,7 @@ router = APIRouter(prefix="/api/modules", tags=["modules"])
 # Student-friendly error messages (NFR-U3).
 _NOT_FOUND = "Module not found."
 _LOCKED = "This module is not available yet. Complete the previous module to unlock it."
+_TOO_FAR = "Work through the module one segment at a time."
 
 
 @router.get("")
@@ -57,6 +60,8 @@ def get_module(module_id: int, user: CurrentUser, session: DbSession) -> ModuleD
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND) from None
     except ModuleLocked:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=_LOCKED) from None
+    except PositionTooFar:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=_TOO_FAR) from None
 
 
 @router.post("/{module_id}/position")
@@ -66,13 +71,15 @@ def save_module_position(
     """Record the student's current segment position and return the updated module.
 
     The client calls this whenever the student advances to a new segment.
-    Reaching the last segment marks the module ``complete``.
+    The furthest segment reached is kept, so stepping back changes nothing. Reaching the last
+    segment marks the module ``complete`` for good.
 
     Returns the updated ``ModuleDetailOut`` so the frontend can re-render the
     module detail page with the new status in one round-trip (consistent with
     ``submit_attempt`` returning ``AttemptOut``).
 
-    Returns 404 if the module does not exist; 403 if it is locked."""
+    Returns 404 if the module does not exist; 403 if it is locked; 409 if the position is more
+    than one segment past the furthest the student has reached."""
     try:
         save_position(session, user.id, module_id, body.segment_position)
         session.commit()
@@ -82,3 +89,5 @@ def save_module_position(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND) from None
     except ModuleLocked:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=_LOCKED) from None
+    except PositionTooFar:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=_TOO_FAR) from None

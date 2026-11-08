@@ -1,0 +1,884 @@
+{
+  "review_paths": [
+    {
+      "objective_id": 1,
+      "segments": [
+        {
+          "id": 1101,
+          "kind": "worked_example",
+          "title": "Placeholder: Graphs, data structures and algorithms, again",
+          "body": "Placeholder worked example until the review content lands.\n\nA **data structure** stores data (a list of stations). An **algorithm** is a set of steps (how to find a route). A **graph** is vertices joined by edges (stations and tracks), and a **traversal** visits every vertex it can reach."
+        },
+        {
+          "id": 1102,
+          "kind": "activity",
+          "title": "Placeholder: practice on objective 1",
+          "activity_id": 1101
+        },
+        {
+          "id": 1103,
+          "kind": "activity",
+          "title": "Placeholder: fresh item on objective 1",
+          "activity_id": 1102
+        }
+      ]
+    },
+    {
+      "objective_id": 2,
+      "segments": [
+        {
+          "id": 1201,
+          "kind": "worked_example",
+          "title": "Placeholder: Vertices and edges, again",
+          "body": "Placeholder worked example.\n\nOn a map of one-way streets, each corner is a **vertex** and each street is a **directed edge**: you can only follow it one way. A footpath is an **undirected edge**."
+        },
+        {
+          "id": 1202,
+          "kind": "activity",
+          "title": "Placeholder: practice on objective 2",
+          "activity_id": 1201
+        },
+        {
+          "id": 1203,
+          "kind": "activity",
+          "title": "Placeholder: fresh item on objective 2",
+          "activity_id": 1202
+        }
+      ]
+    },
+    {
+      "objective_id": 3,
+      "segments": [
+        {
+          "id": 1301,
+          "kind": "worked_example",
+          "title": "Placeholder: Choosing a graph for a problem, again",
+          "body": "Placeholder worked example.\n\nAsk two questions: are there things joined by connections (then it's a graph), and do the connections go one way (then it's directed)?"
+        },
+        {
+          "id": 1302,
+          "kind": "activity",
+          "title": "Placeholder: practice on objective 3",
+          "activity_id": 1301
+        },
+        {
+          "id": 1303,
+          "kind": "activity",
+          "title": "Placeholder: fresh item on objective 3",
+          "activity_id": 1302
+        }
+      ]
+    },
+    {
+      "objective_id": 4,
+      "segments": [
+        {
+          "id": 1401,
+          "kind": "worked_example",
+          "title": "Placeholder: Why BFS, again",
+          "body": "Placeholder worked example.\n\nBFS visits vertices in order of how many edges away they are. Use it when you need everything reachable, or the fewest hops from a start."
+        },
+        {
+          "id": 1402,
+          "kind": "activity",
+          "title": "Placeholder: practice on objective 4",
+          "activity_id": 1401
+        },
+        {
+          "id": 1403,
+          "kind": "activity",
+          "title": "Placeholder: fresh item on objective 4",
+          "activity_id": 1402
+        }
+      ]
+    },
+    {
+      "objective_id": 5,
+      "segments": [
+        {
+          "id": 1501,
+          "kind": "worked_example",
+          "title": "Placeholder: Tracing BFS, again",
+          "body": "Placeholder worked example.\n\nAt each step: take the vertex at the **front** of the queue, add it to the order, then add each unvisited neighbour, in alphabetical order, to the **back** of the queue and mark it visited."
+        },
+        {
+          "id": 1502,
+          "kind": "activity",
+          "title": "Placeholder: practice on objective 5",
+          "activity_id": 1501
+        },
+        {
+          "id": 1503,
+          "kind": "activity",
+          "title": "Placeholder: fresh item on objective 5",
+          "activity_id": 1502
+        }
+      ]
+    },
+    {
+      "objective_id": 6,
+      "segments": [
+        {
+          "id": 1601,
+          "kind": "worked_example",
+          "title": "Placeholder: Writing BFS, again",
+          "body": "Placeholder worked example.\n\nThe queue must be first in, first out: `popleft()` takes the oldest vertex. Mark a neighbour visited when you **add** it to the queue, so it is never added twice."
+        },
+        {
+          "id": 1602,
+          "kind": "activity",
+          "title": "Placeholder: practice on objective 6",
+          "activity_id": 1601
+        },
+        {
+          "id": 1603,
+          "kind": "activity",
+          "title": "Placeholder: fresh item on objective 6",
+          "activity_id": 1602
+        }
+      ]
+    },
+    {
+      "objective_id": 7,
+      "segments": [
+        {
+          "id": 1701,
+          "kind": "worked_example",
+          "title": "Placeholder: Testing and debugging BFS, again",
+          "body": "Placeholder worked example.\n\nA good test case is one the faulty version **fails** and the correct one passes. Think about what the bug changes, then pick a graph where that change shows up in the visit order."
+        },
+        {
+          "id": 1702,
+          "kind": "activity",
+          "title": "Placeholder: practice on objective 7",
+          "activity_id": 1701
+        },
+        {
+          "id": 1703,
+          "kind": "activity",
+          "title": "Placeholder: fresh item on objective 7",
+          "activity_id": 1702
+        }
+      ]
+    }
+  ],
+  "activities": [
+    {
+      "id": 1101,
+      "kind": "multiple_choice",
+      "title": "Placeholder: practice on objective 1",
+      "objective_id": 1,
+      "purpose": "review",
+      "config": {
+        "prompt": "Which of these is an algorithm?",
+        "options": [
+          {
+            "id": "steps",
+            "label": "The steps for finding a route between two stations"
+          },
+          {
+            "id": "list",
+            "label": "A list of station names"
+          },
+          {
+            "id": "map",
+            "label": "A map of the stations"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "steps",
+        "feedback": {
+          "list": "A list stores data; it doesn't say what to do.",
+          "map": "The map is the graph itself, not the steps you follow."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Placeholder hint 1: re-read the worked example above."
+        },
+        {
+          "level": 2,
+          "body": "Placeholder hint 2: a closer pointer to the idea."
+        },
+        {
+          "level": 3,
+          "body": "Placeholder hint 3: most of the way there. Using it marks this as with support."
+        },
+        {
+          "level": 4,
+          "body": "Placeholder hint 4: the worked solution."
+        }
+      ]
+    },
+    {
+      "id": 1102,
+      "kind": "multiple_choice",
+      "title": "Placeholder: fresh item on objective 1",
+      "objective_id": 1,
+      "purpose": "mastery",
+      "config": {
+        "prompt": "Which of these is a data structure?",
+        "options": [
+          {
+            "id": "queue",
+            "label": "A queue of people waiting to be served"
+          },
+          {
+            "id": "recipe",
+            "label": "A recipe for bread"
+          },
+          {
+            "id": "walk",
+            "label": "Walking to class"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "queue",
+        "feedback": {}
+      }
+    },
+    {
+      "id": 1201,
+      "kind": "multiple_choice",
+      "title": "Placeholder: practice on objective 2",
+      "objective_id": 2,
+      "purpose": "review",
+      "config": {
+        "prompt": "A friendship between two students is best shown as…",
+        "options": [
+          {
+            "id": "undirected",
+            "label": "An undirected edge"
+          },
+          {
+            "id": "directed",
+            "label": "A directed edge"
+          },
+          {
+            "id": "vertex",
+            "label": "A vertex"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "undirected",
+        "feedback": {
+          "directed": "Friendship goes both ways, so the edge has no direction."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Placeholder hint 1: re-read the worked example above."
+        },
+        {
+          "level": 2,
+          "body": "Placeholder hint 2: a closer pointer to the idea."
+        },
+        {
+          "level": 3,
+          "body": "Placeholder hint 3: most of the way there. Using it marks this as with support."
+        },
+        {
+          "level": 4,
+          "body": "Placeholder hint 4: the worked solution."
+        }
+      ]
+    },
+    {
+      "id": 1202,
+      "kind": "matching",
+      "title": "Placeholder: fresh item on objective 2",
+      "objective_id": 2,
+      "purpose": "mastery",
+      "config": {
+        "prompt": "Match each part to what it is in a graph.",
+        "left": [
+          {
+            "id": "town",
+            "label": "A town"
+          },
+          {
+            "id": "road",
+            "label": "A two-way road"
+          },
+          {
+            "id": "flight",
+            "label": "A one-way flight"
+          }
+        ],
+        "right": [
+          {
+            "id": "vertex",
+            "label": "A vertex"
+          },
+          {
+            "id": "undirected",
+            "label": "An undirected edge"
+          },
+          {
+            "id": "directed",
+            "label": "A directed edge"
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "town": "vertex",
+          "road": "undirected",
+          "flight": "directed"
+        }
+      }
+    },
+    {
+      "id": 1301,
+      "kind": "multiple_choice",
+      "title": "Placeholder: practice on objective 3",
+      "objective_id": 3,
+      "purpose": "review",
+      "config": {
+        "prompt": "Which situation is a graph problem?",
+        "options": [
+          {
+            "id": "bus",
+            "label": "Bus stops and the routes between them"
+          },
+          {
+            "id": "sum",
+            "label": "Adding up the prices on a till slip"
+          },
+          {
+            "id": "sort",
+            "label": "Putting names in alphabetical order"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "bus",
+        "feedback": {}
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Placeholder hint 1: re-read the worked example above."
+        },
+        {
+          "level": 2,
+          "body": "Placeholder hint 2: a closer pointer to the idea."
+        },
+        {
+          "level": 3,
+          "body": "Placeholder hint 3: most of the way there. Using it marks this as with support."
+        },
+        {
+          "level": 4,
+          "body": "Placeholder hint 4: the worked solution."
+        }
+      ]
+    },
+    {
+      "id": 1302,
+      "kind": "matching",
+      "title": "Placeholder: fresh item on objective 3",
+      "objective_id": 3,
+      "purpose": "mastery",
+      "config": {
+        "prompt": "Match each situation to the model that fits it best.",
+        "left": [
+          {
+            "id": "pipes",
+            "label": "Water pipes between reservoirs, each flowing one way"
+          },
+          {
+            "id": "phone",
+            "label": "Who has whose phone number saved"
+          },
+          {
+            "id": "cables",
+            "label": "Computers joined by network cables"
+          },
+          {
+            "id": "marks",
+            "label": "A class's test marks"
+          }
+        ],
+        "right": [
+          {
+            "id": "undirected",
+            "label": "An undirected graph"
+          },
+          {
+            "id": "directed",
+            "label": "A directed graph"
+          },
+          {
+            "id": "list",
+            "label": "Not a graph: a list is enough"
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "pipes": "directed",
+          "phone": "directed",
+          "cables": "undirected",
+          "marks": "list"
+        }
+      }
+    },
+    {
+      "id": 1401,
+      "kind": "multiple_choice",
+      "title": "Placeholder: practice on objective 4",
+      "objective_id": 4,
+      "purpose": "review",
+      "config": {
+        "prompt": "Why use BFS to find the fewest train changes?",
+        "options": [
+          {
+            "id": "layers",
+            "label": "It visits stations in order of how many hops away they are"
+          },
+          {
+            "id": "fast",
+            "label": "It is always the fastest algorithm"
+          },
+          {
+            "id": "random",
+            "label": "It tries routes at random"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "layers",
+        "feedback": {}
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Placeholder hint 1: re-read the worked example above."
+        },
+        {
+          "level": 2,
+          "body": "Placeholder hint 2: a closer pointer to the idea."
+        },
+        {
+          "level": 3,
+          "body": "Placeholder hint 3: most of the way there. Using it marks this as with support."
+        },
+        {
+          "level": 4,
+          "body": "Placeholder hint 4: the worked solution."
+        }
+      ]
+    },
+    {
+      "id": 1402,
+      "kind": "multiple_choice",
+      "title": "Placeholder: fresh item on objective 4",
+      "objective_id": 4,
+      "purpose": "mastery",
+      "config": {
+        "prompt": "Which task does BFS suit?",
+        "options": [
+          {
+            "id": "hops",
+            "label": "Finding the fewest flights between two cities"
+          },
+          {
+            "id": "biggest",
+            "label": "Finding the biggest city"
+          },
+          {
+            "id": "alpha",
+            "label": "Sorting cities by name"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "hops",
+        "feedback": {}
+      }
+    },
+    {
+      "id": 1501,
+      "kind": "trace",
+      "title": "Placeholder: practice on objective 5",
+      "objective_id": 5,
+      "purpose": "review",
+      "config": {
+        "directed": false,
+        "vertices": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "edges": [
+          {
+            "source": "A",
+            "target": "B"
+          },
+          {
+            "source": "A",
+            "target": "C"
+          },
+          {
+            "source": "B",
+            "target": "D"
+          }
+        ],
+        "start_vertex": "A"
+      },
+      "solution": {},
+      "hints": [
+        {
+          "level": 1,
+          "body": "Placeholder hint 1: re-read the worked example above."
+        },
+        {
+          "level": 2,
+          "body": "Placeholder hint 2: a closer pointer to the idea."
+        },
+        {
+          "level": 3,
+          "body": "Placeholder hint 3: most of the way there. Using it marks this as with support."
+        },
+        {
+          "level": 4,
+          "body": "Placeholder hint 4: the worked solution."
+        }
+      ]
+    },
+    {
+      "id": 1502,
+      "kind": "trace",
+      "title": "Placeholder: fresh item on objective 5",
+      "objective_id": 5,
+      "purpose": "mastery",
+      "config": {
+        "directed": false,
+        "vertices": [
+          "K",
+          "L",
+          "M",
+          "N",
+          "O",
+          "P"
+        ],
+        "edges": [
+          {
+            "source": "K",
+            "target": "M"
+          },
+          {
+            "source": "K",
+            "target": "L"
+          },
+          {
+            "source": "L",
+            "target": "N"
+          },
+          {
+            "source": "M",
+            "target": "N"
+          },
+          {
+            "source": "M",
+            "target": "O"
+          },
+          {
+            "source": "N",
+            "target": "P"
+          }
+        ],
+        "start_vertex": "K"
+      },
+      "solution": {}
+    },
+    {
+      "id": 1601,
+      "kind": "fill_in",
+      "title": "Placeholder: practice on objective 6",
+      "objective_id": 6,
+      "purpose": "review",
+      "config": {
+        "code": "def bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        vertex = queue.__1__()\n        order.append(vertex)\n        for neighbour in sorted(graph[vertex]):\n            if neighbour not in visited:\n                visited.__2__(neighbour)\n                queue.append(neighbour)\n    return order",
+        "blanks": [
+          1,
+          2
+        ],
+        "options": [
+          "popleft",
+          "pop",
+          "add",
+          "remove"
+        ]
+      },
+      "solution": {
+        "answers": {
+          "1": "popleft",
+          "2": "add"
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Placeholder hint 1: re-read the worked example above."
+        },
+        {
+          "level": 2,
+          "body": "Placeholder hint 2: a closer pointer to the idea."
+        },
+        {
+          "level": 3,
+          "body": "Placeholder hint 3: most of the way there. Using it marks this as with support."
+        },
+        {
+          "level": 4,
+          "body": "Placeholder hint 4: the worked solution."
+        }
+      ]
+    },
+    {
+      "id": 1602,
+      "kind": "parsons",
+      "title": "Placeholder: fresh item on objective 6",
+      "objective_id": 6,
+      "purpose": "mastery",
+      "config": {
+        "lines": [
+          {
+            "id": 8,
+            "text": "        for neighbour in sorted(graph[vertex]):"
+          },
+          {
+            "id": 2,
+            "text": "    visited = {start}"
+          },
+          {
+            "id": 11,
+            "text": "                queue.append(neighbour)"
+          },
+          {
+            "id": 14,
+            "text": "        for neighbour in graph:"
+          },
+          {
+            "id": 4,
+            "text": "    order = []"
+          },
+          {
+            "id": 1,
+            "text": "def bfs(graph, start):"
+          },
+          {
+            "id": 12,
+            "text": "    return order"
+          },
+          {
+            "id": 6,
+            "text": "        vertex = queue.popleft()"
+          },
+          {
+            "id": 9,
+            "text": "            if neighbour not in visited:"
+          },
+          {
+            "id": 3,
+            "text": "    queue = deque([start])"
+          },
+          {
+            "id": 10,
+            "text": "                visited.add(neighbour)"
+          },
+          {
+            "id": 5,
+            "text": "    while queue:"
+          },
+          {
+            "id": 7,
+            "text": "        order.append(vertex)"
+          }
+        ]
+      },
+      "solution": {
+        "order": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      }
+    },
+    {
+      "id": 1701,
+      "kind": "multiple_choice",
+      "title": "Placeholder: practice on objective 7",
+      "objective_id": 7,
+      "purpose": "review",
+      "config": {
+        "prompt": "A BFS forgets to sort the neighbours. Which graph shows the bug?",
+        "options": [
+          {
+            "id": "order",
+            "label": "A start vertex whose edges are listed as A–C before A–B"
+          },
+          {
+            "id": "one",
+            "label": "A single vertex"
+          },
+          {
+            "id": "line",
+            "label": "A path A–B–C"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "order",
+        "feedback": {}
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Placeholder hint 1: re-read the worked example above."
+        },
+        {
+          "level": 2,
+          "body": "Placeholder hint 2: a closer pointer to the idea."
+        },
+        {
+          "level": 3,
+          "body": "Placeholder hint 3: most of the way there. Using it marks this as with support."
+        },
+        {
+          "level": 4,
+          "body": "Placeholder hint 4: the worked solution."
+        }
+      ]
+    },
+    {
+      "id": 1702,
+      "kind": "choose_tests",
+      "title": "Placeholder: fresh item on objective 7",
+      "objective_id": 7,
+      "purpose": "mastery",
+      "config": {
+        "prompt": "This BFS doesn't sort the neighbours. Choose every test case it fails.",
+        "code": "def bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        vertex = queue.popleft()\n        order.append(vertex)\n        for neighbour in graph[vertex]:\n            if neighbour not in visited:\n                visited.add(neighbour)\n                queue.append(neighbour)\n    return order",
+        "tests": [
+          {
+            "id": "listed_backwards",
+            "vertices": [
+              "A",
+              "B",
+              "C"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "C"
+              },
+              {
+                "source": "A",
+                "target": "B"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "id": "listed_in_order",
+            "vertices": [
+              "A",
+              "B",
+              "C"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "A",
+                "target": "C"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "id": "single",
+            "vertices": [
+              "A"
+            ],
+            "edges": [],
+            "start_vertex": "A",
+            "expected": [
+              "A"
+            ]
+          },
+          {
+            "id": "cycle_backwards",
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "D"
+              },
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "B",
+                "target": "C"
+              },
+              {
+                "source": "C",
+                "target": "D"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B",
+              "D",
+              "C"
+            ]
+          }
+        ]
+      },
+      "solution": {
+        "exposing": [
+          "listed_backwards",
+          "cycle_backwards"
+        ]
+      }
+    }
+  ]
+}

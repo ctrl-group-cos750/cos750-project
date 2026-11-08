@@ -1,0 +1,53 @@
+{
+  "objectives": [
+    {
+      "id": 1,
+      "bloom_level": "Remember, understand",
+      "text": "Define and distinguish a data structure, an algorithm, a graph and graph traversal, using an example of each.",
+      "criterion": "At least 4 of 5 items correct.",
+      "pass_fraction": 0.8
+    },
+    {
+      "id": 2,
+      "bloom_level": "Understand",
+      "text": "Identify and explain vertices and edges in a graph and distinguish between directed and undirected graphs.",
+      "criterion": "At least 80% of the labels and classifications correct.",
+      "pass_fraction": 0.8
+    },
+    {
+      "id": 3,
+      "bloom_level": "Apply",
+      "text": "Explain why graphs are useful by matching a real-world problem, such as a network of connected locations, to an appropriate graph representation.",
+      "criterion": "At least 3 of 4 situations modelled correctly.",
+      "pass_fraction": 0.75
+    },
+    {
+      "id": 4,
+      "bloom_level": "Understand",
+      "text": "Explain the purpose of BFS and identify situations in which graph traversal is useful.",
+      "criterion": "At least 3 of 4 choices and reasons correct.",
+      "pass_fraction": 0.75
+    },
+    {
+      "id": 5,
+      "bloom_level": "Apply",
+      "text": "Trace BFS manually on a given graph, correctly identifying the next vertex to process, the queue contents, the visited vertices and the traversal order.",
+      "criterion": "Correct queue, visited set and next vertex at every step, with at most one error.",
+      "max_wrong": 1
+    },
+    {
+      "id": 6,
+      "bloom_level": "Apply",
+      "text": "Implement BFS in Python using the selected graph representation and a queue, producing the expected traversal for a given input.",
+      "criterion": "The ordered and completed code matches the reference solution, including the expected traversal order.",
+      "pass_fraction": 1.0
+    },
+    {
+      "id": 7,
+      "bloom_level": "Analyse, evaluate",
+      "text": "Test and debug a BFS implementation using suitable test cases, including a disconnected graph or a graph containing a cycle.",
+      "criterion": "Both faulty versions corrected to match the solution. For each bug, a chosen test case fails the faulty version and passes the correct one.",
+      "pass_fraction": 1.0
+    }
+  ]
+}

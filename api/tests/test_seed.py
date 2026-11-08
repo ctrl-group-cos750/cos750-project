@@ -9,8 +9,17 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, GraphScenario, Hint, User
-from app.seed import load, read_fixtures
+from app.models import (
+    Activity,
+    Attempt,
+    Checkpoint,
+    GraphScenario,
+    Hint,
+    Segment,
+    User,
+    Video,
+)
+from app.seed import EDITOR_IDS_FROM, load, move_editor_activities, read_fixtures
 
 
 def test_every_committed_fixture_is_valid() -> None:
@@ -151,3 +160,123 @@ def test_load_creates_graphs_the_api_can_run_and_a_rerun_updates_them(
     assert (scenario.name, scenario.directed) == ("Line again", True)
     assert scenario.edges == [{"source": "A", "target": "B"}, {"source": "B", "target": "C"}]
     assert len(db.scalars(select(GraphScenario)).all()) == 1
+
+
+# --- Fixture ids and the video editor's questions share the activities table ------------------
+
+
+def editor_question(db: Session, activity_id: int, prompt: str) -> Checkpoint:
+    """A checkpoint question as the video editor makes it, with a hint and a student's attempt."""
+    db.add(
+        Activity(
+            id=activity_id,
+            kind="multiple_choice",
+            title=f"Video at 0:{activity_id:02d}",
+            visible=True,
+            config={"prompt": prompt, "options": [{"id": "a", "label": "A"}]},
+            solution={"correct": "a"},
+        )
+    )
+    video = db.scalar(select(Video)) or Video(
+        title="BFS",
+        media_path="/media/bfs.mp4",
+        captions_path="/media/bfs.vtt",
+        transcript="",
+        duration_seconds=60,
+    )
+    db.add(video)
+    db.flush()
+    checkpoint = Checkpoint(video_id=video.id, at_seconds=activity_id, activity_id=activity_id)
+    user = db.scalar(select(User)) or User(
+        email="ada@example.com",
+        display_name="Ada",
+        password_hash="not-a-real-hash",  # noqa: S106
+    )
+    db.add_all([checkpoint, user])
+    db.flush()
+    db.add(Hint(activity_id=activity_id, level=1, body=f"hint for {prompt}"))
+    db.add(
+        Attempt(
+            user_id=user.id,
+            activity_id=activity_id,
+            submitted={},
+            correct=True,
+            score=1.0,
+            detail={},
+        )
+    )
+    db.commit()
+    return checkpoint
+
+
+def test_a_fixture_never_overwrites_a_video_editor_question(tmp_path: Path, db: Session) -> None:
+    checkpoint = editor_question(db, 1, "Editor question")
+
+    load(db, write(tmp_path, {"activities": [activity(id=1, title="Fixture")]}))
+    db.expire_all()
+
+    assert db.get(Activity, 1).title == "Fixture"  # type: ignore[union-attr]
+    moved = db.get(Activity, EDITOR_IDS_FROM + 1)
+    assert moved is not None
+    assert moved.config["prompt"] == "Editor question"
+    assert db.get(Checkpoint, checkpoint.id).activity_id == moved.id  # type: ignore[union-attr]
+    assert [h.body for h in db.scalars(select(Hint).where(Hint.activity_id == moved.id))] == [
+        "hint for Editor question"
+    ]
+    assert db.scalars(select(Attempt.activity_id)).all() == [moved.id]
+
+
+def test_moving_editor_questions_happens_once(tmp_path: Path, db: Session) -> None:
+    editor_question(db, 3, "Third")
+    folder = write(tmp_path, {"activities": [activity(id=1)]})
+    load(db, folder)
+    load(db, folder)
+    db.expire_all()
+
+    assert db.get(Activity, 3) is None
+    assert db.get(Activity, EDITOR_IDS_FROM + 3) is not None
+    assert move_editor_activities(db) == []
+
+
+def test_a_question_already_overwritten_by_a_module_fixture_is_moved_and_the_fixture_kept(
+    tmp_path: Path, db: Session
+) -> None:
+    # Staging on 8 Nov: the first deploy with fixtures wrote module 0's activity 1 over the
+    # editor's question 1, so the checkpoint and module 0's segment both point at activity 1.
+    folder = write(
+        tmp_path,
+        {
+            "modules": [
+                {
+                    "id": 0,
+                    "slug": "warm-up",
+                    "title": "Warm-up",
+                    "estimated_minutes": 5,
+                    "goals": ["Use a queue."],
+                    "segments": [{"id": 1, "kind": "activity", "title": "Q", "activity_id": 1}],
+                }
+            ],
+            "activities": [activity(id=1, title="Fixture", module_id=0)],
+        },
+    )
+    load(db, folder)
+    video = Video(
+        title="BFS", media_path="/m.mp4", captions_path="/m.vtt", transcript="", duration_seconds=6
+    )
+    db.add(video)
+    db.flush()
+    checkpoint = Checkpoint(video_id=video.id, at_seconds=1, activity_id=1)
+    db.add(checkpoint)
+    db.commit()
+
+    load(db, folder)
+    db.expire_all()
+
+    assert db.get(Checkpoint, checkpoint.id).activity_id == EDITOR_IDS_FROM + 1  # type: ignore[union-attr]
+    assert db.get(Activity, 1).title == "Fixture"  # type: ignore[union-attr]
+    assert db.get(Segment, 1).activity_id == 1  # type: ignore[union-attr]
+
+
+def test_a_fixture_cannot_use_the_editors_ids(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="video editor"):
+        read_fixtures(write(tmp_path, {"activities": [activity(id=EDITOR_IDS_FROM)]}))

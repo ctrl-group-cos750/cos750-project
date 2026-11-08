@@ -973,6 +973,14 @@ export interface components {
       seen: boolean
     }
     /**
+     * ErrorOut
+     * @description An error the client shows as it is: `detail` says what went wrong, in plain words.
+     */
+    ErrorOut: {
+      /** Detail */
+      detail: string
+    }
+    /**
      * EventIn
      * @description What the browser saw: `video_started` or `video_completed` (`targetId` is the video),
      *     `checkpoint_reached` (the checkpoint) or `segment_viewed` (the segment).
@@ -2063,6 +2071,15 @@ export interface operations {
         }
         content?: never
       }
+      /** @description The current password is wrong, or the new one is the same or breaks a password rule. `detail` says which. */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorOut']
+        }
+      }
       /** @description Validation Error */
       422: {
         headers: {
@@ -2070,6 +2087,15 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description More than 10 tries in a minute. */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorOut']
         }
       }
     }

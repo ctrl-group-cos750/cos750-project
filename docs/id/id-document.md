@@ -414,8 +414,10 @@ The pilot is the Implement phase of ADDIE (Table 2). On 10 and 11 November, team
 
 - The System Usability Scale (SUS), ten standard questions that give a usability score from 0 to 100 [30].
 - Questions on the clarity of the feedback and hints, and the time each module took.
-- A short set of ARCS questions based on Keller’s Instructional Materials Motivation Survey [38].
+- A short set of ARCS questions based on Keller’s Instructional Materials Motivation Survey [38]: eight statements, two for each part of the model, adapted from the IMMS. They are reported as ratings per part, not as an IMMS score, because a short adaptation is not the validated 36-item survey.
 - Two open questions: “What helped you most?” and “What confused you?”
+
+The survey, the note-taker's think-aloud sheet and the pilot schedule are in the repository, in `docs/pilot/`.
 
 ## Instruments
 
@@ -480,7 +482,7 @@ If the pilot shows that our choices do not work as intended, the first thing we 
 
 **Tool:** Claude Code, Anthropic's coding assistant, using the Claude Opus 5.5 model, run in the software engineers' development environment.
 
-**What it was used for:** drafting and revising the SE document; proposing options for engineering decisions, which the team then made; writing the project's tooling and infrastructure (CI checks, the database layer, deployment on Coolify, the staging login page, the "coming soon" page, the document builder and its PDF format); organising the course material in the repository; and setting up the project board and its backlog.
+**What it was used for:** drafting and revising the SE document; proposing options for engineering decisions, which the team then made; writing the project's tooling and infrastructure (CI checks, the database layer, deployment on Coolify, the staging login page, the "coming soon" page, the document builder and its PDF format); organising the course material in the repository; setting up the project board and its backlog; building backlog items an instructional designer took on (the seeded demo accounts, #34 and #121, and a reason for each wrong token in fill-in activities, #119); and drafting reviews of other members' pull requests, which the reviewer read, edited and posted.
 
 **How its output was checked:** every change went through a pull request that a team member reviewed, and all code passes the project's automated checks (formatting, linting, type checks, tests and builds). Each decision it proposed was accepted, changed or rejected by the team; the decisions are recorded in the SE document (§2, §15.3).
 
@@ -501,12 +503,59 @@ If the pilot shows that our choices do not work as intended, the first thing we 
 | 1 Nov 2026 | "okay, for the se doc, what is the next thing we need to add/ make desisions on or correct" | SE document: alignment with this document |
 | 1 Nov 2026 | "yes lets carry on with the nes things we need to do in the se doc. ask me questions if the asnswer requires inout" | SE document: testing strategy and diagrams |
 | 1 Nov 2026 | "okay lets continue building it. ask me questions you need imput on" | SE document: stakeholders, wireframes, references; the Sprint 0 record |
+| 5 Nov 2026 | "This is our project. And here is the task list. what do you think should i attack first?" | Choosing which backlog items to take on |
+| 5 Nov 2026 | "how would the seeded demo accounts go?" | Designing the seeded demo accounts (#34) |
+| 5 Nov 2026 | "Yeah if you dont mind, can you get me started with this ? How much work is it? Is there something you need from me in order to do this for me?" | The first demo account and the seed's demo-account loader (#95) |
+| 5 Nov 2026 | "give me a guide on setting the DEMO_PASSWORD on Coolify?" | Deployment guide for the demo accounts' password |
+| 5 Nov 2026 | "while we wait for that PR, can i test this properly to see if it works? I am just trusting you blindly at this stage?" | A manual test plan for the demo accounts, run by the team member |
+| 8 Nov 2026 | "Lets disregard my draft om module 2 let mohtashim do it. Lets start with the review of #107 then." | Reviewing the content model (#107) |
+| 8 Nov 2026 | "Lets do #34 but review #108 and give me feedback before starting with #34" | Reviewing the mastery check (#108); the remaining demo accounts (#116) |
+| 8 Nov 2026 | "thanks. Please review #117." | Reviewing the seed fix (#117) |
+| 8 Nov 2026 | "yeah lets start with fill-in feedback" | A reason for each wrong token in fill-in activities (#119, #120) |
+| 8 Nov 2026 | "Yeah, lets do demo accounts' module progress. Open a new issue and create a PR when you are done. Also do a review on #114." | Demo accounts' module progress (#121, #122); reviewing the activity page (#114) |
 
 Table: Generative AI prompts for the software engineering work.
 
 ## Instructional design
 
-TODO: The instructional design team adds the tools and prompts used for this document and for the app's content.
+Each instructional designer records their own use, in the same format as above. This covers this document and everything made for the app: questions, hints, feedback, narration scripts, images and the pilot instruments.
+
+### Jacobus Hoogenboezem
+
+**Tool:** Claude Code, Anthropic's coding assistant, using the Claude Opus 5.5 model.
+
+**What it was used for:**
+
+- checking what module 1 needs against the activity kinds the app supported, and preparing questions for the content model on how activities are grouped into modules and segments (#14, #83);
+- a first draft of module 2's activities, hints and feedback. It was not used: module 2 was handed to Mohtashim Hussain (#84), and the draft was discarded;
+- drafting the pilot kit (`docs/pilot/`): the plan and schedule, the survey and the think-aloud note sheet (#75);
+- drafting this record.
+
+**How its output was checked:** the team member read and edited every draft before it was shared. The SUS statements were checked against Brooke's standard wording [30]. The ARCS statements were checked against the four parts of Keller's model [38], and are reported as an adaptation, not as the validated IMMS. The pilot kit is reviewed through a pull request like the rest of the repository.
+
+**Main prompts**, as typed:
+
+| Date | Prompt | Used for |
+|---|---|---|
+| 5 Nov 2026 | "what should i ask and suggest regarding how activities get grouped?" | Questions for the content model (#14) |
+| 5 Nov 2026 | "what is required for us to start with: Content: module 1, What is a graph? #83?" | What module 1 needs, against the activity kinds available |
+| 5 Nov 2026 | "yeah lets go for module 2" | A draft of module 2's content (not used) |
+| 8 Nov 2026 | "whats required for #75? what should we do?" | Planning the pilot kit |
+| 8 Nov 2026 | "Cool, now lets do the documentation 74 and 75" | Drafting the pilot kit and this record |
+
+Table: Generative AI prompts for Jacobus Hoogenboezem's instructional design work.
+
+### Mohtashim Hussain
+
+To be added by Mohtashim Hussain (#74).
+
+### Simphiwe Nhlapo
+
+To be added by Simphiwe Nhlapo (#74).
+
+### Joshua Wereley
+
+To be added by Joshua Wereley (#74).
 
 # References and supporting evidence
 

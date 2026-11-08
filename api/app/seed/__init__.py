@@ -47,8 +47,6 @@ from app.services.mastery import MASTERY_MODULE, recompute_all
 
 FIXTURES = Path(__file__).parent
 
-# The config and solution schemas for each kind (FR-4.1). Add a kind here when its checker lands.
-
 
 class HintFixture(BaseModel, extra="forbid"):
     level: int = Field(ge=1, le=4)

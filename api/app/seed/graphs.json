@@ -42,6 +42,22 @@
         { "source": "D", "target": "E" }
       ],
       "start_vertex": "A"
+    },
+    {
+      "id": 4,
+      "name": "The campus graph",
+      "directed": false,
+      "vertices": ["A", "B", "C", "D", "E", "F", "G"],
+      "edges": [
+        { "source": "A", "target": "C" },
+        { "source": "A", "target": "E" },
+        { "source": "B", "target": "C" },
+        { "source": "B", "target": "G" },
+        { "source": "C", "target": "F" },
+        { "source": "D", "target": "E" },
+        { "source": "E", "target": "F" }
+      ],
+      "start_vertex": "A"
     }
   ]
 }

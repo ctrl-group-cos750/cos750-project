@@ -126,13 +126,42 @@ describe('ModuleMap — locked vs open affordances', () => {
     expect(lockedTitle.closest('a')).toBeNull()
   })
 
-  it('open module card is not wrapped in an anchor either (uses navigate button)', async () => {
-    // The module map uses a Continue button and Card (not per-card links), so no <a> per row.
+  it('open module card IS a link to /modules/:id', async () => {
     moduleListApi([openModule])
     renderApp('/')
     await screen.findByText('Warm-up and queue refresher')
-    // No link to the module page from the card itself — navigation is via Continue button
-    expect(screen.queryByRole('link', { name: /warm-up/i })).toBeNull()
+    // The card for an open module should be wrapped in an anchor pointing to the module page.
+    const link = screen.getByRole('link', { name: /warm-up/i })
+    expect(link).toBeInTheDocument()
+    expect(link).toHaveAttribute('href', `/modules/${openModule.id}`)
+  })
+
+  it('locked module card is NOT a link', async () => {
+    moduleListApi([openModule, lockedModule])
+    renderApp('/')
+    await screen.findByText('What is a graph?')
+    // The locked card must not be wrapped in an anchor.
+    const lockedTitle = screen.getByText('What is a graph?')
+    expect(lockedTitle.closest('a')).toBeNull()
+  })
+
+  it('clicking an open module card navigates to the module page', async () => {
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules': () => Response.json([openModule]),
+        'GET /api/modules/:id': () =>
+          Response.json({
+            ...openModule,
+            segments: [],
+          }),
+      },
+    })
+    renderApp('/')
+    const link = await screen.findByRole('link', { name: /warm-up/i })
+    await userEvent.click(link)
+    // ModulePage renders the module heading (even for the empty-segments state).
+    expect(await screen.findByText(/module 0/i)).toBeInTheDocument()
   })
 })
 

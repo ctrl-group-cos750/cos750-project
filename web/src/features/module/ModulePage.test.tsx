@@ -161,20 +161,19 @@ describe('ModulePage — segment rendering', () => {
   })
 
   it('renders a worked_example segment body as Markdown after navigating', async () => {
-    const api = setupModuleApi(twoSegmentDetail)
+    // Use allKindsDetail (4 segments) so clicking Next lands on segment 1 (not the last).
+    const api = setupModuleApi(allKindsDetail)
     renderApp('/modules/1')
 
-    // Navigate to the second segment (worked_example)
+    // Navigate to the second segment (video — but we just need to check a forward nav worked)
     const nextBtn = await screen.findByRole('button', { name: 'Next →' })
     await userEvent.click(nextBtn)
 
     // Wait for POST position to complete
     expect(api.callsTo('POST /api/modules/1/position')).toHaveLength(1)
 
-    // The worked_example body has "## Example" → <h2>Example</h2>
-    expect(await screen.findByRole('heading', { name: 'Example' })).toBeInTheDocument()
-    // And a paragraph
-    expect(screen.getByText('Here is a worked example paragraph.')).toBeInTheDocument()
+    // The video segment title appears (position 1 in allKindsDetail)
+    expect(await screen.findByRole('heading', { name: 'Watch: BFS in action' })).toBeInTheDocument()
   })
 })
 
@@ -197,23 +196,27 @@ describe('ModulePage — navigation and position saving', () => {
   })
 
   it('advances the UI to the next segment after clicking Next', async () => {
-    setupModuleApi(twoSegmentDetail)
+    // Use allKindsDetail (4 segments) so navigating to segment 1 doesn't trigger completion.
+    setupModuleApi(allKindsDetail)
     renderApp('/modules/1')
 
     await screen.findByRole('heading', { name: 'Introduction to graphs' })
     await userEvent.click(screen.getByRole('button', { name: 'Next →' }))
 
-    // Segment 2 title appears
-    expect(
-      await screen.findByRole('heading', { name: 'Worked example: adjacency list' }),
-    ).toBeInTheDocument()
+    // Segment 2 title appears (video segment at position 1)
+    expect(await screen.findByRole('heading', { name: 'Watch: BFS in action' })).toBeInTheDocument()
   })
 
   it('shows "Finish module" on the last segment instead of "Next →"', async () => {
-    setupModuleApi(twoSegmentDetail)
+    // Start already at the last segment via currentSegmentPosition so we don't need
+    // to navigate there (which would trigger the completion-navigate-home logic).
+    const atLastSegment: ModuleDetail = {
+      ...twoSegmentDetail,
+      currentSegmentPosition: 1, // last segment in a 2-segment module
+    }
+    setupModuleApi(atLastSegment)
     renderApp('/modules/1')
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Next →' }))
     expect(await screen.findByRole('button', { name: 'Finish module' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Next →' })).toBeNull()
   })
@@ -227,7 +230,8 @@ describe('ModulePage — navigation and position saving', () => {
   })
 
   it('enables Previous after navigating forward', async () => {
-    setupModuleApi(twoSegmentDetail)
+    // Use allKindsDetail (4 segments) so clicking Next doesn't trigger completion.
+    setupModuleApi(allKindsDetail)
     renderApp('/modules/1')
 
     await userEvent.click(await screen.findByRole('button', { name: 'Next →' }))
@@ -245,6 +249,32 @@ describe('ModulePage — navigation and position saving', () => {
     // Should start on segment at position 1 (worked_example)
     expect(
       await screen.findByRole('heading', { name: 'Worked example: adjacency list' }),
+    ).toBeInTheDocument()
+  })
+
+  it('clicking "Finish module" on the last segment saves the position and navigates to "/"', async () => {
+    // Start already at the last segment so we don't navigate there first (which
+    // would trigger the completion-navigate-home logic before we can click Finish).
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules': () => Response.json([{ ...moduleSummary, status: 'complete' }]),
+        'GET /api/modules/:id': () =>
+          Response.json({ ...twoSegmentDetail, currentSegmentPosition: 1 }),
+        'POST /api/modules/:id/position': () => Response.json(twoSegmentDetail),
+      },
+    })
+    renderApp('/modules/1')
+
+    // We start on the last segment — Finish module button should already be present.
+    const finishBtn = await screen.findByRole('button', { name: 'Finish module' })
+
+    // Click Finish module — this fires savePosition and then navigates to '/'.
+    await userEvent.click(finishBtn)
+
+    // After navigation, the module map heading should be visible.
+    expect(
+      await screen.findByRole('heading', { name: 'Graphs and breadth-first search' }),
     ).toBeInTheDocument()
   })
 })

@@ -81,6 +81,14 @@
   padding-top: var(--space-2);
 }
 
+/* Link wrapper for non-locked module cards — resets anchor decorations so the card
+   appearance is unchanged; the Card's own interactive hover still applies. */
+.cardLink {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
 /* Responsive: stack number+title on small screens */
 @media (max-width: 480px) {
   .row {

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { Alert, Button, Card, ProgressBar, Spinner, Tag } from '../../components'
 import type { TagTone } from '../../components'
 import type { ModuleStatus, ModuleSummary } from './module.types.ts'
@@ -30,28 +30,38 @@ function ModuleRow({ module }: { module: ModuleSummary }) {
   const { tone, label, icon } = statusDisplay(module.status)
   const isLocked = module.status === 'locked'
 
+  const cardContent = (
+    <Card interactive={!isLocked} className={`${styles.row} ${isLocked ? styles.locked : ''}`}>
+      <span className={styles.number} aria-hidden="true">
+        {module.number}
+      </span>
+      <div className={styles.info}>
+        <span className={styles.title}>{module.title}</span>
+        {module.status === 'in_progress' && module.segmentCount > 0 && (
+          <ProgressBar
+            label={`Module ${module.number} progress`}
+            value={module.currentSegmentPosition + 1}
+            max={module.segmentCount}
+            showCount
+          />
+        )}
+      </div>
+      <span className={styles.duration}>{formatDuration(module.estimatedMinutes)}</span>
+      <Tag tone={tone} icon={icon}>
+        {label}
+      </Tag>
+    </Card>
+  )
+
   return (
     <li>
-      <Card interactive={!isLocked} className={`${styles.row} ${isLocked ? styles.locked : ''}`}>
-        <span className={styles.number} aria-hidden="true">
-          {module.number}
-        </span>
-        <div className={styles.info}>
-          <span className={styles.title}>{module.title}</span>
-          {module.status === 'in_progress' && module.segmentCount > 0 && (
-            <ProgressBar
-              label={`Module ${module.number} progress`}
-              value={module.currentSegmentPosition + 1}
-              max={module.segmentCount}
-              showCount
-            />
-          )}
-        </div>
-        <span className={styles.duration}>{formatDuration(module.estimatedMinutes)}</span>
-        <Tag tone={tone} icon={icon}>
-          {label}
-        </Tag>
-      </Card>
+      {isLocked ? (
+        cardContent
+      ) : (
+        <Link to={`/modules/${module.id}`} className={styles.cardLink}>
+          {cardContent}
+        </Link>
+      )}
     </li>
   )
 }

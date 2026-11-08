@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { useParams } from 'react-router'
+import { useNavigate, useParams } from 'react-router'
 import { Alert, Button, Markdown, ProgressBar, Spinner } from '../../components'
 import { fetchModule, savePosition } from './module.api.ts'
 import { SegmentView } from './SegmentView.tsx'
@@ -9,6 +9,7 @@ import { SegmentView } from './SegmentView.tsx'
 export function ModulePage() {
   const id = Number(useParams().moduleId)
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
   const query = useQuery({ queryKey: ['module', id], queryFn: () => fetchModule(id) })
 
@@ -17,9 +18,15 @@ export function ModulePage() {
 
   const mutation = useMutation({
     mutationFn: (position: number) => savePosition(id, position),
-    onSuccess: () => {
+    onSuccess: (_data, position) => {
       void queryClient.invalidateQueries({ queryKey: ['modules'] })
       void queryClient.invalidateQueries({ queryKey: ['module', id] })
+      // When the student finishes the last segment, navigate back to the module map so
+      // they can see the module marked 'complete' and the next module unlocked.
+      const segs = query.data?.segments
+      if (segs && position === segs[segs.length - 1].position) {
+        void navigate('/')
+      }
     },
   })
 

@@ -337,6 +337,9 @@ Figure: Use cases. The student takes part in every use case in both groups excep
 - **FR-1.2** Log in and out. A session lasts until logout or 14 days, whichever is first.
 - **FR-1.3** A student sees and changes only their own progress, attempts and results.
 - **FR-1.4** Seeded demo accounts exist at different points in the course (new, mid-course, finished with a "not yet" objective, ready for the lecture), so the demo can show any stage without working through 75 minutes of content.
+- **FR-1.5** A student can change their password: they give the current one, the new one must meet the password rules (NFR-S1), and every other session is logged out.
+- **FR-1.6** A student can choose a profile picture from a set the team provides (graph shapes, never an uploaded photo), shown only to them, like the display name.
+- **FR-1.7** A profile page, reached from the account menu in the header, shows the student their own objectives met and, unless hidden (FR-9.5), points and badges.
 
 ## Modules and progress (FR-2)
 - **FR-2.1** Present the seven modules of the ID document (0 to 6) in order. A module opens once the one before it is complete; module 0 is always open.
@@ -524,7 +527,7 @@ Figure: Entities and relationships.
 
 **Attempt** (append-only): `id`, `user_id`, `activity_id`, `submitted` (JSON: the answer — for a code activity, the chosen line order or filled-in tokens), `correct`, `score` (0 to 1, for partial results such as trace tables), `hint_level` (highest level shown before this attempt), `detail` (JSON: per-line or per-blank results for a code activity), `created_at`.
 
-**Event** (append-only): `id`, `user_id`, `type` (`segment_viewed` | `checkpoint_reached` | `hint_shown` | `module_completed` | `result_changed` …), `ref` (the segment, activity, module or objective), `payload` (JSON), `created_at`.
+**Event** (append-only): `id`, `user_id`, `type`, `ref` (what it was about: `video:3`, `checkpoint:12`, `segment:301`, `activity:301`, `objective:5`), `payload` (JSON: a hint's level, a result's old and new state), `created_at`. The server logs `hint_shown` and `result_changed` itself; the browser reports `video_started`, `video_completed`, `checkpoint_reached` and `segment_viewed` through `POST /api/events`, which takes only those types, each about a video, checkpoint or segment that exists, and no free text (`app/services/events.py`). `module_completed` is added with modules (#15). Answers and hints shown also have their own tables, `Attempt` and `HintView`.
 
 **ModuleProgress**: `user_id`, `module_id`, `status` (`open` | `in_progress` | `complete`), `current_segment_id`, `completed_at`.
 
@@ -534,7 +537,7 @@ Figure: Entities and relationships.
 
 **PointsEntry** (append-only, never negative): `user_id`, `event`, `ref`, `points`, `created_at`. `ref` names what was rewarded (`activity:12`, `objective:5`) and is unique per student, so nothing is rewarded twice. A student's total is the sum.
 
-**UserBadge** (never deleted): `user_id`, `badge`, `ref`, `tier`, `awarded_at`, `upgraded_at`, `seen_at`. `badge` is an id from the badge catalogue: the rules that award it are in `app/services/rewards.py`, and its name, wording and picture in `web/src/components/achievements.ts`. `ref` tells apart badges earned more than once (one per bonus quest). `tier` is bronze or gold for objective badges. `seen_at` stays empty until the app has announced the badge. **User** also has `hide_rewards` (FR-9.5).
+**UserBadge** (never deleted): `user_id`, `badge`, `ref`, `tier`, `awarded_at`, `upgraded_at`, `seen_at`. `badge` is an id from the badge catalogue: the rules that award it are in `app/services/rewards.py`, and its name, wording and picture in `web/src/components/achievements.ts`. `ref` tells apart badges earned more than once (one per bonus quest). `tier` is bronze or gold for objective badges. `seen_at` stays empty until the app has announced the badge. **User** also has `hide_rewards` (FR-9.5) and `avatar` (FR-1.6: the picture chosen from the set, empty for the student's initial).
 
 ## Notes
 - **Attempts and events are the source of truth.** Module progress, objective results, points and badges are derived from them by the services, and can be recomputed if a rule changes (FR-7.6).
@@ -553,6 +556,8 @@ Base path: `/api`. JSON over HTTPS. Auth via the session cookie set by `/api/aut
 | POST | `/api/auth/login` | public | Check credentials and set the session cookie. |
 | POST | `/api/auth/logout` | public | Clear the session cookie. Succeeds without a valid session, so logging out never fails. |
 | GET | `/api/auth/me` | user | The logged-in user. |
+| PUT | `/api/me/avatar` | user | Choose a profile picture from the set, or none (FR-1.6). |
+| POST | `/api/me/password` | user | Change the password: the current one, then a new one that meets the rules; every other session ends (FR-1.5). |
 
 ## Modules and content
 | Method | Path | Auth | Purpose |
@@ -631,7 +636,8 @@ Progress, results and points change only as a side effect of attempts and segmen
 ## Evaluation export (staff only)
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/api/staff/export/{table}.csv` | staff | `events`, `attempts` or `objective_results` as CSV, students identified by internal ID only (FR-10). |
+| GET | `/api/staff/export/{table}.csv` | staff | `events`, `attempts`, `hints` or `objective_results` as CSV, students identified by internal ID only, staff and demo accounts left out (FR-10). |
+| POST | `/api/events` | user | Report something only the browser sees (`video_started`, `video_completed`, `checkpoint_reached`, `segment_viewed`) for the event log (FR-10.1); 120 a minute per student. |
 
 ## Conventions **[PROVISIONAL]**
 - Standard HTTP status codes; error bodies `{ "detail": "..." }`. `429` with a retry hint when a rate limit is reached.
@@ -886,7 +892,7 @@ cos750-project/
 │  │  ├─ rate_limit.py          per-client limits on login and registration
 │  │  ├─ services/              content, checking (one checker per activity kind), mastery, points (planned)
 │  │  ├─ bfs/engine.py          BfsEngine: pure, tested in isolation (planned)
-│  │  └─ seed/                  modules, activities, hints, tests, scenarios, demo accounts (planned)
+│  │  └─ seed/                  modules, activities, hints, tests, scenarios, demo accounts
 │  └─ tests/
 ├─ web/
 │  ├─ Dockerfile                Vite build, then nginx

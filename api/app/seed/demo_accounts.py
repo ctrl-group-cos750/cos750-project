@@ -1,45 +1,82 @@
 """Seeded demo accounts at different points in the course (SE document FR-1.4), so the demo and the
 end-to-end tests can show any stage without working through 75 minutes of content.
 
-Each account is in demo/accounts.json: who it is, and the history that puts it at its stage, as the
-attempts it made and the hints it saw before each. `python -m app.seed` rebuilds them every time it
-runs (the API container does on every start): each demo account's rows are deleted and its history
-is replayed through the same code a student's answers go through (app/services/attempts.py). So a
-rehearsal that clicked through an account is undone by the next seed, and a progress or mastery
-figure is always the one the real code works out, never one written by hand.
+Each account is in demo/accounts.json: who it is, the steps that put it at its stage, and what that
+stage must look like. A step names questions by where they are, never by id: "answer module 6's
+mastery items right, except objective 6's". The seed finds those questions in the order a student
+meets them, builds a right or wrong answer from each one's stored solution, and submits it through
+the same code a student's answers go through (app/services/attempts.py). So new or replaced content
+never breaks an account, and every result is the one the real mastery rules work out.
+
+`expect` says what the account must end up as (ready for the lecture or not, and which objectives
+are "not yet"). If content changes so that the steps no longer produce it, the load fails, naming
+the account. CI loads the committed accounts against the committed content, so that shows up in
+the PR that changed the content, not on a deploy. On a deploy, a demo account problem is reported
+and the previous demo accounts are left as they were (app/seed/__main__.py): it never stops the API.
+
+`python -m app.seed` rebuilds the accounts every time it runs (the API container does on every
+start), so whatever a rehearsal clicked through is undone by the next seed.
 
 Every demo account shares one password, from DEMO_PASSWORD in the server's environment (Coolify).
 It is never committed. Unset, no demo accounts are made: an environment only has them on purpose.
 """
 
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, ValidationError, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, User
+from app.models import Activity, Segment, User
 from app.models.user import DEMO_EMAIL_DOMAIN
 from app.passwords import password_problem
+from app.schemas.activities import (
+    ChooseTestsSolution,
+    FillInSolution,
+    FixTheBugConfig,
+    FixTheBugSolution,
+    MatchingSolution,
+    MultipleChoiceConfig,
+    MultipleChoiceSolution,
+    ParsonsSolution,
+    TraceConfig,
+)
+from app.schemas.content import Purpose
+from app.schemas.graphs import GraphScenarioOut
 from app.security import hash_password
 from app.services.attempts import hint_level_seen, record_attempt, reveal_next_hint
+from app.services.bfs import run_bfs
+from app.services.checking import check_activity
 from app.services.history import delete_history
+from app.services.mastery import evaluate, is_ready
 
 DEMO_FILE = Path(__file__).parent / "demo" / "accounts.json"
 
 
-class DemoAttempt(BaseModel, extra="forbid"):
-    activity: int
-    # The hint level the account has seen on this activity before submitting: hints up to it are
-    # revealed first. 3 or 4 makes a correct answer "met with support" (FR-7.2).
-    hints_seen: int = Field(default=0, ge=0, le=4)
-    # In the kind's shape, as the browser sends it: {"selected": ...}, {"order": [...]}, ...
-    submitted: dict[str, Any]
-    # What the author means this attempt to be. The load fails if the checker disagrees, so a
-    # content change that quietly turns a demo's wrong answer right (or back) is caught.
-    correct: bool
+class DemoStep(BaseModel, extra="forbid"):
+    """Answer some of a module's questions, in the order its segments show them."""
+
+    module: int
+    # Only questions with one of these purposes, or for one of these objectives. Unset: all.
+    purposes: list[Purpose] | None = None
+    objectives: list[int] | None = None
+    except_objectives: list[int] = Field(default_factory=list)
+    # Only the first this many of them, e.g. to stop partway through a module.
+    limit: int | None = Field(default=None, ge=1)
+    answer: Literal["right", "wrong"]
+    # Hints to reveal before answering, up to as many as each question has. 3 or 4 makes a right
+    # answer "with support" (FR-7.2).
+    hints: int = Field(default=0, ge=0, le=4)
+
+
+class DemoExpect(BaseModel, extra="forbid"):
+    """What the account's mastery report must say once its steps are done (FR-7.3, FR-7.4)."""
+
+    ready: bool
+    not_yet: list[int] = Field(default_factory=list)  # exactly these objectives are "not yet"
 
 
 class DemoAccount(BaseModel, extra="forbid"):
@@ -49,7 +86,8 @@ class DemoAccount(BaseModel, extra="forbid"):
     # Where in the course this account is, for whoever runs the demo.
     stage: str = Field(min_length=1)
     staff: bool = False
-    attempts: list[DemoAttempt] = Field(default_factory=list)
+    steps: list[DemoStep] = Field(default_factory=list)
+    expect: DemoExpect
 
     @property
     def email(self) -> str:
@@ -80,7 +118,7 @@ def load_demo_accounts(
 ) -> list[DemoAccount]:
     """Create or rebuild every demo account in one transaction, after the content is loaded.
     Returns the accounts made: none if `password` is unset. Raises ValueError, writing nothing,
-    if the file, the password or an account's history is wrong."""
+    if the file or the password is wrong, or an account doesn't reach its `expect`."""
     if not password:
         return []
     accounts = read_demo_accounts(path)
@@ -114,20 +152,107 @@ def _rebuild(session: Session, account: DemoAccount, password_hash: str) -> None
 
     delete_history(session, user.id)
 
-    for n, step in enumerate(account.attempts, start=1):
-        where = f"{account.email}, attempt {n}"
-        activity = session.get(Activity, step.activity)
-        if activity is None:
-            raise ValueError(f"{where}: no activity {step.activity}")
-        while hint_level_seen(session, user.id, activity.id) < step.hints_seen:
-            if reveal_next_hint(session, user.id, activity) is None:
-                raise ValueError(f"{where}: activity {activity.id} has no hint {step.hints_seen}")
-        try:
-            _, result = record_attempt(session, user.id, activity, step.submitted)
-        except ValidationError as exc:
-            raise ValueError(f"{where}: submission not in the {activity.kind} shape") from exc
-        if result.correct != step.correct:
-            raise ValueError(
-                f"{where}: meant to be {'right' if step.correct else 'wrong'}, "
-                f"but the checker says {result.feedback!r}"
-            )
+    for n, step in enumerate(account.steps, start=1):
+        for activity in _questions(session, step):
+            where = f"{account.email}, step {n}, activity {activity.id}"
+            while hint_level_seen(session, user.id, activity.id) < step.hints:
+                if reveal_next_hint(session, user.id, activity) is None:
+                    break  # fewer hints than asked for: show what there is
+            record_attempt(session, user.id, activity, answer_for(activity, step.answer, where))
+
+    outcomes = evaluate(session, user.id)
+    ready = is_ready(outcomes)
+    not_yet = sorted(o.objective.id for o in outcomes if o.state == "not_yet")
+    if ready != account.expect.ready or not_yet != sorted(account.expect.not_yet):
+        raise ValueError(
+            f"{account.email}: expected ready={account.expect.ready}, not yet "
+            f"{sorted(account.expect.not_yet)}, but the steps give ready={ready}, not yet {not_yet}"
+        )
+
+
+def _questions(session: Session, step: DemoStep) -> list[Activity]:
+    """The step's questions, in the order the module's segments show them."""
+    shown = session.scalars(
+        select(Activity)
+        .join(Segment, Segment.activity_id == Activity.id)
+        .where(Segment.module_id == step.module)
+        .order_by(Segment.position)
+    ).all()
+    picked = [
+        a
+        for a in shown
+        if (step.purposes is None or a.purpose in step.purposes)
+        and (step.objectives is None or a.objective_id in step.objectives)
+        and a.objective_id not in step.except_objectives
+    ]
+    return picked[: step.limit]
+
+
+def answer_for(activity: Activity, answer: Literal["right", "wrong"], where: str) -> dict[str, Any]:
+    """A submission to `activity` that the checker marks right, or wrong, built from its stored
+    solution. Checked with the real checker before it is used, so a kind whose answers this
+    doesn't know how to build fails here, naming the activity, instead of seeding a wrong stage."""
+    builders = _BUILDERS.get(activity.kind)
+    if builders is None:
+        raise ValueError(f"{where}: demo accounts can't answer a {activity.kind} activity yet")
+    submission = builders[0 if answer == "right" else 1](activity)
+    result = check_activity(activity.kind, activity.config, activity.solution, submission)
+    if result.correct != (answer == "right"):
+        raise ValueError(f"{where}: couldn't build a {answer} {activity.kind} answer")
+    return submission
+
+
+def _wrong_option(activity: Activity) -> dict[str, Any]:
+    correct = MultipleChoiceSolution.model_validate(activity.solution).correct
+    options = MultipleChoiceConfig.model_validate(activity.config).options
+    return {"selected": next(o.id for o in options if o.id != correct)}
+
+
+def _trace_rows(activity: Activity) -> dict[str, Any]:
+    config = TraceConfig.model_validate(activity.config)
+    scenario = GraphScenarioOut(id=0, name="", **config.model_dump())
+    steps = run_bfs(scenario).steps
+    return {
+        "rows": [
+            {
+                "visitedVertex": s.visited_vertex,
+                "queue": s.queue,
+                "visited": s.visited,
+                "order": s.order,
+            }
+            for s in steps
+        ]
+    }
+
+
+# For each kind: how to build a right answer, and a wrong one. A wrong answer is the mistake a
+# student would make where there is an obvious one (a wrong option, leaving the bug in), and an
+# empty answer otherwise.
+Build = Callable[[Activity], dict[str, Any]]
+_BUILDERS: dict[str, tuple[Build, Build]] = {
+    "multiple_choice": (
+        lambda a: {"selected": MultipleChoiceSolution.model_validate(a.solution).correct},
+        _wrong_option,
+    ),
+    "matching": (
+        lambda a: {"pairs": MatchingSolution.model_validate(a.solution).pairs},
+        lambda a: {"pairs": {}},
+    ),
+    "parsons": (
+        lambda a: {"order": ParsonsSolution.model_validate(a.solution).order},
+        lambda a: {"order": []},
+    ),
+    "fill_in": (
+        lambda a: {"answers": FillInSolution.model_validate(a.solution).answers},
+        lambda a: {"answers": {}},
+    ),
+    "fix_the_bug": (
+        lambda a: {"order": FixTheBugSolution.model_validate(a.solution).order},
+        lambda a: {"order": [line.id for line in FixTheBugConfig.model_validate(a.config).lines]},
+    ),
+    "choose_tests": (
+        lambda a: {"selected": ChooseTestsSolution.model_validate(a.solution).exposing},
+        lambda a: {"selected": []},
+    ),
+    "trace": (_trace_rows, lambda a: {"rows": []}),
+}

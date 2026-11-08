@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.models import Activity, Attempt, Hint, HintView
 from app.schemas.activities import CheckResult
 from app.services.checking import check_activity
+from app.services.events import log_event
 from app.services.mastery import counts, recompute
 from app.services.rewards import on_attempt
 
@@ -62,5 +63,6 @@ def reveal_next_hint(
     if hint is None:
         return None
     session.add(HintView(user_id=user_id, activity_id=activity.id, level=hint.level))
+    log_event(session, user_id, "hint_shown", f"activity:{activity.id}", {"level": hint.level})
     session.flush()
     return hint, next((h for h in hints if h.level > hint.level), None)

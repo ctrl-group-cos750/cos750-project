@@ -13,14 +13,18 @@ describe('routing', () => {
   it('shows the signed-in home page to a logged-in student', async () => {
     fakeApi({ user: ada })
     renderApp('/')
-    expect(await screen.findByRole('heading', { name: 'Welcome, Ada' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Graphs and breadth-first search' }),
+    ).toBeInTheDocument()
     expect(screen.getByText('Ada')).toBeInTheDocument() // in the header
   })
 
   it('sends a logged-in student away from the log-in and register pages', async () => {
     fakeApi({ user: ada })
     renderApp('/login')
-    expect(await screen.findByRole('heading', { name: 'Welcome, Ada' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Graphs and breadth-first search' }),
+    ).toBeInTheDocument()
   })
 
   it('shows a not-found page for unknown addresses', () => {
@@ -42,25 +46,31 @@ describe('routing', () => {
     expect(await screen.findByText("Can't reach Ctrl Academy")).toBeInTheDocument()
     up = true
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
-    expect(await screen.findByRole('heading', { name: 'Welcome, Ada' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Graphs and breadth-first search' }),
+    ).toBeInTheDocument()
     expect(api.callsTo('GET /api/auth/me')).toHaveLength(2)
   })
 })
 
 describe('home page', () => {
-  it('shows the API and database status', async () => {
+  it('shows the module map heading', async () => {
     fakeApi({ user: ada })
     renderApp('/')
-    expect(await screen.findByText('API: ok, database ok')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Graphs and breadth-first search' }),
+    ).toBeInTheDocument()
   })
 
-  it('says the API is unreachable when the health check fails', async () => {
+  it('shows an error when the modules API fails', async () => {
     fakeApi({
       user: ada,
-      overrides: { 'GET /api/health': () => new Response(null, { status: 502 }) },
+      overrides: {
+        'GET /api/modules': () => Response.json({ detail: 'Service unavailable' }, { status: 503 }),
+      },
     })
     renderApp('/')
-    expect(await screen.findByText('API: unreachable')).toBeInTheDocument()
+    expect(await screen.findByText('Service unavailable')).toBeInTheDocument()
   })
 })
 
@@ -68,7 +78,8 @@ describe('logging out', () => {
   it('ends the session and returns to the log-in page', async () => {
     const api = fakeApi({ user: ada })
     renderApp('/')
-    await userEvent.click(await screen.findByRole('button', { name: 'Log out' }))
+    await userEvent.click(await screen.findByRole('button', { name: /your account/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Log out' }))
     expect(await screen.findByRole('heading', { name: 'Log in' })).toBeInTheDocument()
     expect(api.callsTo('POST /api/auth/logout')).toHaveLength(1)
   })
@@ -81,8 +92,11 @@ describe('logging out', () => {
       },
     })
     renderApp('/')
-    await userEvent.click(await screen.findByRole('button', { name: 'Log out' }))
+    await userEvent.click(await screen.findByRole('button', { name: /your account/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Log out' }))
     expect(await screen.findByText('You are still logged in')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Welcome, Ada' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Graphs and breadth-first search' }),
+    ).toBeInTheDocument()
   })
 })

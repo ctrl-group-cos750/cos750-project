@@ -23,10 +23,17 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     # NullPool: a migration run opens one connection and closes it, leaving nothing behind.
-    with create_engine(url, poolclass=pool.NullPool).connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
-        with context.begin_transaction():
-            context.run_migrations()
+    # engine.dispose() is called explicitly so Python's GC never has to close the underlying
+    # sqlite3.Connection — which would fire a ResourceWarning and fail the test suite under
+    # pytest-unraisableexception.
+    engine = create_engine(url, poolclass=pool.NullPool)
+    try:
+        with engine.connect() as connection:
+            context.configure(connection=connection, target_metadata=target_metadata)
+            with context.begin_transaction():
+                context.run_migrations()
+    finally:
+        engine.dispose()
 
 
 if context.is_offline_mode():

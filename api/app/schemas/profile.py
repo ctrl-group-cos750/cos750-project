@@ -19,3 +19,9 @@ class AvatarIn(ApiModel):
 class PasswordChangeIn(ApiModel):
     current_password: Password
     new_password: Password
+
+
+class ErrorOut(ApiModel):
+    """An error the client shows as it is: `detail` says what went wrong, in plain words."""
+
+    detail: str

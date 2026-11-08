@@ -6,7 +6,7 @@ from app.models import User
 from app.passwords import password_problem
 from app.rate_limit import RateLimiter
 from app.schemas.auth import UserOut
-from app.schemas.profile import AvatarIn, PasswordChangeIn
+from app.schemas.profile import AvatarIn, ErrorOut, PasswordChangeIn
 from app.security import hash_password, set_session_cookie, verify_password
 
 router = APIRouter(prefix="/api/me", tags=["profile"])
@@ -27,7 +27,18 @@ def set_avatar(body: AvatarIn, user: CurrentUser, session: DbSession) -> User:
     return user
 
 
-@router.post("/password", status_code=status.HTTP_204_NO_CONTENT)
+@router.post(
+    "/password",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        400: {
+            "model": ErrorOut,
+            "description": "The current password is wrong, or the new one is the same or breaks "
+            "a password rule. `detail` says which.",
+        },
+        429: {"model": ErrorOut, "description": "More than 10 tries in a minute."},
+    },
+)
 def change_password(
     body: PasswordChangeIn, user: CurrentUser, session: DbSession, response: Response
 ) -> Response:

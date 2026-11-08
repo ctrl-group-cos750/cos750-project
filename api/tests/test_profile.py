@@ -118,3 +118,9 @@ def test_the_api_and_the_app_offer_the_same_pictures() -> None:
     found = re.search(r"AVATARS = \[([^\]]*)\]", source)
     assert found is not None
     assert re.findall(r"'([a-z]+)'", found.group(1)) == list(get_args(Avatar))
+
+
+def test_the_password_change_documents_every_answer_it_gives(client: TestClient) -> None:
+    # The published schema matches the real contract, so the generated types do too (NFR-M2).
+    answers = client.get("/api/openapi.json").json()["paths"]["/api/me/password"]["post"]
+    assert set(answers["responses"]) == {"204", "400", "422", "429"}

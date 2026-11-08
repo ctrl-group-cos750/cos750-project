@@ -9,7 +9,7 @@ import styles from './SignedInLayout.module.css'
 const navClass = ({ isActive }: { isActive: boolean }) =>
   cn(buttonVariants({ variant: isActive ? 'secondary' : 'ghost', size: 'lg' }), 'text-foreground')
 
-/** Every signed-in page: the header (Badges, the staff portal link for team members, the
+/** Every signed-in page: the header (Report, Badges, the staff portal link for team members, the
  * student's name and Log out), then the page, and new badges announced as they are earned. */
 export function SignedInLayout() {
   const { data: user } = useCurrentUser()
@@ -20,6 +20,9 @@ export function SignedInLayout() {
     <AppShell
       nav={
         <>
+          <NavLink to="/report" className={navClass}>
+            Report
+          </NavLink>
           <NavLink to="/badges" className={navClass}>
             Badges
           </NavLink>

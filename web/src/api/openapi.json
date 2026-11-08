@@ -645,6 +645,115 @@
         }
       }
     },
+    "/api/me/report": {
+      "get": {
+        "tags": [
+          "mastery"
+        ],
+        "summary": "Get Report",
+        "description": "The logged-in student's mastery report: each objective's result, whether they are ready\nfor the lecture, and the review path's progress for each objective module 6 marked \"not yet\"\n(FR-7.3 to FR-7.5).\n\nWorked out from their attempts on every request (app/services/mastery.py), so it always follows\nthe current rules (FR-7.6). Nothing a client sends can set a result: they change only through\nattempts. Only ever the student's own.",
+        "operationId": "get_report_api_me_report_get",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MasteryReportOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/review/{objective_id}": {
+      "get": {
+        "tags": [
+          "mastery"
+        ],
+        "summary": "Get Review Path",
+        "description": "The objective's review path: its steps in order, and which the student has answered\n(FR-7.5). 404 if the objective has no path; 403 until module 6 marks it \"not yet\", so the\nfresh items stay unseen until the student needs them.",
+        "operationId": "get_review_path_api_me_review__objective_id__get",
+        "parameters": [
+          {
+            "name": "objective_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Objective Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewPathOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/videos/{video_id}": {
       "get": {
         "tags": [
@@ -2006,6 +2115,29 @@
         ],
         "title": "LoginIn"
       },
+      "MasteryReportOut": {
+        "properties": {
+          "ready": {
+            "type": "boolean",
+            "title": "Ready"
+          },
+          "objectives": {
+            "items": {
+              "$ref": "#/components/schemas/ObjectiveReportOut"
+            },
+            "type": "array",
+            "title": "Objectives"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ready",
+          "objectives"
+        ],
+        "title": "MasteryReportOut",
+        "description": "The student's own mastery report. `ready` (for the lecture) is true when every objective is\nmet, with or without support (FR-7.4). Always shown, even when rewards are hidden (FR-9.5)."
+      },
       "MediaOut": {
         "properties": {
           "path": {
@@ -2025,6 +2157,63 @@
         ],
         "title": "MediaOut",
         "description": "Where the upload is served from. Put it in a video's `mediaPath` or `captionsPath`."
+      },
+      "ObjectiveReportOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "criterion": {
+            "type": "string",
+            "title": "Criterion"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "not_attempted",
+              "met_independently",
+              "met_with_support",
+              "not_yet"
+            ],
+            "title": "State"
+          },
+          "answered": {
+            "type": "integer",
+            "title": "Answered"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "review": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewProgressOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "criterion",
+          "state",
+          "answered",
+          "total",
+          "review"
+        ],
+        "title": "ObjectiveReportOut",
+        "description": "One objective on the mastery report (FR-7.2, FR-7.3). `answered` of `total` is how many of\nits module 6 items the student has answered; the result stays `not_attempted` until all are.\n`review` is there once module 6 marks it \"not yet\", which opens its review path."
       },
       "PartResult": {
         "properties": {
@@ -2084,6 +2273,144 @@
           "password"
         ],
         "title": "RegisterIn"
+      },
+      "ReviewPathOut": {
+        "properties": {
+          "objectiveId": {
+            "type": "integer",
+            "title": "Objectiveid"
+          },
+          "objectiveText": {
+            "type": "string",
+            "title": "Objectivetext"
+          },
+          "criterion": {
+            "type": "string",
+            "title": "Criterion"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "not_attempted",
+              "met_independently",
+              "met_with_support",
+              "not_yet"
+            ],
+            "title": "State"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/ReviewProgressOut"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewStepOut"
+            },
+            "type": "array",
+            "title": "Steps"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "objectiveId",
+          "objectiveText",
+          "criterion",
+          "state",
+          "progress",
+          "steps"
+        ],
+        "title": "ReviewPathOut",
+        "description": "An objective's review path for the logged-in student (FR-7.5, ID document §7.6)."
+      },
+      "ReviewProgressOut": {
+        "properties": {
+          "answered": {
+            "type": "integer",
+            "title": "Answered"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "answered",
+          "total"
+        ],
+        "title": "ReviewProgressOut",
+        "description": "How far the student is through an open review path's fresh items (FR-7.5). Once all are\nanswered they decide the objective's result, so `answered == total` means the path is done."
+      },
+      "ReviewStepOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "video",
+              "text",
+              "worked_example",
+              "activity",
+              "refresher"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "activityId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activityid"
+          },
+          "purpose": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "review",
+                  "mastery"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purpose"
+          },
+          "answered": {
+            "type": "boolean",
+            "title": "Answered"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "body",
+          "activityId",
+          "purpose",
+          "answered"
+        ],
+        "title": "ReviewStepOut",
+        "description": "One step of a review path, in order. An activity step names its activity and its purpose:\n`review` is practice with the full hint ladder, `mastery` a fresh item that decides the\nresult. `answered` is whether the student has submitted an answer to it."
       },
       "RewardsOut": {
         "properties": {

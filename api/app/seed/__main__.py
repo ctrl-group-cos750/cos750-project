@@ -13,7 +13,8 @@ with SessionLocal() as session:
 segments = sum(len(m.segments) for m in content.modules)
 print(
     f"seed: {len(content.objectives)} objectives, {len(content.modules)} modules, "
-    f"{segments} segments, {len(content.activities)} activities, {len(content.graphs)} graphs"
+    f"{segments} segments, {len(content.review_paths)} review paths, "
+    f"{len(content.activities)} activities, {len(content.graphs)} graphs"
 )
 if demo:
     print(f"seed: demo accounts {', '.join(a.email for a in demo)}")

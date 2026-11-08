@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.models import Activity, Attempt, Hint, HintView
 from app.schemas.activities import CheckResult
 from app.services.checking import check_activity
+from app.services.mastery import counts, recompute
 from app.services.rewards import on_attempt
 
 
@@ -28,8 +29,8 @@ def hint_level_seen(session: Session, user_id: int, activity_id: int) -> int:
 def record_attempt(
     session: Session, user_id: int, activity: Activity, submitted: dict[str, Any]
 ) -> tuple[Attempt, CheckResult]:
-    """Grade `submitted` by comparison with the stored solution and add the attempt, and any points
-    it earns, to the session (not committed). Raises pydantic's ValidationError if `submitted` is not in the kind's shape."""
+    """Grade `submitted` by comparison with the stored solution and add the attempt, any points it
+    earns and, for a mastery item, the student's objective results to the session (not committed). Raises pydantic's ValidationError if `submitted` is not in the kind's shape."""
     result = check_activity(activity.kind, activity.config, activity.solution, submitted)
     attempt = Attempt(
         user_id=user_id,
@@ -43,6 +44,8 @@ def record_attempt(
     session.add(attempt)
     session.flush()
     on_attempt(session, attempt)  # points for a first correct answer (FR-9.1, FR-9.2)
+    if counts(activity):
+        recompute(session, user_id)  # the objective results, and what they earn (FR-7)
     return attempt, result
 
 

@@ -20,6 +20,7 @@ from app.models import (
     Video,
 )
 from app.seed import EDITOR_IDS_FROM, load, move_editor_activities, read_fixtures
+from app.services.mastery import counts
 
 
 def test_every_committed_fixture_is_valid() -> None:
@@ -280,3 +281,60 @@ def test_a_question_already_overwritten_by_a_module_fixture_is_moved_and_the_fix
 def test_a_fixture_cannot_use_the_editors_ids(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="video editor"):
         read_fixtures(write(tmp_path, {"activities": [activity(id=EDITOR_IDS_FROM)]}))
+
+
+# --- An activity the fixtures stop listing ---------------------------------------------------
+
+
+def test_an_activity_the_fixtures_drop_is_deleted_if_nobody_used_it(
+    tmp_path: Path, db: Session
+) -> None:
+    load(db, write(tmp_path, {"activities": [activity(id=1), activity(id=2)]}))
+    load(db, write(tmp_path, {"activities": [activity(id=2)]}))
+    db.expire_all()
+
+    assert db.get(Activity, 1) is None
+    assert db.scalars(select(Hint.activity_id).distinct()).all() == [2]
+
+
+def test_a_dropped_activity_someone_answered_is_kept_but_hidden_and_no_longer_a_mastery_item(
+    tmp_path: Path, db: Session
+) -> None:
+    # An old placeholder mastery item a later fixture replaced, which a student had answered.
+    db.add(
+        Activity(
+            id=1,
+            kind="multiple_choice",
+            title="Old placeholder",
+            visible=True,
+            purpose="mastery",
+            config={"prompt": "Q", "options": []},
+            solution={"correct": "a"},
+        )
+    )
+    user = User(email="ada@example.com", display_name="Ada", password_hash="not-a-real-hash")  # noqa: S106
+    db.add(user)
+    db.flush()
+    db.add(
+        Attempt(user_id=user.id, activity_id=1, submitted={}, correct=True, score=1.0, detail={})
+    )
+    db.commit()
+    assert counts(db.get_one(Activity, 1))
+
+    load(db, write(tmp_path, {"activities": [activity(id=2)]}))
+    db.expire_all()
+
+    kept = db.get_one(Activity, 1)
+    assert (kept.visible, kept.purpose, kept.module_id) == (False, "practice", None)
+    assert len(db.scalars(select(Attempt)).all()) == 1
+    assert not counts(kept)
+
+
+def test_dropping_fixtures_never_touches_a_video_editor_question(
+    tmp_path: Path, db: Session
+) -> None:
+    editor_question(db, EDITOR_IDS_FROM + 5, "Editor question")
+    load(db, write(tmp_path, {"activities": [activity(id=1)]}))
+    db.expire_all()
+
+    assert db.get(Activity, EDITOR_IDS_FROM + 5) is not None

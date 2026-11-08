@@ -3,7 +3,18 @@ ordered segments inside each module. All three are content, loaded from the fixt
 never edited by students.
 """
 
-from sqlalchemy import JSON, ForeignKey, String, Text
+from datetime import datetime
+
+from sqlalchemy import (
+    JSON,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -18,9 +29,14 @@ class Objective(Base):
     id: Mapped[int] = mapped_column(primary_key=True)  # the objective's number
     text: Mapped[str] = mapped_column(Text)
     bloom_level: Mapped[str] = mapped_column(String(100))
-    # The success criterion from the ID document's Table 1, in words. The mastery service (#22)
-    # turns it into the rule it evaluates.
+    # The success criterion from the ID document's Table 1, in words, as the report shows it.
     criterion: Mapped[str] = mapped_column(Text)
+    # The same criterion as the rule the mastery service evaluates (app/services/mastery.py),
+    # counted over the parts of the module 6 items: at least `pass_fraction` of them right
+    # ("at least 4 of 5" is 0.8), or at most `max_wrong` wrong ("with at most one error" is 1).
+    # Exactly one is set; the seed checks that.
+    pass_fraction: Mapped[float | None] = mapped_column()
+    max_wrong: Mapped[int | None] = mapped_column()
 
 
 class Module(Base):
@@ -39,7 +55,11 @@ class Module(Base):
 
 
 class Segment(Base):
-    """One step of a module, shown in `position` order (FR-2.2).
+    """One step of a module, or of an objective's review path, shown in `position` order (FR-2.2).
+
+    A segment belongs to exactly one of the two: a module (`module_id`), or the review path of an
+    objective (`review_objective_id`), which a student opens when the mastery check marks that
+    objective "not yet" (FR-7.5, ID document §7.6).
 
     `kind` says what the step is: a narrated `video` (the Video row points here by `segment_id`,
     because videos are made by staff in the app, not in fixtures), Markdown `text`, a
@@ -49,10 +69,16 @@ class Segment(Base):
     """
 
     __tablename__ = "segments"
+    __table_args__ = (
+        CheckConstraint(
+            "(module_id IS NULL) <> (review_objective_id IS NULL)", name="ck_segments_one_home"
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    module_id: Mapped[int] = mapped_column(ForeignKey("modules.id"), index=True)
-    # Its place in the module. The seed numbers segments in fixture order, so no two collide.
+    module_id: Mapped[int | None] = mapped_column(ForeignKey("modules.id"), index=True)
+    review_objective_id: Mapped[int | None] = mapped_column(ForeignKey("objectives.id"), index=True)
+    # Its place in the module or review path. The seed numbers segments in fixture order.
     position: Mapped[int] = mapped_column()
     kind: Mapped[str] = mapped_column(String(32))
     title: Mapped[str] = mapped_column(String(200))
@@ -60,3 +86,25 @@ class Segment(Base):
     activity_id: Mapped[int | None] = mapped_column(ForeignKey("activities.id"))
     skip_check_activity_id: Mapped[int | None] = mapped_column(ForeignKey("activities.id"))
     refresher_for: Mapped[str | None] = mapped_column(String(100))
+
+
+class ObjectiveResult(Base):
+    """A student's result on one objective (FR-7.2): `not_attempted`, `met_independently`,
+    `met_with_support` or `not_yet`.
+
+    Derived, never set by a client: app/services/mastery.py works it out from the student's
+    attempts and rewrites this row after each mastery attempt and on every seed, so a changed rule
+    is applied to everyone (FR-7.6). `evidence` is the ids of the attempts it was decided from.
+    """
+
+    __tablename__ = "objective_results"
+    __table_args__ = (UniqueConstraint("user_id", "objective_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    objective_id: Mapped[int] = mapped_column(ForeignKey("objectives.id"))
+    state: Mapped[str] = mapped_column(String(20))
+    evidence: Mapped[list[int]] = mapped_column(JSON)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )

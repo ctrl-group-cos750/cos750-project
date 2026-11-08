@@ -24,6 +24,7 @@ def objective(id: int = 1, **overrides: Any) -> dict[str, Any]:
         "text": f"Objective {id}",
         "bloom_level": "Understand",
         "criterion": "At least 4 of 5 items correct.",
+        "pass_fraction": 0.8,
         **overrides,
     }
 

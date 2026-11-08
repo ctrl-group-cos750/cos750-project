@@ -1,6 +1,6 @@
 import { Link } from 'react-router'
 import { Alert, Markdown } from '../../components'
-import type { Segment, SegmentKind } from './module.types.ts'
+import type { Segment } from './module.types.ts'
 
 export type SegmentViewProps = {
   segment: Segment
@@ -8,9 +8,7 @@ export type SegmentViewProps = {
 
 /** Dispatches on segment.kind and renders the appropriate view. */
 export function SegmentView({ segment }: SegmentViewProps) {
-  const kind: SegmentKind = segment.kind
-
-  switch (kind) {
+  switch (segment.kind) {
     case 'text':
     case 'worked_example':
     case 'refresher':
@@ -51,8 +49,8 @@ export function SegmentView({ segment }: SegmentViewProps) {
       )
 
     default: {
-      // exhaustiveness check
-      const exhaustiveCheck: never = kind
+      // exhaustiveness check — segment.kind narrows to never here
+      const exhaustiveCheck: never = segment.kind
       return <Alert tone="warning">Unknown segment kind: {String(exhaustiveCheck)}</Alert>
     }
   }

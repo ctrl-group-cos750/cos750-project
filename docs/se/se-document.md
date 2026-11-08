@@ -886,7 +886,7 @@ cos750-project/
 │  │  ├─ rate_limit.py          per-client limits on login and registration
 │  │  ├─ services/              content, checking (one checker per activity kind), mastery, points (planned)
 │  │  ├─ bfs/engine.py          BfsEngine: pure, tested in isolation (planned)
-│  │  └─ seed/                  modules, activities, hints, tests, scenarios, demo accounts (planned)
+│  │  └─ seed/                  modules, activities, hints, tests, scenarios, demo accounts
 │  └─ tests/
 ├─ web/
 │  ├─ Dockerfile                Vite build, then nginx

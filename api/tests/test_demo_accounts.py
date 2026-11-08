@@ -14,7 +14,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
 from app.db import Base
-from app.models import Activity, Attempt, HintView, User
+from app.models import Activity, Attempt, HintView, ModuleProgress, User
 from app.schemas.activities import ActivityKind
 from app.seed import FIXTURES, load
 from app.seed.demo_accounts import (
@@ -28,6 +28,7 @@ from app.seed.demo_accounts import (
 from app.services.checking import check_activity
 from app.services.history import history_tables
 from app.services.mastery import evaluate, is_ready
+from app.services.modules import get_modules_for_user
 
 PASSWORD = "Demo pass 2026!"  # noqa: S105 (test only)
 API_DIR = Path(__file__).resolve().parent.parent
@@ -142,6 +143,127 @@ def test_the_accounts_survive_content_that_changes_its_ids(tmp_path: Path) -> No
         assert report(session, "ready@demo.example.com") == (True, [])
 
 
+# --- Module progress (#121) ---------------------------------------------------------------------
+
+
+def statuses(session: Session, email: str) -> dict[int, str]:
+    """The account's module map: each module's status, as GET /api/modules gives it."""
+    user = session.scalars(select(User).where(User.email == email)).one()
+    return {m.id: m.status for m in get_modules_for_user(session, user.id)}
+
+
+def full_course(folder: Path) -> Path:
+    """The committed content, with one placeholder segment in every module that has none yet, as
+    the course will be once modules 1, 2, 4 and 5 arrive (#83 to #86)."""
+    for f in FIXTURES.glob("*.json"):
+        shutil.copy(f, folder)
+    for f in folder.glob("module-*.json"):
+        data = json.loads(f.read_text())
+        for m in data["modules"]:
+            if not m["segments"]:
+                m["segments"] = [
+                    {"id": m["id"] * 100 + 99, "kind": "text", "title": "Coming", "body": "Soon."}
+                ]
+        f.write_text(json.dumps(data))
+    return folder
+
+
+def test_on_the_committed_content_progress_goes_as_far_as_the_course_allows(db: Session) -> None:
+    # Module 1 has no segments yet, so nobody can complete it. The accounts still load, complete
+    # module 0, and the seed says where each one stopped instead of failing.
+    load(db)
+    notes: list[str] = []
+    load_demo_accounts(db, PASSWORD, notes=notes)
+    assert statuses(db, "new@demo.example.com")[0] == "open"
+    for account_ in read_demo_accounts():
+        if not account_.progress:
+            continue
+        shown = statuses(db, account_.email)
+        assert shown[0] == "complete"
+        if not any(n.startswith(account_.email) for n in notes):
+            # It didn't stop short, so every module it means to finish is complete.
+            for entry in account_.progress:
+                if entry.through == "end":
+                    assert shown[entry.module] == "complete", (account_.email, entry.module)
+
+
+def test_once_every_module_has_segments_each_map_matches_its_stage(tmp_path: Path) -> None:
+    fresh = create_engine("sqlite://")
+    Base.metadata.create_all(fresh)
+    with Session(fresh) as session:
+        load(session, full_course(tmp_path))
+        notes: list[str] = []
+        load_demo_accounts(session, PASSWORD, notes=notes)
+        assert notes == []
+        assert statuses(session, "new@demo.example.com") == {
+            0: "open",
+            1: "locked",
+            2: "locked",
+            3: "locked",
+            4: "locked",
+            5: "locked",
+            6: "locked",
+        }
+        assert statuses(session, "mid@demo.example.com") == {
+            0: "complete",
+            1: "complete",
+            2: "complete",
+            3: "in_progress",
+            4: "locked",
+            5: "locked",
+            6: "locked",
+        }
+        for key in ("not-yet", "ready"):
+            assert set(statuses(session, f"{key}@demo.example.com").values()) == {"complete"}
+        mid = session.scalars(select(User).where(User.email == "mid@demo.example.com")).one()
+        module_3 = session.scalars(
+            select(ModuleProgress).where(
+                ModuleProgress.user_id == mid.id, ModuleProgress.module_id == 3
+            )
+        ).one()
+        assert module_3.current_segment_position == 3  # the fourth segment, 0-based
+
+
+def test_the_mid_account_can_open_module_3_through_the_api(
+    tmp_path: Path, db: Session, client: TestClient
+) -> None:
+    load(db, full_course(tmp_path))
+    load_demo_accounts(db, PASSWORD)
+    log_in(client, "mid@demo.example.com")
+    module = client.get("/api/modules/3")
+    assert module.status_code == 200
+    assert module.json()["status"] == "in_progress"
+    assert client.get("/api/modules/4").status_code == 403  # still locked
+
+
+def test_a_rerun_rebuilds_progress_instead_of_adding_to_it(tmp_path: Path, db: Session) -> None:
+    load(db, full_course(tmp_path))
+    load_demo_accounts(db, PASSWORD)
+    load_demo_accounts(db, PASSWORD)
+    mid = db.scalars(select(User).where(User.email == "mid@demo.example.com")).one()
+    rows = db.scalars(select(ModuleProgress).where(ModuleProgress.user_id == mid.id)).all()
+    assert sorted(r.module_id for r in rows) == [0, 1, 2, 3]
+
+
+@pytest.mark.parametrize(
+    ("progress", "problem"),
+    [
+        ([{"module": 3, "through": 99}], "meant to stop partway, at segment 99"),
+        ([{"module": 42}], "no such module"),
+    ],
+)
+def test_progress_that_does_not_fit_the_content_writes_nothing(
+    tmp_path: Path, db: Session, progress: list[dict[str, Any]], problem: str
+) -> None:
+    load(db, full_course(tmp_path))
+    accounts = write(
+        tmp_path, [account(progress=[{"module": 0}, {"module": 1}, {"module": 2}, *progress])]
+    )
+    with pytest.raises(ValueError, match=problem):
+        load_demo_accounts(db, PASSWORD, accounts)
+    assert db.scalars(select(User)).all() == []
+
+
 # --- Rules -------------------------------------------------------------------------------------
 
 
@@ -167,6 +289,8 @@ def test_a_weak_password_is_refused(tmp_path: Path, db: Session) -> None:
         ([account(steps=[{"module": 3, "answer": "maybe"}])], "answer"),
         ([account(steps=[{"module": 3, "answer": "right", "hints": 5}])], "hints"),
         ([account(steps=[{"activity": 301, "answer": "right"}])], "module"),
+        ([account(progress=[{"module": 3, "through": 0}])], "through"),
+        ([account(progress=[{"module": 3, "through": "half"}])], "through"),
     ],
 )
 def test_invalid_demo_files_are_refused(

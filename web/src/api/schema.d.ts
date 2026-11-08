@@ -264,6 +264,54 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/me/report': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get Report
+     * @description The logged-in student's mastery report: each objective's result, whether they are ready
+     *     for the lecture, and the review path's progress for each objective module 6 marked "not yet"
+     *     (FR-7.3 to FR-7.5).
+     *
+     *     Worked out from their attempts on every request (app/services/mastery.py), so it always follows
+     *     the current rules (FR-7.6). Nothing a client sends can set a result: they change only through
+     *     attempts. Only ever the student's own.
+     */
+    get: operations['get_report_api_me_report_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/me/review/{objective_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get Review Path
+     * @description The objective's review path: its steps in order, and which the student has answered
+     *     (FR-7.5). 404 if the objective has no path; 403 until module 6 marks it "not yet", so the
+     *     fresh items stay unseen until the student needs them.
+     */
+    get: operations['get_review_path_api_me_review__objective_id__get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/videos/{video_id}': {
     parameters: {
       query?: never
@@ -756,6 +804,17 @@ export interface components {
       password: string
     }
     /**
+     * MasteryReportOut
+     * @description The student's own mastery report. `ready` (for the lecture) is true when every objective is
+     *     met, with or without support (FR-7.4). Always shown, even when rewards are hidden (FR-9.5).
+     */
+    MasteryReportOut: {
+      /** Ready */
+      ready: boolean
+      /** Objectives */
+      objectives: components['schemas']['ObjectiveReportOut'][]
+    }
+    /**
      * MediaOut
      * @description Where the upload is served from. Put it in a video's `mediaPath` or `captionsPath`.
      */
@@ -764,6 +823,30 @@ export interface components {
       path: string
       /** Bytes */
       bytes: number
+    }
+    /**
+     * ObjectiveReportOut
+     * @description One objective on the mastery report (FR-7.2, FR-7.3). `answered` of `total` is how many of
+     *     its module 6 items the student has answered; the result stays `not_attempted` until all are.
+     *     `review` is there once module 6 marks it "not yet", which opens its review path.
+     */
+    ObjectiveReportOut: {
+      /** Id */
+      id: number
+      /** Text */
+      text: string
+      /** Criterion */
+      criterion: string
+      /**
+       * State
+       * @enum {string}
+       */
+      state: 'not_attempted' | 'met_independently' | 'met_with_support' | 'not_yet'
+      /** Answered */
+      answered: number
+      /** Total */
+      total: number
+      review: components['schemas']['ReviewProgressOut'] | null
     }
     /**
      * PartResult
@@ -789,6 +872,62 @@ export interface components {
       displayName: string
       /** Password */
       password: string
+    }
+    /**
+     * ReviewPathOut
+     * @description An objective's review path for the logged-in student (FR-7.5, ID document §7.6).
+     */
+    ReviewPathOut: {
+      /** Objectiveid */
+      objectiveId: number
+      /** Objectivetext */
+      objectiveText: string
+      /** Criterion */
+      criterion: string
+      /**
+       * State
+       * @enum {string}
+       */
+      state: 'not_attempted' | 'met_independently' | 'met_with_support' | 'not_yet'
+      progress: components['schemas']['ReviewProgressOut']
+      /** Steps */
+      steps: components['schemas']['ReviewStepOut'][]
+    }
+    /**
+     * ReviewProgressOut
+     * @description How far the student is through an open review path's fresh items (FR-7.5). Once all are
+     *     answered they decide the objective's result, so `answered == total` means the path is done.
+     */
+    ReviewProgressOut: {
+      /** Answered */
+      answered: number
+      /** Total */
+      total: number
+    }
+    /**
+     * ReviewStepOut
+     * @description One step of a review path, in order. An activity step names its activity and its purpose:
+     *     `review` is practice with the full hint ladder, `mastery` a fresh item that decides the
+     *     result. `answered` is whether the student has submitted an answer to it.
+     */
+    ReviewStepOut: {
+      /** Id */
+      id: number
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: 'video' | 'text' | 'worked_example' | 'activity' | 'refresher'
+      /** Title */
+      title: string
+      /** Body */
+      body: string
+      /** Activityid */
+      activityId: number | null
+      /** Purpose */
+      purpose: ('review' | 'mastery') | null
+      /** Answered */
+      answered: boolean
     }
     /**
      * RewardsOut
@@ -1396,6 +1535,70 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['RewardsOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  get_report_api_me_report_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['MasteryReportOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  get_review_path_api_me_review__objective_id__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        objective_id: number
+      }
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ReviewPathOut']
         }
       }
       /** @description Validation Error */

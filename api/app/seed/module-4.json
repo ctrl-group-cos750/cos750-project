@@ -1,0 +1,15 @@
+{
+  "modules": [
+    {
+      "id": 4,
+      "slug": "build-bfs",
+      "title": "Build BFS",
+      "estimated_minutes": 15,
+      "goals": [
+        "Put the lines of BFS in order.",
+        "Fill in the missing parts of BFS so it gives the expected order."
+      ],
+      "segments": []
+    }
+  ]
+}

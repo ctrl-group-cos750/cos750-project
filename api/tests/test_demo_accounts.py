@@ -14,7 +14,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
 from app.db import Base
-from app.models import Activity, Attempt, HintView, ModuleProgress, User
+from app.models import Activity, Attempt, HintView, ModuleProgress, Segment, User
 from app.schemas.activities import ActivityKind
 from app.seed import FIXTURES, load
 from app.seed.demo_accounts import (
@@ -168,23 +168,24 @@ def full_course(folder: Path) -> Path:
     return folder
 
 
-def test_on_the_committed_content_progress_goes_as_far_as_the_course_allows(db: Session) -> None:
-    # Module 1 has no segments yet, so nobody can complete it. The accounts still load, complete
-    # module 0, and the seed says where each one stopped instead of failing.
+def test_on_the_committed_content_each_map_matches_its_stage(db: Session) -> None:
+    # Modules 1, 2, 4 and 5 have no segments yet. They don't lock the modules after them (FR-2.1),
+    # so every account walks all the way, and nothing stops short.
     load(db)
     notes: list[str] = []
     load_demo_accounts(db, PASSWORD, notes=notes)
+    assert notes == []
+    with_content = {s.module_id for s in db.scalars(select(Segment)) if s.module_id is not None}
     assert statuses(db, "new@demo.example.com")[0] == "open"
     for account_ in read_demo_accounts():
-        if not account_.progress:
-            continue
         shown = statuses(db, account_.email)
-        assert shown[0] == "complete"
-        if not any(n.startswith(account_.email) for n in notes):
-            # It didn't stop short, so every module it means to finish is complete.
-            for entry in account_.progress:
-                if entry.through == "end":
-                    assert shown[entry.module] == "complete", (account_.email, entry.module)
+        for entry in account_.progress:
+            if entry.module not in with_content:
+                assert shown[entry.module] == "open", (account_.email, entry.module)
+            elif entry.through == "end":
+                assert shown[entry.module] == "complete", (account_.email, entry.module)
+            else:
+                assert shown[entry.module] == "in_progress", (account_.email, entry.module)
 
 
 def test_once_every_module_has_segments_each_map_matches_its_stage(tmp_path: Path) -> None:
@@ -403,3 +404,18 @@ def test_a_demo_account_problem_never_stops_the_seed(tmp_path: Path) -> None:
     assert run.returncode == 0, run.stderr
     assert "demo accounts NOT rebuilt" in run.stdout
     assert "DEMO_PASSWORD" in run.stdout
+
+
+def test_progress_into_a_module_still_locked_stops_there_and_says_so(
+    tmp_path: Path, db: Session
+) -> None:
+    # Module 3 straight away, without module 0 first: module 3 is still locked, as for a student.
+    load(db)
+    notes: list[str] = []
+    path = write(tmp_path, [account(progress=[{"module": 3}])])
+    load_demo_accounts(db, PASSWORD, path, notes=notes)
+    assert notes == [
+        "mid@demo.example.com: stopped at module 3, which is still locked because the module "
+        "before it isn't complete"
+    ]
+    assert statuses(db, "mid@demo.example.com")[3] == "locked"

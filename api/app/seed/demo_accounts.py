@@ -11,8 +11,9 @@ never breaks an account, and every result is the one the real mastery rules work
 `progress` says how far the account got through each module. The seed walks it through the module
 service (app/services/modules.py) one segment at a time, as a student would, so the module map
 shows the same stage as the answers. "end" means the whole module, however many segments it has.
-A module that can't be completed yet (one with no segments) stops the walk there, and the seed
-says so, rather than failing: the account goes as far as the course allows.
+A module with no segments yet is passed over, as it is for a student (FR-2.1). If a module is
+still locked when the walk reaches it, the walk stops there and the seed says so, rather than
+failing: the account goes as far as the course allows.
 
 `expect` says what the account must end up as (ready for the lecture or not, and which objectives
 are "not yet"). If content changes so that the steps no longer produce it, the load fails, naming
@@ -208,10 +209,8 @@ def _walk(session: Session, user_id: int, account: DemoAccount) -> str | None:
             session.scalars(select(Segment.id).where(Segment.module_id == entry.module)).all()
         )
         if count == 0:
-            return (
-                f"{account.email}: stopped at module {entry.module}, which has no segments yet, "
-                "so it can't be completed and the modules after it stay locked"
-            )
+            # No content yet: nothing to walk, and it doesn't lock the modules after it (FR-2.1).
+            continue
         if entry.through == "end":
             last = count - 1
         elif entry.through >= count:

@@ -49,3 +49,4 @@ class UserOut(ApiModel):
     email: str
     display_name: str
     is_staff: bool
+    avatar: str | None = None  # an id from AVATARS (app/schemas/profile.py), or none chosen

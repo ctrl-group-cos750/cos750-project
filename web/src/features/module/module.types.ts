@@ -8,10 +8,12 @@ export type ModuleSummary = {
   number: number
   slug: string
   title: string
-  goals: string
+  /** "By the end of this module you can …": one sentence per goal (FR-2.3). */
+  goals: string[]
   estimatedMinutes: number
   status: ModuleStatus
   segmentCount: number
+  /** The furthest segment the student has reached, 0-based: where the module resumes. */
   currentSegmentPosition: number
 }
 

@@ -49,7 +49,7 @@ export function GuestOnly({ children }: { children: ReactNode }) {
   return children
 }
 
-/** Staff pages (the video editor). Inside RequireAuth; a student gets a plain refusal. */
+/** The staff portal (/staff and everything under it). Inside RequireAuth; a student gets a plain refusal. */
 export function RequireStaff({ children }: { children: ReactNode }) {
   const { data: user } = useCurrentUser()
   if (!user?.isStaff) {

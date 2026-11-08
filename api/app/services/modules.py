@@ -1,249 +1,149 @@
-"""Service functions for the module map and per-module progress (SE document §9, FR-2).
+"""The module map and each student's progress through the modules (SE document §9, FR-2).
 
-All functions take a SQLAlchemy ``Session`` and a ``user_id`` int — no FastAPI imports.
-The router is responsible for calling ``session.commit()`` after any write (repo convention:
-routers commit, services flush).
+The modules and their segments are content (app/models/content.py, loaded from the fixtures);
+`ModuleProgress` is the student's part. Functions take a session and the student's id, flush
+and never commit: the router commits.
 
-Status/unlock logic (FR-2.1):
-- Module 0 is always at least ``open``.
-- A module whose ``ModuleProgress.status`` is ``complete`` → ``complete``.
-- A module whose ``ModuleProgress.status`` is ``in_progress`` → ``in_progress``.
-- A module with no progress row: ``open`` if it is module 0 OR the previous module (by number)
-  is ``complete``; otherwise ``locked``.
+Unlocking (FR-2.1): the first module (by `position`) is always open. Any other module opens when
+the one before it is complete, and stays as it is once the student has started it.
 
-Custom exceptions:
-- ``ModuleNotFound``  — raised when a module_id does not exist; router translates to 404.
-- ``ModuleLocked``    — raised when a module's computed status is ``locked``; router → 403.
+Progress (FR-2.5, FR-2.6): the student moves through a module one segment at a time. The
+furthest segment reached is kept, so stepping back to reread never loses progress, and reaching
+the last segment completes the module for good.
 """
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Module, ModuleProgress, Segment
+from app.models import Module, ModuleProgress, Segment, Video
 from app.schemas.modules import ModuleDetailOut, ModuleOut, ModuleStatus, SegmentOut
-
-# ---------------------------------------------------------------------------
-# Domain errors (no FastAPI imports — router translates these to HTTP errors)
-# ---------------------------------------------------------------------------
 
 
 class ModuleNotFound(ValueError):
-    """The requested module_id does not exist in the database."""
+    """No module has this id."""
 
 
 class ModuleLocked(ValueError):
-    """The requested module's computed status is 'locked' for this student."""
+    """The module before this one isn't complete yet."""
 
 
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
+class PositionTooFar(ValueError):
+    """The position is more than one segment past the furthest the student has reached."""
 
 
-def _segment_count(session: Session, module_id: int) -> int:
-    """Count segments belonging to *module_id*."""
-    result = session.scalar(select(func.count()).where(Segment.module_id == module_id))
-    return result or 0
+def _modules(session: Session) -> Sequence[Module]:
+    return session.scalars(select(Module).order_by(Module.position)).all()
 
 
-def _compute_status(
-    progress: ModuleProgress | None,
-    module_number: int,
-    prev_complete: bool,
-) -> ModuleStatus:
-    """Compute the student-facing status for one module.
-
-    Args:
-        progress:      The ``ModuleProgress`` row for this user+module, or ``None``.
-        module_number: The module's ``number`` field (0-based).
-        prev_complete: Whether the immediately previous module (number - 1) is complete.
-
-    Returns:
-        One of ``"locked" | "open" | "in_progress" | "complete"``.
-    """
-    if progress is not None:
-        # Trust whatever the progress row says — save_position sets it authoritatively.
-        status: str = progress.status
-        if status in ("complete", "in_progress", "open"):
-            return status  # type: ignore[return-value]
-    # No progress row (or an unknown status value) — derive from unlock rules (FR-2.1).
-    if module_number == 0 or prev_complete:
-        return "open"
-    return "locked"
+def _progress(session: Session, user_id: int) -> dict[int, ModuleProgress]:
+    rows = session.scalars(select(ModuleProgress).where(ModuleProgress.user_id == user_id))
+    return {row.module_id: row for row in rows}
 
 
-def _prev_module_complete(
-    all_progress: dict[int, ModuleProgress],
-    module_number: int,
-    number_to_module_id: dict[int, int],
-) -> bool:
-    """Return True when module (module_number - 1) has status 'complete'.
-
-    Args:
-        all_progress:        Map of ``module_id → ModuleProgress`` for this user.
-        module_number:       The module whose predecessor we are checking.
-        number_to_module_id: Map of ``module.number → module.id``.
-    """
-    if module_number == 0:
-        return False
-    prev_id = number_to_module_id.get(module_number - 1)
-    if prev_id is None:
-        return False
-    prev = all_progress.get(prev_id)
-    return prev is not None and prev.status == "complete"
-
-
-def _is_prev_complete_for_user(session: Session, module: Module, user_id: int) -> bool:
-    """Query whether the previous module (by number) is complete for the given user.
-
-    Used by ``get_module_detail`` and ``save_position`` when they need to evaluate
-    one specific module's unlock status (not the full list).
-    """
-    if module.number == 0:
-        return False
-    prev_module = session.scalar(select(Module).where(Module.number == module.number - 1))
-    if prev_module is None:
-        return False
-    prev_prog = session.scalar(
-        select(ModuleProgress).where(
-            ModuleProgress.user_id == user_id,
-            ModuleProgress.module_id == prev_module.id,
-        )
-    )
-    return prev_prog is not None and prev_prog.status == "complete"
-
-
-# ---------------------------------------------------------------------------
-# Public service functions
-# ---------------------------------------------------------------------------
-
-
-def get_modules_for_user(session: Session, user_id: int) -> list[ModuleOut]:
-    """Return all modules ordered by ``position``, each with the student's computed status.
-
-    Queries:
-    1. All modules ordered by position.
-    2. All ModuleProgress rows for this user (one round-trip, then resolved in Python).
-    3. Segment counts per module (aggregated in one query).
-
-    Args:
-        session: SQLAlchemy session (no commit performed here).
-        user_id: The authenticated student's id (NFR-S2, FR-1.3).
-
-    Returns:
-        A list of ``ModuleOut`` Pydantic objects, ordered by ``Module.position``.
-    """
-    modules = session.scalars(select(Module).order_by(Module.position)).all()
-
-    # Bulk-fetch all progress rows for this user in one query.
-    progress_rows = session.scalars(
-        select(ModuleProgress).where(ModuleProgress.user_id == user_id)
-    ).all()
-    progress_by_module: dict[int, ModuleProgress] = {row.module_id: row for row in progress_rows}
-
-    # Segment counts per module in one aggregated query.
-    count_rows = session.execute(
-        select(Segment.module_id, func.count().label("cnt"))
-        .where(Segment.module_id.in_([m.id for m in modules]))
-        .group_by(Segment.module_id)
-    ).all()
-    segment_counts: dict[int, int] = {row.module_id: row.cnt for row in count_rows}
-
-    # Build a number → module_id lookup for the unlock rule.
-    number_to_id: dict[int, int] = {m.number: m.id for m in modules}
-
-    result: list[ModuleOut] = []
-    for module in modules:
-        prog = progress_by_module.get(module.id)
-        prev_done = _prev_module_complete(progress_by_module, module.number, number_to_id)
-        status = _compute_status(prog, module.number, prev_done)
-        result.append(
-            ModuleOut(
-                id=module.id,
-                number=module.number,
-                slug=module.slug,
-                title=module.title,
-                goals=module.goals,
-                estimated_minutes=module.estimated_minutes,
-                status=status,
-                segment_count=segment_counts.get(module.id, 0),
-                current_segment_position=prog.current_segment_position if prog else 0,
-            )
-        )
-    return result
-
-
-def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleDetailOut:
-    """Return a single module with its ordered segments and the student's computed status.
-
-    Args:
-        session:   SQLAlchemy session (no commit performed here).
-        user_id:   The authenticated student's id (NFR-S2, FR-1.3).
-        module_id: The surrogate id of the module to fetch.
-
-    Raises:
-        ModuleNotFound: The module does not exist.
-        ModuleLocked:   The module's computed status is 'locked' for this student.
-
-    Returns:
-        A ``ModuleDetailOut`` Pydantic object with ``segments`` in position order.
-    """
-    module = session.get(Module, module_id)
-    if module is None:
-        raise ModuleNotFound(f"Module {module_id} not found.")
-
-    # Fetch this user's progress row for this module (scoped to user_id — NFR-S2).
-    prog = session.scalar(
-        select(ModuleProgress).where(
-            ModuleProgress.user_id == user_id,
-            ModuleProgress.module_id == module_id,
-        )
-    )
-
-    prev_done = _is_prev_complete_for_user(session, module, user_id)
-    status = _compute_status(prog, module.number, prev_done)
-
-    if status == "locked":
-        raise ModuleLocked(f"Module {module_id} is locked for user {user_id}.")
-
-    # Segments in position order.
-    # TODO (FR-8.1): The SE §9 contract says GET /api/modules/{moduleId} leaves out refresher
-    # segments that the diagnostic has ruled out. The diagnostic module is out of scope for this
-    # story and no refresher segments are seeded yet. All segments (including refreshers) are
-    # returned here for now. When FR-8.1 is implemented, replace this query with one that
-    # filters out 'refresher' segments where the diagnostic has ruled the student out — but a
-    # refresher with no diagnostic rule should still be shown.
-    segments = session.scalars(
+def _segments(session: Session, module_id: int) -> Sequence[Segment]:
+    return session.scalars(
         select(Segment).where(Segment.module_id == module_id).order_by(Segment.position)
     ).all()
 
-    segment_count = len(segments)
 
-    return ModuleDetailOut(
+def _statuses(
+    modules: Sequence[Module], progress: dict[int, ModuleProgress]
+) -> dict[int, ModuleStatus]:
+    """Each module's status for one student, in map order (FR-2.1)."""
+    statuses: dict[int, ModuleStatus] = {}
+    previous_complete = True  # nothing comes before the first module
+    for module in modules:
+        row = progress.get(module.id)
+        if row is not None and row.status == "complete":
+            status: ModuleStatus = "complete"
+        elif row is not None:
+            status = "in_progress"
+        else:
+            status = "open" if previous_complete else "locked"
+        statuses[module.id] = status
+        previous_complete = status == "complete"
+    return statuses
+
+
+def _status(session: Session, user_id: int, module_id: int) -> ModuleStatus:
+    modules = _modules(session)
+    if not any(module.id == module_id for module in modules):
+        raise ModuleNotFound(module_id)
+    return _statuses(modules, _progress(session, user_id))[module_id]
+
+
+def _summary(
+    module: Module, status: ModuleStatus, segment_count: int, row: ModuleProgress | None
+) -> ModuleOut:
+    return ModuleOut(
         id=module.id,
-        number=module.number,
+        number=module.id,
         slug=module.slug,
         title=module.title,
         goals=module.goals,
         estimated_minutes=module.estimated_minutes,
         status=status,
         segment_count=segment_count,
-        current_segment_position=prog.current_segment_position if prog else 0,
+        current_segment_position=row.current_segment_position if row else 0,
+    )
+
+
+def get_modules_for_user(session: Session, user_id: int) -> list[ModuleOut]:
+    """Every module in map order, with this student's status and progress."""
+    modules = _modules(session)
+    progress = _progress(session, user_id)
+    statuses = _statuses(modules, progress)
+    counts: dict[int, int] = {}
+    for module_id in session.scalars(
+        select(Segment.module_id).where(Segment.module_id.isnot(None))
+    ):
+        if module_id is not None:
+            counts[module_id] = counts.get(module_id, 0) + 1
+    return [
+        _summary(module, statuses[module.id], counts.get(module.id, 0), progress.get(module.id))
+        for module in modules
+    ]
+
+
+def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleDetailOut:
+    """One module with its segments in order. Raises `ModuleNotFound` or `ModuleLocked`."""
+    status = _status(session, user_id, module_id)
+    if status == "locked":
+        raise ModuleLocked(module_id)
+    module = session.get_one(Module, module_id)
+    row = session.scalar(
+        select(ModuleProgress).where(
+            ModuleProgress.user_id == user_id, ModuleProgress.module_id == module_id
+        )
+    )
+    segments = _segments(session, module_id)
+    # A video segment's video points at it (Video.segment_id): videos are made in the app.
+    videos = {
+        video.segment_id: video.id
+        for video in session.scalars(
+            select(Video).where(Video.segment_id.in_([segment.id for segment in segments]))
+        )
+    }
+    # TODO (FR-8.1): leave out the refreshers module 0's diagnostic has ruled out, once the
+    # diagnostic records its result. Until then every refresher is shown.
+    return ModuleDetailOut(
+        **_summary(module, status, len(segments), row).model_dump(),
         segments=[
             SegmentOut(
-                id=seg.id,
-                position=seg.position,
-                kind=seg.kind,  # type: ignore[arg-type]
-                title=seg.title,
-                body=seg.body,
-                video_id=seg.video_id,
-                activity_id=seg.activity_id,
+                id=segment.id,
+                position=index,
+                kind=segment.kind,  # type: ignore[arg-type]
+                title=segment.title,
+                body=segment.body or None,
+                video_id=videos.get(segment.id),
+                activity_id=segment.activity_id,
             )
-            for seg in segments
+            for index, segment in enumerate(segments)
         ],
     )
 
@@ -251,78 +151,33 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
 def save_position(
     session: Session, user_id: int, module_id: int, segment_position: int
 ) -> ModuleProgress:
-    """Upsert the student's current segment position and update the module status.
+    """Record that the student reached `segment_position` (0-based) in this module.
 
-    Creates or updates the ``ModuleProgress`` row (honouring the
-    ``UniqueConstraint(user_id, module_id)``).
-
-    Status transitions:
-    - Sets ``status = 'in_progress'`` unless the student has reached or passed the last
-      segment index (``segment_position >= segment_count - 1``), in which case
-      ``status = 'complete'`` and ``completed_at`` is recorded.
-
-    Does NOT call ``session.commit()``; the router is responsible for committing
-    (repo convention).
-
-    Args:
-        session:          SQLAlchemy session.
-        user_id:          The authenticated student's id (NFR-S2, FR-1.3).
-        module_id:        The surrogate id of the module.
-        segment_position: Zero-based position of the segment the student just reached.
-
-    Raises:
-        ModuleNotFound: The module does not exist.
-        ModuleLocked:   The module is locked for this student.
-
-    Returns:
-        The created or updated ``ModuleProgress`` ORM object (not yet committed).
+    The furthest position reached is kept: stepping back is allowed and changes nothing. Moving
+    more than one segment past the furthest raises `PositionTooFar`. Reaching the last segment
+    completes the module, and a complete module stays complete (FR-2.6). Raises `ModuleNotFound`
+    or `ModuleLocked` like `get_module_detail`.
     """
-    module = session.get(Module, module_id)
-    if module is None:
-        raise ModuleNotFound(f"Module {module_id} not found.")
-
-    # Fetch existing progress row (scoped to user_id — NFR-S2).
-    prog = session.scalar(
-        select(ModuleProgress).where(
-            ModuleProgress.user_id == user_id,
-            ModuleProgress.module_id == module_id,
-        )
+    status = _status(session, user_id, module_id)
+    if status == "locked":
+        raise ModuleLocked(module_id)
+    last = len(_segments(session, module_id)) - 1
+    if last < 0:
+        raise PositionTooFar(module_id)  # nothing to move through yet
+    row = session.scalar(
+        select(ModuleProgress)
+        .where(ModuleProgress.user_id == user_id, ModuleProgress.module_id == module_id)
+        .with_for_update()
     )
-
-    # Determine whether this module is unlocked for the student.
-    prev_done = _is_prev_complete_for_user(session, module, user_id)
-    current_status = _compute_status(prog, module.number, prev_done)
-    if current_status == "locked":
-        raise ModuleLocked(f"Module {module_id} is locked for user {user_id}.")
-
-    # How many segments does this module have?
-    segment_count = _segment_count(session, module_id)
-    last_index = max(segment_count - 1, 0)
-
-    # Determine new status and whether to record completion.
-    # TODO (future activity story): Gate completion on required activities being passed.
-    #   Replace the line below with a check that all required activities on this module's
-    #   segments are correctly answered before setting status='complete'. See approved decision 3.
-    is_complete = segment_count > 0 and segment_position >= last_index
-
-    if prog is None:
-        # Create a new progress row.
-        prog = ModuleProgress(
-            user_id=user_id,
-            module_id=module_id,
-            current_segment_position=segment_position,
-            status="complete" if is_complete else "in_progress",
-            completed_at=datetime.now(tz=UTC) if is_complete else None,
-        )
-        session.add(prog)
-    else:
-        # Update the existing row in-place.
-        prog.current_segment_position = segment_position
-        prog.status = "complete" if is_complete else "in_progress"
-        if is_complete and prog.completed_at is None:
-            # Record the first time the module was completed; do not overwrite a prior timestamp.
-            prog.completed_at = datetime.now(tz=UTC)
-
-    # Flush so the caller's session reflects the change; router commits.
+    reached = row.current_segment_position if row else 0
+    if segment_position > min(reached + 1, last):
+        raise PositionTooFar(module_id)
+    if row is None:
+        row = ModuleProgress(user_id=user_id, module_id=module_id, status="in_progress")
+        session.add(row)
+    row.current_segment_position = max(reached, segment_position)
+    if row.current_segment_position == last and row.status != "complete":
+        row.status = "complete"
+        row.completed_at = datetime.now(tz=UTC)
     session.flush()
-    return prog
+    return row

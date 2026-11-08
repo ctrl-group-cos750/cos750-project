@@ -8,27 +8,19 @@ class Video(Base):
     """A narrated screen recording (SE document §8, FR-3). The MP4 and captions are static files
     under /media/, served by the web container; the API only knows their paths.
 
-    `segment_id` links the video back to the Segment that plays it (SE §8 ER diagram,
-    `SEGMENT |o--o| VIDEO`). Segment also carries `video_id` in the other direction (decision 1,
-    approved) so the module page can load content in one query.
+    `segment_id` places the video in a module: it points at the `video` segment that plays it
+    (§8). Staff make videos in the app, so a new video has no segment until one is chosen.
     """
 
     __tablename__ = "videos"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    segment_id: Mapped[int | None] = mapped_column(ForeignKey("segments.id"), unique=True)
     title: Mapped[str] = mapped_column(String(200))
     media_path: Mapped[str] = mapped_column(String(300))
     captions_path: Mapped[str] = mapped_column(String(300))
     transcript: Mapped[str] = mapped_column(Text)  # Markdown: the text version of the video
     duration_seconds: Mapped[int] = mapped_column()
-    # The segment this video belongs to; nullable so existing videos remain valid before segments
-    # are seeded (SE §8, backward-compatible addition).
-    # use_alter=True tells SQLAlchemy to emit this FK as ALTER TABLE (deferred) rather than inline
-    # in CREATE TABLE, breaking the segments <-> videos circular dependency for autogenerate.
-    segment_id: Mapped[int | None] = mapped_column(
-        ForeignKey("segments.id", use_alter=True, name="fk_videos_segment_id_segments"),
-        nullable=True,
-    )
 
 
 class Checkpoint(Base):

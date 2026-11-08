@@ -44,7 +44,16 @@ export function SegmentView({ segment }: SegmentViewProps) {
       return (
         <section aria-label={segment.title} className="grid gap-4">
           <h2 className="text-xl font-semibold">{segment.title}</h2>
-          <Alert tone="info">Activity — coming in a future story.</Alert>
+          {segment.activityId !== null ? (
+            <Link
+              to={`/activities/${segment.activityId}`}
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-3 font-medium hover:bg-accent"
+            >
+              Start the activity
+            </Link>
+          ) : (
+            <Alert tone="warning">Activity not available.</Alert>
+          )}
         </section>
       )
 

@@ -13,7 +13,7 @@ unlock chain and the completion logic while keeping the setup minimal.
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.models import Module, Segment
+from app.models import Module, Objective, Segment, Video
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -24,26 +24,21 @@ BOB = {"email": "bob@example.com", "password": "Correct horse 2", "displayName":
 
 
 def _make_modules(db: Session) -> tuple[int, int, int]:
-    """Insert 3 modules (numbers 0-2), each with 2 segments.
+    """Insert 3 modules (ids 0-2: a module's id is its number), each with 2 segments.
 
     Returns the three module IDs in order.
     """
     m0 = Module(
-        number=0, slug="warm-up", title="Warm-up", goals="Goal 0.", estimated_minutes=5, position=0
+        id=0, slug="warm-up", title="Warm-up", goals=["Goal 0."], estimated_minutes=5, position=0
     )
     m1 = Module(
-        number=1,
-        slug="graphs",
-        title="Graphs",
-        goals="Goal 1.",
-        estimated_minutes=12,
-        position=1,
+        id=1, slug="graphs", title="Graphs", goals=["Goal 1."], estimated_minutes=12, position=1
     )
     m2 = Module(
-        number=2,
+        id=2,
         slug="python-graphs",
         title="A graph in Python",
-        goals="Goal 2.",
+        goals=["Goal 2."],
         estimated_minutes=10,
         position=2,
     )
@@ -139,7 +134,7 @@ def test_get_module_detail_returns_goals_and_ordered_segments(
     assert res.status_code == 200
     body = res.json()
 
-    assert body["goals"] == "Goal 0."
+    assert body["goals"] == ["Goal 0."]
     segs = body["segments"]
     assert len(segs) == 2
     # Segments come back in position order.
@@ -219,13 +214,72 @@ def test_reaching_last_segment_completes_the_module(client: TestClient, db: Sess
     assert res.json()["status"] == "complete"
 
 
-def test_exceeding_last_segment_position_still_completes(client: TestClient, db: Session) -> None:
-    """segmentPosition >= last_index should mark complete (>= not just ==)."""
+def test_jumping_ahead_is_refused_so_a_module_cant_be_finished_unread(
+    client: TestClient, db: Session
+) -> None:
+    """A position more than one past the furthest reached is 409, and nothing is saved."""
     m0_id, _, _ = _make_modules(db)
     _register_and_login(client, ALICE)
 
     res = client.post(f"/api/modules/{m0_id}/position", json={"segmentPosition": 5})
+    assert res.status_code == 409
+    assert client.get(f"/api/modules/{m0_id}").json()["status"] == "open"
+
+
+def test_going_back_keeps_the_furthest_position_and_the_completion(
+    client: TestClient, db: Session
+) -> None:
+    """Rereading an earlier segment of a finished module doesn't un-finish it, and doesn't
+    re-lock the next module the student hasn't started yet."""
+    m0_id, m1_id, _ = _make_modules(db)
+    _register_and_login(client, ALICE)
+    client.post(f"/api/modules/{m0_id}/position", json={"segmentPosition": 1})
+
+    res = client.post(f"/api/modules/{m0_id}/position", json={"segmentPosition": 0})
+    assert res.status_code == 200
     assert res.json()["status"] == "complete"
+    assert res.json()["currentSegmentPosition"] == 1
+    statuses = {m["id"]: m["status"] for m in client.get("/api/modules").json()}
+    assert statuses[m1_id] == "open"
+
+
+def test_a_review_segment_is_not_part_of_any_module(client: TestClient, db: Session) -> None:
+    """Segments of an objective's review path (#23) belong to no module."""
+    m0_id, _, _ = _make_modules(db)
+    db.add(Objective(id=1, text="o", bloom_level="b", criterion="c", pass_fraction=0.8))
+    db.flush()
+    db.add(Segment(review_objective_id=1, position=0, kind="text", title="Review", body="x"))
+    db.commit()
+    _register_and_login(client, ALICE)
+
+    assert len(client.get(f"/api/modules/{m0_id}").json()["segments"]) == 2
+    counts = {m["id"]: m["segmentCount"] for m in client.get("/api/modules").json()}
+    assert counts[m0_id] == 2
+
+
+def test_a_video_segment_carries_the_video_that_points_at_it(
+    client: TestClient, db: Session
+) -> None:
+    """Videos are made in the app and point at their segment (Video.segment_id)."""
+    m0_id, _, _ = _make_modules(db)
+    segment = Segment(module_id=m0_id, position=2, kind="video", title="Watch")
+    db.add(segment)
+    db.flush()
+    video = Video(
+        title="BFS",
+        media_path="/media/bfs.mp4",
+        captions_path="/media/bfs.vtt",
+        transcript="",
+        duration_seconds=60,
+        segment_id=segment.id,
+    )
+    db.add(video)
+    db.commit()
+    _register_and_login(client, ALICE)
+
+    segments = client.get(f"/api/modules/{m0_id}").json()["segments"]
+    assert segments[2]["videoId"] == video.id
+    assert segments[0]["videoId"] is None
 
 
 # ---------------------------------------------------------------------------

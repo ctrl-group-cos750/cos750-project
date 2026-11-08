@@ -31,17 +31,17 @@ class ModuleOut(ApiModel):
     """
 
     id: int
+    # The module's number, 0 to 6. The same as `id` (a module's id is its number).
     number: int
     slug: str
     title: str
-    goals: str
+    # "By the end of this module you can …": one sentence per goal (FR-2.3).
+    goals: list[str]
     estimated_minutes: int
     # Computed at query time for the requesting student — not a DB column.
     status: ModuleStatus
     segment_count: int
-    # NOTE: SE §8 specifies current_segment_id (FK to segments). Using a 0-based int position
-    # instead (approved decision 5, questions.md). Segment content reordering would require a
-    # migration to convert back to ids. Seed enforces sequential 0-based positions.
+    # The furthest segment the student has reached, 0-based: where the module page resumes.
     current_segment_position: int
 
 
@@ -49,7 +49,7 @@ class SegmentOut(ApiModel):
     """One segment of a module, in display order.
 
     Kind-specific nullable fields:
-    - ``body``        — Markdown content, present only for ``text`` / ``worked_example``.
+    - ``body``        — Markdown content, for ``text`` / ``worked_example`` / ``refresher``.
     - ``video_id``    — FK to the video, present only for ``video`` segments.
     - ``activity_id`` — FK to the activity, present only for ``activity`` segments.
 
@@ -83,7 +83,8 @@ class PositionIn(ApiModel):
     """Request body for ``POST /api/modules/{moduleId}/position`` (FR-2.5).
 
     The client sends the zero-based position of the segment the student just
-    reached; the server persists it in ``ModuleProgress.current_segment_position``.
+    reached. The server keeps the furthest one, and refuses a position more than one past it,
+    so a module can't be finished by jumping to its end.
 
     ``ge=0`` rejects negative values at the API boundary: a negative position stored in
     ``ModuleProgress.current_segment_position`` would cause ``segments[-1]`` (undefined

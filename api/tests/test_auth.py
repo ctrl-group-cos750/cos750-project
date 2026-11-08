@@ -36,6 +36,7 @@ def test_register_creates_the_account_and_logs_in(client: TestClient, db: Sessio
         "email": "ada@example.com",
         "displayName": "Ada",
         "isStaff": False,
+        "avatar": None,
     }
     assert client.get("/api/auth/me").json()["email"] == "ada@example.com"
 

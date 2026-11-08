@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import { Alert, Button, Markdown, ProgressBar, Spinner } from '../../components'
+import { Alert, Button, ProgressBar, Spinner } from '../../components'
 import { fetchModule, savePosition } from './module.api.ts'
 import { SegmentView } from './SegmentView.tsx'
 
@@ -16,17 +16,13 @@ export function ModulePage() {
   // Drive current index from the fetched position; update locally on navigation.
   const [segmentIndex, setSegmentIndex] = useState<number | null>(null)
 
+  // Saves how far the student has got. The server keeps the furthest segment reached, so only
+  // moving forward is saved; stepping back just changes what's on screen.
   const mutation = useMutation({
     mutationFn: (position: number) => savePosition(id, position),
-    onSuccess: (_data, position) => {
+    onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['modules'] })
       void queryClient.invalidateQueries({ queryKey: ['module', id] })
-      // When the student finishes the last segment, navigate back to the module map so
-      // they can see the module marked 'complete' and the next module unlocked.
-      const segs = query.data?.segments
-      if (segs && position === segs[segs.length - 1].position) {
-        void navigate('/')
-      }
     },
   })
 
@@ -53,20 +49,20 @@ export function ModulePage() {
   const isFirst = currentIndex === 0
   const isLast = currentIndex === segments.length - 1
 
-  function navigateTo(newIndex: number) {
-    const clamped = Math.max(0, Math.min(newIndex, segments.length - 1))
-    setSegmentIndex(clamped)
-    // segment.position is 0-based and equals clamped when segments are sequential,
-    // so sending it directly satisfies the backend contract (FR-2.5).
-    mutation.mutate(segments[clamped].position)
-  }
-
   function handlePrevious() {
-    navigateTo(currentIndex - 1)
+    setSegmentIndex(Math.max(0, currentIndex - 1))
   }
 
   function handleNext() {
-    navigateTo(currentIndex + 1)
+    const next = currentIndex + 1
+    mutation.mutate(segments[next].position, { onSuccess: () => setSegmentIndex(next) })
+  }
+
+  // The last segment was saved when the student reached it, which completed the module; saving it
+  // again is harmless and covers a save that failed. Then back to the map, where the next module
+  // is now open.
+  function handleFinish() {
+    mutation.mutate(segments[currentIndex].position, { onSuccess: () => void navigate('/') })
   }
 
   return (
@@ -80,13 +76,15 @@ export function ModulePage() {
           Module {module.number} · {module.title}
         </h1>
 
-        {/* Goals rendered as Markdown (FR-2.3) */}
-        {module.goals && (
+        {/* Goals (FR-2.3) */}
+        {module.goals.length > 0 && (
           <div className="rounded-lg border border-border bg-card p-4">
-            <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Learning goals
-            </p>
-            <Markdown>{module.goals}</Markdown>
+            <p className="mb-2 font-semibold">By the end of this module you can:</p>
+            <ul className="ml-5 list-disc">
+              {module.goals.map((goal) => (
+                <li key={goal}>{goal}</li>
+              ))}
+            </ul>
           </div>
         )}
       </div>
@@ -125,7 +123,7 @@ export function ModulePage() {
         </Button>
         <Button
           variant={isLast ? 'primary' : 'secondary'}
-          onClick={handleNext}
+          onClick={isLast ? handleFinish : handleNext}
           disabled={mutation.isPending}
           loading={mutation.isPending}
         >

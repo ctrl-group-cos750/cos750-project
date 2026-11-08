@@ -1,0 +1,10 @@
+{
+  "accounts": [
+    {
+      "key": "new",
+      "display_name": "Demo: new student",
+      "stage": "Just registered: nothing done yet, so the course opens on module 0 and its diagnostic.",
+      "attempts": []
+    }
+  ]
+}

@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from app.auth import CurrentUser, SessionCookie, session_user
 from app.db import DbSession
 from app.models import User
+from app.models.user import DEMO_EMAIL_DOMAIN
 from app.rate_limit import (
     client_ip,
     login_account_limiter,
@@ -24,6 +25,10 @@ def register(body: RegisterIn, request: Request, response: Response, session: Db
     """Create an account and log straight in (FR-1.1)."""
     register_limiter.check(client_ip(request))
     email = body.email.lower()
+    # The demo accounts' domain is reserved for the seed (FR-1.4): refused as if it were taken,
+    # so nobody can claim a demo address before the seed creates it.
+    if email.endswith("@" + DEMO_EMAIL_DOMAIN):
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=EMAIL_TAKEN)
     if session.scalar(select(User.id).where(User.email == email)) is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, detail=EMAIL_TAKEN)
     user = User(

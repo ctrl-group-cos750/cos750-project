@@ -27,6 +27,9 @@ services:
       SECRET_KEY: ${SECRET_KEY:-}
       # "off" in production: hides /api/docs and /api/openapi.json. Staging keeps them for the team.
       API_DOCS: ${API_DOCS:-on}
+      # The password of every seeded demo account (FR-1.4, app/seed/demo_accounts.py). Unset, none
+      # are made. Set it where the demo runs; changing it takes effect on the next deploy.
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-}
       # Where staff uploads go (app/media.py). The same volume the web container serves.
       MEDIA_DIR: /media
     volumes:

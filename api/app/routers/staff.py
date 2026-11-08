@@ -6,11 +6,19 @@ from sqlalchemy import func, select
 from app.auth import StaffUser
 from app.db import DbSession
 from app.media import KINDS, MediaError, file_for, save_upload
-from app.models import Checkpoint, Video
-from app.schemas.staff import MediaOut, StaffVideoIn, StaffVideoOut, StaffVideoSummary
+from app.models import Checkpoint, User, Video
+from app.schemas.staff import (
+    MediaOut,
+    StaffMemberIn,
+    StaffMemberOut,
+    StaffVideoIn,
+    StaffVideoOut,
+    StaffVideoSummary,
+)
 from app.services.videos import UnknownCheckpoint, save_video, video_for_editor
 
-# Team members only (users.is_staff, granted with `python -m app.staff grant <email>`).
+# Team members only (users.is_staff). A team member grants it to another on the staff portal's
+# "Staff members" page; `python -m app.staff grant <email>` makes the first one.
 router = APIRouter(prefix="/api/staff", tags=["staff"])
 
 NOT_FOUND = "This video does not exist."
@@ -115,3 +123,40 @@ def update_video(
         session.rollback()
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
     return video_for_editor(session, video)
+
+
+NO_ACCOUNT = "No account uses this email. They need to register in the app first."
+NOT_A_MEMBER = "This person is not a team member."
+NOT_YOURSELF = "You can't remove your own access. Ask another team member to do it."
+
+
+@router.get("/members")
+def list_members(session: DbSession, _staff: StaffUser) -> list[StaffMemberOut]:
+    """Every team member, by name."""
+    users = session.scalars(select(User).where(User.is_staff).order_by(User.display_name, User.id))
+    return [StaffMemberOut.model_validate(u) for u in users]
+
+
+@router.post("/members")
+def add_member(data: StaffMemberIn, session: DbSession, _staff: StaffUser) -> StaffMemberOut:
+    """Make the account with this email a team member. It must exist already. Someone who is
+    staff already stays staff (no error), so pressing the button twice is harmless."""
+    user = session.scalar(select(User).where(User.email == data.email))
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NO_ACCOUNT)
+    user.is_staff = True
+    session.commit()
+    return StaffMemberOut.model_validate(user)
+
+
+@router.delete("/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_member(user_id: int, session: DbSession, staff: StaffUser) -> None:
+    """Take staff access away. It ends at once: every request reads `is_staff` afresh. Nobody can
+    remove themselves, so the portal always has at least one team member left."""
+    if user_id == staff.id:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=NOT_YOURSELF)
+    user = session.get(User, user_id)
+    if user is None or not user.is_staff:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NOT_A_MEMBER)
+    user.is_staff = False
+    session.commit()

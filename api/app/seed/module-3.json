@@ -1,0 +1,402 @@
+{
+  "modules": [
+    {
+      "id": 3,
+      "slug": "meet-bfs",
+      "title": "Meet BFS",
+      "estimated_minutes": 12,
+      "goals": [
+        "Explain what BFS is for, and when it is the right tool.",
+        "Trace BFS by hand: say which vertex comes next, what is in the queue, which vertices are visited and the order they are visited in."
+      ],
+      "segments": [
+        {
+          "id": 311,
+          "kind": "activity",
+          "title": "Quick recall: graphs",
+          "activity_id": 311
+        },
+        {
+          "id": 312,
+          "kind": "activity",
+          "title": "Quick recall: a graph in Python",
+          "activity_id": 312
+        },
+        {
+          "id": 313,
+          "kind": "video",
+          "title": "Why BFS? The fewest walkways",
+          "body": "Staff attach the narrated video to this segment in the video editor, with its checkpoint questions: see `docs/id/module-3/narration-script.md`."
+        },
+        {
+          "id": 314,
+          "kind": "activity",
+          "title": "When is BFS the right tool?",
+          "activity_id": 313
+        },
+        {
+          "id": 315,
+          "kind": "video",
+          "title": "BFS step by step on the campus",
+          "body": "Staff attach the narrated video to this segment in the video editor, with its checkpoint questions: see `docs/id/module-3/narration-script.md`."
+        },
+        {
+          "id": 316,
+          "kind": "text",
+          "title": "Your turn: predict every step",
+          "body": "Open the BFS visualiser on the campus graph: **[predict every step](/graphs/4)**.\n\nBefore each step, pick the vertex BFS takes next.\n\n- Look at the queue panel, not the graph: BFS always takes the vertex at the **front** of the queue.\n- Alphabetical order only decides the order neighbours **join** the queue, not which vertex leaves next.\n- A vertex that hasn't joined the queue yet can't be next."
+        },
+        {
+          "id": 317,
+          "kind": "worked_example",
+          "title": "Worked example: filling in a trace table",
+          "body": "We trace BFS on the campus graph from **A**, one row for each vertex that leaves the queue. A vertex is **found** when it joins the queue, and BFS never adds a vertex it has already found. It is **visited** when it leaves the queue, which is when it joins the order.\n\n| Step | Current vertex | Queue after the step | Visited | Order so far |\n|---|---|---|---|---|\n| start | – | A | – | – |\n| 1 | A | C, E | A | A |\n| 2 | C | E, B, F | A, C | A, C |\n| 3 | E | B, F, D | A, C, E | A, C, E |\n\n**Step 1.** A leaves the queue, so it is visited and joins the order. Its neighbours in alphabetical order are C and E. Neither has been found yet, so both join the back of the queue.\n\n**Step 2.** C is at the front, so C leaves. Its neighbours are A, B and F. A has been found already, so only B and F join.\n\n**Step 3.** E leaves. Its neighbours are A, D and F. A is visited, and F is already waiting in the queue, so only D joins.\n\nThe remaining steps work the same way. The full order is **A, C, E, B, F, D, G**.",
+          "skip_check_activity_id": 314
+        },
+        {
+          "id": 318,
+          "kind": "activity",
+          "title": "Your turn: a trace table",
+          "activity_id": 315
+        },
+        {
+          "id": 319,
+          "kind": "activity",
+          "title": "Closing task: fewest walkways",
+          "activity_id": 316
+        }
+      ]
+    }
+  ],
+  "activities": [
+    {
+      "id": 311,
+      "kind": "multiple_choice",
+      "title": "Quick recall: graphs",
+      "module_id": 3,
+      "purpose": "retrieval",
+      "objective_id": 2,
+      "config": {
+        "prompt": "The walkways on campus can be used in both directions. What kind of graph is the campus map?",
+        "options": [
+          {
+            "id": "a",
+            "label": "An undirected graph"
+          },
+          {
+            "id": "b",
+            "label": "A directed graph"
+          },
+          {
+            "id": "c",
+            "label": "It is not a graph, because walkways have different lengths"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "a",
+        "feedback": {
+          "b": "A directed edge only goes one way, like a one-way street. These walkways go both ways.",
+          "c": "Edges can have lengths (weights) and still be a graph. Here we only care whether two buildings are connected."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Think back to module 1: what is the difference between a directed and an undirected edge?"
+        },
+        {
+          "level": 2,
+          "body": "A directed edge has an arrow and can only be followed one way."
+        },
+        {
+          "level": 3,
+          "body": "Can you walk from A to C and also from C to A? Then the edge has no single direction."
+        },
+        {
+          "level": 4,
+          "body": "Answer: an undirected graph, because every walkway can be used in both directions."
+        }
+      ]
+    },
+    {
+      "id": 312,
+      "kind": "multiple_choice",
+      "title": "Quick recall: a graph in Python",
+      "module_id": 3,
+      "purpose": "retrieval",
+      "objective_id": 2,
+      "config": {
+        "prompt": "Using the `Graph` class from module 2, an empty undirected graph runs `add_vertex(\"A\")`, `add_vertex(\"C\")` and then `add_edge(\"A\", \"C\")`. What is `adjacency` now?",
+        "options": [
+          {
+            "id": "a",
+            "label": "`{\"A\": [\"C\"], \"C\": [\"A\"]}`"
+          },
+          {
+            "id": "b",
+            "label": "`{\"A\": [\"C\"], \"C\": []}`"
+          },
+          {
+            "id": "c",
+            "label": "`{\"A\": \"C\"}`"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "a",
+        "feedback": {
+          "b": "That is a directed edge from A to C. In an undirected graph C must also list A.",
+          "c": "Each vertex maps to a list of neighbours, and both A and C are in the dictionary."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Remember how module 2 stored an undirected edge."
+        },
+        {
+          "level": 2,
+          "body": "Each vertex has a list of its neighbours."
+        },
+        {
+          "level": 3,
+          "body": "If A is a neighbour of C, then C is also a neighbour of A."
+        },
+        {
+          "level": 4,
+          "body": "Answer: {\"A\": [\"C\"], \"C\": [\"A\"]} — the edge is stored once in each vertex's list."
+        }
+      ]
+    },
+    {
+      "id": 313,
+      "kind": "matching",
+      "title": "When is BFS the right tool?",
+      "module_id": 3,
+      "purpose": "practice",
+      "objective_id": 4,
+      "config": {
+        "prompt": "For each situation, choose whether BFS is a good fit and why.",
+        "left": [
+          {
+            "id": "s1",
+            "label": "Find the route between two stations on the Gautrain map with the fewest stops."
+          },
+          {
+            "id": "s2",
+            "label": "List everyone who is a friend, or a friend of a friend, of Thandi on a social network."
+          },
+          {
+            "id": "s3",
+            "label": "Add up the prices of all items in a shopping list."
+          }
+        ],
+        "right": [
+          {
+            "id": "r1",
+            "label": "Good fit: BFS reaches vertices in order of the fewest edges from the start."
+          },
+          {
+            "id": "r2",
+            "label": "Good fit: BFS explores one ring of neighbours at a time, so it finds everyone within two steps first."
+          },
+          {
+            "id": "r3",
+            "label": "Not a fit: there are no connections to follow, so this is not a graph problem."
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "s1": "r1",
+          "s2": "r2",
+          "s3": "r3"
+        },
+        "feedback": {
+          "s3": "A list of prices has no vertices and edges to traverse. A simple loop is enough.",
+          "s1": "Fewest stops means fewest edges. That is exactly the order in which BFS reaches vertices.",
+          "s2": "Friends are one edge away, friends of friends two edges. BFS finds them ring by ring."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "First ask: are there things connected to other things? If not, it is not a graph problem."
+        },
+        {
+          "level": 2,
+          "body": "BFS explores everything one edge away, then everything two edges away, and so on."
+        },
+        {
+          "level": 3,
+          "body": "'Fewest stops' and 'friend of a friend' are both about counting edges from a start."
+        },
+        {
+          "level": 4,
+          "body": "Answer: s1 → r1 (fewest stops), s2 → r2 (ring by ring), s3 → r3 (not a graph)."
+        }
+      ]
+    },
+    {
+      "id": 314,
+      "kind": "multiple_choice",
+      "title": "Already confident? The queue after C",
+      "module_id": 3,
+      "purpose": "practice",
+      "objective_id": 5,
+      "config": {
+        "prompt": "Already confident? On the campus graph from A, after C is processed, what is in the queue (front first)?",
+        "options": [
+          {
+            "id": "a",
+            "label": "E, B, F"
+          },
+          {
+            "id": "b",
+            "label": "B, F, E"
+          },
+          {
+            "id": "c",
+            "label": "B, E, F"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "a",
+        "feedback": {
+          "b": "E was already waiting. New vertices join at the back, so E stays in front.",
+          "c": "B and F join together at the back, after E."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "What was in the queue before C was processed?"
+        },
+        {
+          "level": 2,
+          "body": "C leaves from the front, and C's new neighbours join at the back."
+        },
+        {
+          "level": 3,
+          "body": "Before: C, E. C leaves. B and F join behind E."
+        },
+        {
+          "level": 4,
+          "body": "Answer: E, B, F."
+        }
+      ]
+    },
+    {
+      "id": 315,
+      "kind": "trace",
+      "title": "Trace BFS from B: one row each time a vertex leaves the queue",
+      "module_id": 3,
+      "purpose": "practice",
+      "objective_id": 5,
+      "config": {
+        "directed": false,
+        "vertices": [
+          "A",
+          "B",
+          "C",
+          "D",
+          "E"
+        ],
+        "edges": [
+          {
+            "source": "A",
+            "target": "B"
+          },
+          {
+            "source": "A",
+            "target": "C"
+          },
+          {
+            "source": "B",
+            "target": "D"
+          },
+          {
+            "source": "C",
+            "target": "D"
+          },
+          {
+            "source": "C",
+            "target": "E"
+          }
+        ],
+        "start_vertex": "B"
+      },
+      "solution": {},
+      "hints": [
+        {
+          "level": 1,
+          "body": "Start with only B in the queue. Nothing is visited yet. Row 1 is what happens when B leaves."
+        },
+        {
+          "level": 2,
+          "body": "For each row: take the vertex at the front of the queue. It is now visited and joins the order. Then add its neighbours that haven't been found yet, in alphabetical order, at the back of the queue."
+        },
+        {
+          "level": 3,
+          "body": "Row 1: B leaves, and its neighbours A and D join. Row 2: A leaves. Its neighbours are B and C, and only C is new."
+        },
+        {
+          "level": 4,
+          "body": "Answer: the order is B, A, D, C, E. The queue after each row is [A, D], [D, C], [C], [E], []. At row 3, C is not added again because it is already waiting in the queue."
+        }
+      ]
+    },
+    {
+      "id": 316,
+      "kind": "multiple_choice",
+      "title": "Closing task: fewest walkways",
+      "module_id": 3,
+      "purpose": "practice",
+      "objective_id": 4,
+      "config": {
+        "prompt": "On the campus graph, what is the fewest number of walkways from the Admin block (A) to the Green (G)? Use the BFS order you found: A, C, E, B, F, D, G.",
+        "options": [
+          {
+            "id": "a",
+            "label": "3"
+          },
+          {
+            "id": "b",
+            "label": "6"
+          },
+          {
+            "id": "c",
+            "label": "2"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "a",
+        "feedback": {
+          "b": "6 is G's position in the order, not its distance. Follow who discovered whom back to A.",
+          "c": "G is not joined to C or E. It needs one more walkway, from B."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Ask: which vertex added G to the queue?"
+        },
+        {
+          "level": 2,
+          "body": "B added G. Which vertex added B?"
+        },
+        {
+          "level": 3,
+          "body": "C added B, and A added C. Count those walkways."
+        },
+        {
+          "level": 4,
+          "body": "Answer: 3 walkways, A → C → B → G."
+        }
+      ]
+    }
+  ]
+}

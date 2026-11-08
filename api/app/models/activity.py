@@ -35,6 +35,12 @@ class Activity(Base):
     visible: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     config: Mapped[dict[str, Any]] = mapped_column(JSON)
     solution: Mapped[dict[str, Any]] = mapped_column(JSON)
+    # Where the activity sits and what it is evidence for (FR-4.3). All three come from the content
+    # fixtures; an activity made in the staff video editor has no module or objective yet.
+    module_id: Mapped[int | None] = mapped_column(ForeignKey("modules.id"), index=True)
+    objective_id: Mapped[int | None] = mapped_column(ForeignKey("objectives.id"), index=True)
+    # practice | diagnostic | retrieval | mastery | review | bonus (app/schemas/content.py)
+    purpose: Mapped[str] = mapped_column(String(32), default="practice", server_default="practice")
 
 
 class Attempt(Base):

@@ -5,6 +5,12 @@
   padding: var(--space-6) var(--space-4);
 }
 
+.theme {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+}
+
 .column {
   width: 100%;
   max-width: 26rem;

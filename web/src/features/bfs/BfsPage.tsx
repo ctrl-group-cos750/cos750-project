@@ -42,5 +42,5 @@ export function BfsPage() {
     )
   }
 
-  return <BfsVisualizer scenario={query.data} />
+  return <BfsVisualizer key={query.data.id} scenario={query.data} />
 }

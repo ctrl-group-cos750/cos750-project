@@ -12,9 +12,12 @@ export {
   type AchievementKind,
 } from './achievements.ts'
 export { Alert, type AlertProps, type AlertTone } from './Alert.tsx'
+export { Avatar, type AvatarProps } from './Avatar.tsx'
+export { AVATARS, avatarName, type AvatarId } from './avatars.ts'
 export { AppShell, type AppShellProps } from './AppShell.tsx'
 export { Button, type ButtonProps } from './Button.tsx'
 export { Card, type CardProps } from './Card.tsx'
+export { Markdown, type MarkdownProps } from './Markdown.tsx'
 export { MasteryStatus, type Mastery } from './MasteryStatus.tsx'
 export { ProgressBar, type ProgressBarProps } from './ProgressBar.tsx'
 export { Spinner, type SpinnerProps } from './Spinner.tsx'

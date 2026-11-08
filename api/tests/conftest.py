@@ -11,6 +11,8 @@ import app.main
 from app.db import Base, get_session
 from app.main import app as fastapi_app
 from app.rate_limit import login_account_limiter, login_address_limiter, register_limiter
+from app.routers.events import events_limiter
+from app.routers.profile import password_change_limiter
 
 TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL")
 
@@ -27,6 +29,8 @@ def fresh_rate_limits() -> None:
     login_account_limiter.reset()
     login_address_limiter.reset()
     register_limiter.reset()
+    events_limiter.reset()
+    password_change_limiter.reset()
 
 
 @pytest.fixture
@@ -60,20 +64,22 @@ def db() -> Iterator[Session]:
 
 
 @pytest.fixture
-def working_db(monkeypatch: pytest.MonkeyPatch) -> Engine:
+def working_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[Engine]:
     """An in-memory SQLite engine, so tests never depend on a running Postgres."""
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
     monkeypatch.setattr(app.main, "engine", engine)
-    return engine
+    yield engine
+    engine.dispose()
 
 
 @pytest.fixture
-def unreachable_db(monkeypatch: pytest.MonkeyPatch) -> Engine:
+def unreachable_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[Engine]:
     """An engine pointed at a port nothing listens on."""
     engine = create_engine(
         "postgresql+psycopg://ctrl:ctrl@127.0.0.1:1/ctrl", connect_args={"connect_timeout": 1}
     )
     monkeypatch.setattr(app.main, "engine", engine)
-    return engine
+    yield engine
+    engine.dispose()

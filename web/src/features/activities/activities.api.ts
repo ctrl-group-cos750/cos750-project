@@ -22,3 +22,8 @@ export function submitActivityAttempt(
 export function requestActivityHint(activityId: number): Promise<Hint> {
   return api<Hint>(`/api/activities/${activityId}/hints`, { method: 'POST' })
 }
+
+/** Fetches previously unlocked hints on the server-managed ladder. */
+export function fetchActivityHints(activityId: number): Promise<readonly Hint[]> {
+  return api<readonly Hint[]>(`/api/activities/${activityId}/hints`)
+}

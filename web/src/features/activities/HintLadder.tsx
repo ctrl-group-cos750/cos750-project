@@ -1,21 +1,52 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Alert, Button } from '../../components'
+import { fetchActivityHints } from './activities.api.ts'
 import type { Hint } from './activities.types.ts'
 
 type HintLadderProps = {
   activityId: number
   disabled?: boolean
   requestHint: (activityId: number) => Promise<Hint>
+  loadHints?: (activityId: number) => Promise<readonly Hint[]>
 }
 
 /** Shows one server-recorded hint at a time, warning before a support-level hint. */
-export function HintLadder({ activityId, disabled = false, requestHint }: HintLadderProps) {
+export function HintLadder({
+  activityId,
+  disabled = false,
+  requestHint,
+  loadHints = fetchActivityHints,
+}: HintLadderProps) {
   const [hints, setHints] = useState<readonly Hint[]>([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [loadingInitial, setLoadingInitial] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [confirmingSupport, setConfirmingSupport] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    loadHints(activityId)
+      .then((loaded) => {
+        if (active) {
+          setHints(loaded)
+          setLoadingInitial(false)
+          setLoadFailed(false)
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setLoadFailed(true)
+          setLoadingInitial(false)
+        }
+      })
+    return () => {
+      active = false
+    }
+  }, [activityId, loadHints])
+
   const lastHint = hints.at(-1)
-  const hasMore = lastHint?.hasMore ?? true
+  const hasMore = !loadFailed && !loadingInitial && (lastHint?.hasMore ?? true)
 
   async function showNextHint() {
     if (lastHint?.nextCountsAsSupport && lastHint.level < 3 && !confirmingSupport) {

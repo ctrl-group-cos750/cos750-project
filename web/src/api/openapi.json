@@ -309,6 +309,67 @@
       }
     },
     "/api/activities/{activity_id}/hints": {
+      "get": {
+        "tags": [
+          "activities"
+        ],
+        "summary": "Get Revealed Hints",
+        "description": "Every hint level this student has already unlocked on this activity (FR-4.4, FR-4.5).\n\nReturns an empty list if they have not asked for any hints yet.",
+        "operationId": "get_revealed_hints_api_activities__activity_id__hints_get",
+        "parameters": [
+          {
+            "name": "activity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Activity Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HintOut"
+                  },
+                  "title": "Response Get Revealed Hints Api Activities  Activity Id  Hints Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": [
           "activities"
@@ -353,6 +414,59 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events": {
+      "post": {
+        "tags": [
+          "events"
+        ],
+        "summary": "Report Event",
+        "description": "Log something only the browser sees, for the pilot's evaluation (FR-10.1). The server adds\nwho and when. 404 if the video, checkpoint or segment doesn't exist; 429 past 120 a minute.",
+        "operationId": "report_event_api_events_post",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -628,6 +742,430 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RewardsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/report": {
+      "get": {
+        "tags": [
+          "mastery"
+        ],
+        "summary": "Get Report",
+        "description": "The logged-in student's mastery report: each objective's result, whether they are ready\nfor the lecture, and the review path's progress for each objective module 6 marked \"not yet\"\n(FR-7.3 to FR-7.5).\n\nWorked out from their attempts on every request (app/services/mastery.py), so it always follows\nthe current rules (FR-7.6). Nothing a client sends can set a result: they change only through\nattempts. Only ever the student's own.",
+        "operationId": "get_report_api_me_report_get",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MasteryReportOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/review/{objective_id}": {
+      "get": {
+        "tags": [
+          "mastery"
+        ],
+        "summary": "Get Review Path",
+        "description": "The objective's review path: its steps in order, and which the student has answered\n(FR-7.5). 404 if the objective has no path; 403 until module 6 marks it \"not yet\", so the\nfresh items stay unseen until the student needs them.",
+        "operationId": "get_review_path_api_me_review__objective_id__get",
+        "parameters": [
+          {
+            "name": "objective_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Objective Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewPathOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/avatar": {
+      "put": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Set Avatar",
+        "description": "Choose a profile picture from the team's set, or none (FR-1.6). Only the student sees it.",
+        "operationId": "set_avatar_api_me_avatar_put",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AvatarIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/password": {
+      "post": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Change Password",
+        "description": "Change the password (FR-1.5). The current one is required, so a session left open on a\nshared computer can't be used to take the account over; the new one must pass the same rules\nas registration (NFR-S1). Every other session is logged out, and this one carries on.\n\n400 with the reason if the current password is wrong or the new one breaks a rule; 429 after\n10 tries a minute.",
+        "operationId": "change_password_api_me_password_post",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordChangeIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "The current password is wrong, or the new one is the same or breaks a password rule. `detail` says which.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "More than 10 tries in a minute.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/modules": {
+      "get": {
+        "tags": [
+          "modules"
+        ],
+        "summary": "List Modules",
+        "description": "All modules with the student's computed status and progress (FR-2).\n\nReturns every module in display order.  ``status`` is one of:\n``locked | open | in_progress | complete``.  No commit needed — read-only.",
+        "operationId": "list_modules_api_modules_get",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ModuleOut"
+                  },
+                  "title": "Response List Modules Api Modules Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/modules/{module_id}": {
+      "get": {
+        "tags": [
+          "modules"
+        ],
+        "summary": "Get Module",
+        "description": "One module with its full ordered segment list and the student's status.\n\nReturns 404 if the module does not exist; 403 if it is locked for this\nstudent (the previous module has not been completed yet).",
+        "operationId": "get_module_api_modules__module_id__get",
+        "parameters": [
+          {
+            "name": "module_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Module Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleDetailOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/modules/{module_id}/position": {
+      "post": {
+        "tags": [
+          "modules"
+        ],
+        "summary": "Save Module Position",
+        "description": "Record the student's current segment position and return the updated module.\n\nThe client calls this whenever the student advances to a new segment.\nThe furthest segment reached is kept, so stepping back changes nothing. Reaching the last\nsegment marks the module ``complete`` for good.\n\nReturns the updated ``ModuleDetailOut`` so the frontend can re-render the\nmodule detail page with the new status in one round-trip (consistent with\n``submit_attempt`` returning ``AttemptOut``).\n\nReturns 404 if the module does not exist; 403 if it is locked; 409 if the position is more\nthan one segment past the furthest the student has reached.",
+        "operationId": "save_module_position_api_modules__module_id__position_post",
+        "parameters": [
+          {
+            "name": "module_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Module Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PositionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleDetailOut"
                 }
               }
             }
@@ -1332,6 +1870,114 @@
         }
       }
     },
+    "/api/staff/export/{table}.csv": {
+      "get": {
+        "tags": [
+          "staff"
+        ],
+        "summary": "Export Csv",
+        "description": "Download one table as CSV for every real student (FR-10.2), oldest first:\n\n- `attempts`: each answer; `submitted` and `detail` are what was answered and the per-part\n  result, as JSON.\n- `hints`: each hint shown.\n- `events`: the timeline (app/services/events.py): videos started and finished, checkpoints\n  reached, segments viewed, hints shown, results changing; `payload` as JSON.\n- `objective_results`: each student's current result per objective, with the attempts it was\n  decided from (`evidence`).",
+        "operationId": "export_csv_api_staff_export__table__csv_get",
+        "parameters": [
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "attempts",
+                "hints",
+                "events",
+                "objective_results"
+              ],
+              "type": "string",
+              "title": "Table"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/insights": {
+      "get": {
+        "tags": [
+          "staff"
+        ],
+        "summary": "Insights",
+        "description": "The pilot at a glance (ID document §8.4): per activity, how many students tried it, wrong\nattempts, and how many needed hint 3 or 4; per video, how many started it, passed each\ncheckpoint and finished it, which shows where students stopped. Real students only (no staff\nor demo accounts); counts only.",
+        "operationId": "insights_api_staff_insights_get",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Insights"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "summary": "Health",
@@ -1579,6 +2225,56 @@
         "title": "AccountVideo",
         "description": "Progress through one video: checkpoints answered correctly, out of all its checkpoints."
       },
+      "ActivityInsight": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "students": {
+            "type": "integer",
+            "title": "Students"
+          },
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts"
+          },
+          "wrongAttempts": {
+            "type": "integer",
+            "title": "Wrongattempts"
+          },
+          "studentsPassed": {
+            "type": "integer",
+            "title": "Studentspassed"
+          },
+          "studentsWithSupport": {
+            "type": "integer",
+            "title": "Studentswithsupport"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "kind",
+          "students",
+          "attempts",
+          "wrongAttempts",
+          "studentsPassed",
+          "studentsWithSupport"
+        ],
+        "title": "ActivityInsight",
+        "description": "How students got on with one activity, as ID document §8.4 analyses it."
+      },
       "ActivityOut": {
         "properties": {
           "id": {
@@ -1679,6 +2375,38 @@
         "title": "AttemptOut",
         "description": "The graded result sent back. Carries per-part correctness and messages, never the solution."
       },
+      "AvatarIn": {
+        "properties": {
+          "avatar": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "vertex",
+                  "edge",
+                  "path",
+                  "cycle",
+                  "tree",
+                  "star",
+                  "grid",
+                  "queue"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "avatar"
+        ],
+        "title": "AvatarIn",
+        "description": "The picture to show, or null for the student's initial."
+      },
       "BfsResult": {
         "properties": {
           "startVertex": {
@@ -1764,6 +2492,35 @@
         ],
         "title": "BfsStep",
         "description": "One step of the traversal: the vertex just visited (dequeued), and the state after it\n(SE document FR-6.2). `discovered` are the vertices this step added to the queue, in the\nalphabetical order they were enqueued; `frontier_edges` are the edges along which they were\ndiscovered (from the visited vertex to each newly discovered neighbour)."
+      },
+      "CheckpointInsight": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "atSeconds": {
+            "type": "number",
+            "title": "Atseconds"
+          },
+          "activityTitle": {
+            "type": "string",
+            "title": "Activitytitle"
+          },
+          "studentsPassed": {
+            "type": "integer",
+            "title": "Studentspassed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "atSeconds",
+          "activityTitle",
+          "studentsPassed"
+        ],
+        "title": "CheckpointInsight"
       },
       "CheckpointOut": {
         "properties": {
@@ -1876,6 +2633,48 @@
         "title": "EarnedBadgeOut",
         "description": "A badge the student holds. `badge` is a catalogue id (web/src/components/achievements.ts);\n`ref` tells repeatable badges apart (the bonus quest's id), \"\" otherwise. `seen` is false until\nthe app has announced it; an upgrade from bronze to gold makes it unseen again."
       },
+      "ErrorOut": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorOut",
+        "description": "An error the client shows as it is: `detail` says what went wrong, in plain words."
+      },
+      "EventIn": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "video_started",
+              "video_completed",
+              "checkpoint_reached",
+              "segment_viewed"
+            ],
+            "title": "Type"
+          },
+          "targetId": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Targetid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "targetId"
+        ],
+        "title": "EventIn",
+        "description": "What the browser saw: `video_started` or `video_completed` (`targetId` is the video),\n`checkpoint_reached` (the checkpoint) or `segment_viewed` (the segment)."
+      },
       "GraphEdge": {
         "properties": {
           "source": {
@@ -1985,6 +2784,46 @@
         "title": "HintOut",
         "description": "The hint just revealed. `next_counts_as_support` is true when the *next* hint would be level\n3 or 4: show the \"this counts as met with support\" warning before asking for it (ID doc §7.4)."
       },
+      "Insights": {
+        "properties": {
+          "students": {
+            "type": "integer",
+            "title": "Students"
+          },
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts"
+          },
+          "hintsViewed": {
+            "type": "integer",
+            "title": "Hintsviewed"
+          },
+          "activities": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityInsight"
+            },
+            "type": "array",
+            "title": "Activities"
+          },
+          "videos": {
+            "items": {
+              "$ref": "#/components/schemas/VideoInsight"
+            },
+            "type": "array",
+            "title": "Videos"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "students",
+          "attempts",
+          "hintsViewed",
+          "activities",
+          "videos"
+        ],
+        "title": "Insights"
+      },
       "LoginIn": {
         "properties": {
           "email": {
@@ -2006,6 +2845,29 @@
         ],
         "title": "LoginIn"
       },
+      "MasteryReportOut": {
+        "properties": {
+          "ready": {
+            "type": "boolean",
+            "title": "Ready"
+          },
+          "objectives": {
+            "items": {
+              "$ref": "#/components/schemas/ObjectiveReportOut"
+            },
+            "type": "array",
+            "title": "Objectives"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ready",
+          "objectives"
+        ],
+        "title": "MasteryReportOut",
+        "description": "The student's own mastery report. `ready` (for the lecture) is true when every objective is\nmet, with or without support (FR-7.4). Always shown, even when rewards are hidden (FR-9.5)."
+      },
       "MediaOut": {
         "properties": {
           "path": {
@@ -2025,6 +2887,199 @@
         ],
         "title": "MediaOut",
         "description": "Where the upload is served from. Put it in a video's `mediaPath` or `captionsPath`."
+      },
+      "ModuleDetailOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "goals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Goals"
+          },
+          "estimatedMinutes": {
+            "type": "integer",
+            "title": "Estimatedminutes"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "locked",
+              "open",
+              "in_progress",
+              "complete"
+            ],
+            "title": "Status"
+          },
+          "segmentCount": {
+            "type": "integer",
+            "title": "Segmentcount"
+          },
+          "currentSegmentPosition": {
+            "type": "integer",
+            "title": "Currentsegmentposition"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/SegmentOut"
+            },
+            "type": "array",
+            "title": "Segments"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "number",
+          "slug",
+          "title",
+          "goals",
+          "estimatedMinutes",
+          "status",
+          "segmentCount",
+          "currentSegmentPosition",
+          "segments"
+        ],
+        "title": "ModuleDetailOut",
+        "description": "A module with its full ordered segment list.\n\nReturned by ``GET /api/modules/{moduleId}``.  Extends ``ModuleOut`` so the\nfrontend can use the same type for map cards and detail views."
+      },
+      "ModuleOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "goals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Goals"
+          },
+          "estimatedMinutes": {
+            "type": "integer",
+            "title": "Estimatedminutes"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "locked",
+              "open",
+              "in_progress",
+              "complete"
+            ],
+            "title": "Status"
+          },
+          "segmentCount": {
+            "type": "integer",
+            "title": "Segmentcount"
+          },
+          "currentSegmentPosition": {
+            "type": "integer",
+            "title": "Currentsegmentposition"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "number",
+          "slug",
+          "title",
+          "goals",
+          "estimatedMinutes",
+          "status",
+          "segmentCount",
+          "currentSegmentPosition"
+        ],
+        "title": "ModuleOut",
+        "description": "A module as it appears on the module map.\n\n``status`` is computed per-student at query time (never stored directly on the\nmodule); it is one of: locked | open | in_progress | complete.\n``segment_count`` and ``current_segment_position`` let the map show a progress\nbar without loading the full segment list."
+      },
+      "ObjectiveReportOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "criterion": {
+            "type": "string",
+            "title": "Criterion"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "not_attempted",
+              "met_independently",
+              "met_with_support",
+              "not_yet"
+            ],
+            "title": "State"
+          },
+          "answered": {
+            "type": "integer",
+            "title": "Answered"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "review": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewProgressOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "criterion",
+          "state",
+          "answered",
+          "total",
+          "review"
+        ],
+        "title": "ObjectiveReportOut",
+        "description": "One objective on the mastery report (FR-7.2, FR-7.3). `answered` of `total` is how many of\nits module 6 items the student has answered; the result stays `not_attempted` until all are.\n`review` is there once module 6 marks it \"not yet\", which opens its review path."
       },
       "PartResult": {
         "properties": {
@@ -2057,6 +3112,43 @@
         "title": "PartResult",
         "description": "One graded part: a position in the ordering (Parsons, fix the bug), a blank id (fill-in),\nor the index of an item in the config (matching: a left item; choose tests: a test case)."
       },
+      "PasswordChangeIn": {
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "maxLength": 128,
+            "title": "Currentpassword"
+          },
+          "newPassword": {
+            "type": "string",
+            "maxLength": 128,
+            "title": "Newpassword"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ],
+        "title": "PasswordChangeIn"
+      },
+      "PositionIn": {
+        "properties": {
+          "segmentPosition": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Segmentposition"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "segmentPosition"
+        ],
+        "title": "PositionIn",
+        "description": "Request body for ``POST /api/modules/{moduleId}/position`` (FR-2.5).\n\nThe client sends the zero-based position of the segment the student just\nreached. The server keeps the furthest one, and refuses a position more than one past it,\nso a module can't be finished by jumping to its end.\n\n``ge=0`` rejects negative values at the API boundary: a negative position stored in\n``ModuleProgress.current_segment_position`` would cause ``segments[-1]`` (undefined\nin JavaScript) on resume, crashing the ModulePage render."
+      },
       "RegisterIn": {
         "properties": {
           "email": {
@@ -2084,6 +3176,144 @@
           "password"
         ],
         "title": "RegisterIn"
+      },
+      "ReviewPathOut": {
+        "properties": {
+          "objectiveId": {
+            "type": "integer",
+            "title": "Objectiveid"
+          },
+          "objectiveText": {
+            "type": "string",
+            "title": "Objectivetext"
+          },
+          "criterion": {
+            "type": "string",
+            "title": "Criterion"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "not_attempted",
+              "met_independently",
+              "met_with_support",
+              "not_yet"
+            ],
+            "title": "State"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/ReviewProgressOut"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewStepOut"
+            },
+            "type": "array",
+            "title": "Steps"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "objectiveId",
+          "objectiveText",
+          "criterion",
+          "state",
+          "progress",
+          "steps"
+        ],
+        "title": "ReviewPathOut",
+        "description": "An objective's review path for the logged-in student (FR-7.5, ID document §7.6)."
+      },
+      "ReviewProgressOut": {
+        "properties": {
+          "answered": {
+            "type": "integer",
+            "title": "Answered"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "answered",
+          "total"
+        ],
+        "title": "ReviewProgressOut",
+        "description": "How far the student is through an open review path's fresh items (FR-7.5). Once all are\nanswered they decide the objective's result, so `answered == total` means the path is done."
+      },
+      "ReviewStepOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "video",
+              "text",
+              "worked_example",
+              "activity",
+              "refresher"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "activityId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activityid"
+          },
+          "purpose": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "review",
+                  "mastery"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purpose"
+          },
+          "answered": {
+            "type": "boolean",
+            "title": "Answered"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "body",
+          "activityId",
+          "purpose",
+          "answered"
+        ],
+        "title": "ReviewStepOut",
+        "description": "One step of a review path, in order. An activity step names its activity and its purpose:\n`review` is practice with the full hint ladder, `mastery` a fresh item that decides the\nresult. `answered` is whether the student has submitted an answer to it."
       },
       "RewardsOut": {
         "properties": {
@@ -2126,6 +3356,76 @@
           "hideRewards"
         ],
         "title": "RewardsSettingsIn"
+      },
+      "SegmentOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "video",
+              "text",
+              "worked_example",
+              "activity",
+              "refresher"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "videoId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Videoid"
+          },
+          "activityId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activityid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "position",
+          "kind",
+          "title"
+        ],
+        "title": "SegmentOut",
+        "description": "One segment of a module, in display order.\n\nKind-specific nullable fields:\n- ``body``        — Markdown content, for ``text`` / ``worked_example`` / ``refresher``.\n- ``video_id``    — FK to the video, present only for ``video`` segments.\n- ``activity_id`` — FK to the activity, present only for ``activity`` segments.\n\n``body``, ``video_id``, and ``activity_id`` are mutually exclusive in practice;\nthe schema keeps them separate and nullable so the frontend can branch on ``kind``."
       },
       "StaffCheckpointIn": {
         "properties": {
@@ -2464,6 +3764,17 @@
           "isStaff": {
             "type": "boolean",
             "title": "Isstaff"
+          },
+          "avatar": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar"
           }
         },
         "additionalProperties": false,
@@ -2515,6 +3826,44 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VideoInsight": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "students": {
+            "type": "integer",
+            "title": "Students"
+          },
+          "finished": {
+            "type": "integer",
+            "title": "Finished"
+          },
+          "checkpoints": {
+            "items": {
+              "$ref": "#/components/schemas/CheckpointInsight"
+            },
+            "type": "array",
+            "title": "Checkpoints"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "students",
+          "finished",
+          "checkpoints"
+        ],
+        "title": "VideoInsight",
+        "description": "How far students got through one video: who started it (or answered one of its\ncheckpoints), who passed each checkpoint and who watched to the end. A drop between two steps\nis where students stopped."
       },
       "VideoOut": {
         "properties": {

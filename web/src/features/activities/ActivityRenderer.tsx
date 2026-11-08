@@ -13,10 +13,20 @@ type ActivityRendererProps = {
   submitting: boolean
   onSubmit: (submitted: Submission) => Promise<void>
   requestHint: (activityId: number) => Promise<Hint>
+  loadHints?: (activityId: number) => Promise<readonly Hint[]>
 }
+
+const SUPPORTED: ReadonlySet<Activity['kind']> = new Set([
+  'parsons',
+  'fill_in',
+  'multiple_choice',
+  'matching',
+])
 
 /** Chooses the activity control and consistently adds server feedback and the hint ladder. */
 export function ActivityRenderer(props: ActivityRendererProps) {
+  const isSupported = SUPPORTED.has(props.activity.kind)
+
   return (
     <Card>
       <h1>{props.activity.title}</h1>
@@ -51,23 +61,17 @@ export function ActivityRenderer(props: ActivityRendererProps) {
       ) : (
         <Alert tone="warning">This activity kind is not available yet.</Alert>
       )}
-      <div className="mt-5 grid gap-4">
-        <FeedbackPanel
-          result={props.result}
-          partName={
-            props.activity.kind === 'parsons'
-              ? 'line'
-              : props.activity.kind === 'fill_in'
-                ? 'blank'
-                : undefined
-          }
-        />
-        <HintLadder
-          activityId={props.activity.id}
-          disabled={props.submitting}
-          requestHint={props.requestHint}
-        />
-      </div>
+      {isSupported && (
+        <div className="mt-5 grid gap-4">
+          <FeedbackPanel result={props.result} />
+          <HintLadder
+            activityId={props.activity.id}
+            disabled={props.submitting}
+            requestHint={props.requestHint}
+            loadHints={props.loadHints}
+          />
+        </div>
+      )}
     </Card>
   )
 }

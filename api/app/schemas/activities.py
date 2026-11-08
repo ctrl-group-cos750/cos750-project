@@ -86,9 +86,12 @@ class FillInConfig(ApiModel):
 
 
 class FillInSolution(ApiModel):
-    """Server-only: the correct token for each blank, keyed by blank id."""
+    """Server-only: the correct token for each blank, keyed by blank id, and why a wrong token is
+    wrong (FR-4.2): a message per blank and token, e.g. `{1: {"in": "Not quite. With in, …"}}`.
+    A wrong token without a message gets a generic one."""
 
     answers: dict[int, str]
+    feedback: dict[int, dict[str, str]] = Field(default_factory=dict)
 
 
 class FillInSubmission(ApiModel):

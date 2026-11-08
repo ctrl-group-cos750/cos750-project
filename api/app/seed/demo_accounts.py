@@ -8,6 +8,13 @@ meets them, builds a right or wrong answer from each one's stored solution, and 
 the same code a student's answers go through (app/services/attempts.py). So new or replaced content
 never breaks an account, and every result is the one the real mastery rules work out.
 
+`progress` says how far the account got through each module. The seed walks it through the module
+service (app/services/modules.py) one segment at a time, as a student would, so the module map
+shows the same stage as the answers. "end" means the whole module, however many segments it has.
+A module with no segments yet is passed over, as it is for a student (FR-2.1). If a module is
+still locked when the walk reaches it, the walk stops there and the seed says so, rather than
+failing: the account goes as far as the course allows.
+
 `expect` says what the account must end up as (ready for the lecture or not, and which objectives
 are "not yet"). If content changes so that the steps no longer produce it, the load fails, naming
 the account. CI loads the committed accounts against the committed content, so that shows up in
@@ -24,13 +31,13 @@ It is never committed. Unset, no demo accounts are made: an environment only has
 import json
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field, ValidationError, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Segment, User
+from app.models import Activity, Module, Segment, User
 from app.models.user import DEMO_EMAIL_DOMAIN
 from app.passwords import password_problem
 from app.schemas.activities import (
@@ -52,6 +59,7 @@ from app.services.bfs import run_bfs
 from app.services.checking import check_activity
 from app.services.history import delete_history
 from app.services.mastery import evaluate, is_ready
+from app.services.modules import ModuleLocked, save_position
 
 DEMO_FILE = Path(__file__).parent / "demo" / "accounts.json"
 
@@ -72,6 +80,16 @@ class DemoStep(BaseModel, extra="forbid"):
     hints: int = Field(default=0, ge=0, le=4)
 
 
+class DemoProgress(BaseModel, extra="forbid"):
+    """How far the account got through one module (FR-2.5)."""
+
+    module: int
+    # "end" completes the module, however many segments it has. A number stops partway, at that
+    # segment (1 is the first). A stop the module can no longer hold, at or past its last segment,
+    # fails the load rather than quietly completing the module.
+    through: Literal["end"] | Annotated[int, Field(ge=1)] = "end"
+
+
 class DemoExpect(BaseModel, extra="forbid"):
     """What the account's mastery report must say once its steps are done (FR-7.3, FR-7.4)."""
 
@@ -86,6 +104,7 @@ class DemoAccount(BaseModel, extra="forbid"):
     # Where in the course this account is, for whoever runs the demo.
     stage: str = Field(min_length=1)
     staff: bool = False
+    progress: list[DemoProgress] = Field(default_factory=list)
     steps: list[DemoStep] = Field(default_factory=list)
     expect: DemoExpect
 
@@ -114,11 +133,16 @@ def read_demo_accounts(path: Path = DEMO_FILE) -> list[DemoAccount]:
 
 
 def load_demo_accounts(
-    session: Session, password: str | None, path: Path = DEMO_FILE
+    session: Session,
+    password: str | None,
+    path: Path = DEMO_FILE,
+    notes: list[str] | None = None,
 ) -> list[DemoAccount]:
     """Create or rebuild every demo account in one transaction, after the content is loaded.
     Returns the accounts made: none if `password` is unset. Raises ValueError, writing nothing,
-    if the file or the password is wrong, or an account doesn't reach its `expect`."""
+    if the file or the password is wrong, or an account doesn't reach its `expect`. Where an
+    account's progress stopped short because the course doesn't allow more yet, a line saying so
+    is added to `notes`."""
     if not password:
         return []
     accounts = read_demo_accounts(path)
@@ -127,7 +151,9 @@ def load_demo_accounts(
             raise ValueError(f"DEMO_PASSWORD for {account.email}: {problem}")
     try:
         for account in accounts:
-            _rebuild(session, account, hash_password(password))
+            stopped = _rebuild(session, account, hash_password(password))
+            if notes is not None and stopped:
+                notes.append(stopped)
     except Exception:
         session.rollback()
         raise
@@ -135,7 +161,7 @@ def load_demo_accounts(
     return accounts
 
 
-def _rebuild(session: Session, account: DemoAccount, password_hash: str) -> None:
+def _rebuild(session: Session, account: DemoAccount, password_hash: str) -> str | None:
     user = session.scalar(select(User).where(User.email == account.email))
     if user is None:
         user = User(email=account.email)
@@ -151,6 +177,7 @@ def _rebuild(session: Session, account: DemoAccount, password_hash: str) -> None
     session.flush()
 
     delete_history(session, user.id)
+    stopped = _walk(session, user.id, account)
 
     for n, step in enumerate(account.steps, start=1):
         for activity in _questions(session, step):
@@ -168,6 +195,40 @@ def _rebuild(session: Session, account: DemoAccount, password_hash: str) -> None
             f"{account.email}: expected ready={account.expect.ready}, not yet "
             f"{sorted(account.expect.not_yet)}, but the steps give ready={ready}, not yet {not_yet}"
         )
+    return stopped
+
+
+def _walk(session: Session, user_id: int, account: DemoAccount) -> str | None:
+    """Move the account through its modules one segment at a time, through the module service, so
+    the same rules apply as for a student. Returns why it stopped short, or None if it didn't."""
+    for entry in account.progress:
+        where = f"{account.email}, module {entry.module}"
+        if session.get(Module, entry.module) is None:
+            raise ValueError(f"{where}: no such module")
+        count = len(
+            session.scalars(select(Segment.id).where(Segment.module_id == entry.module)).all()
+        )
+        if count == 0:
+            # No content yet: nothing to walk, and it doesn't lock the modules after it (FR-2.1).
+            continue
+        if entry.through == "end":
+            last = count - 1
+        elif entry.through >= count:
+            raise ValueError(
+                f"{where}: meant to stop partway, at segment {entry.through}, but the module has "
+                f"only {count} segments"
+            )
+        else:
+            last = entry.through - 1
+        try:
+            for position in range(last + 1):
+                save_position(session, user_id, entry.module, position)
+        except ModuleLocked:
+            return (
+                f"{account.email}: stopped at module {entry.module}, which is still locked "
+                "because the module before it isn't complete"
+            )
+    return None
 
 
 def _questions(session: Session, step: DemoStep) -> list[Activity]:

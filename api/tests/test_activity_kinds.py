@@ -251,11 +251,24 @@ def test_choose_tests_a_made_up_test_id_cannot_pad_a_right_answer() -> None:
 # --- Content checks (run by the seed and in CI) ----------------------------------------------
 
 
+FILL_CONFIG: dict[str, Any] = {
+    "code": "if v __1__ self.adjacency:\n    self.adjacency[v] = __2__",
+    "blanks": [1, 2],
+    "options": ["in", "not in", "[]", "None"],
+}
+FILL_SOLUTION: dict[str, Any] = {
+    "answers": {"1": "not in", "2": "[]"},
+    "feedback": {"1": {"in": "With in, a new vertex never gets a list."}},
+}
+
+
 def test_the_examples_are_valid_content() -> None:
     validate_activity("matching", MATCHING_CONFIG, MATCHING_SOLUTION)
     validate_activity("fix_the_bug", FIX_CONFIG, FIX_SOLUTION)
     validate_activity("choose_tests", TESTS_CONFIG, TESTS_SOLUTION)
-    # Parsons and fill-in have no extra rules: their shapes are the whole check.
+    validate_activity("fill_in", FILL_CONFIG, FILL_SOLUTION)
+    validate_activity("fill_in", FILL_CONFIG, {"answers": FILL_SOLUTION["answers"]})  # no feedback
+    # Parsons has no extra rules: its shape is the whole check.
     validate_activity("parsons", {"lines": [{"id": 1, "text": "x"}]}, {"order": [1]})
 
 
@@ -294,6 +307,32 @@ def test_the_examples_are_valid_content() -> None:
             {"prompt": "?", "options": [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}]},
             {"correct": "a", "feedback": {"z": "x"}},
             "unknown options",
+        ),
+        ("fill_in", FILL_CONFIG, {"answers": {"1": "not in"}}, r"no answer for blanks \[2\]"),
+        (
+            "fill_in",
+            FILL_CONFIG,
+            {"answers": {**FILL_SOLUTION["answers"], "3": "in"}},
+            "blanks that don't exist",
+        ),
+        ("fill_in", FILL_CONFIG, {"answers": {"1": "not in", "2": "{}"}}, "not one of the options"),
+        (
+            "fill_in",
+            FILL_CONFIG,
+            {**FILL_SOLUTION, "feedback": {"9": {"in": "x"}}},
+            "blank 9, which doesn't exist",
+        ),
+        (
+            "fill_in",
+            FILL_CONFIG,
+            {**FILL_SOLUTION, "feedback": {"1": {"is": "x"}}},
+            "tokens that aren't options",
+        ),
+        (
+            "fill_in",
+            FILL_CONFIG,
+            {**FILL_SOLUTION, "feedback": {"2": {"[]": "x"}}},
+            "the correct token",
         ),
         ("essay", {}, {}, "unknown activity kind"),
         ("fix_the_bug", FIX_CONFIG, {"order": [1, 99]}, "unknown line ids"),
@@ -370,6 +409,8 @@ def make(db: Session, kind: str, config: dict[str, Any], solution: dict[str, Any
         ("fix_the_bug", FIX_CONFIG, FIX_SOLUTION, {"order": FIX_RIGHT}, "as a stack does"),
         ("choose_tests", TESTS_CONFIG, TESTS_SOLUTION, {"selected": ["cycle", "diamond"]},
          "exposing"),
+        ("fill_in", FILL_CONFIG, FILL_SOLUTION, {"answers": {"1": "not in", "2": "[]"}},
+         "never gets a list"),
     ],
 )  # fmt: skip
 def test_each_kind_through_the_api(

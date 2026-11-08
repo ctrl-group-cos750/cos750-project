@@ -9,8 +9,9 @@ from app.seed.demo_accounts import load_demo_accounts
 
 with SessionLocal() as session:
     content = load(session)  # broken content stops here, and so does the API (Dockerfile)
+    notes: list[str] = []  # where a demo account's progress stopped short, and why
     try:
-        demo = load_demo_accounts(session, os.environ.get("DEMO_PASSWORD"))
+        demo = load_demo_accounts(session, os.environ.get("DEMO_PASSWORD"), notes=notes)
         demo_problem = None
     except ValueError as exc:
         # Demo accounts never stop the API: the previous ones are kept, and CI catches the same
@@ -26,5 +27,7 @@ if demo_problem:
     print(f"seed: demo accounts NOT rebuilt, the previous ones are kept: {demo_problem}")
 elif demo:
     print(f"seed: demo accounts {', '.join(a.email for a in demo)}")
+    for note in notes:
+        print(f"seed: demo progress {note}")
 else:
     print("seed: no demo accounts (DEMO_PASSWORD is not set)")

@@ -414,8 +414,10 @@ The pilot is the Implement phase of ADDIE (Table 2). On 10 and 11 November, team
 
 - The System Usability Scale (SUS), ten standard questions that give a usability score from 0 to 100 [30].
 - Questions on the clarity of the feedback and hints, and the time each module took.
-- A short set of ARCS questions based on Keller’s Instructional Materials Motivation Survey [38].
+- A short set of ARCS questions based on Keller’s Instructional Materials Motivation Survey [38]: eight statements, two for each part of the model, adapted from the IMMS. They are reported as ratings per part, not as an IMMS score, because a short adaptation is not the validated 36-item survey.
 - Two open questions: “What helped you most?” and “What confused you?”
+
+The survey, the note-taker's think-aloud sheet and the pilot schedule are in the repository, in `docs/pilot/`.
 
 ## Instruments
 
@@ -480,7 +482,7 @@ If the pilot shows that our choices do not work as intended, the first thing we 
 
 **Tool:** Claude Code, Anthropic's coding assistant, using the Claude Opus 5.5 model, run in the software engineers' development environment.
 
-**What it was used for:** drafting and revising the SE document; proposing options for engineering decisions, which the team then made; writing the project's tooling and infrastructure (CI checks, the database layer, deployment on Coolify, the staging login page, the "coming soon" page, the document builder and its PDF format); organising the course material in the repository; and setting up the project board and its backlog.
+**What it was used for:** drafting and revising the SE document; proposing options for engineering decisions, which the team then made; writing the project's tooling and infrastructure (CI checks, the database layer, deployment on Coolify, the staging login page, the "coming soon" page, the document builder and its PDF format); organising the course material in the repository; setting up the project board and its backlog; and drafting reviews of other members' pull requests, which the reviewer read, edited and posted.
 
 **How its output was checked:** every change went through a pull request that a team member reviewed, and all code passes the project's automated checks (formatting, linting, type checks, tests and builds). Each decision it proposed was accepted, changed or rejected by the team; the decisions are recorded in the SE document (§2, §15.3).
 
@@ -506,7 +508,27 @@ Table: Generative AI prompts for the software engineering work.
 
 ## Instructional design
 
-TODO: The instructional design team adds the tools and prompts used for this document and for the app's content.
+Each instructional designer records their own use, in the same format as above. This covers this document and everything made for the app: questions, hints, feedback, narration scripts, images and the pilot instruments.
+
+### Jacobus Hoogenboezem
+
+**Tool:** Claude Code, Anthropic's coding assistant, using the Claude Opus 5.5 model.
+
+**What it was used for:** drafting the pilot kit (`docs/pilot/`): the plan and schedule, the survey and the think-aloud note sheet (#75); and the engineering backlog items he took on: the seeded demo accounts (#34, #121) and a reason for each wrong token in fill-in activities (#119).
+
+How its output was checked, and the main prompts as typed, to be added by Jacobus Hoogenboezem (#74).
+
+### Mohtashim Hussain
+
+To be added by Mohtashim Hussain (#74).
+
+### Simphiwe Nhlapo
+
+To be added by Simphiwe Nhlapo (#74).
+
+### Joshua Wereley
+
+To be added by Joshua Wereley (#74).
 
 # References and supporting evidence
 

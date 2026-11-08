@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, ValidationError, model_validator
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import Activity, Segment, User
@@ -52,6 +52,7 @@ from app.services.bfs import run_bfs
 from app.services.checking import check_activity
 from app.services.history import delete_history
 from app.services.mastery import evaluate, is_ready
+from app.services.modules import ModuleLocked, ModuleNotFound, PositionTooFar, save_position
 
 DEMO_FILE = Path(__file__).parent / "demo" / "accounts.json"
 
@@ -79,6 +80,13 @@ class DemoExpect(BaseModel, extra="forbid"):
     not_yet: list[int] = Field(default_factory=list)  # exactly these objectives are "not yet"
 
 
+class DemoPlace(BaseModel, extra="forbid"):
+    """How far into a module the account has got: `segment` is 0-based."""
+
+    module: int
+    segment: int = Field(ge=0)
+
+
 class DemoAccount(BaseModel, extra="forbid"):
     # The email's local part: "new" is new@demo.example.com.
     key: str = Field(pattern=r"^[a-z][a-z0-9-]{0,30}$")
@@ -87,6 +95,10 @@ class DemoAccount(BaseModel, extra="forbid"):
     stage: str = Field(min_length=1)
     staff: bool = False
     steps: list[DemoStep] = Field(default_factory=list)
+    # The modules it has worked through, in order, and where it is now (FR-2.5, FR-2.6). A module
+    # with no segments yet is passed over, as it is for a student.
+    modules_done: list[int] = Field(default_factory=list)
+    reached: DemoPlace | None = None
     expect: DemoExpect
 
     @property
@@ -160,6 +172,8 @@ def _rebuild(session: Session, account: DemoAccount, password_hash: str) -> None
                     break  # fewer hints than asked for: show what there is
             record_attempt(session, user.id, activity, answer_for(activity, step.answer, where))
 
+    _walk_modules(session, user.id, account)
+
     outcomes = evaluate(session, user.id)
     ready = is_ready(outcomes)
     not_yet = sorted(o.objective.id for o in outcomes if o.state == "not_yet")
@@ -168,6 +182,27 @@ def _rebuild(session: Session, account: DemoAccount, password_hash: str) -> None
             f"{account.email}: expected ready={account.expect.ready}, not yet "
             f"{sorted(account.expect.not_yet)}, but the steps give ready={ready}, not yet {not_yet}"
         )
+
+
+def _walk_modules(session: Session, user_id: int, account: DemoAccount) -> None:
+    """Move through the account's modules one segment at a time, through the same code the module
+    page uses (app/services/modules.py), so the map shows what a student would see."""
+    walks: list[tuple[int, int | None]] = [(m, None) for m in account.modules_done]
+    if account.reached is not None:
+        walks.append((account.reached.module, account.reached.segment))
+    for module_id, stop in walks:
+        segments = session.scalar(
+            select(func.count()).select_from(Segment).where(Segment.module_id == module_id)
+        )
+        last = (segments or 0) - 1 if stop is None else stop
+        try:
+            for position in range(last + 1):
+                save_position(session, user_id, module_id, position)
+        except (ModuleNotFound, ModuleLocked, PositionTooFar) as exc:
+            raise ValueError(
+                f"{account.email}: can't reach segment {last} of module {module_id} "
+                f"({type(exc).__name__})"
+            ) from exc
 
 
 def _questions(session: Session, step: DemoStep) -> list[Activity]:

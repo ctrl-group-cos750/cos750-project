@@ -10,7 +10,7 @@
     {
       "key": "mid",
       "display_name": "Demo: mid-course",
-      "stage": "Partway through module 3: modules 0 to 2 answered, module 3's first question got wrong once and then right after two hints. Not at the mastery check yet.",
+      "stage": "Partway through module 3: modules 0 to 2 done, and module 3's first question got wrong once and then right after two hints. Not at the mastery check yet.",
       "steps": [
         { "module": 0, "answer": "right" },
         { "module": 1, "answer": "right" },
@@ -18,6 +18,8 @@
         { "module": 3, "limit": 1, "answer": "wrong" },
         { "module": 3, "limit": 1, "answer": "right", "hints": 2 }
       ],
+      "modules_done": [0, 1, 2],
+      "reached": { "module": 3, "segment": 1 },
       "expect": { "ready": false }
     },
     {
@@ -34,6 +36,7 @@
         { "module": 6, "purposes": ["mastery"], "except_objectives": [6], "answer": "right" },
         { "module": 6, "purposes": ["mastery"], "objectives": [6], "answer": "wrong" }
       ],
+      "modules_done": [0, 1, 2, 3, 4, 5, 6],
       "expect": { "ready": false, "not_yet": [6] }
     },
     {
@@ -49,6 +52,7 @@
         { "module": 5, "answer": "right" },
         { "module": 6, "purposes": ["mastery"], "answer": "right" }
       ],
+      "modules_done": [0, 1, 2, 3, 4, 5, 6],
       "expect": { "ready": true }
     }
   ]

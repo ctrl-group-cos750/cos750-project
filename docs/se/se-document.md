@@ -342,7 +342,7 @@ Figure: Use cases. The student takes part in every use case in both groups excep
 - **FR-1.7** A profile page, reached from the account menu in the header, shows the student their own objectives met and, unless hidden (FR-9.5), points and badges.
 
 ## Modules and progress (FR-2)
-- **FR-2.1** Present the seven modules of the ID document (0 to 6) in order. A module opens once the one before it is complete; module 0 is always open.
+- **FR-2.1** Present the seven modules of the ID document (0 to 6) in order. A module opens once the one before it is complete; module 0 is always open. A module with no segments yet (its content not written) is passed over, so it never locks the modules after it.
 - **FR-2.2** Each module is an ordered sequence of segments: narrated video, text, worked example, activity, or code activity.
 - **FR-2.3** Each module starts by stating its objectives in plain words ("By the end of this module you can …"), taken from the content.
 - **FR-2.4** Each module from module 2 onwards opens with one or two retrieval questions on earlier modules.

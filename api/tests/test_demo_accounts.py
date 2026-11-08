@@ -14,7 +14,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
 from app.db import Base
-from app.models import Activity, Attempt, HintView, User
+from app.models import Activity, Attempt, HintView, Segment, User
 from app.schemas.activities import ActivityKind
 from app.seed import FIXTURES, load
 from app.seed.demo_accounts import (
@@ -28,6 +28,7 @@ from app.seed.demo_accounts import (
 from app.services.checking import check_activity
 from app.services.history import history_tables
 from app.services.mastery import evaluate, is_ready
+from app.services.modules import get_modules_for_user
 
 PASSWORD = "Demo pass 2026!"  # noqa: S105 (test only)
 API_DIR = Path(__file__).resolve().parent.parent
@@ -279,3 +280,36 @@ def test_a_demo_account_problem_never_stops_the_seed(tmp_path: Path) -> None:
     assert run.returncode == 0, run.stderr
     assert "demo accounts NOT rebuilt" in run.stdout
     assert "DEMO_PASSWORD" in run.stdout
+
+
+def test_each_account_shows_its_progress_on_the_module_map(db: Session) -> None:
+    load(db)
+    load_demo_accounts(db, PASSWORD)
+
+    def statuses(email: str) -> dict[int, str]:
+        user = db.scalar(select(User).where(User.email == email))
+        assert user is not None
+        return {m.id: m.status for m in get_modules_for_user(db, user.id)}
+
+    with_segments = {s.module_id for s in db.scalars(select(Segment)) if s.module_id is not None}
+
+    def with_content(status: dict[int, str]) -> dict[int, str]:
+        # A module with no segments yet can't be completed, so it stays open.
+        return {m: s for m, s in status.items() if m in with_segments}
+
+    assert set(statuses("new@demo.example.com").values()) <= {"open", "locked"}
+    mid = statuses("mid@demo.example.com")
+    assert mid[3] == "in_progress"
+    assert all(s == "complete" for m, s in with_content(mid).items() if m < 3)
+    for email in ("not-yet@demo.example.com", "ready@demo.example.com"):
+        assert set(with_content(statuses(email)).values()) == {"complete"}, email
+
+
+def test_an_account_whose_modules_cant_be_walked_writes_nothing(
+    tmp_path: Path, db: Session
+) -> None:
+    load(db)
+    path = write(tmp_path, [account(reached={"module": 3, "segment": 99})])
+    with pytest.raises(ValueError, match="can't reach segment 99 of module 3"):
+        load_demo_accounts(db, PASSWORD, path)
+    assert db.scalar(select(User).where(User.email == "mid@demo.example.com")) is None

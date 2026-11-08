@@ -500,6 +500,14 @@ def move_editor_activities(session: Session) -> list[int]:
                 select(literal(new), *columns).where(Activity.id == old),
             )
         )
+        # A checkpoint question belongs to no module or objective, as the editor makes it. A row
+        # a fixture already wrote over (staging, 8 Nov) carries the fixture's tags: drop them, so
+        # its answers aren't counted as that module's in the pilot data (FR-10).
+        session.execute(
+            update(Activity)
+            .where(Activity.id == new)
+            .values(module_id=None, objective_id=None, purpose="practice")
+        )
         for child in (Checkpoint, Hint, HintView, Attempt):
             session.execute(update(child).where(child.activity_id == old).values(activity_id=new))
         # A fixture already written over this id (staging, 8 Nov) is still a module's segment:

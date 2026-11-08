@@ -257,7 +257,7 @@ def test_a_question_already_overwritten_by_a_module_fixture_is_moved_and_the_fix
                     "segments": [{"id": 1, "kind": "activity", "title": "Q", "activity_id": 1}],
                 }
             ],
-            "activities": [activity(id=1, title="Fixture", module_id=0)],
+            "activities": [activity(id=1, title="Fixture", module_id=0, purpose="diagnostic")],
         },
     )
     load(db, folder)
@@ -275,6 +275,9 @@ def test_a_question_already_overwritten_by_a_module_fixture_is_moved_and_the_fix
 
     assert db.get(Checkpoint, checkpoint.id).activity_id == EDITOR_IDS_FROM + 1  # type: ignore[union-attr]
     assert db.get(Activity, 1).title == "Fixture"  # type: ignore[union-attr]
+    # The moved question loses the fixture's tags, so it isn't counted as module 0's (Koos, #117).
+    moved = db.get_one(Activity, EDITOR_IDS_FROM + 1)
+    assert (moved.module_id, moved.objective_id, moved.purpose) == (None, None, "practice")
     assert db.get(Segment, 1).activity_id == 1  # type: ignore[union-attr]
 
 

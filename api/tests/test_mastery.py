@@ -10,9 +10,10 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, HintView, ObjectiveResult, User
+from app.models import Activity, Attempt, HintView, ObjectiveResult, Segment, User
 from app.schemas.graphs import GraphScenarioOut
 from app.seed import FixtureFile, ObjectiveFixture, check_references, load, read_fixtures
 from app.services import mastery, rewards
@@ -124,7 +125,9 @@ def test_parts_of_one_item_count_one_by_one() -> None:
 # --- Through the API, on a small course ----------------------------------------------------------
 
 
-def mcq(id: int, objective: int, purpose: str = "mastery", module: int = 6) -> dict[str, Any]:
+def mcq(
+    id: int, objective: int, purpose: str = "mastery", module: int | None = 6
+) -> dict[str, Any]:
     return {
         "id": id,
         "kind": "multiple_choice",
@@ -140,9 +143,28 @@ def mcq(id: int, objective: int, purpose: str = "mastery", module: int = 6) -> d
     }
 
 
+def ladder() -> list[dict[str, Any]]:
+    """The full hint ladder a practice item on a review path needs: a new list each time."""
+    return [{"level": n, "body": f"Hint {n}"} for n in (1, 2, 3, 4)]
+
+
+def review_path(objective: int, fresh: list[int]) -> dict[str, Any]:
+    """A worked example, practice item `objective`01, then the fresh items."""
+    base = 1000 + 100 * objective
+    return {
+        "objective_id": objective,
+        "segments": [
+            {"id": base, "kind": "worked_example", "title": "Again", "body": "Like this."},
+            {"id": base + 1, "kind": "activity", "title": "Practice", "activity_id": base + 1},
+        ]
+        + [{"id": i, "kind": "activity", "title": f"Fresh {i}", "activity_id": i} for i in fresh],
+    }
+
+
 def small_course(rule_1: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Objective 1 needs 2 of 2 MCQs (601, 602), objective 2 one MCQ (603). 301 is practice and
-    302 a mastery item outside module 6: neither counts."""
+    """Objective 1 needs 2 of 2 MCQs (601, 602), objective 2 one MCQ (603); 301 is practice, so it
+    doesn't count. The review paths: objective 1 practises on 1101, then fresh 1102 and 1103;
+    objective 2 practises on 1201, then fresh 1202."""
     return {
         "objectives": [
             {"id": 1, "text": "One", "bloom_level": "b", "criterion": "Both right."}
@@ -155,11 +177,16 @@ def small_course(rule_1: dict[str, Any] | None = None) -> dict[str, Any]:
         ],
         "activities": [
             mcq(301, 1, purpose="practice", module=3),
-            mcq(302, 1, module=3),
             mcq(601, 1),
             mcq(602, 1),
             mcq(603, 2),
+            mcq(1101, 1, purpose="review", module=None) | {"hints": ladder()},
+            mcq(1102, 1, module=None),
+            mcq(1103, 1, module=None),
+            mcq(1201, 2, purpose="review", module=None) | {"hints": ladder()},
+            mcq(1202, 2, module=None),
         ],
+        "review_paths": [review_path(1, [1102, 1103]), review_path(2, [1202])],
     }
 
 
@@ -200,6 +227,7 @@ def test_a_new_student_has_attempted_nothing_and_is_not_ready(
         "state": "not_attempted",
         "answered": 0,
         "total": 2,
+        "review": None,
     }
 
 
@@ -221,10 +249,9 @@ def test_only_the_first_attempt_at_an_item_counts(client: TestClient, course: Pa
     assert states(client)[2] == "not_yet"
 
 
-def test_only_module_6_mastery_items_count(client: TestClient, course: Path, db: Session) -> None:
+def test_practice_items_do_not_count(client: TestClient, course: Path, db: Session) -> None:
     user = log_in(client)
     answer(client, 301)
-    answer(client, 302)
     assert states(client)[1] == "not_attempted"
     assert db.scalars(select(ObjectiveResult).where(ObjectiveResult.user_id == user)).all() == []
 
@@ -430,3 +457,295 @@ def test_two_first_answers_at_once_both_record(course: Path, db: Session) -> Non
     db.expire_all()
     rows = db.scalars(select(ObjectiveResult).where(ObjectiveResult.user_id == student.id)).all()
     assert {r.objective_id: r.state for r in rows} == {1: "not_attempted", 2: "met_independently"}
+
+
+# --- The review path (FR-7.5, ID document §7.6) --------------------------------------------------
+
+
+def broken(change: Any) -> dict[str, Any]:
+    course = small_course()
+    change(course)
+    return course
+
+
+def _path(course: dict[str, Any], objective: int) -> dict[str, Any]:
+    return next(p for p in course["review_paths"] if p["objective_id"] == objective)
+
+
+def _fresh_first(path: dict[str, Any]) -> None:
+    """Keep the worked example first, but put the fresh items before the practice."""
+    teach, *rest = path["segments"]
+    path["segments"] = [teach, *reversed(rest)]
+
+
+def _activity(course: dict[str, Any], id: int) -> dict[str, Any]:
+    return next(a for a in course["activities"] if a["id"] == id)
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        (lambda c: c["review_paths"].pop(), r"no review path: \[2\]"),
+        (lambda c: c["review_paths"].append(review_path(2, [])), "two review paths"),
+        (lambda c: _path(c, 2).update(objective_id=3), "objectives that don't exist"),
+        (lambda c: _activity(c, 1202).update(module_id=6), "must have no module"),
+        (lambda c: _activity(c, 1202).update(objective_id=1), "must have no module"),
+        (lambda c: _activity(c, 1201).update(purpose="practice"), "is practice"),
+        (lambda c: _path(c, 2)["segments"].pop(), "at least one fresh mastery item"),
+        (lambda c: _path(c, 2)["segments"].pop(1), "at least one practice"),
+        (lambda c: _activity(c, 1201)["hints"].pop(), "needs the full hint ladder"),
+        (lambda c: _fresh_first(_path(c, 1)), "after all the practice"),
+        (lambda c: _path(c, 2)["segments"].append(_path(c, 2)["segments"][-1]), "path twice"),
+        (lambda c: _path(c, 2)["segments"][1].update(activity_id=999), "no activity 999"),
+        (
+            lambda c: _path(c, 2)["segments"][0].update(skip_check_activity_id=603),
+            "nothing on a review path is skipped",
+        ),
+        (
+            lambda c: c["activities"].append(mcq(399, 1, module=3)),
+            "mastery item belongs in module 6 or on a review path",
+        ),
+        (
+            lambda c: c["modules"][0].update(
+                segments=[{"id": 9, "kind": "activity", "title": "x", "activity_id": 1202}]
+            ),
+            "is on a review path",
+        ),
+    ],
+)
+def test_a_review_path_that_cannot_work_is_refused(change: Any, message: str) -> None:
+    with pytest.raises(ValueError, match=message):
+        check_references(FixtureFile.model_validate(broken(change)))
+
+
+@pytest.mark.parametrize(
+    ("segments", "message"),
+    [
+        ([{"id": 1, "kind": "activity", "title": "x", "activity_id": 1}], "teaches the objective"),
+        (
+            [
+                {"id": 1, "kind": "activity", "title": "x", "activity_id": 1},
+                {"id": 2, "kind": "worked_example", "title": "y", "body": "b"},
+            ],
+            "starts with a segment that teaches",
+        ),
+        (
+            [{"id": 1, "kind": "refresher", "title": "x", "body": "b", "refresher_for": "q"}],
+            "belongs in module 0",
+        ),
+    ],
+)
+def test_a_review_path_teaches_before_it_tests(segments: list[Any], message: str) -> None:
+    with pytest.raises(ValueError, match=message):
+        FixtureFile.model_validate({"review_paths": [{"objective_id": 1, "segments": segments}]})
+
+
+def test_review_path_segment_ids_must_not_collide_with_modules(tmp_path: Path) -> None:
+    course = small_course()
+    _path(course, 2)["segments"][0]["id"] = 1100  # objective 1's worked example
+    (tmp_path / "course.json").write_text(json.dumps(course), encoding="utf-8")
+    with pytest.raises(ValueError, match=r"segment ids used twice: \[1100\]"):
+        read_fixtures(tmp_path)
+
+
+def test_a_segment_belongs_to_a_module_or_a_review_path(course: Path, db: Session) -> None:
+    db.add(Segment(id=5000, kind="text", title="Nowhere", body="b"))
+    with pytest.raises(IntegrityError):
+        db.flush()
+    db.rollback()
+    db.add(
+        Segment(id=5001, module_id=3, review_objective_id=1, kind="text", title="Both", body="b")
+    )
+    with pytest.raises(IntegrityError):
+        db.flush()
+
+
+def test_a_reseed_reorders_and_removes_review_segments(course: Path, db: Session) -> None:
+    changed = small_course()
+    segments = _path(changed, 1)["segments"]
+    segments[:] = [segments[0], segments[1], segments[3]]  # drop fresh item 1102's step
+    (course / "course.json").write_text(json.dumps(changed), encoding="utf-8")
+    with pytest.raises(ValueError, match="activity 1102: a mastery item belongs"):
+        load(db, course)
+    changed["activities"] = [a for a in changed["activities"] if a["id"] != 1102]
+    (course / "course.json").write_text(json.dumps(changed), encoding="utf-8")
+    load(db, course)
+    db.expire_all()
+    rows = db.scalars(
+        select(Segment).where(Segment.review_objective_id == 1).order_by(Segment.position)
+    ).all()
+    assert [(s.id, s.position, s.module_id) for s in rows] == [
+        (1100, 1, None),
+        (1101, 2, None),
+        (1103, 3, None),
+    ]
+
+
+def fail_objective_2(client: TestClient) -> None:
+    answer(client, 603, WRONG)
+
+
+def test_a_review_path_is_closed_until_module_6_says_not_yet(
+    client: TestClient, course: Path
+) -> None:
+    log_in(client)
+    assert client.get("/api/me/review/2").status_code == 403
+    for item in (1201, 1202):
+        assert client.get(f"/api/activities/{item}").status_code == 403
+        assert client.post(f"/api/activities/{item}/attempts", json=RIGHT).status_code == 403
+        assert client.post(f"/api/activities/{item}/hints").status_code == 403
+    assert states(client)[2] == "not_attempted"
+
+
+def test_an_objective_met_in_module_6_never_opens_its_path(
+    client: TestClient, course: Path
+) -> None:
+    log_in(client)
+    answer(client, 603)
+    assert client.get("/api/me/review/2").status_code == 403
+    assert client.get("/api/me/report").json()["objectives"][1]["review"] is None
+
+
+def test_an_objective_without_a_path_is_404(client: TestClient, course: Path) -> None:
+    log_in(client)
+    assert client.get("/api/me/review/9").status_code == 404
+
+
+def test_not_yet_opens_the_review_path(client: TestClient, course: Path) -> None:
+    log_in(client)
+    fail_objective_2(client)
+    report = client.get("/api/me/report").json()
+    assert report["objectives"][1]["review"] == {"answered": 0, "total": 1}
+    path = client.get("/api/me/review/2").json()
+    assert path["objectiveId"] == 2
+    assert path["state"] == "not_yet"
+    assert path["progress"] == {"answered": 0, "total": 1}
+    assert [(s["kind"], s["activityId"], s["purpose"], s["answered"]) for s in path["steps"]] == [
+        ("worked_example", None, None, False),
+        ("activity", 1201, "review", False),
+        ("activity", 1202, "mastery", False),
+    ]
+    assert path["steps"][0]["body"] == "Like this."
+    assert client.get("/api/activities/1202").status_code == 200
+
+
+def test_practice_on_the_path_does_not_change_the_result(client: TestClient, course: Path) -> None:
+    log_in(client)
+    fail_objective_2(client)
+    answer(client, 1201)
+    assert states(client)[2] == "not_yet"
+    steps = client.get("/api/me/review/2").json()["steps"]
+    assert [s["answered"] for s in steps] == [False, True, False]
+
+
+def test_the_fresh_items_decide_the_result_and_the_student_comes_back_stronger(
+    client: TestClient, course: Path, db: Session
+) -> None:
+    user = log_in(client)
+    answer(client, 601)
+    answer(client, 602)
+    fail_objective_2(client)
+    assert client.get("/api/me/report").json()["ready"] is False
+    answer(client, 1201, WRONG)  # practice: getting it wrong costs nothing
+    answer(client, 1202)
+    report = client.get("/api/me/report").json()
+    assert states(client) == {1: "met_independently", 2: "met_independently"}
+    assert report["ready"] is True
+    assert report["objectives"][1]["review"] == {"answered": 1, "total": 1}
+    held = {b.badge for b in rewards.badges_of(db, user)}
+    assert {rewards.CAME_BACK_STRONGER, rewards.READY_FOR_LECTURE} <= held
+    stored = db.scalar(
+        select(ObjectiveResult).where(
+            ObjectiveResult.user_id == user, ObjectiveResult.objective_id == 2
+        )
+    )
+    assert stored is not None
+    assert len(stored.evidence) == 2  # module 6's attempt and the fresh item's
+    # The path stays open to look back at.
+    assert client.get("/api/me/review/2").json()["state"] == "met_independently"
+
+
+def test_all_fresh_items_must_be_answered_before_they_decide(
+    client: TestClient, course: Path
+) -> None:
+    log_in(client)
+    answer(client, 601)
+    answer(client, 602, WRONG)
+    answer(client, 1102)
+    assert states(client)[1] == "not_yet"  # module 6's result stands until 1103 is answered
+    assert client.get("/api/me/report").json()["objectives"][0]["review"] == {
+        "answered": 1,
+        "total": 2,
+    }
+    answer(client, 1103)
+    assert states(client)[1] == "met_independently"
+
+
+def test_still_not_yet_after_the_path(client: TestClient, course: Path) -> None:
+    log_in(client)
+    fail_objective_2(client)
+    answer(client, 1202, WRONG)
+    answer(client, 1202, RIGHT)  # only the first answer to a fresh item counts too
+    report = client.get("/api/me/report").json()
+    assert states(client)[2] == "not_yet"
+    assert report["objectives"][1]["review"] == {"answered": 1, "total": 1}
+
+
+def test_hint_3_on_a_fresh_item_makes_it_met_with_support(
+    client: TestClient, course: Path, db: Session
+) -> None:
+    user = log_in(client)
+    fail_objective_2(client)
+    db.add(HintView(user_id=user, activity_id=1202, level=3))
+    db.commit()
+    answer(client, 1202)
+    assert states(client)[2] == "met_with_support"
+
+
+def wrong_submission(activity: Activity) -> dict[str, Any]:
+    """An answer to any committed item that gets every part wrong."""
+    wrong: dict[str, dict[str, Any]] = {
+        "multiple_choice": {"selected": "not-an-option"},
+        "matching": {"pairs": {}},
+        "parsons": {"order": []},
+        "fix_the_bug": {"order": []},
+        "fill_in": {"answers": {}},
+        "choose_tests": {"selected": []},
+        "trace": {"rows": []},
+    }
+    return wrong[activity.kind]
+
+
+def test_every_committed_objective_has_a_review_path_that_teaches_then_tests() -> None:
+    content = read_fixtures()
+    activities = {a.id: a for a in content.activities}
+    paths = {r.objective_id: r for r in content.review_paths}
+    assert set(paths) == {o.id for o in content.objectives}
+    for objective, path in paths.items():
+        kinds = [s.kind for s in path.segments]
+        assert kinds[0] == "worked_example", objective
+        purposes = [activities[s.activity_id].purpose for s in path.segments if s.activity_id]
+        assert purposes[0] == "review", objective  # practice, with the full hint ladder
+        assert len(activities[path.segments[1].activity_id or 0].hints) == 4, objective
+        assert purposes[-1] == "mastery", objective
+
+
+def test_the_committed_review_paths_can_take_a_student_to_ready(
+    client: TestClient, db: Session
+) -> None:
+    load(db)
+    log_in(client)
+    check = db.scalars(
+        select(Activity).where(Activity.module_id == 6, Activity.purpose == "mastery")
+    ).all()
+    for item in check:
+        answer(client, item.id, {"submitted": wrong_submission(item)})
+    assert set(states(client).values()) == {"not_yet"}
+    for objective in range(1, 8):
+        for step in client.get(f"/api/me/review/{objective}").json()["steps"]:
+            if step["purpose"] == "mastery":
+                item = db.get_one(Activity, step["activityId"])
+                answer(client, item.id, {"submitted": correct_submission(item)})
+    report = client.get("/api/me/report").json()
+    assert set(states(client).values()) == {"met_independently"}
+    assert report["ready"] is True

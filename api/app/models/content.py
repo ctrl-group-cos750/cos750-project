@@ -5,7 +5,16 @@ never edited by students.
 
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, ForeignKey, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    JSON,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -46,7 +55,11 @@ class Module(Base):
 
 
 class Segment(Base):
-    """One step of a module, shown in `position` order (FR-2.2).
+    """One step of a module, or of an objective's review path, shown in `position` order (FR-2.2).
+
+    A segment belongs to exactly one of the two: a module (`module_id`), or the review path of an
+    objective (`review_objective_id`), which a student opens when the mastery check marks that
+    objective "not yet" (FR-7.5, ID document §7.6).
 
     `kind` says what the step is: a narrated `video` (the Video row points here by `segment_id`,
     because videos are made by staff in the app, not in fixtures), Markdown `text`, a
@@ -56,10 +69,16 @@ class Segment(Base):
     """
 
     __tablename__ = "segments"
+    __table_args__ = (
+        CheckConstraint(
+            "(module_id IS NULL) <> (review_objective_id IS NULL)", name="ck_segments_one_home"
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    module_id: Mapped[int] = mapped_column(ForeignKey("modules.id"), index=True)
-    # Its place in the module. The seed numbers segments in fixture order, so no two collide.
+    module_id: Mapped[int | None] = mapped_column(ForeignKey("modules.id"), index=True)
+    review_objective_id: Mapped[int | None] = mapped_column(ForeignKey("objectives.id"), index=True)
+    # Its place in the module or review path. The seed numbers segments in fixture order.
     position: Mapped[int] = mapped_column()
     kind: Mapped[str] = mapped_column(String(32))
     title: Mapped[str] = mapped_column(String(200))

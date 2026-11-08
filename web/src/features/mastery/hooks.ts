@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { fetchReport } from './mastery.api.ts'
+import { fetchReport, fetchReviewPath } from './mastery.api.ts'
 
 export const reportKey = ['mastery-report'] as const
 
@@ -7,4 +7,13 @@ export const reportKey = ['mastery-report'] as const
  * that submits one should invalidate `reportKey`. */
 export function useReport() {
   return useQuery({ queryKey: reportKey, queryFn: fetchReport })
+}
+
+/** An objective's review path. Like the report, it changes only when the student answers. */
+export function useReviewPath(objectiveId: number) {
+  return useQuery({
+    queryKey: [...reportKey, 'review', objectiveId],
+    queryFn: () => fetchReviewPath(objectiveId),
+    enabled: Number.isInteger(objectiveId) && objectiveId > 0,
+  })
 }

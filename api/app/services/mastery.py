@@ -2,8 +2,14 @@
 
 Each objective's result comes from the student's answers to the module 6 items tagged with it
 (`purpose` "mastery"). Only the **first** attempt at each item counts: these items are unseen and
-answered once, so trying again until it is right is not evidence. A student who doesn't meet an
-objective gets the review path and fresh items for it (FR-7.5, #23), not another go at these.
+answered once, so trying again until it is right is not evidence.
+
+A student whom module 6 marks "not yet" on an objective gets its **review path** instead (FR-7.5,
+ID document §7.6): segments that teach it again, practice with the full hint ladder, then fresh
+mastery items for that objective only. Once every fresh item is answered, they decide the result
+by the same rule, and the module 6 result no longer does. The path opens only for a "not yet"
+objective, so its fresh items stay unseen until then (`review_open`), and there is one path per
+objective: a student still "not yet" after it is told to bring that objective to the lecture.
 
 The objective's rule (`pass_fraction` or `max_wrong` on the Objective, from the criterion in
 Table 1) is counted over the parts of those attempts: an option for multiple choice, a step of a
@@ -29,12 +35,12 @@ frontend's MasteryStatus. `_REWARD_NAMES` maps the first to the second; the fron
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
-from sqlalchemy import ColumnElement, and_, func, select
+from sqlalchemy import ColumnElement, and_, func, or_, select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, Objective, ObjectiveResult, User
+from app.models import Activity, Attempt, Objective, ObjectiveResult, Segment, User
 from app.services import rewards
 
 State = Literal["not_attempted", "met_independently", "met_with_support", "not_yet"]
@@ -52,13 +58,18 @@ _REWARD_NAMES: dict[State, rewards.Mastery] = {
 
 
 def counts(activity: Activity) -> bool:
-    """Whether answers to this activity decide a result: a mastery item in module 6 (FR-7.1)."""
-    return activity.purpose == "mastery" and activity.module_id == MASTERY_MODULE
+    """Whether answers to this activity decide a result: a mastery item in module 6 (FR-7.1), or
+    a fresh mastery item on a review path, which has no module (FR-7.5). The seed refuses a
+    mastery item anywhere else."""
+    return activity.purpose == "mastery" and activity.module_id in (MASTERY_MODULE, None)
 
 
 def _counted() -> ColumnElement[bool]:
     """`counts` as a query condition."""
-    return and_(Activity.purpose == "mastery", Activity.module_id == MASTERY_MODULE)
+    return and_(
+        Activity.purpose == "mastery",
+        or_(Activity.module_id == MASTERY_MODULE, Activity.module_id.is_(None)),
+    )
 
 
 @dataclass(frozen=True)
@@ -105,23 +116,76 @@ def _parts(attempt: Attempt) -> tuple[bool, ...]:
 
 
 @dataclass(frozen=True)
-class Outcome:
-    """One objective's result for one student, and how far through its items they are."""
+class Tally:
+    """One set of items (module 6's, or a review path's fresh ones) and what they decide."""
 
-    objective: Objective
     state: State
     answered: int
     total: int
-    evidence: tuple[int, ...]  # the attempts it was decided from
+    evidence: tuple[int, ...]  # the first attempts it was decided from
+
+
+@dataclass(frozen=True)
+class Outcome:
+    """One objective's result for one student. `check` is module 6; `review` is the review path's
+    fresh items, present once the path is open (module 6 said "not yet")."""
+
+    objective: Objective
+    check: Tally
+    review: Tally | None
+
+    @property
+    def via_review(self) -> bool:
+        """The review path decided the result: all its fresh items are answered."""
+        return self.review is not None and self.review.state != "not_attempted"
+
+    @property
+    def state(self) -> State:
+        return (
+            self.review.state if self.review is not None and self.via_review else self.check.state
+        )
+
+    @property
+    def evidence(self) -> tuple[int, ...]:
+        return self.check.evidence + (self.review.evidence if self.review else ())
+
+
+def _tally(rule: Rule, items: Sequence[Activity], first: dict[int, Attempt]) -> Tally:
+    answers = [
+        Answer(a.id, _parts(a), a.hint_level) if (a := first.get(i.id)) else None for i in items
+    ]
+    given = tuple(a.attempt_id for a in answers if a is not None)
+    return Tally(decide(rule, answers), len(given), len(items), given)
+
+
+def review_items(session: Session) -> dict[int, list[Activity]]:
+    """Each objective's fresh review-path items, in path order."""
+    rows = session.execute(
+        select(Segment, Activity)
+        .join(Activity, Activity.id == Segment.activity_id)
+        .where(Segment.review_objective_id.is_not(None), Activity.purpose == "mastery")
+        .order_by(Segment.position)
+    ).all()
+    found: dict[int, list[Activity]] = {}
+    for segment, activity in rows:
+        objective_id = cast(int, segment.review_objective_id)  # not None, by the query
+        found.setdefault(objective_id, []).append(activity)
+    return found
 
 
 def evaluate(session: Session, user_id: int) -> list[Outcome]:
     """This student's result on every objective, in objective order. Reads only."""
     objectives = session.scalars(select(Objective).order_by(Objective.id)).all()
-    items = session.scalars(select(Activity).where(_counted()).order_by(Activity.id)).all()
+    check = session.scalars(
+        select(Activity)
+        .where(Activity.purpose == "mastery", Activity.module_id == MASTERY_MODULE)
+        .order_by(Activity.id)
+    ).all()
+    fresh = review_items(session)
+    ids = [i.id for i in check] + [i.id for items in fresh.values() for i in items]
     first_ids = (
         select(func.min(Attempt.id))
-        .where(Attempt.user_id == user_id, Attempt.activity_id.in_([i.id for i in items]))
+        .where(Attempt.user_id == user_id, Attempt.activity_id.in_(ids))
         .group_by(Attempt.activity_id)
     )
     first = {
@@ -130,14 +194,20 @@ def evaluate(session: Session, user_id: int) -> list[Outcome]:
 
     outcomes = []
     for objective in objectives:
-        mine = [i for i in items if i.objective_id == objective.id]
-        answers = [
-            Answer(a.id, _parts(a), a.hint_level) if (a := first.get(i.id)) else None for i in mine
-        ]
         rule = Rule(objective.pass_fraction, objective.max_wrong)
-        given = tuple(a.attempt_id for a in answers if a is not None)
-        outcomes.append(Outcome(objective, decide(rule, answers), len(given), len(mine), given))
+        on_check = _tally(rule, [i for i in check if i.objective_id == objective.id], first)
+        review = None
+        if on_check.state == "not_yet":
+            review = _tally(rule, fresh.get(objective.id, []), first)
+        outcomes.append(Outcome(objective, on_check, review))
     return outcomes
+
+
+def review_open(session: Session, user_id: int, objective_id: int) -> bool:
+    """Whether this student's review path for the objective is open: module 6 said "not yet"."""
+    return any(
+        o.objective.id == objective_id and o.review is not None for o in evaluate(session, user_id)
+    )
 
 
 def is_ready(outcomes: Sequence[Outcome]) -> bool:
@@ -178,6 +248,7 @@ def recompute(session: Session, user_id: int) -> list[Outcome]:
                 o.objective.id,
                 _REWARD_NAMES[o.state],
                 results,
+                via_review=o.via_review,  # Came Back Stronger
                 objectives=[x.objective.id for x in outcomes],
             )
     session.flush()
@@ -194,3 +265,12 @@ def recompute_all(session: Session) -> int:
     for user_id in sorted(users):
         recompute(session, user_id)
     return len(users)
+
+
+def review_path_of(session: Session, activity_id: int) -> int | None:
+    """The objective whose review path shows this activity, or None if it is on none."""
+    return session.scalar(
+        select(Segment.review_objective_id).where(
+            Segment.activity_id == activity_id, Segment.review_objective_id.is_not(None)
+        )
+    )

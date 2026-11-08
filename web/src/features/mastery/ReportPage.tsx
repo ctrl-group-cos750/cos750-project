@@ -1,3 +1,5 @@
+import { Link } from 'react-router'
+import { buttonVariants } from '@/components/ui/button-variants'
 import { Alert, Card, MasteryStatus, Spinner, Tag, type Mastery } from '../../components'
 import { useReport } from './hooks.ts'
 import type { ObjectiveReport, ObjectiveState } from './mastery.api.ts'
@@ -13,16 +15,48 @@ const asMastery: Partial<Record<ObjectiveState, Mastery>> = {
 function nextStep(o: ObjectiveReport): string {
   switch (o.state) {
     case 'met_independently':
-      return 'You met this on your own.'
+      return reviewDone(o)
+        ? 'You met this on your own after the review path.'
+        : 'You met this on your own.'
     case 'met_with_support':
-      return 'You met this after using hint 3 or 4.'
+      return reviewDone(o)
+        ? 'You met this after the review path, using hint 3 or 4.'
+        : 'You met this after using hint 3 or 4.'
     case 'not_yet':
-      return 'Review this objective before the lecture.'
+      if (reviewDone(o))
+        return 'Still not yet after the review path. Bring this one to the lecture.'
+      if (o.review && o.review.answered > 0)
+        return `Review path: ${o.review.answered} of ${o.review.total} fresh questions answered.`
+      return 'Work through its review path before the lecture.'
     case 'not_attempted':
       if (o.total === 0) return 'There are no questions on this objective yet.'
       if (o.answered > 0) return `${o.answered} of ${o.total} questions answered in module 6.`
       return 'Answer its questions in module 6, the mastery check.'
   }
+}
+
+/** The review path's fresh questions are all answered, so they decided the result. */
+function reviewDone(o: ObjectiveReport): boolean {
+  return o.review !== null && o.review.answered === o.review.total
+}
+
+/** The way into an open review path, worded for how far the student is through it. */
+function ReviewLink({ o }: { o: ObjectiveReport }) {
+  if (!o.review) return null
+  const label = reviewDone(o)
+    ? 'Look back at the review path'
+    : o.review.answered > 0
+      ? 'Continue review path'
+      : 'Start review path'
+  return (
+    <Link
+      to={`/review/${o.id}`}
+      className={buttonVariants({ variant: reviewDone(o) ? 'ghost' : 'secondary', size: 'sm' })}
+    >
+      {label}
+      <span className="sr-only">: objective {o.id}</span>
+    </Link>
+  )
 }
 
 function Result({ state }: { state: ObjectiveState }) {
@@ -67,6 +101,7 @@ export function ReportPage() {
                 <p className={styles.text}>{o.text}</p>
                 <p className={styles.next}>{nextStep(o)}</p>
                 <p className={styles.criterion}>To meet it: {o.criterion}</p>
+                <ReviewLink o={o} />
               </div>
               <Result state={o.state} />
             </li>

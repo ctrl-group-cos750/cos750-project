@@ -6,7 +6,7 @@ from app.auth import CurrentUser
 from app.db import DbSession
 from app.models import Activity, Hint
 from app.schemas.activities import ActivityOut, AttemptIn, AttemptOut, HintOut
-from app.services.attempts import record_attempt, reveal_next_hint
+from app.services.attempts import hint_level_seen, record_attempt, reveal_next_hint
 from app.services.mastery import review_open, review_path_of
 
 router = APIRouter(prefix="/api/activities", tags=["activities"])
@@ -72,7 +72,7 @@ def get_revealed_hints(activity_id: int, user: CurrentUser, session: DbSession) 
     """Every hint level this student has already unlocked on this activity (FR-4.4, FR-4.5).
 
     Returns an empty list if they have not asked for any hints yet."""
-    activity = _activity_or_404(session, activity_id)
+    activity = _activity_or_404(session, activity_id, user.id)
     all_hints = session.scalars(
         select(Hint).where(Hint.activity_id == activity.id).order_by(Hint.level)
     ).all()

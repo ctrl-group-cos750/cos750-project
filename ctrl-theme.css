@@ -1,0 +1,82 @@
+/*
+ * Ctrl Academy theme for shadcn/ui (Tailwind v4 globals.css format). Light mode only.
+ * Palette: group logo blues — 03045e 023e8a 0077b6 0096c7 00b4d8 48cae4 90e0ef ade8f4 caf0f8.
+ *
+ * How to use: in web/src/index.css (or globals.css after `npx shadcn@latest init`),
+ * replace the generated :root block with the one below (remove the .dark block),
+ * and add the extra lines to the existing `@theme inline` block.
+ *
+ * Contrast notes (WCAG 2.1 AA, NFR-A2):
+ *  - Light mode only. Pale blue backgrounds, navy text, and #48cae4 buttons with navy text (9.2:1).
+ *  - On white, only #0077b6 and darker are readable as text (#0077b6 is 4.9:1). Use #00b4d8 and lighter
+ *    only for fills, borders, buttons with navy text, and focus rings.
+ *  - Success and destructive are the only non-blue colours, because right/wrong feedback must stay recognisable.
+ */
+
+:root {
+  --radius: 0.625rem;
+
+  --background: #f5fcfe;
+  --foreground: #023e8a;
+  --card: #ffffff;
+  --card-foreground: #023e8a;
+  --popover: #ffffff;
+  --popover-foreground: #023e8a;
+
+  --primary: #48cae4;
+  --primary-foreground: #03045e;
+  --secondary: #caf0f8;
+  --secondary-foreground: #03045e;
+  --muted: #f5fcfe;
+  --muted-foreground: #0077b6;
+  --accent: #caf0f8;
+  --accent-foreground: #03045e;
+  --destructive: #b8412f;
+
+  --border: #ade8f4;
+  --input: #90e0ef;
+  --ring: #00b4d8;
+
+  --chart-1: #03045e;
+  --chart-2: #0077b6;
+  --chart-3: #00b4d8;
+  --chart-4: #48cae4;
+  --chart-5: #90e0ef;
+
+  --sidebar: #f5fcfe;
+  --sidebar-foreground: #023e8a;
+  --sidebar-primary: #48cae4;
+  --sidebar-primary-foreground: #03045e;
+  --sidebar-accent: #caf0f8;
+  --sidebar-accent-foreground: #03045e;
+  --sidebar-border: #ade8f4;
+  --sidebar-ring: #00b4d8;
+
+  /* App-specific: feedback and BFS visualiser states (NFR-A2: also shown by label and marker shape) */
+  --success: #1f7a52;
+  --success-soft: #e8f7ef;
+  --destructive-soft: #fdf0ee;
+  --bfs-current: #0077b6;       /* thick solid ring */
+  --bfs-current-soft: #ade8f4;
+  --bfs-queued: #00b4d8;        /* dashed ring */
+  --bfs-queued-soft: #e8f8fc;
+  --bfs-visited: #48cae4;       /* filled */
+  --bfs-visited-soft: #caf0f8;
+  --bfs-edge: #90e0ef;
+}
+
+
+/* Add these to the existing `@theme inline { ... }` block so Tailwind classes like
+   bg-success-soft, text-success, border-bfs-queued and fill-bfs-current-soft work. */
+@theme inline {
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-bfs-current: var(--bfs-current);
+  --color-bfs-current-soft: var(--bfs-current-soft);
+  --color-bfs-queued: var(--bfs-queued);
+  --color-bfs-queued-soft: var(--bfs-queued-soft);
+  --color-bfs-visited: var(--bfs-visited);
+  --color-bfs-visited-soft: var(--bfs-visited-soft);
+  --color-bfs-edge: var(--bfs-edge);
+}

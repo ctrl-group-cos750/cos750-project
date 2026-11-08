@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router'
 import { GuestOnly, RequireAuth, RequireStaff } from './auth/guards.tsx'
 import { LoginPage } from './auth/LoginPage.tsx'
 import { RegisterPage } from './auth/RegisterPage.tsx'
+import { ReportPage } from './features/mastery/ReportPage.tsx'
 import { BadgesPage } from './features/rewards/BadgesPage.tsx'
 import { StaffAccountPage } from './features/staff/StaffAccountPage.tsx'
 import { StaffAccountsPage } from './features/staff/StaffAccountsPage.tsx'
@@ -45,6 +46,7 @@ function App() {
       >
         <Route index element={<HomePage />} />
         <Route path="videos/:videoId" element={<VideoPage />} />
+        <Route path="report" element={<ReportPage />} />
         <Route path="badges" element={<BadgesPage />} />
         <Route
           path="staff"

@@ -12,7 +12,8 @@ Each fixture file may hold any of:
 Everything has a fixed id, so a re-run updates the same rows. By convention a module's segments and
 activities are numbered from 100 times its number (module 3: 301, 302, …; module 0: 1, 2, …), and a
 module lives in its own file (`module-3.json`), so content for different modules never collides.
-Re-running replaces content only: students' attempts and hint views are never touched. A segment
+Re-running replaces content only: students' attempts and hint views are never touched, and their
+objective results are worked out again from those attempts, so a changed rule applies to everyone. A segment
 removed from a module's fixture is removed from the database; a video that played it is kept and
 simply has no segment until staff choose another.
 Videos and their checkpoints are not fixtures: staff make them in the app's video editor, because
@@ -37,6 +38,7 @@ from app.schemas.content import Purpose, SegmentKind
 from app.schemas.graphs import VERTEX, GraphScenarioOut
 from app.services.bfs import InvalidGraph, run_bfs
 from app.services.content import validate_activity
+from app.services.mastery import MASTERY_MODULE, recompute_all
 
 FIXTURES = Path(__file__).parent
 
@@ -78,10 +80,23 @@ class ActivityFixture(BaseModel, extra="forbid"):
 
 
 class ObjectiveFixture(BaseModel, extra="forbid"):
-    id: int = Field(ge=1, le=20)
+    # 1 to 8: each objective has a badge, and the badge catalogue has lo1 to lo8
+    # (app/services/rewards.py, web/src/components/achievements.ts). Add one there first.
+    id: int = Field(ge=1, le=8)
     text: str = Field(min_length=1)
     bloom_level: str = Field(min_length=1, max_length=100)
     criterion: str = Field(min_length=1)
+    # The criterion as the rule the mastery service counts over the parts of the module 6 items
+    # (app/services/mastery.py): at least this fraction right ("4 of 5" is 0.8) ...
+    pass_fraction: float | None = Field(default=None, gt=0, le=1)
+    # ... or at most this many wrong ("with at most one error" is 1). Exactly one of the two.
+    max_wrong: int | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def one_rule(self) -> "ObjectiveFixture":
+        if (self.pass_fraction is None) == (self.max_wrong is None):
+            raise ValueError(f"objective {self.id}: give pass_fraction or max_wrong, not both")
+        return self
 
 
 class SegmentFixture(BaseModel, extra="forbid"):
@@ -161,6 +176,18 @@ def check_references(content: FixtureFile) -> None:
             raise ValueError(f"activity {a.id}: no module {a.module_id}")
         if a.objective_id is not None and a.objective_id not in objectives:
             raise ValueError(f"activity {a.id}: no objective {a.objective_id}")
+    # Module 6 is the mastery check: every objective needs an item there, or its result could
+    # never be met and no student could ever be ready for the lecture (FR-7.1, FR-7.4).
+    if MASTERY_MODULE in modules:
+        checked = {
+            a.objective_id
+            for a in content.activities
+            if a.module_id == MASTERY_MODULE and a.purpose == "mastery"
+        }
+        if missing := sorted(objectives - checked):
+            raise ValueError(
+                f"module {MASTERY_MODULE} has no mastery item for objectives {missing}"
+            )
     placed: dict[int, int] = {}  # activity id -> the segment that shows it
     for m in content.modules:
         for seg in m.segments:
@@ -218,7 +245,14 @@ def load(session: Session, folder: Path = FIXTURES) -> FixtureFile:
     # Parents first: activities point at modules and objectives, segments at activities.
     for o in content.objectives:
         session.merge(
-            Objective(id=o.id, text=o.text, bloom_level=o.bloom_level, criterion=o.criterion)
+            Objective(
+                id=o.id,
+                text=o.text,
+                bloom_level=o.bloom_level,
+                criterion=o.criterion,
+                pass_fraction=o.pass_fraction,
+                max_wrong=o.max_wrong,
+            )
         )
     for m in content.modules:
         session.merge(
@@ -264,6 +298,8 @@ def load(session: Session, folder: Path = FIXTURES) -> FixtureFile:
             )
         )
     session.flush()
+    # A changed rule or mastery item applies to every student's result straight away (FR-7.6).
+    recompute_all(session)
     if session.get_bind().dialect.name == "postgresql":
         # Fixed ids don't move Postgres's id sequences; move them past the largest id, so a row
         # added without an id later doesn't collide with seeded content.

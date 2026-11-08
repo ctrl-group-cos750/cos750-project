@@ -64,20 +64,22 @@ def db() -> Iterator[Session]:
 
 
 @pytest.fixture
-def working_db(monkeypatch: pytest.MonkeyPatch) -> Engine:
+def working_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[Engine]:
     """An in-memory SQLite engine, so tests never depend on a running Postgres."""
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
     monkeypatch.setattr(app.main, "engine", engine)
-    return engine
+    yield engine
+    engine.dispose()
 
 
 @pytest.fixture
-def unreachable_db(monkeypatch: pytest.MonkeyPatch) -> Engine:
+def unreachable_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[Engine]:
     """An engine pointed at a port nothing listens on."""
     engine = create_engine(
         "postgresql+psycopg://ctrl:ctrl@127.0.0.1:1/ctrl", connect_args={"connect_timeout": 1}
     )
     monkeypatch.setattr(app.main, "engine", engine)
-    return engine
+    yield engine
+    engine.dispose()

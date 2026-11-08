@@ -77,7 +77,7 @@ describe('account menu', () => {
     setup()
     renderApp('/')
     await openMenu()
-    await userEvent.click(screen.getByRole('heading', { name: 'Welcome, Ada' }))
+    await userEvent.click(screen.getByRole('heading', { name: 'Graphs and breadth-first search' }))
     expect(screen.queryByRole('link', { name: 'Profile' })).toBeNull()
 
     await openMenu()

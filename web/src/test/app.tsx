@@ -14,11 +14,31 @@ export const ada: User = {
 }
 
 type Call = { method: string; path: string; body: unknown }
-type Override = (body: unknown) => Response | Promise<Response>
+type Override = (body: unknown, params: Record<string, string>) => Response | Promise<Response>
+
+/**
+ * Converts a route pattern like "GET /api/modules/:id/position" into a RegExp.
+ * Named capture groups are created for each `:param` segment.
+ * Returns null for exact-match keys (no colon segments).
+ */
+function patternToRegex(key: string): RegExp | null {
+  if (!key.includes(':')) return null
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const source = escaped.replace(/:([A-Za-z_][A-Za-z0-9_]*)/g, '(?<$1>[^/]+)')
+  return new RegExp(`^${source}$`)
+}
 
 /**
  * A stand-in for the API that remembers who is logged in, like the real one does with its cookie.
  * `overrides` replace a route's answer, keyed "METHOD /path".
+ *
+ * Parameterised routes are supported: use `:param` in the key, e.g.
+ *   `'GET /api/modules/:id'`  — matches `GET /api/modules/42`, passes `{ id: '42' }` to handler
+ *   `'POST /api/modules/:id/position'` — matches the position endpoint for any id
+ *
+ * Exact keys take precedence over pattern keys. Default handlers are provided for:
+ *   - `GET /api/modules/:id`         → 404
+ *   - `POST /api/modules/:id/position` → 404
  */
 export function fakeApi({
   user = null,
@@ -46,17 +66,43 @@ export function fakeApi({
       return new Response(null, { status: 204 })
     },
     'GET /api/health': () => Response.json({ status: 'ok', database: 'ok' }),
+    'GET /api/modules': () => Response.json([]),
     'GET /api/rewards': () => Response.json({ hideRewards: false, points: 0, badges: [] }),
+    // Default handlers for parameterised module routes (overridable)
+    'GET /api/modules/:id': () => Response.json({ detail: 'Not Found' }, { status: 404 }),
+    'POST /api/modules/:id/position': () => Response.json({ detail: 'Not Found' }, { status: 404 }),
     ...overrides,
   }
+
+  // Pre-compile patterns once so the fetch handler is fast.
+  const patterns: Array<{ regex: RegExp; key: string; handler: Override }> = Object.entries(routes)
+    .map(([key, handler]) => ({ regex: patternToRegex(key), key, handler }))
+    .filter((e): e is { regex: RegExp; key: string; handler: Override } => e.regex !== null)
 
   const fetch = vi.fn<typeof globalThis.fetch>(async (input, init) => {
     const path = String(input)
     const method = init?.method ?? 'GET'
     const body: unknown = init?.body ? JSON.parse(String(init.body)) : undefined
     calls.push({ method, path, body })
-    const route = routes[`${method} ${path}`]
-    return route ? route(body) : Response.json({ detail: 'Not Found' }, { status: 404 })
+
+    const routeKey = `${method} ${path}`
+
+    // 1. Exact match (highest priority)
+    const exact = routes[routeKey]
+    if (exact) return exact(body, {})
+
+    // 2. Pattern match (first wins; overrides appear after defaults in the object, so they take
+    //    precedence because we rebuild the patterns array from the merged routes object in order —
+    //    but overrides that use the *same* key string simply replace the default via object spread)
+    for (const { regex, handler } of patterns) {
+      const m = regex.exec(routeKey)
+      if (m) {
+        const params = (m.groups ?? {}) as Record<string, string>
+        return handler(body, params)
+      }
+    }
+
+    return Response.json({ detail: 'Not Found' }, { status: 404 })
   })
   vi.stubGlobal('fetch', fetch)
   return {

@@ -9,7 +9,7 @@ import { AccountMenu } from './AccountMenu.tsx'
 const navClass = ({ isActive }: { isActive: boolean }) =>
   cn(buttonVariants({ variant: isActive ? 'secondary' : 'ghost', size: 'lg' }), 'text-foreground')
 
-/** Every signed-in page: the header (Report, the staff portal link for team members, and the
+/** Every signed-in page: the header (Modules, Report, the staff portal link for team members, and the
  * account menu with the student's profile, badges and Log out), then the page, and new badges
  * announced as they are earned. */
 export function SignedInLayout() {
@@ -21,6 +21,9 @@ export function SignedInLayout() {
     <AppShell
       nav={
         <>
+          <NavLink to="/" end className={navClass}>
+            Modules
+          </NavLink>
           <NavLink to="/report" className={navClass}>
             Report
           </NavLink>

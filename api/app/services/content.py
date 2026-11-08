@@ -106,6 +106,28 @@ def _choose_tests(config: ChooseTestsConfig, solution: ChooseTestsSolution) -> N
             )
 
 
+def _fill_in(config: FillInConfig, solution: FillInSolution) -> None:
+    blanks, options = set(config.blanks), set(config.options)
+    # Every blank has an answer a student can choose, and nothing else does (NFR-M5).
+    if missing := sorted(blanks - set(solution.answers)):
+        raise ValueError(f"no answer for blanks {missing}")
+    if unknown := sorted(set(solution.answers) - blanks):
+        raise ValueError(f"answers for blanks that don't exist {unknown}")
+    for blank, token in sorted(solution.answers.items()):
+        if token not in options:
+            raise ValueError(f"blank {blank}: the answer {token!r} is not one of the options")
+    for blank, messages in sorted(solution.feedback.items()):
+        if blank not in blanks:
+            raise ValueError(f"feedback for blank {blank}, which doesn't exist")
+        if not_options := sorted(set(messages) - options):
+            raise ValueError(
+                f"blank {blank}: feedback for tokens that aren't options {not_options}"
+            )
+        if solution.answers[blank] in messages:
+            # The right token never gets a wrong-answer message, so this one could never show.
+            raise ValueError(f"blank {blank}: feedback for the correct token")
+
+
 def _trace(config: TraceConfig) -> None:
     # The traversal is the engine's, so a graph it refuses would only fail when a student opens
     # it; catch it at load, as the seed does for graph scenarios (FR-6.6).
@@ -131,7 +153,9 @@ def validate_activity(kind: str, config: dict[str, Any], solution: dict[str, Any
             _fix_the_bug(parsed_config, parsed_solution)
         case ChooseTestsConfig(), ChooseTestsSolution():
             _choose_tests(parsed_config, parsed_solution)
+        case FillInConfig(), FillInSolution():
+            _fill_in(parsed_config, parsed_solution)
         case TraceConfig(), _:
             _trace(parsed_config)
         case _:
-            pass  # Parsons and fill-in: the shapes are the whole check
+            pass  # Parsons: the shapes are the whole check

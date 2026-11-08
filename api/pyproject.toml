@@ -34,5 +34,13 @@ files = ["app", "tests"]
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
-addopts = "-ra --strict-markers --strict-config"
+# Coverage for the whole app is reported on every run (issue #67). The 90% gate on the code that
+# decides a student's results is a separate scoped run — see scripts/check.sh and the CI workflow.
+addopts = "-ra --strict-markers --strict-config --cov=app --cov-report=term-missing --no-cov-on-fail"
 filterwarnings = ["error"]
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError"]

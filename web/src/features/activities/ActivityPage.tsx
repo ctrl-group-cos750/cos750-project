@@ -10,7 +10,7 @@ import {
   submitActivityAttempt,
 } from './activities.api.ts'
 import { ActivityRenderer } from './ActivityRenderer.tsx'
-import type { AttemptResult } from './activities.types.ts'
+import type { AttemptResult, Submission } from './activities.types.ts'
 
 function ActivityView({ activityId }: { activityId: number }) {
   const [result, setResult] = useState<AttemptResult>()
@@ -25,7 +25,7 @@ function ActivityView({ activityId }: { activityId: number }) {
   if (query.isPending) return <Spinner label="Loading activity" />
   if (query.isError) return <Alert tone="danger">{query.error.message}</Alert>
 
-  async function submit(submitted: { order: number[] } | { answers: Record<number, string> }) {
+  async function submit(submitted: Submission) {
     setSubmitting(true)
     setSubmitError('')
     try {
@@ -62,7 +62,7 @@ function ActivityView({ activityId }: { activityId: number }) {
   )
 }
 
-/** /activities/:activityId — a standalone code activity. */
+/** /activities/:activityId — a standalone activity. */
 export function ActivityPage() {
   const activityId = Number(useParams().activityId)
   const validActivityId = Number.isInteger(activityId) && activityId > 0

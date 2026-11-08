@@ -2,21 +2,30 @@ import { Alert, Card } from '../../components'
 import { FeedbackPanel } from './FeedbackPanel.tsx'
 import { FillInCode } from './FillInCode.tsx'
 import { HintLadder } from './HintLadder.tsx'
+import { Matching } from './Matching.tsx'
+import { MultipleChoice } from './MultipleChoice.tsx'
 import { ParsonsProblem } from './ParsonsProblem.tsx'
-import type { AttemptResult, CodeActivity, Hint } from './activities.types.ts'
+import type { Activity, AttemptResult, Hint, Submission } from './activities.types.ts'
 
 type ActivityRendererProps = {
-  activity: CodeActivity
+  activity: Activity
   result: AttemptResult | undefined
   submitting: boolean
-  onSubmit: (submitted: { order: number[] } | { answers: Record<number, string> }) => Promise<void>
+  onSubmit: (submitted: Submission) => Promise<void>
   requestHint: (activityId: number) => Promise<Hint>
   loadHints?: (activityId: number) => Promise<readonly Hint[]>
 }
 
+const SUPPORTED: ReadonlySet<Activity['kind']> = new Set([
+  'parsons',
+  'fill_in',
+  'multiple_choice',
+  'matching',
+])
+
 /** Chooses the activity control and consistently adds server feedback and the hint ladder. */
 export function ActivityRenderer(props: ActivityRendererProps) {
-  const isSupported = props.activity.kind === 'parsons' || props.activity.kind === 'fill_in'
+  const isSupported = SUPPORTED.has(props.activity.kind)
 
   return (
     <Card>
@@ -34,6 +43,20 @@ export function ActivityRenderer(props: ActivityRendererProps) {
           result={props.result}
           submitting={props.submitting}
           onSubmit={(answers) => props.onSubmit({ answers })}
+        />
+      ) : props.activity.kind === 'multiple_choice' ? (
+        <MultipleChoice
+          activity={props.activity}
+          result={props.result}
+          submitting={props.submitting}
+          onSubmit={(selected) => props.onSubmit({ selected })}
+        />
+      ) : props.activity.kind === 'matching' ? (
+        <Matching
+          activity={props.activity}
+          result={props.result}
+          submitting={props.submitting}
+          onSubmit={(pairs) => props.onSubmit({ pairs })}
         />
       ) : (
         <Alert tone="warning">This activity kind is not available yet.</Alert>

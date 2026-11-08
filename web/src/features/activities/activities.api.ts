@@ -1,15 +1,16 @@
 import { api } from '../../api/client.ts'
-import type { AttemptResult, CodeActivity, Hint } from './activities.types.ts'
+import type { Activity, AttemptResult, Hint, Submission } from './activities.types.ts'
 
 /** Fetches an activity configuration. The API deliberately omits its solution. */
-export function fetchActivity(activityId: number): Promise<CodeActivity> {
-  return api<CodeActivity>(`/api/activities/${activityId}`)
+export function fetchActivity(activityId: number): Promise<Activity> {
+  return api<Activity>(`/api/activities/${activityId}`)
 }
 
-/** Sends only a line order or token choices, never student-authored executable code. */
+/** Sends only the student's choices (a line order, tokens, an option or pairs), never
+ * student-authored executable code. */
 export function submitActivityAttempt(
   activityId: number,
-  submitted: { order: number[] } | { answers: Record<number, string> },
+  submitted: Submission,
 ): Promise<AttemptResult> {
   return api<AttemptResult>(`/api/activities/${activityId}/attempts`, {
     method: 'POST',

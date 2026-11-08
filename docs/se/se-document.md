@@ -398,6 +398,8 @@ Code activities never execute student-written code. The student constructs code 
 - **FR-9.2** Award fewer points for a correct answer reached after hint level 3 or 4, matching "met with support".
 - **FR-9.3** Award badges for milestones (first module, every objective met, all bonus quests).
 - **FR-9.4** Points and badges are **private**: each student sees only their own. There is no public leaderboard, because public ranking discourages the students who most need the app (those motivated by avoiding failure, L05 [4]).
+- **FR-9.5** A student can hide points and badges. They are still earned while hidden, and the per-objective mastery report is never hidden. About a third of students in a data-structures course found badges demotivating [9], so opting out is the student's choice.
+- **FR-9.6** Points are never taken away and each thing is rewarded once; a badge, once earned, is never removed. Recomputing results (FR-7.6) may add badges but never removes them, and an objective badge only goes up, from bronze (met with support) to gold (met independently). No badge counts hints, attempts, days or speed, so none can be earned by clicking through hints or guessing.
 
 The rules, as confirmed by the ID document (§7.2):
 
@@ -464,7 +466,7 @@ Table: Which part of the ID document each functional requirement delivers.
 
 ## Maintainability
 - **NFR-M1** Layered backend (routers → services → data) with the BfsEngine, the answer checkers and the mastery rules isolated from web concerns and unit-testable in isolation.
-- **NFR-M2** Typed boundaries on both sides (Pydantic + TypeScript); the TypeScript API types are generated from the OpenAPI schema. **[PROVISIONAL]**
+- **NFR-M2** Typed boundaries on both sides (Pydantic + TypeScript); the TypeScript API types in `web/src/api/` are generated from the OpenAPI schema by `scripts/gen-api.sh`, and CI fails if they are out of date.
 - **NFR-M3** ruff, mypy --strict, oxlint and Prettier enforced in CI on every PR.
 - **NFR-M4** Database migrations tracked with Alembic.
 - **NFR-M5** Content (modules, activities, hints, tests, scenarios) lives in fixture files validated by a schema in CI, so a broken content edit fails its PR instead of the app.
@@ -496,7 +498,6 @@ erDiagram
     ACTIVITY ||--|{ HINT : offers
     ACTIVITY ||--o{ ATTEMPT : receives
     ACTIVITY |o--o| GRAPH_SCENARIO : uses
-    BADGE ||--o{ USER_BADGE : awarded_as
 ```
 
 Figure: Entities and relationships.
@@ -529,9 +530,11 @@ Figure: Entities and relationships.
 
 **ObjectiveResult**: `user_id`, `objective_id`, `state` (`not_attempted` | `met_independently` | `met_with_support` | `not_yet`), `evidence` (IDs of the attempts the decision was based on), `updated_at`.
 
-**PointsEntry** (append-only): `user_id`, `points`, `reason`, `ref`, `created_at`. A student's total is the sum.
+**PointsRule**: `event`, `points`; the points table above, editable without a code change.
 
-**Badge** and **UserBadge**: `badge.id`, `name`, `description`, `rule`; `user_badge.user_id`, `badge_id`, `awarded_at`.
+**PointsEntry** (append-only, never negative): `user_id`, `event`, `ref`, `points`, `created_at`. `ref` names what was rewarded (`activity:12`, `objective:5`) and is unique per student, so nothing is rewarded twice. A student's total is the sum.
+
+**UserBadge** (never deleted): `user_id`, `badge`, `ref`, `tier`, `awarded_at`, `upgraded_at`, `seen_at`. `badge` is an id from the badge catalogue: the rules that award it are in `app/services/rewards.py`, and its name, wording and picture in `web/src/components/achievements.ts`. `ref` tells apart badges earned more than once (one per bonus quest). `tier` is bronze or gold for objective badges. `seen_at` stays empty until the app has announced the badge. **User** also has `hide_rewards` (FR-9.5).
 
 ## Notes
 - **Attempts and events are the source of truth.** Module progress, objective results, points and badges are derived from them by the services, and can be recomputed if a rule changes (FR-7.6).
@@ -861,7 +864,9 @@ cos750-project/
 │  ├─ workflows/branch-flow.yml
 │  ├─ dependabot.yml
 │  └─ pull_request_template.md
-├─ scripts/check.sh             every CI check locally; --fix formats first
+├─ scripts/
+│  ├─ check.sh                  every CI check locally; --fix formats first
+│  └─ gen-api.sh                regenerates the frontend's API types (NFR-M2)
 ├─ api/
 │  ├─ Dockerfile                runs migrations, then Uvicorn
 │  ├─ requirements.txt          runtime dependencies (pinned)
@@ -889,7 +894,7 @@ cos750-project/
 │  ├─ package.json, vite.config.ts, .oxlintrc.json, .prettierrc.json, .nvmrc
 │  └─ src/
 │     ├─ main.tsx, App.tsx
-│     ├─ api/                   API client: JSON, errors as ApiError
+│     ├─ api/                   API client: JSON, errors as ApiError; generated types (schema.d.ts)
 │     ├─ auth/                  log-in and register pages, session hooks, route guards
 │     ├─ pages/                 signed-in layout, home, not found
 │     ├─ components/            the shared UI kit: AppShell, Button, TextField, Card, Alert, Tag, ...
@@ -927,7 +932,7 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml up -d db
 
 cd api && python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/alembic upgrade head
-.venv/bin/python -m app.seed      # content fixtures and demo accounts (planned)
+DEMO_PASSWORD=... .venv/bin/python -m app.seed   # content fixtures, then the demo accounts (FR-1.4)
 .venv/bin/uvicorn app.main:app --reload            # http://localhost:8000/api/docs
 
 cd web && npm install && npm run dev               # http://localhost:5173, proxies /api to :8000
@@ -1224,6 +1229,8 @@ Table: Risk register.
 [7] World Wide Web Consortium. *Web Content Accessibility Guidelines (WCAG) 2.1.* W3C Recommendation, 2018, updated 2023. <https://www.w3.org/TR/WCAG21/>
 
 [8] Republic of South Africa. *Protection of Personal Information Act 4 of 2013* (POPIA). Government Gazette No. 37067, 26 November 2013.
+
+[9] L. Haaranen, P. Ihantola, L. Hakulinen and A. Korhonen. How (not) to introduce badges to online exercises. In *Proceedings of the 45th ACM Technical Symposium on Computer Science Education (SIGCSE '14)*, pages 33–38. ACM, 2014. <https://doi.org/10.1145/2538862.2538921>
 
 </div>
 

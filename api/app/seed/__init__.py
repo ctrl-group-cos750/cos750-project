@@ -22,26 +22,14 @@ from sqlalchemy import delete, text
 from sqlalchemy.orm import Session
 
 from app.models import Activity, GraphScenario, Hint, Module, Segment
-from app.schemas.activities import (
-    ActivityKind,
-    FillInConfig,
-    FillInSolution,
-    MultipleChoiceConfig,
-    MultipleChoiceSolution,
-    ParsonsConfig,
-    ParsonsSolution,
-)
+from app.schemas.activities import ActivityKind
 from app.schemas.graphs import VERTEX, GraphScenarioOut
 from app.services.bfs import InvalidGraph, run_bfs
+from app.services.content import validate_activity
 
 FIXTURES = Path(__file__).parent
 
 # The config and solution schemas for each kind (FR-4.1). Add a kind here when its checker lands.
-SHAPES: dict[str, tuple[type[BaseModel], type[BaseModel]]] = {
-    "multiple_choice": (MultipleChoiceConfig, MultipleChoiceSolution),
-    "parsons": (ParsonsConfig, ParsonsSolution),
-    "fill_in": (FillInConfig, FillInSolution),
-}
 
 
 class HintFixture(BaseModel, extra="forbid"):
@@ -60,21 +48,11 @@ class ActivityFixture(BaseModel, extra="forbid"):
 
     @model_validator(mode="after")
     def check_shapes(self) -> "ActivityFixture":
-        config_shape, solution_shape = SHAPES[self.kind]
-        config = config_shape.model_validate(self.config)
-        solution = solution_shape.model_validate(self.solution)
-        if isinstance(config, MultipleChoiceConfig) and isinstance(
-            solution, MultipleChoiceSolution
-        ):
-            ids = {option.id for option in config.options}
-            if solution.correct not in ids:
-                raise ValueError(
-                    f"activity {self.id}: correct option {solution.correct!r} is not one of the options"
-                )
-            if unknown := set(solution.feedback) - ids:
-                raise ValueError(
-                    f"activity {self.id}: feedback for unknown options {sorted(unknown)}"
-                )
+        """The kind's shapes, and a solution a student can reach (app/services/content.py)."""
+        try:
+            validate_activity(self.kind, self.config, self.solution)
+        except ValueError as exc:
+            raise ValueError(f"activity {self.id}: {exc}") from exc
         levels = [hint.level for hint in self.hints]
         if len(levels) != len(set(levels)):
             raise ValueError(f"activity {self.id}: two hints share a level")

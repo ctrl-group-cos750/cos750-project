@@ -1,6 +1,6 @@
 """modules, segments and module-progress: the course map and student progress tracking (FR-2)
 
-Revision ID: 0007
+Revision ID: 0009
 Revises: 0006
 Create Date: 2026-11-05
 """
@@ -10,13 +10,24 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0007"
+revision: str = "0009"
 down_revision: str | None = "0006"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
+    inspector = sa.inspect(op.get_bind())
+    legacy_tables = {"modules", "segments", "module_progress"}
+    existing_tables = {table for table in legacy_tables if inspector.has_table(table)}
+    has_video_segment = inspector.has_table("videos") and any(
+        column["name"] == "segment_id" for column in inspector.get_columns("videos")
+    )
+    if existing_tables or has_video_segment:
+        if existing_tables == legacy_tables and has_video_segment:
+            return
+        raise RuntimeError("The legacy modules migration is only partially present.")
+
     # 1. modules — no FKs to other new tables; must exist before segments.
     op.create_table(
         "modules",

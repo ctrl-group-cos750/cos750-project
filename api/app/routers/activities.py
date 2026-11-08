@@ -1,12 +1,11 @@
 from fastapi import APIRouter, HTTPException, status
 from pydantic import ValidationError
-from sqlalchemy import func, select
 
 from app.auth import CurrentUser
 from app.db import DbSession
-from app.models import Activity, Attempt, Hint, HintView
+from app.models import Activity
 from app.schemas.activities import ActivityOut, AttemptIn, AttemptOut, HintOut
-from app.services.checking import check_activity
+from app.services.attempts import record_attempt, reveal_next_hint
 
 router = APIRouter(prefix="/api/activities", tags=["activities"])
 
@@ -21,16 +20,6 @@ def _activity_or_404(session: DbSession, activity_id: int) -> Activity:
     if activity is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NOT_FOUND)
     return activity
-
-
-def _hint_level_seen(session: DbSession, user_id: int, activity_id: int) -> int:
-    """The highest hint level this student has been shown on this activity; 0 for none."""
-    seen = session.scalar(
-        select(func.max(HintView.level)).where(
-            HintView.user_id == user_id, HintView.activity_id == activity_id
-        )
-    )
-    return seen or 0
 
 
 @router.get("/{activity_id}", response_model=ActivityOut)
@@ -48,24 +37,16 @@ def submit_attempt(
     FR-4.5, FR-5.3).
 
     Send `{"submitted": {...}}` in the kind's shape: `{"selected": "<option id>"}` for multiple
-    choice, `{"order": [...]}` for Parsons, `{"answers": {...}}` for fill-in. A submission in the
+    choice, `{"order": [...]}` for Parsons, `{"answers": {...}}` for fill-in, and
+    `{"rows": [{"visitedVertex", "queue", "visited", "order"}, ...]}` for a trace table, one row
+    per BFS step (graded against the engine, so a trace has no stored solution). A submission in the
     wrong shape is 422. No student code is executed: `check_activity` compares the submission with
     the solution, which stays in this process (NFR-S7)."""
     activity = _activity_or_404(session, activity_id)
     try:
-        result = check_activity(activity.kind, activity.config, activity.solution, body.submitted)
+        attempt, result = record_attempt(session, user.id, activity, body.submitted)
     except ValidationError as exc:  # the submission didn't match the kind's shape
         raise HTTPException(422, detail=BAD_SUBMISSION) from exc  # constant is deprecated upstream
-    attempt = Attempt(
-        user_id=user.id,
-        activity_id=activity.id,
-        submitted=body.submitted,
-        correct=result.correct,
-        score=result.score,
-        detail=result.model_dump(),
-        hint_level=_hint_level_seen(session, user.id, activity.id),
-    )
-    session.add(attempt)
     session.commit()
     return AttemptOut(
         id=attempt.id,
@@ -86,16 +67,11 @@ def reveal_hint(activity_id: int, user: CurrentUser, session: DbSession) -> Hint
     is 409. When `nextCountsAsSupport` is true, warn the student before calling again: a correct
     answer after hint 3 or 4 counts as "met with support" (ID document §7.4)."""
     activity = _activity_or_404(session, activity_id)
-    hints = session.scalars(
-        select(Hint).where(Hint.activity_id == activity.id).order_by(Hint.level)
-    ).all()
-    seen = _hint_level_seen(session, user.id, activity.id)
-    hint = next((h for h in hints if h.level > seen), None)
-    if hint is None:
+    revealed = reveal_next_hint(session, user.id, activity)
+    if revealed is None:
         raise HTTPException(status.HTTP_409_CONFLICT, detail=NO_MORE_HINTS)
-    session.add(HintView(user_id=user.id, activity_id=activity.id, level=hint.level))
     session.commit()
-    following = next((h for h in hints if h.level > hint.level), None)
+    hint, following = revealed
     return HintOut(
         level=hint.level,
         body=hint.body,

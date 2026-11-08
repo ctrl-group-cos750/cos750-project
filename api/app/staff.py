@@ -6,6 +6,9 @@
 
 In Docker: `docker compose exec api python -m app.staff grant <email>`. On Coolify: the api
 container's terminal. The account must exist first (register in the app).
+
+Only the first team member needs this: after that, staff grant and remove access on the staff
+portal's "Staff members" page (/staff/members).
 """
 
 import sys

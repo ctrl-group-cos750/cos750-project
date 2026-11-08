@@ -56,6 +56,15 @@
   --bfs-edge: var(--color-border);
   --bfs-edge-traversed: var(--brand-accent);
 
+  /*
+   * Achievement badges (FR-9.3). The stroke is the badge outline and its picture (3:1 or more on
+   * the surface); the soft colour fills the shape. Tiers also differ in shape, never colour alone.
+   */
+  --badge-bronze: #9a5b24;
+  --badge-bronze-soft: #f7e9db;
+  --badge-gold: #8a6700;
+  --badge-gold-soft: #fcf0c4;
+
   /* Type */
   --font-display: 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif;
   --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -116,6 +125,10 @@
     --color-danger: #f97066;
     --color-danger-soft: #331a17;
     --bfs-queued-stroke: #f0b44c;
+    --badge-bronze: #e3a56d;
+    --badge-bronze-soft: #2e2115;
+    --badge-gold: #f2c94c;
+    --badge-gold-soft: #2e2810;
     --shadow-card: 0 1px 2px rgb(0 0 0 / 40%);
     color-scheme: dark;
   }
@@ -139,6 +152,10 @@
   --color-danger: #f97066;
   --color-danger-soft: #331a17;
   --bfs-queued-stroke: #f0b44c;
+  --badge-bronze: #e3a56d;
+  --badge-bronze-soft: #2e2115;
+  --badge-gold: #f2c94c;
+  --badge-gold-soft: #2e2810;
   --shadow-card: 0 1px 2px rgb(0 0 0 / 40%);
   color-scheme: dark;
 }

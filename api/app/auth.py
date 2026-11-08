@@ -33,7 +33,8 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
 def get_staff_user(user: CurrentUser) -> User:
-    """Team members only (`users.is_staff`). Grant it with `python -m app.staff grant <email>`."""
+    """Team members only (`users.is_staff`). Granted on the staff portal's "Staff members" page,
+    or with `python -m app.staff grant <email>` for the first one."""
     if not user.is_staff:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Only team members can do this.")
     return user

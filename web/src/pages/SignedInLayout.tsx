@@ -1,9 +1,16 @@
-import { Link, Outlet, useNavigate } from 'react-router'
+import { NavLink, Outlet, useNavigate } from 'react-router'
+import { buttonVariants } from '@/components/ui/button-variants'
+import { cn } from '@/lib/utils'
 import { useCurrentUser, useLogout } from '../auth/hooks.ts'
 import { Alert, AppShell, Button } from '../components'
+import { BadgeAnnouncer } from '../features/rewards/BadgeAnnouncer.tsx'
 import styles from './SignedInLayout.module.css'
 
-/** Every signed-in page: the header with the student's name and Log out, then the page. */
+const navClass = ({ isActive }: { isActive: boolean }) =>
+  cn(buttonVariants({ variant: isActive ? 'secondary' : 'ghost', size: 'lg' }), 'text-foreground')
+
+/** Every signed-in page: the header (Modules, Badges, the staff portal link for team members,
+ * the student's name and Log out), then the page, and new badges announced as they are earned. */
 export function SignedInLayout() {
   const { data: user } = useCurrentUser()
   const logout = useLogout()
@@ -11,10 +18,23 @@ export function SignedInLayout() {
 
   return (
     <AppShell
+      nav={
+        <>
+          <NavLink to="/" end className={navClass}>
+            Modules
+          </NavLink>
+          <NavLink to="/badges" className={navClass}>
+            Badges
+          </NavLink>
+          {user?.isStaff && (
+            <NavLink to="/staff" className={navClass}>
+              Staff portal
+            </NavLink>
+          )}
+        </>
+      }
       actions={
         <>
-          <Link to="/">Modules</Link>
-          {user?.isStaff && <Link to="/staff/videos">Videos</Link>}
           <span className={styles.name}>{user?.displayName}</span>
           <Button
             variant="secondary"
@@ -37,6 +57,7 @@ export function SignedInLayout() {
         </Alert>
       )}
       <Outlet />
+      <BadgeAnnouncer />
     </AppShell>
   )
 }

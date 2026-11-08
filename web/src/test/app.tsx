@@ -61,6 +61,7 @@ export function fakeApi({
     },
     'GET /api/health': () => Response.json({ status: 'ok', database: 'ok' }),
     'GET /api/modules': () => Response.json([]),
+    'GET /api/rewards': () => Response.json({ hideRewards: false, points: 0, badges: [] }),
     // Default handlers for parameterised module routes (overridable)
     'GET /api/modules/:id': () => Response.json({ detail: 'Not Found' }, { status: 404 }),
     'POST /api/modules/:id/position': () => Response.json({ detail: 'Not Found' }, { status: 404 }),

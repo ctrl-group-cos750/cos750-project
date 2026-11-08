@@ -94,7 +94,9 @@ def check_parsons(
 def check_fill_in(
     config: FillInConfig, solution: FillInSolution, submission: FillInSubmission
 ) -> CheckResult:
-    """One part per blank: a blank is correct when the chosen token matches the solution's."""
+    """One part per blank: a blank is correct when the chosen token matches the solution's. A
+    wrong token gets the content's message for that blank and token, saying why it is wrong
+    (FR-4.2), or a generic one. Only the chosen token's message is sent, never the answer."""
     parts: list[PartResult] = []
     for blank in config.blanks:
         have = submission.answers.get(blank)
@@ -103,7 +105,8 @@ def check_fill_in(
         elif have == solution.answers.get(blank):
             parts.append(PartResult(ref=blank, correct=True))
         else:
-            parts.append(PartResult(ref=blank, correct=False, message=WRONG_CHOICE))
+            message = solution.feedback.get(blank, {}).get(have, WRONG_CHOICE)
+            parts.append(PartResult(ref=blank, correct=False, message=message))
     return _result(parts)
 
 

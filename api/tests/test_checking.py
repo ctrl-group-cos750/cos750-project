@@ -101,6 +101,28 @@ def test_fill_in_wrong_token_fails_that_blank() -> None:
     assert result.parts[1].message == checking.WRONG_CHOICE
 
 
+def test_fill_in_wrong_token_gets_the_contents_reason_for_it() -> None:
+    reason = "Not quite. visited starts empty: nothing has been visited yet."
+    solution = FillInSolution(answers={1: "start", 2: "set()"}, feedback={2: {"[]": reason}})
+    result = checking.check_fill_in(
+        FILL_IN, solution, FillInSubmission(answers={1: "start", 2: "[]"})
+    )
+    assert result.parts[1].message == reason
+    # Another wrong token on the same blank, and a wrong token on a blank with no feedback, still
+    # get the generic message.
+    other = checking.check_fill_in(FILL_IN, solution, FillInSubmission(answers={1: "0", 2: "0"}))
+    assert [p.message for p in other.parts] == [checking.WRONG_CHOICE, checking.WRONG_CHOICE]
+
+
+def test_fill_in_right_answers_never_carry_a_message() -> None:
+    solution = FillInSolution(answers={1: "start", 2: "set()"}, feedback={2: {"[]": "reason"}})
+    result = checking.check_fill_in(
+        FILL_IN, solution, FillInSubmission(answers={1: "start", 2: "set()"})
+    )
+    assert result.correct
+    assert all(p.message is None for p in result.parts)
+
+
 def test_fill_in_missing_blank_is_reported_empty() -> None:
     result = checking.check_fill_in(
         FILL_IN, FILL_IN_SOLUTION, FillInSubmission(answers={1: "start"})
@@ -128,6 +150,17 @@ def test_dispatch_fill_in_from_plain_data() -> None:
     )
     assert not result.correct
     assert result.parts[0].message == checking.WRONG_CHOICE
+
+
+def test_dispatch_fill_in_feedback_from_json_keys() -> None:
+    # Fixtures are JSON, so blank ids arrive as strings; they must still find their message.
+    result = checking.check_activity(
+        "fill_in",
+        {"code": "x = __1__", "blanks": [1], "options": ["1", "2"]},
+        {"answers": {"1": "1"}, "feedback": {"1": {"2": "Not quite: x starts at 1."}}},
+        {"answers": {"1": "2"}},
+    )
+    assert result.parts[0].message == "Not quite: x starts at 1."
 
 
 def test_dispatch_unknown_kind_raises() -> None:

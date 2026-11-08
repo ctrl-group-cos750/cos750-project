@@ -4,7 +4,13 @@ import { describe, expect, it } from 'vitest'
 import type { User } from '../../auth/api.ts'
 import { ada, fakeApi, renderApp } from '../../test/app.tsx'
 
-const grace: User = { id: 2, email: 'grace@example.com', displayName: 'Grace', isStaff: true }
+const grace: User = {
+  id: 2,
+  email: 'grace@example.com',
+  displayName: 'Grace',
+  isStaff: true,
+  avatar: null,
+}
 
 const twoVideos = () =>
   Response.json([
@@ -16,7 +22,7 @@ describe('staff portal', () => {
   it('is not in the navbar for a student', async () => {
     fakeApi({ user: ada })
     renderApp('/')
-    await screen.findByRole('heading', { name: 'Welcome, Ada' })
+    await screen.findByRole('heading', { name: 'Graphs and breadth-first search' })
     expect(screen.queryByRole('link', { name: 'Staff portal' })).not.toBeInTheDocument()
   })
 

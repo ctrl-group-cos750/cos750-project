@@ -92,10 +92,11 @@ describe('Badges page', () => {
     expect(await screen.findByText('30')).toBeVisible()
   })
 
-  it('is linked from the header', async () => {
+  it('is linked from the account menu', async () => {
     withRewards({ hideRewards: false, points: 0, badges: [] })
     renderApp('/')
-    expect(await screen.findByRole('link', { name: 'Badges' })).toHaveAttribute('href', '/badges')
+    await userEvent.click(await screen.findByRole('button', { name: /your account/ }))
+    expect(screen.getByRole('link', { name: 'Badges' })).toHaveAttribute('href', '/badges')
   })
 })
 

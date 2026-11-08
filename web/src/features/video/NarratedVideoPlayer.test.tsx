@@ -26,12 +26,25 @@ const activities = {
 }
 
 let pause: Mock<() => void>
+let fetchMock: Mock<typeof globalThis.fetch>
 beforeEach(() => {
   pause = vi.fn<() => void>()
   vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(pause)
   vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
+  fetchMock = vi.fn<typeof globalThis.fetch>(async () => new Response(null, { status: 204 }))
+  vi.stubGlobal('fetch', fetchMock)
 })
-afterEach(() => vi.restoreAllMocks())
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+})
+
+/** The events the player reported to POST /api/events, in order. */
+function reported() {
+  return fetchMock.mock.calls
+    .filter(([url]) => String(url) === '/api/events')
+    .map(([, init]) => JSON.parse(String(init?.body)) as { type: string; targetId: number })
+}
 
 function hint(level: number, hasMore = true): Hint {
   return { level, body: `hint ${level}`, hasMore, nextCountsAsSupport: hasMore && level + 1 >= 3 }
@@ -141,5 +154,37 @@ describe('hint ladder at a checkpoint', () => {
     expect(onHint).toHaveBeenCalledTimes(4)
     expect(screen.getByText('hint 4')).toBeInTheDocument()
     expect(button()).toBeNull()
+  })
+})
+
+describe('the pilot event log', () => {
+  it('reports the video starting, each checkpoint and the end, once each', () => {
+    const { el, at } = setup({ initialPassedIds: [2] })
+    fireEvent.play(el)
+    fireEvent.play(el) // pausing and playing again is not a new start
+    at(20)
+    at(20)
+    fireEvent.ended(el)
+    expect(reported()).toEqual([
+      { type: 'video_started', targetId: 1 },
+      { type: 'checkpoint_reached', targetId: 1 },
+      { type: 'video_completed', targetId: 1 },
+    ])
+  })
+
+  it('does not count playback a question stopped as a start', () => {
+    const { el, at } = setup()
+    at(20)
+    fireEvent.play(el)
+    expect(reported()).toEqual([{ type: 'checkpoint_reached', targetId: 1 }])
+  })
+
+  it('carries on when a report fails', async () => {
+    fetchMock.mockRejectedValue(new TypeError('offline'))
+    const { el } = setup()
+    fireEvent.play(el)
+    await act(async () => {})
+    expect(reported()).toEqual([{ type: 'video_started', targetId: 1 }])
+    expect(screen.getByLabelText('Narrated lesson video')).toBeInTheDocument()
   })
 })

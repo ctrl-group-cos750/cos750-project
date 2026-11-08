@@ -14,6 +14,8 @@ from app.schemas.activities import (
     ParsonsConfig,
     ParsonsSolution,
     ParsonsSubmission,
+    TraceConfig,
+    TraceSubmission,
 )
 from app.services import checking
 
@@ -238,3 +240,138 @@ def test_dispatch_multiple_choice_from_plain_data() -> None:
         {"selected": "a"},
     )
     assert result.correct
+
+
+# --- Trace table: checked step by step against the BFS engine (FR-6.6) -------------------------
+
+# Undirected A-B, A-C, B-D, start A. Neighbours alphabetical, so BFS visits A, B, C, D.
+TRACE = TraceConfig.model_validate(
+    {
+        "directed": False,
+        "vertices": ["A", "B", "C", "D"],
+        "edges": [
+            {"source": "A", "target": "B"},
+            {"source": "A", "target": "C"},
+            {"source": "B", "target": "D"},
+        ],
+        "start_vertex": "A",
+    }
+)
+# The correct trace (the state after each step), matching the engine.
+CORRECT_ROWS = [
+    {"visited_vertex": "A", "queue": ["B", "C"], "visited": ["A"], "order": ["A"]},
+    {"visited_vertex": "B", "queue": ["C", "D"], "visited": ["A", "B"], "order": ["A", "B"]},
+    {"visited_vertex": "C", "queue": ["D"], "visited": ["A", "B", "C"], "order": ["A", "B", "C"]},
+    {
+        "visited_vertex": "D",
+        "queue": [],
+        "visited": ["A", "B", "C", "D"],
+        "order": ["A", "B", "C", "D"],
+    },
+]
+
+
+def test_trace_correct_matches_the_engine_step_by_step() -> None:
+    result = checking.check_trace(TRACE, TraceSubmission.model_validate({"rows": CORRECT_ROWS}))
+    assert result.correct
+    assert result.score == 1.0
+    assert [p.correct for p in result.parts] == [True, True, True, True]
+
+
+def test_trace_wrong_queue_fails_only_that_step() -> None:
+    rows = [dict(r) for r in CORRECT_ROWS]
+    rows[1] = {**rows[1], "queue": ["D", "C"]}  # right vertices, wrong order
+    result = checking.check_trace(TRACE, TraceSubmission.model_validate({"rows": rows}))
+    assert not result.correct
+    assert result.score == pytest.approx(3 / 4)
+    assert [p.correct for p in result.parts] == [True, False, True, True]
+    assert result.parts[1].message == checking.WRONG_TRACE_STEP
+
+
+def test_trace_wrong_visited_vertex_fails_that_step() -> None:
+    rows = [dict(r) for r in CORRECT_ROWS]
+    rows[2] = {**rows[2], "visited_vertex": "D"}  # visited D before C
+    result = checking.check_trace(TRACE, TraceSubmission.model_validate({"rows": rows}))
+    assert result.parts[2].message == checking.WRONG_TRACE_STEP
+
+
+def test_trace_visited_set_is_compared_regardless_of_order() -> None:
+    rows = [dict(r) for r in CORRECT_ROWS]
+    rows[1] = {**rows[1], "visited": ["B", "A"]}  # same set as ["A", "B"]
+    result = checking.check_trace(TRACE, TraceSubmission.model_validate({"rows": rows}))
+    assert result.correct
+
+
+def test_trace_visited_set_with_a_repeated_vertex_is_wrong() -> None:
+    rows = [dict(r) for r in CORRECT_ROWS]
+    rows[1] = {**rows[1], "visited": ["A", "B", "B"]}
+    result = checking.check_trace(TRACE, TraceSubmission.model_validate({"rows": rows}))
+    assert [p.correct for p in result.parts] == [True, False, True, True]
+
+
+def test_trace_order_still_counts_order() -> None:
+    rows = [dict(r) for r in CORRECT_ROWS]
+    rows[1] = {**rows[1], "order": ["B", "A"]}  # the visit order is a sequence, not a set
+    result = checking.check_trace(TRACE, TraceSubmission.model_validate({"rows": rows}))
+    assert [p.correct for p in result.parts] == [True, False, True, True]
+
+
+def test_trace_refuses_an_overlong_vertex_label() -> None:
+    row = {"visited_vertex": "A" * 33, "queue": [], "visited": [], "order": []}
+    with pytest.raises(ValidationError):
+        TraceSubmission.model_validate({"rows": [row]})
+
+
+def test_trace_config_refuses_a_bad_vertex_label() -> None:
+    with pytest.raises(ValidationError):
+        TraceConfig.model_validate(
+            {"directed": False, "vertices": ["A b!"], "edges": [], "start_vertex": "A b!"}
+        )
+
+
+def test_trace_short_answer_reports_the_missing_steps() -> None:
+    result = checking.check_trace(TRACE, TraceSubmission.model_validate({"rows": CORRECT_ROWS[:2]}))
+    assert not result.correct
+    assert len(result.parts) == 4
+    assert result.parts[2].message == checking.MISSING_TRACE_STEP
+    assert result.parts[3].message == checking.MISSING_TRACE_STEP
+    assert result.score == pytest.approx(2 / 4)
+
+
+def test_trace_extra_steps_lower_the_score() -> None:
+    extra = [
+        *CORRECT_ROWS,
+        {"visited_vertex": "A", "queue": [], "visited": ["A", "B", "C", "D"], "order": ["A"]},
+    ]
+    result = checking.check_trace(TRACE, TraceSubmission.model_validate({"rows": extra}))
+    assert not result.correct
+    assert len(result.parts) == 5
+    assert result.parts[4].message == checking.EXTRA_TRACE_STEP
+
+
+def test_trace_empty_submission_scores_zero() -> None:
+    result = checking.check_trace(TRACE, TraceSubmission.model_validate({"rows": []}))
+    assert result.score == 0.0
+    assert all(not p.correct for p in result.parts)
+
+
+def test_dispatch_trace_from_plain_data_ignores_any_solution() -> None:
+    result = checking.check_activity(
+        "trace",
+        TRACE.model_dump(),
+        {},  # trace keeps no stored solution; the engine derives the answer
+        {"rows": CORRECT_ROWS},
+    )
+    assert result.correct
+
+
+def test_trace_bad_stored_graph_raises_not_silently_passes() -> None:
+    # A content-authoring bug (start vertex not in the graph) must surface, not grade as correct.
+    bad = {
+        "directed": False,
+        "vertices": ["A", "B"],
+        "edges": [],
+        "start_vertex": "Z",
+    }
+    with pytest.raises(ValueError, match="start vertex"):
+        checking.check_activity("trace", bad, {}, {"rows": []})

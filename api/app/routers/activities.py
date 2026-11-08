@@ -38,7 +38,9 @@ def submit_attempt(
     FR-4.5, FR-5.3).
 
     Send `{"submitted": {...}}` in the kind's shape: `{"selected": "<option id>"}` for multiple
-    choice, `{"order": [...]}` for Parsons, `{"answers": {...}}` for fill-in. A submission in the
+    choice, `{"order": [...]}` for Parsons, `{"answers": {...}}` for fill-in, and
+    `{"rows": [{"visitedVertex", "queue", "visited", "order"}, ...]}` for a trace table, one row
+    per BFS step (graded against the engine, so a trace has no stored solution). A submission in the
     wrong shape is 422. No student code is executed: `check_activity` compares the submission with
     the solution, which stays in this process (NFR-S7)."""
     activity = _activity_or_404(session, activity_id)

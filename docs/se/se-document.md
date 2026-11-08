@@ -466,7 +466,7 @@ Table: Which part of the ID document each functional requirement delivers.
 
 ## Maintainability
 - **NFR-M1** Layered backend (routers → services → data) with the BfsEngine, the answer checkers and the mastery rules isolated from web concerns and unit-testable in isolation.
-- **NFR-M2** Typed boundaries on both sides (Pydantic + TypeScript); the TypeScript API types are generated from the OpenAPI schema. **[PROVISIONAL]**
+- **NFR-M2** Typed boundaries on both sides (Pydantic + TypeScript); the TypeScript API types in `web/src/api/` are generated from the OpenAPI schema by `scripts/gen-api.sh`, and CI fails if they are out of date.
 - **NFR-M3** ruff, mypy --strict, oxlint and Prettier enforced in CI on every PR.
 - **NFR-M4** Database migrations tracked with Alembic.
 - **NFR-M5** Content (modules, activities, hints, tests, scenarios) lives in fixture files validated by a schema in CI, so a broken content edit fails its PR instead of the app.
@@ -864,7 +864,9 @@ cos750-project/
 │  ├─ workflows/branch-flow.yml
 │  ├─ dependabot.yml
 │  └─ pull_request_template.md
-├─ scripts/check.sh             every CI check locally; --fix formats first
+├─ scripts/
+│  ├─ check.sh                  every CI check locally; --fix formats first
+│  └─ gen-api.sh                regenerates the frontend's API types (NFR-M2)
 ├─ api/
 │  ├─ Dockerfile                runs migrations, then Uvicorn
 │  ├─ requirements.txt          runtime dependencies (pinned)
@@ -892,7 +894,7 @@ cos750-project/
 │  ├─ package.json, vite.config.ts, .oxlintrc.json, .prettierrc.json, .nvmrc
 │  └─ src/
 │     ├─ main.tsx, App.tsx
-│     ├─ api/                   API client: JSON, errors as ApiError
+│     ├─ api/                   API client: JSON, errors as ApiError; generated types (schema.d.ts)
 │     ├─ auth/                  log-in and register pages, session hooks, route guards
 │     ├─ pages/                 signed-in layout, home, not found
 │     ├─ components/            the shared UI kit: AppShell, Button, TextField, Card, Alert, Tag, ...

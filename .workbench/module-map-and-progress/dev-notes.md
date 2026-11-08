@@ -1332,3 +1332,174 @@ Commit: `dcb6c89` on branch `feature/module-map-and-progress`.
 
 ### Open Issues
 None introduced. All deferred items listed above are tracked.
+
+---
+
+## Local DB Verification — 2026-11-06
+
+Ran against LOCAL Docker Postgres only (localhost:5432). No commits, no pushes, no remote/staging/prod touched.
+
+### Alembic head
+`alembic upgrade head` applied migrations 0005 → 0006 → 0007 cleanly on real Postgres (not SQLite). Final `alembic_version = 0007`.
+
+### Seed counts
+```
+seed: 0 activities, 3 graphs, 7 modules, 13 segments
+```
+
+### Modules (7 rows)
+
+| id | number | slug | title | est_mins | position | goals (first 60 chars) |
+|----|--------|------|-------|----------|----------|------------------------|
+| 1  | 0 | warm-up         | Warm-up and queue refresher  |  5 | 0 | recall what a queue is and how it works, and identify... |
+| 2  | 1 | what-is-a-graph | What is a graph?             | 12 | 1 | define and distinguish a data structure, an algorithm... |
+| 3  | 2 | graph-in-python | A graph in Python            | 10 | 2 | identify vertices and edges in a graph, distinguish d... |
+| 4  | 3 | meet-bfs        | Meet BFS                     | 12 | 3 | explain the purpose of BFS and identify situations in... |
+| 5  | 4 | build-bfs       | Build BFS                    | 15 | 4 | implement BFS in Python using the selected graph repr... |
+| 6  | 5 | test-and-debug  | Test and debug               | 10 | 5 | test and debug a BFS implementation using suitable te... |
+| 7  | 6 | mastery-check   | Mastery check and report     | 10 | 6 | demonstrate mastery of all seven learning objectives... |
+
+### Segment counts per module
+| module# | title | segments |
+|---------|-------|----------|
+| 0 | Warm-up and queue refresher | 2 |
+| 1 | What is a graph? | 2 |
+| 2 | A graph in Python | 2 |
+| 3 | Meet BFS | 2 |
+| 4 | Build BFS | 2 |
+| 5 | Test and debug | 2 |
+| 6 | Mastery check and report | 1 |
+
+Total: 13 segments ✓
+
+### Sample segments — module 0 (Warm-up)
+| id | module_id | pos | kind | title |
+|----|-----------|-----|------|-------|
+| 1  | 1 | 0 | text | Welcome and what to expect |
+| 2  | 1 | 1 | worked_example | Queues: add, remove and first in, first out |
+
+### Sample segments — module 1 (What is a graph?)
+| id | module_id | pos | kind | title |
+|----|-----------|-----|------|-------|
+| 3  | 2 | 0 | worked_example | Vertices, edges and the campus map |
+| 4  | 2 | 1 | text | Directed and undirected graphs |
+
+### videos.segment_id column present
+```
+column_name    | data_type | is_nullable
+segment_id     | integer   | YES
+```
+✓ Column exists, nullable (videos not yet linked to segments is fine).
+
+### module_progress table
+```
+module_progress_rows
+--------------------
+                   0
+```
+✓ Table exists and is empty (no student progress yet, as expected).
+
+### Container state
+Left `cos750-project-db-1` running with seeded data — useful for local dev. Stop with:
+```
+docker compose -f docker-compose.yml -f docker-compose.local.yml stop db
+```
+
+---
+
+## Local Run — 2026-11-06
+
+Branch: `feature/module-map-and-progress`. No source files changed; run-only.
+
+### Services started (background, nohup)
+
+| Service | Command | PID | Port | Log |
+|---------|---------|-----|------|-----|
+| API (uvicorn) | `DATABASE_URL=postgresql+psycopg://ctrl:***@localhost:5432/ctrl SECRET_KEY=*** .venv/bin/uvicorn app.main:app --reload` | 81178 | 8000 | `/tmp/uvicorn.log` |
+| Frontend (Vite) | `/Users/ayandajuqu/.nvm/versions/node/v24.22.2/bin/npm run dev` | 81214 | 5173 | `/tmp/vite.log` |
+
+Node v24.22.2 used (matches `.nvmrc`; the shell's active version was v8 so npm was called with the full path).
+
+### Health check (confirmed)
+```json
+{"status":"ok","database":"ok","schema":"0007"}
+```
+HTTP 200 on `http://localhost:5173/`.
+
+### To stop later
+```bash
+pkill -f uvicorn          # stops the API
+pkill -f "vite"           # stops the frontend
+# stop the DB:
+docker compose -f docker-compose.yml -f docker-compose.local.yml stop db
+```
+
+---
+
+## Developer Notes — Bug fixes: Finish module navigation + Module card links
+
+### Files Modified
+
+- `web/src/features/module/ModulePage.tsx` — imported `useNavigate`; added `navigate('/')` in
+  `mutation.onSuccess` when the saved position equals the last segment's position
+- `web/src/features/module/ModuleMap.tsx` — imported `Link`; wrapped non-locked `Card` in
+  `<Link to={'/modules/${module.id}'}>`; locked cards remain plain
+- `web/src/features/module/ModuleMap.module.css` — added `.cardLink` rule (`display:block;
+  text-decoration:none; color:inherit`) so the anchor doesn't underline the card or alter box layout
+- `web/src/features/module/ModuleMap.test.tsx` — replaced the "no link" documenting test with
+  three correct tests: open card IS a link to `/modules/:id`; locked card is NOT a link;
+  clicking an open card navigates to the module page
+- `web/src/features/module/ModulePage.test.tsx` — updated four pre-existing tests that clicked
+  "Next →" into the last segment (now triggers navigate-home) to use `allKindsDetail` (4 segments)
+  or `currentSegmentPosition` to start at the right position; added one new test that starts on
+  the last segment and asserts clicking "Finish module" navigates to the module map heading
+
+### Key Decisions
+
+1. **Bug 1 fix placement — `mutation.onSuccess`**: The `position` argument passed to
+   `mutationFn` is forwarded by TanStack Query as the second argument to `onSuccess`. Checking
+   `position === segs[segs.length - 1].position` inside `onSuccess` keeps the navigation tied
+   to a confirmed backend success (not a speculative UI state). `navigate('/')` fires after both
+   cache invalidations so the module map re-fetches the now-complete status.
+
+2. **Bug 2 fix — `<Link>` wrapping over `onClick`**: Using a react-router `<Link>` gives native
+   anchor semantics (keyboard focus, right-click → open in new tab, correct role=link) and
+   matches the house style (StaffVideosPage and the Continue button both use router primitives
+   for navigation). The `cardLink` CSS class resets `text-decoration` and `color` so the card
+   appearance is unchanged.
+
+3. **Pre-existing tests that broke**: Four existing ModulePage tests used `twoSegmentDetail`
+   (2 segments) and clicked "Next →" from segment 0 to segment 1 (the last). With the fix,
+   reaching the last segment triggers navigate-home, so the tests that expected to see segment-1
+   content were left waiting on a now-unmounted page. Fixed by switching those tests to
+   `allKindsDetail` (4 segments, so segment 1 is not the last) or by setting
+   `currentSegmentPosition: 1` to start directly at the desired segment.
+
+### Library Docs Consulted (Context7)
+None — no new third-party libraries were added. All APIs used (react-router `Link`,
+`useNavigate`, TanStack Query `useMutation` `onSuccess` args) were verified by reading
+existing project source files.
+
+### Build & Test Results
+
+```
+scripts/check.sh (Node v24.22.2, Python 3.13.2) → exit 0
+
+web:
+  format:check  → All matched files use Prettier code style!
+  lint          → Found 0 warnings and 0 errors. (67 files, 219 rules)
+  test          → Test Files: 12 passed (12) | Tests: 134 passed (134)
+                  (3 new tests: ModuleMap +2 replacing the "no link" test, ModulePage +1)
+  build         → tsc -b + vite build ✓, 473 modules, built in 224ms
+
+api:
+  ruff format   → 64 files already formatted
+  ruff check    → All checks passed!
+  mypy          → Success: no issues found in 56 source files
+  pytest        → 436 passed, 1 skipped (Postgres), 0 failed
+```
+
+Commit: `bb1fa64` on branch `feature/module-map-and-progress`.
+
+### Open Issues
+None introduced. All pre-existing deferred items unchanged.

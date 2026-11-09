@@ -44,7 +44,7 @@
   display: grid;
   place-items: center;
   padding: var(--space-4);
-  background: rgb(20 20 19 / 55%);
+  background: var(--overlay);
 }
 
 .dialog {

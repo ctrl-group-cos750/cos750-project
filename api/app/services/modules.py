@@ -5,7 +5,8 @@ The modules and their segments are content (app/models/content.py, loaded from t
 and never commit: the router commits.
 
 Unlocking (FR-2.1): the first module (by `position`) is always open. Any other module opens when
-the one before it is complete, and stays as it is once the student has started it.
+the one before it is complete, and stays as it is once the student has started it. A module with
+no segments yet is passed over, so missing content never locks the rest of the course.
 
 Progress (FR-2.5, FR-2.6): the student moves through a module one segment at a time. The
 furthest segment reached is kept, so stepping back to reread never loses progress, and reaching
@@ -61,10 +62,25 @@ def _segments(session: Session, module_id: int) -> Sequence[Segment]:
     ).all()
 
 
+def _segment_counts(session: Session) -> dict[int, int]:
+    counts: dict[int, int] = {}
+    for module_id in session.scalars(
+        select(Segment.module_id).where(Segment.module_id.isnot(None))
+    ):
+        if module_id is not None:
+            counts[module_id] = counts.get(module_id, 0) + 1
+    return counts
+
+
 def _statuses(
-    modules: Sequence[Module], progress: dict[int, ModuleProgress]
+    modules: Sequence[Module], progress: dict[int, ModuleProgress], counts: dict[int, int]
 ) -> dict[int, ModuleStatus]:
-    """Each module's status for one student, in map order (FR-2.1)."""
+    """Each module's status for one student, in map order (FR-2.1).
+
+    A module with no segments yet (its content hasn't been written) can't be completed, so it
+    doesn't hold back the modules after it: it opens when they would, and unlocking passes over
+    it. Once it has content it counts like any other.
+    """
     statuses: dict[int, ModuleStatus] = {}
     previous_complete = True  # nothing comes before the first module
     for module in modules:
@@ -76,7 +92,8 @@ def _statuses(
         else:
             status = "open" if previous_complete else "locked"
         statuses[module.id] = status
-        previous_complete = status == "complete"
+        if counts.get(module.id, 0) > 0:
+            previous_complete = status == "complete"
     return statuses
 
 
@@ -84,7 +101,7 @@ def _status(session: Session, user_id: int, module_id: int) -> ModuleStatus:
     modules = _modules(session)
     if not any(module.id == module_id for module in modules):
         raise ModuleNotFound(module_id)
-    return _statuses(modules, _progress(session, user_id))[module_id]
+    return _statuses(modules, _progress(session, user_id), _segment_counts(session))[module_id]
 
 
 def _summary(
@@ -107,13 +124,8 @@ def get_modules_for_user(session: Session, user_id: int) -> list[ModuleOut]:
     """Every module in map order, with this student's status and progress."""
     modules = _modules(session)
     progress = _progress(session, user_id)
-    statuses = _statuses(modules, progress)
-    counts: dict[int, int] = {}
-    for module_id in session.scalars(
-        select(Segment.module_id).where(Segment.module_id.isnot(None))
-    ):
-        if module_id is not None:
-            counts[module_id] = counts.get(module_id, 0) + 1
+    counts = _segment_counts(session)
+    statuses = _statuses(modules, progress, counts)
     return [
         _summary(module, statuses[module.id], counts.get(module.id, 0), progress.get(module.id))
         for module in modules

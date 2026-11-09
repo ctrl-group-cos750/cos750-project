@@ -17,6 +17,6 @@
 }
 
 .interactive:hover {
-  border-color: var(--color-accent);
-  transform: translateY(-1px);
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
 }

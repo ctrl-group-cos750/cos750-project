@@ -11,7 +11,7 @@ unlock chain and the completion logic while keeping the setup minimal.
 """
 
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.models import Activity, Attempt, Module, Objective, Segment, Video
@@ -547,3 +547,18 @@ def test_post_position_with_negative_segment_position_is_422(
 
     res = client.post(f"/api/modules/{m0_id}/position", json={"segmentPosition": -1})
     assert res.status_code == 422
+
+
+def test_a_module_with_no_segments_yet_doesnt_lock_the_ones_after_it(
+    client: TestClient, db: Session
+) -> None:
+    """Content that hasn't been written yet can't be completed, so it mustn't block the course."""
+    m0_id, m1_id, m2_id = _make_modules(db)
+    db.execute(delete(Segment).where(Segment.module_id == m1_id))
+    db.commit()
+    _register_and_login(client, ALICE)
+    client.post(f"/api/modules/{m0_id}/position", json={"segmentPosition": 1})
+
+    statuses = {m["id"]: m["status"] for m in client.get("/api/modules").json()}
+    assert statuses == {m0_id: "complete", m1_id: "open", m2_id: "open"}
+    assert client.get(f"/api/modules/{m2_id}").status_code == 200

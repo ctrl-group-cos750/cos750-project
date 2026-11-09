@@ -6,6 +6,9 @@ import './styles/tokens.css'
 import './styles/global.css'
 import './styles/base.css'
 import App from './App.tsx'
+import { applyTheme, initialTheme } from './theme/theme.ts'
+
+applyTheme({ theme: initialTheme() })
 
 const queryClient = new QueryClient()
 

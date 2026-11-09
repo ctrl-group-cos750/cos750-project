@@ -19,12 +19,12 @@
 }
 
 .bar::-webkit-progress-value {
-  background: var(--color-accent);
+  background: var(--color-primary);
   transition: width 200ms;
 }
 
 .bar::-moz-progress-bar {
-  background: var(--color-accent);
+  background: var(--color-primary);
 }
 
 .count {

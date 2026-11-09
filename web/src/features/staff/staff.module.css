@@ -9,10 +9,16 @@
 .primaryLink {
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-md);
-  background: var(--color-accent);
+  background: var(--color-primary);
   color: var(--color-surface);
   font-weight: 600;
   text-decoration: none;
+  box-shadow: var(--shadow-xs);
+}
+
+.primaryLink:hover {
+  background: var(--color-accent-hover);
+  transform: translateY(-1px);
 }
 
 .list {
@@ -58,8 +64,9 @@
   font: inherit;
   color: var(--color-text);
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-control-border);
   border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2xs);
 }
 
 .textarea {
@@ -69,7 +76,7 @@
 
 .input:focus-visible,
 .textarea:focus-visible {
-  border-color: var(--color-accent);
+  border-color: var(--color-primary);
 }
 
 .field {
@@ -80,8 +87,9 @@
 .preview {
   width: 100%;
   max-height: 28rem;
-  background: black;
+  background: var(--color-surface-sunken);
   border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
 }
 
 .row {
@@ -124,4 +132,5 @@
   padding: var(--space-3) 0;
   background: var(--color-bg);
   border-top: 1px solid var(--color-line);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }

@@ -135,7 +135,13 @@ export interface paths {
       path?: never
       cookie?: never
     }
-    get?: never
+    /**
+     * Get Revealed Hints
+     * @description Every hint level this student has already unlocked on this activity (FR-4.4, FR-4.5).
+     *
+     *     Returns an empty list if they have not asked for any hints yet.
+     */
+    get: operations['get_revealed_hints_api_activities__activity_id__hints_get']
     put?: never
     /**
      * Reveal Hint
@@ -1731,6 +1737,39 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['AttemptOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  get_revealed_hints_api_activities__activity_id__hints_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        activity_id: number
+      }
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HintOut'][]
         }
       }
       /** @description Validation Error */

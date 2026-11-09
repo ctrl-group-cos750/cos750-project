@@ -342,7 +342,7 @@ Figure: Use cases. The student takes part in every use case in both groups excep
 - **FR-1.7** A profile page, reached from the account menu in the header, shows the student their own objectives met and, unless hidden (FR-9.5), points and badges.
 
 ## Modules and progress (FR-2)
-- **FR-2.1** Present the seven modules of the ID document (0 to 6) in order. A module opens once the one before it is complete; module 0 is always open.
+- **FR-2.1** Present the seven modules of the ID document (0 to 6) in order. A module opens once the one before it is complete; module 0 is always open. A module with no segments yet (its content not written) is passed over, so it never locks the modules after it.
 - **FR-2.2** Each module is an ordered sequence of segments: narrated video, text, worked example, activity, or code activity.
 - **FR-2.3** Each module starts by stating its objectives in plain words ("By the end of this module you can …"), taken from the content.
 - **FR-2.4** Each module from module 2 onwards opens with one or two retrieval questions on earlier modules.
@@ -371,7 +371,7 @@ Code activities never execute student-written code. The student constructs code 
 - **FR-5.1** Render the activity's code with Python syntax highlighting and line numbers (read-only display), and present the lines to reorder or the blanks to fill. Blanks are filled by choosing from a given set of tokens, not by free typing.
 - **FR-5.2** **Check** compares the student's arrangement against the solution and shows which lines or blanks are wrong, with a message for each. There is no code execution, so there are no run-time limits or output to show. A check is practice: it is not graded and not recorded as an attempt.
 - **FR-5.3** **Submit** records a graded attempt: the server compares the submission with the solution (which the browser never receives) and returns which lines or blanks were wrong and a message for each, without revealing the full solution.
-- **FR-5.4** Parsons problems are checked by the order of the lines; fill-in activities are checked token by token against the expected tokens.
+- **FR-5.4** Parsons problems are checked by the order of the lines; fill-in activities are checked token by token against the expected tokens, and a wrong token gets the content's reason for that blank and token where it gives one (FR-4.2).
 - **FR-5.5** Objective 7 uses two more kinds, also checked by comparison. **Fix the bug** shows a faulty BFS: the student marks each faulty line and chooses its correction from a given set of lines, or moves a line that is in the wrong place, as in a Parsons problem. **Choose tests** shows a faulty BFS and four to six test cases, each a small graph, a start vertex and the expected order: the student selects every test case that the faulty version fails and the correct version passes. No student code or student-written test runs.
 - **FR-5.6** Because nothing is executed, a code activity always returns promptly with per-line or per-blank feedback, never a run-time error page.
 
@@ -644,7 +644,7 @@ Progress, results and points change only as a side effect of attempts and segmen
 - OpenAPI/Swagger auto-published at `/api/docs` (FastAPI) and used as the frontend contract.
 
 ## Code activity checking (internal)
-Code activities are checked inside the API, with no separate service and no code execution. A **Parsons** submission is a permutation of the activity's line IDs; the checker compares it with the solution order and reports, per line, whether it is in the right place. A **fill-in** submission is a map from each blank to a chosen token; the checker compares each against the expected token. The solution (the correct order, the expected tokens) lives only on the server and is never sent to the browser, so the student cannot read it or fake a pass. There is nothing to run, so there are no run-time limits.
+Code activities are checked inside the API, with no separate service and no code execution. A **Parsons** submission is a permutation of the activity's line IDs; the checker compares it with the solution order and reports, per line, whether it is in the right place. A **fill-in** submission is a map from each blank to a chosen token; the checker compares each against the expected token, and a wrong token gets the message the content gives for that blank and token, or a generic one. The solution (the correct order, the expected tokens) lives only on the server and is never sent to the browser, so the student cannot read it or fake a pass. There is nothing to run, so there are no run-time limits.
 
 An earlier design executed student Python in a sandboxed code runner (`POST /run`); it was removed when the team dropped freeform code writing (§15.3).
 
@@ -892,7 +892,7 @@ cos750-project/
 │  │  ├─ rate_limit.py          per-client limits on login and registration
 │  │  ├─ services/              content, checking (one checker per activity kind), mastery, points (planned)
 │  │  ├─ bfs/engine.py          BfsEngine: pure, tested in isolation (planned)
-│  │  └─ seed/                  modules, activities, hints, tests, scenarios, demo accounts (planned)
+│  │  └─ seed/                  modules, activities, hints, tests, scenarios, demo accounts
 │  └─ tests/
 ├─ web/
 │  ├─ Dockerfile                Vite build, then nginx

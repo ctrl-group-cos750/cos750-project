@@ -34,10 +34,21 @@ from pathlib import Path
 from typing import Annotated, Any
 
 from pydantic import BaseModel, Field, ValidationError, model_validator
-from sqlalchemy import delete, select, text, update
+from sqlalchemy import delete, insert, literal, select, text, update
 from sqlalchemy.orm import Session
 
-from app.models import Activity, GraphScenario, Hint, Module, Objective, Segment, Video
+from app.models import (
+    Activity,
+    Attempt,
+    Checkpoint,
+    GraphScenario,
+    Hint,
+    HintView,
+    Module,
+    Objective,
+    Segment,
+    Video,
+)
 from app.schemas.activities import ActivityKind
 from app.schemas.content import Purpose, SegmentKind
 from app.schemas.graphs import VERTEX, GraphScenarioOut
@@ -46,6 +57,12 @@ from app.services.content import validate_activity
 from app.services.mastery import MASTERY_MODULE, recompute_all
 
 FIXTURES = Path(__file__).parent
+
+# Activities come from two places: the fixtures, and the video editor (a checkpoint's question,
+# made in the app). They share one table, so they get separate id ranges: fixtures stay below
+# EDITOR_IDS_FROM, and the editor's start there. Otherwise a fixture would overwrite an editor
+# question that happens to have its id: `load` writes fixtures by id.
+EDITOR_IDS_FROM = 100_000
 
 
 class HintFixture(BaseModel, extra="forbid"):
@@ -84,8 +101,6 @@ class ActivityFixture(BaseModel, extra="forbid"):
         if self.purpose == "retrieval":
             if self.module_id not in range(2, 7):
                 raise ValueError(f"activity {self.id}: a retrieval item belongs in module 2 to 6")
-            if self.objective_id is not None:
-                raise ValueError(f"activity {self.id}: a retrieval item has no mastery objective")
             if self.kind != "multiple_choice":
                 raise ValueError(f"activity {self.id}: retrieval items must be multiple choice")
         return self
@@ -343,6 +358,11 @@ def read_fixtures(folder: Path = FIXTURES) -> FixtureFile:
     ):
         if dupes := sorted({i for i in ids if ids.count(i) > 1}):
             raise ValueError(f"{what} ids used twice: {dupes}")
+    if too_big := sorted(a.id for a in merged.activities if a.id >= EDITOR_IDS_FROM):
+        raise ValueError(
+            f"activity ids {too_big} are for the video editor: fixtures use ids below "
+            f"{EDITOR_IDS_FROM}"
+        )
     slugs = [m.slug for m in merged.modules]
     if repeated := sorted({slug for slug in slugs if slugs.count(slug) > 1}):
         raise ValueError(f"module slugs used twice: {repeated}")
@@ -353,6 +373,7 @@ def read_fixtures(folder: Path = FIXTURES) -> FixtureFile:
 def load(session: Session, folder: Path = FIXTURES) -> FixtureFile:
     """Validate every fixture, then insert or update its rows in one transaction."""
     content = read_fixtures(folder)
+    move_editor_activities(session)
     # Parents first: activities point at modules and objectives, segments at activities.
     for o in content.objectives:
         session.merge(
@@ -411,20 +432,108 @@ def load(session: Session, folder: Path = FIXTURES) -> FixtureFile:
             )
         )
     session.flush()
+    retire_dropped_activities(session, {a.id for a in content.activities})
     # A changed rule or mastery item applies to every student's result straight away (FR-7.6).
     recompute_all(session)
     if session.get_bind().dialect.name == "postgresql":
         # Fixed ids don't move Postgres's id sequences; move them past the largest id, so a row
         # added without an id later doesn't collide with seeded content.
-        for table in ("activities", "graph_scenarios", "segments"):
+        # The editor's activities start at EDITOR_IDS_FROM, clear of every fixture id.
+        for table, floor in (
+            ("activities", EDITOR_IDS_FROM),
+            ("graph_scenarios", 1),
+            ("segments", 1),
+        ):
             session.execute(
                 text(
                     f"SELECT setval(pg_get_serial_sequence('{table}', 'id'), "  # noqa: S608 (fixed names)
-                    f"GREATEST((SELECT MAX(id) FROM {table}), 1))"
+                    f"GREATEST((SELECT MAX(id) FROM {table}), {floor}))"
                 )
             )
     session.commit()
     return content
+
+
+def retire_dropped_activities(session: Session, listed: set[int]) -> list[int]:
+    """Take out every fixture activity the fixtures no longer list, and return their ids.
+
+    One nobody has used is deleted with its hints. One a student has answered or asked a hint
+    for keeps its row, so their history stays, but is hidden and stops being a mastery item: an
+    objective whose old placeholder still counted could never be reached. The video editor's
+    questions (ids from EDITOR_IDS_FROM) are never touched.
+    """
+    dropped = session.scalars(
+        select(Activity).where(Activity.id < EDITOR_IDS_FROM, Activity.id.not_in(listed))
+    ).all()
+    for activity in dropped:
+        used = any(
+            session.scalar(select(child.id).where(child.activity_id == activity.id).limit(1))
+            for child in (Attempt, HintView, Checkpoint)
+        )
+        if used:
+            activity.visible = False
+            activity.purpose = "practice"
+            activity.module_id = None
+            activity.objective_id = None
+        else:
+            session.execute(delete(Hint).where(Hint.activity_id == activity.id))
+            session.delete(activity)
+    session.flush()
+    return [activity.id for activity in dropped]
+
+
+def move_editor_activities(session: Session) -> list[int]:
+    """Move every video-checkpoint question with an id below EDITOR_IDS_FROM up by that much,
+    with everything that points at it, and return the ids it moved.
+
+    The editor's questions were numbered 1, 2, 3, … before the fixtures had activities, so their
+    ids can be the same as a fixture's. Moving them first means `load` never writes a fixture over
+    one. It runs on every load and finds nothing to do once they have moved.
+    """
+    low = sorted(
+        set(
+            session.scalars(
+                select(Checkpoint.activity_id).where(Checkpoint.activity_id < EDITOR_IDS_FROM)
+            )
+        )
+    )
+    if not low:
+        return []
+    taken = session.scalars(
+        select(Activity.id).where(Activity.id.in_([i + EDITOR_IDS_FROM for i in low]))
+    ).all()
+    if taken:
+        raise ValueError(f"can't move editor activities: ids {sorted(taken)} are already used")
+    columns = [c for c in Activity.__table__.columns if c.name != "id"]
+    for old in low:
+        new = old + EDITOR_IDS_FROM
+        session.execute(
+            insert(Activity).from_select(
+                ["id", *(c.name for c in columns)],
+                select(literal(new), *columns).where(Activity.id == old),
+            )
+        )
+        # A checkpoint question belongs to no module or objective, as the editor makes it. A row
+        # a fixture already wrote over (staging, 8 Nov) carries the fixture's tags: drop them, so
+        # its answers aren't counted as that module's in the pilot data (FR-10).
+        session.execute(
+            update(Activity)
+            .where(Activity.id == new)
+            .values(module_id=None, objective_id=None, purpose="practice")
+        )
+        for child in (Checkpoint, Hint, HintView, Attempt):
+            session.execute(update(child).where(child.activity_id == old).values(activity_id=new))
+        # A fixture already written over this id (staging, 8 Nov) is still a module's segment:
+        # leave that row for `load` to rewrite as the fixture.
+        in_a_module = session.scalar(
+            select(Segment.id).where(
+                (Segment.activity_id == old) | (Segment.skip_check_activity_id == old)
+            )
+        )
+        if in_a_module is None:
+            session.execute(delete(Activity).where(Activity.id == old))
+    session.flush()
+    return low
 
 
 def _load_segments(

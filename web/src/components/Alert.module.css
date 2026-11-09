@@ -3,7 +3,8 @@
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
-  border-left: 4px solid;
+  border: 1px solid;
+  box-shadow: var(--shadow-xs);
   margin-bottom: var(--space-4);
 }
 
@@ -30,7 +31,7 @@
 
 .info {
   background: var(--color-accent-soft);
-  border-color: var(--color-accent);
+  border-color: var(--color-primary);
 }
 
 .info .icon {

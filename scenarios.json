@@ -1,0 +1,350 @@
+{
+  "scenarios": [
+    {
+      "id": "m1-campus",
+      "name": "The campus map",
+      "directed": false,
+      "vertices": [
+        {
+          "id": "A",
+          "label": "A",
+          "name": "Admin block"
+        },
+        {
+          "id": "B",
+          "label": "B",
+          "name": "Bookshop"
+        },
+        {
+          "id": "C",
+          "label": "C",
+          "name": "Computer Science building"
+        },
+        {
+          "id": "D",
+          "label": "D",
+          "name": "Dining hall"
+        },
+        {
+          "id": "E",
+          "label": "E",
+          "name": "Engineering building"
+        },
+        {
+          "id": "F",
+          "label": "F",
+          "name": "Fountain"
+        },
+        {
+          "id": "G",
+          "label": "G",
+          "name": "Green (sports field)"
+        }
+      ],
+      "edges": [
+        {
+          "source": "A",
+          "target": "C"
+        },
+        {
+          "source": "A",
+          "target": "E"
+        },
+        {
+          "source": "B",
+          "target": "C"
+        },
+        {
+          "source": "B",
+          "target": "G"
+        },
+        {
+          "source": "C",
+          "target": "F"
+        },
+        {
+          "source": "D",
+          "target": "E"
+        },
+        {
+          "source": "E",
+          "target": "F"
+        }
+      ],
+      "start_vertex": "A",
+      "description": "Undirected graph with 7 vertices: A is the Admin block; B is the Bookshop; C is the Computer Science building; D is the Dining hall; E is the Engineering building; F is the Fountain; G is the Green (sports field). It has 7 edges: A–C, A–E, B–C, B–G, C–F, D–E, E–F."
+    },
+    {
+      "id": "m1-shuttle",
+      "name": "The campus shuttle",
+      "directed": true,
+      "vertices": [
+        {
+          "id": "A",
+          "label": "A",
+          "name": "Admin block"
+        },
+        {
+          "id": "D",
+          "label": "D",
+          "name": "Dining hall"
+        },
+        {
+          "id": "G",
+          "label": "G",
+          "name": "Green (sports field)"
+        }
+      ],
+      "edges": [
+        {
+          "source": "A",
+          "target": "D"
+        },
+        {
+          "source": "D",
+          "target": "G"
+        },
+        {
+          "source": "G",
+          "target": "A"
+        }
+      ],
+      "start_vertex": "A",
+      "description": "Directed graph with 3 vertices: A is the Admin block; D is the Dining hall; G is the Green (sports field). It has 3 edges: A → D, D → G, G → A. Each edge points from the first vertex to the second."
+    },
+    {
+      "id": "m1-bus-stops",
+      "name": "Four bus stops",
+      "directed": false,
+      "vertices": [
+        {
+          "id": "P",
+          "label": "P",
+          "name": "Park"
+        },
+        {
+          "id": "Q",
+          "label": "Q",
+          "name": "Quad"
+        },
+        {
+          "id": "R",
+          "label": "R",
+          "name": "Residence"
+        },
+        {
+          "id": "S",
+          "label": "S",
+          "name": "Station"
+        }
+      ],
+      "edges": [
+        {
+          "source": "P",
+          "target": "Q"
+        },
+        {
+          "source": "Q",
+          "target": "R"
+        },
+        {
+          "source": "Q",
+          "target": "S"
+        },
+        {
+          "source": "R",
+          "target": "S"
+        }
+      ],
+      "start_vertex": "P",
+      "description": "Undirected graph with 4 vertices: P is the Park; Q is the Quad; R is the Residence; S is the Station. It has 4 edges: P–Q, Q–R, Q–S, R–S."
+    },
+    {
+      "id": "m1-skip",
+      "name": "Skip check graph",
+      "directed": false,
+      "vertices": [
+        {
+          "id": "P",
+          "label": "P"
+        },
+        {
+          "id": "Q",
+          "label": "Q"
+        },
+        {
+          "id": "R",
+          "label": "R"
+        },
+        {
+          "id": "S",
+          "label": "S"
+        }
+      ],
+      "edges": [
+        {
+          "source": "P",
+          "target": "Q"
+        },
+        {
+          "source": "Q",
+          "target": "R"
+        },
+        {
+          "source": "Q",
+          "target": "S"
+        }
+      ],
+      "start_vertex": "P",
+      "description": "Undirected graph with 4 vertices: P, Q, R, S. It has 3 edges: P–Q, Q–R, Q–S."
+    },
+    {
+      "id": "m1-cls-friends",
+      "name": "Friendships at a residence",
+      "directed": false,
+      "vertices": [
+        {
+          "id": "T",
+          "label": "T",
+          "name": "Thandi"
+        },
+        {
+          "id": "S",
+          "label": "S",
+          "name": "Sipho"
+        },
+        {
+          "id": "L",
+          "label": "L",
+          "name": "Lerato"
+        }
+      ],
+      "edges": [
+        {
+          "source": "L",
+          "target": "S"
+        },
+        {
+          "source": "S",
+          "target": "T"
+        },
+        {
+          "source": "T",
+          "target": "L"
+        }
+      ],
+      "start_vertex": "T",
+      "description": "Undirected graph with 3 vertices: T is Thandi; S is Sipho; L is Lerato. It has 3 edges: L–S, S–T, T–L."
+    },
+    {
+      "id": "m1-cls-follows",
+      "name": "Who follows whom online",
+      "directed": true,
+      "vertices": [
+        {
+          "id": "A",
+          "label": "A",
+          "name": "Ana"
+        },
+        {
+          "id": "B",
+          "label": "B",
+          "name": "Ben"
+        },
+        {
+          "id": "C",
+          "label": "C",
+          "name": "Cara"
+        }
+      ],
+      "edges": [
+        {
+          "source": "A",
+          "target": "B"
+        },
+        {
+          "source": "B",
+          "target": "A"
+        },
+        {
+          "source": "B",
+          "target": "C"
+        }
+      ],
+      "start_vertex": "A",
+      "description": "Directed graph with 3 vertices: A is Ana; B is Ben; C is Cara. It has 3 edges: A → B, B → A, B → C. Each edge points from the first vertex to the second."
+    },
+    {
+      "id": "m1-cls-route",
+      "name": "A delivery route",
+      "directed": true,
+      "vertices": [
+        {
+          "id": "W",
+          "label": "W",
+          "name": "Warehouse"
+        },
+        {
+          "id": "X",
+          "label": "X",
+          "name": "Shop X"
+        },
+        {
+          "id": "Y",
+          "label": "Y",
+          "name": "Shop Y"
+        }
+      ],
+      "edges": [
+        {
+          "source": "W",
+          "target": "X"
+        },
+        {
+          "source": "X",
+          "target": "Y"
+        },
+        {
+          "source": "Y",
+          "target": "W"
+        }
+      ],
+      "start_vertex": "W",
+      "description": "Directed graph with 3 vertices: W is the Warehouse; X is Shop X; Y is Shop Y. It has 3 edges: W → X, X → Y, Y → W. Each edge points from the first vertex to the second."
+    },
+    {
+      "id": "m1-cls-roads",
+      "name": "Roads between towns",
+      "directed": false,
+      "vertices": [
+        {
+          "id": "J",
+          "label": "J",
+          "name": "Johannesburg"
+        },
+        {
+          "id": "P",
+          "label": "P",
+          "name": "Pretoria"
+        },
+        {
+          "id": "S",
+          "label": "S",
+          "name": "Soweto"
+        }
+      ],
+      "edges": [
+        {
+          "source": "J",
+          "target": "P"
+        },
+        {
+          "source": "J",
+          "target": "S"
+        }
+      ],
+      "start_vertex": "J",
+      "description": "Undirected graph with 3 vertices: J is Johannesburg; P is Pretoria; S is Soweto. It has 2 edges: J–P, J–S."
+    }
+  ]
+}

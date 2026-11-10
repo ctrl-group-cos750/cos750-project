@@ -9,9 +9,11 @@ from app.seed.demo_accounts import load_demo_accounts
 
 with SessionLocal() as session:
     kept: list[str] = []  # content staff edited in the portal, which the seed leaves alone
-    content = load(
-        session, kept=kept
-    )  # broken content stops here, and so does the API (Dockerfile)
+    caught_up: list[str] = []  # staff edits the repository now holds, so it decides again
+    problems: list[str] = []  # the repository's content and the portal's edits don't fit together
+    # Broken fixtures stop here, and so does the API (Dockerfile). Content that is only broken in
+    # combination with a staff edit does not: staff fix it in the portal, which needs the API.
+    content = load(session, kept=kept, caught_up=caught_up, problems=problems)
     notes: list[str] = []  # where a demo account's progress stopped short, and why
     try:
         demo = load_demo_accounts(session, os.environ.get("DEMO_PASSWORD"), notes=notes)
@@ -28,6 +30,16 @@ print(
 )
 if kept:
     print(f"seed: left as staff edited them in the portal: {', '.join(kept)}")
+if caught_up:
+    print(
+        "seed: the repository now matches these portal edits, so it decides again: "
+        f"{', '.join(caught_up)}"
+    )
+for problem in problems:
+    print(
+        "seed: WARNING the repository's content and the portal's edits don't fit together, so the "
+        f"content editor will refuse every save until it is fixed in the portal: {problem}"
+    )
 if demo_problem:
     print(f"seed: demo accounts NOT rebuilt, the previous ones are kept: {demo_problem}")
 elif demo:

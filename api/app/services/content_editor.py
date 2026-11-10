@@ -67,9 +67,12 @@ from app.seed import (
     ObjectiveFixture,
     ReviewPathFixture,
     SegmentFixture,
+    activity_as_fixture,
     check_content,
     load,
     read_fixtures,
+    segment_as_fixture,
+    snapshot,
 )
 from app.services.mastery import recompute_all
 
@@ -128,100 +131,14 @@ def _repo_ids() -> dict[str, set[int]]:
     }
 
 
-# --- Reading the database as fixtures ---------------------------------------------------------
-
-
-def _segment_fixture(seg: Segment) -> dict[str, Any]:
-    return {
-        "id": seg.id,
-        "kind": seg.kind,
-        "title": seg.title,
-        "body": seg.body,
-        "activity_id": seg.activity_id,
-        "skip_check_activity_id": seg.skip_check_activity_id,
-        "refresher_for": seg.refresher_for,
-    }
-
-
-def _activity_fixture(session: Session, a: Activity) -> dict[str, Any]:
-    hints = session.scalars(select(Hint).where(Hint.activity_id == a.id).order_by(Hint.level))
-    return {
-        "id": a.id,
-        "kind": a.kind,
-        "title": a.title,
-        "visible": a.visible,
-        "module_id": a.module_id,
-        "objective_id": a.objective_id,
-        "purpose": a.purpose,
-        "config": a.config,
-        "solution": a.solution,
-        "hints": [{"level": h.level, "body": h.body} for h in hints],
-    }
-
-
 def _checkpoint_ids(session: Session) -> set[int]:
     return set(session.scalars(select(Checkpoint.activity_id)))
-
-
-def _snapshot(session: Session) -> dict[str, Any]:
-    """All the content in the database, in the fixtures' shape (not yet validated)."""
-    segments = session.scalars(select(Segment).order_by(Segment.position, Segment.id)).all()
-    by_module: dict[int, list[dict[str, Any]]] = {}
-    by_path: dict[int, list[dict[str, Any]]] = {}
-    for seg in segments:
-        if seg.module_id is not None:
-            by_module.setdefault(seg.module_id, []).append(_segment_fixture(seg))
-        elif seg.review_objective_id is not None:
-            by_path.setdefault(seg.review_objective_id, []).append(_segment_fixture(seg))
-    return {
-        "objectives": [
-            {
-                "id": o.id,
-                "text": o.text,
-                "bloom_level": o.bloom_level,
-                "criterion": o.criterion,
-                "pass_fraction": o.pass_fraction,
-                "max_wrong": o.max_wrong,
-            }
-            for o in session.scalars(select(Objective).order_by(Objective.id))
-        ],
-        "modules": [
-            {
-                "id": m.id,
-                "slug": m.slug,
-                "title": m.title,
-                "goals": m.goals,
-                "estimated_minutes": m.estimated_minutes,
-                "segments": by_module.get(m.id, []),
-            }
-            for m in session.scalars(select(Module).order_by(Module.position, Module.id))
-        ],
-        "activities": [
-            _activity_fixture(session, a)
-            for a in session.scalars(select(Activity).order_by(Activity.id))
-        ],
-        "graphs": [
-            {
-                "id": g.id,
-                "name": g.name,
-                "directed": g.directed,
-                "vertices": g.vertices,
-                "edges": g.edges,
-                "start_vertex": g.start_vertex,
-            }
-            for g in session.scalars(select(GraphScenario).order_by(GraphScenario.id))
-        ],
-        "review_paths": [
-            {"objective_id": objective_id, "segments": segs}
-            for objective_id, segs in sorted(by_path.items())
-        ],
-    }
 
 
 def check_database(session: Session) -> FixtureFile:
     """All the content in the database, checked as CI checks the fixtures. Raises
     ContentProblem naming the item at fault."""
-    content = _fixture(FixtureFile, _snapshot(session))
+    content = _fixture(FixtureFile, snapshot(session))
     try:
         check_content(content)
     except ValueError as exc:
@@ -396,7 +313,7 @@ def _segment_rows(session: Session, home: Any) -> list[Segment]:
 
 def _same_segments(rows: list[Segment], incoming: list[EditorSegmentIn]) -> bool:
     """The incoming list says exactly what is stored already (so saving changes nothing)."""
-    return [_segment_fixture(r) for r in rows] == [
+    return [segment_as_fixture(r) for r in rows] == [
         {k: v for k, v in s.model_dump().items() if k != "video_id"} for s in incoming
     ]
 
@@ -629,7 +546,7 @@ def _shown_in(session: Session, activity_id: int) -> list[str]:
 
 def get_activity(session: Session, activity_id: int) -> EditorActivityOut:
     a = _activity_row(session, activity_id)
-    data = _activity_fixture(session, a)
+    data = activity_as_fixture(session, a)
     return EditorActivityOut(
         **{k: v for k, v in data.items() if k != "hints"},
         hints=data["hints"],

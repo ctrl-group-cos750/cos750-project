@@ -4,7 +4,9 @@ rules CI applies to the fixtures."""
 
 import io
 import json
+import shutil
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -13,8 +15,18 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, Checkpoint, Hint, Segment, User, Video
-from app.seed import PORTAL_IDS_FROM, load, read_fixtures
+from app.models import (
+    Activity,
+    Attempt,
+    Checkpoint,
+    Hint,
+    Module,
+    Objective,
+    Segment,
+    User,
+    Video,
+)
+from app.seed import FIXTURES, PORTAL_IDS_FROM, load, read_fixtures
 
 STAFF = {"email": "staff@example.com", "password": "Correct horse 1", "displayName": "Staff"}
 STUDENT = {"email": "ada@example.com", "password": "Correct horse 1", "displayName": "Ada"}
@@ -342,3 +354,113 @@ def test_editing_a_mastery_item_keeps_earlier_attempts(staff: TestClient, db: Se
     assert staff.put(f"{BASE}/activities/311", json=body).status_code == 200
     assert len(db.scalars(select(Attempt)).all()) == 1
     assert db.scalars(select(Segment).where(Segment.activity_id == 311)).first() is not None
+
+
+def copy_fixtures(to: Path) -> Path:
+    """The repository's fixtures in a folder a test can change, as a later commit would."""
+    for path in FIXTURES.glob("*.json"):
+        shutil.copy(path, to / path.name)
+    return to
+
+
+def edit_json(path: Path, change: Callable[[dict[str, Any]], None]) -> None:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    change(data)
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
+def test_a_committed_export_hands_the_edits_back_to_the_repository(
+    staff: TestClient, tmp_path: Path, db: Session
+) -> None:
+    """Export, commit, deploy: the fixtures now say what the portal says, so the items are no
+    longer marked edited, and a later change in the repository reaches the database again."""
+    body = activity_body(staff, 311)
+    body["title"] = "Edited, then exported"
+    assert staff.put(f"{BASE}/activities/311", json=body).status_code == 200
+    module = module_body(staff, 3)
+    module["segments"].reverse()
+    assert staff.put(f"{BASE}/modules/3", json=module).status_code == 200
+    path = staff.get(f"{BASE}/review-paths/1").json()["segments"]
+    path[0]["title"] = "Worked example, retitled"
+    assert staff.put(f"{BASE}/review-paths/1", json={"segments": path}).status_code == 200
+    with zipfile.ZipFile(io.BytesIO(staff.get(f"{BASE}/export").content)) as archive:
+        archive.extractall(tmp_path)
+
+    kept: list[str] = []
+    caught_up: list[str] = []
+    load(db, folder=tmp_path, kept=kept, caught_up=caught_up)  # the deploy of that commit
+    assert kept == []
+    assert {"activities 311", "segments of module 3", "segments of review path 1"} <= set(caught_up)
+    db.expire_all()
+    assert db.get_one(Activity, 311).edited_at is None
+    assert db.get_one(Module, 3).segments_edited_at is None
+    assert db.get_one(Objective, 1).segments_edited_at is None
+    assert db.get_one(Activity, 311).title == "Edited, then exported"
+
+    def retitle(data: dict[str, Any]) -> None:
+        next(a for a in data["activities"] if a["id"] == 311)["title"] = "Changed in the repository"
+
+    edit_json(tmp_path / "module-3.json", retitle)
+    load(db, folder=tmp_path)  # a later commit
+    db.expire_all()
+    assert db.get_one(Activity, 311).title == "Changed in the repository"
+
+
+def test_an_edit_the_repository_differs_from_stays_edited(staff: TestClient, db: Session) -> None:
+    body = activity_body(staff, 311)
+    body["title"] = "Only in the portal"
+    assert staff.put(f"{BASE}/activities/311", json=body).status_code == 200
+    caught_up: list[str] = []
+    load(db, caught_up=caught_up)
+    assert caught_up == []
+    db.expire_all()
+    assert db.get_one(Activity, 311).edited_at is not None
+
+
+def test_the_seed_reports_content_that_only_breaks_with_a_staff_edit(
+    staff: TestClient, tmp_path: Path, db: Session
+) -> None:
+    """Staff have edited module 3's segments, then the repository moves activity 316 to module 2.
+    Each is fine on its own; together, the kept module 3 still shows an activity module 2 now
+    shows. The seed loads anyway and reports it, rather than stopping the API, so staff can fix
+    it in the portal."""
+    module = module_body(staff, 3)
+    module["segments"][0]["title"] = "Renamed in the portal"
+    assert staff.put(f"{BASE}/modules/3", json=module).status_code == 200
+
+    folder = copy_fixtures(tmp_path)
+
+    def take_316(data: dict[str, Any]) -> None:
+        data["modules"][0]["segments"] = [
+            s for s in data["modules"][0]["segments"] if s.get("activity_id") != 316
+        ]
+        moved.append(next(a for a in data["activities"] if a["id"] == 316))
+        data["activities"] = [a for a in data["activities"] if a["id"] != 316]
+
+    def give_316(data: dict[str, Any]) -> None:
+        data["activities"].append(moved[0] | {"module_id": 2})
+        data["modules"][0]["segments"].append(
+            {"id": 299, "kind": "activity", "title": "Moved here", "activity_id": 316}
+        )
+
+    moved: list[dict[str, Any]] = []
+    edit_json(folder / "module-3.json", take_316)
+    edit_json(folder / "module-2.json", give_316)
+    read_fixtures(folder)  # the repository on its own passes CI
+
+    kept: list[str] = []
+    problems: list[str] = []
+    load(db, folder=folder, kept=kept, problems=problems)
+    assert "segments of module 3" in kept
+    assert len(problems) == 1
+    assert "activity 316" in problems[0]
+    # Without the seed's warning, this is where staff would first find out.
+    refused = staff.put(f"{BASE}/activities/311", json=activity_body(staff, 311))
+    assert refused.status_code == 422
+    assert "activity 316" in refused.json()["detail"]
+
+
+def test_the_seed_reports_no_problem_for_the_repository_s_content(db: Session) -> None:
+    problems: list[str] = []
+    load(db, problems=problems)
+    assert problems == []

@@ -19,7 +19,11 @@ portal (app/routers/staff_content.py), and an edited row is marked (`edited_at`,
 `segments_edited_at` for a module's list of segments). A re-run inserts what is missing and
 updates what nobody has edited, but never writes over a staff edit: those are listed in `kept`
 and stay as staff left them. To bring the repository back, staff use "Use the repository's
-version" on that item, or export the portal's content as fixtures and commit them.
+version" on that item. Or they export the portal's content as fixtures and commit them: an edited
+row the fixtures now match is no longer marked edited (`caught_up`), so the repository decides
+again. After loading, the whole of the content is checked again (`database_problem`), since the
+fixtures and the staff edits can each be fine and still not fit together; a problem is reported,
+not raised.
 
 Everything has a fixed id, so a re-run updates the same rows. By convention a module's segments and
 activities are numbered from 100 times its number (module 3: 301, 302, …; module 0: 1, 2, …), and a
@@ -37,8 +41,9 @@ anything is written.
 """
 
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, TypeVar
 
 from pydantic import BaseModel, Field, ValidationError, model_validator
 from sqlalchemy import delete, insert, literal, select, text, update
@@ -375,23 +380,188 @@ def check_content(merged: FixtureFile) -> None:
     check_references(merged)
 
 
-def load(session: Session, folder: Path = FIXTURES, kept: list[str] | None = None) -> FixtureFile:
-    """Validate every fixture, then insert or update its rows in one transaction. A row staff have
-    edited in the portal is left as it is, and named in `kept` (when given)."""
-    content = read_fixtures(folder)
-    kept = [] if kept is None else kept
+# --- The database read back as fixtures --------------------------------------------------------
+# The content editor checks every save on these (app/services/content_editor.py), the seed checks
+# the content as a whole after a deploy, and it compares a staff edit with the repository's version.
 
-    def edited(model: type[Objective | Module | Activity | GraphScenario], row_id: int) -> bool:
-        row = session.get(model, row_id)
-        if row is None or getattr(row, "edited_at", None) is None:
+
+def objective_as_fixture(o: Objective) -> dict[str, Any]:
+    return {
+        "id": o.id,
+        "text": o.text,
+        "bloom_level": o.bloom_level,
+        "criterion": o.criterion,
+        "pass_fraction": o.pass_fraction,
+        "max_wrong": o.max_wrong,
+    }
+
+
+def module_as_fixture(m: Module) -> dict[str, Any]:
+    """A module without its segments (`segments_as_fixture` reads those)."""
+    return {
+        "id": m.id,
+        "slug": m.slug,
+        "title": m.title,
+        "goals": m.goals,
+        "estimated_minutes": m.estimated_minutes,
+    }
+
+
+def segment_as_fixture(seg: Segment) -> dict[str, Any]:
+    return {
+        "id": seg.id,
+        "kind": seg.kind,
+        "title": seg.title,
+        "body": seg.body,
+        "activity_id": seg.activity_id,
+        "skip_check_activity_id": seg.skip_check_activity_id,
+        "refresher_for": seg.refresher_for,
+    }
+
+
+def segments_as_fixture(session: Session, home: Any) -> list[dict[str, Any]]:
+    """The segments `home` selects (a module's, or a review path's), in their order."""
+    rows = session.scalars(select(Segment).where(home).order_by(Segment.position, Segment.id))
+    return [segment_as_fixture(seg) for seg in rows]
+
+
+def activity_as_fixture(session: Session, a: Activity) -> dict[str, Any]:
+    hints = session.scalars(select(Hint).where(Hint.activity_id == a.id).order_by(Hint.level))
+    return {
+        "id": a.id,
+        "kind": a.kind,
+        "title": a.title,
+        "visible": a.visible,
+        "module_id": a.module_id,
+        "objective_id": a.objective_id,
+        "purpose": a.purpose,
+        "config": a.config,
+        "solution": a.solution,
+        "hints": [{"level": h.level, "body": h.body} for h in hints],
+    }
+
+
+def graph_as_fixture(g: GraphScenario) -> dict[str, Any]:
+    return {
+        "id": g.id,
+        "name": g.name,
+        "directed": g.directed,
+        "vertices": g.vertices,
+        "edges": g.edges,
+        "start_vertex": g.start_vertex,
+    }
+
+
+def snapshot(session: Session) -> dict[str, Any]:
+    """All the content in the database, in the fixtures' shape (not yet validated)."""
+    segments = session.scalars(select(Segment).order_by(Segment.position, Segment.id)).all()
+    by_module: dict[int, list[dict[str, Any]]] = {}
+    by_path: dict[int, list[dict[str, Any]]] = {}
+    for seg in segments:
+        if seg.module_id is not None:
+            by_module.setdefault(seg.module_id, []).append(segment_as_fixture(seg))
+        elif seg.review_objective_id is not None:
+            by_path.setdefault(seg.review_objective_id, []).append(segment_as_fixture(seg))
+    return {
+        "objectives": [
+            objective_as_fixture(o)
+            for o in session.scalars(select(Objective).order_by(Objective.id))
+        ],
+        "modules": [
+            {**module_as_fixture(m), "segments": by_module.get(m.id, [])}
+            for m in session.scalars(select(Module).order_by(Module.position, Module.id))
+        ],
+        "activities": [
+            activity_as_fixture(session, a)
+            for a in session.scalars(select(Activity).order_by(Activity.id))
+        ],
+        "graphs": [
+            graph_as_fixture(g)
+            for g in session.scalars(select(GraphScenario).order_by(GraphScenario.id))
+        ],
+        "review_paths": [
+            {"objective_id": objective_id, "segments": segs}
+            for objective_id, segs in sorted(by_path.items())
+        ],
+    }
+
+
+def database_problem(session: Session) -> str | None:
+    """What is wrong with the content in the database as a whole, or None: the check the content
+    editor runs on every save. The seed runs it after a deploy, because the repository's content
+    and the portal's edits are each fine on their own but may not fit together, and then every
+    save in the editor would be refused until someone fixes it."""
+    try:
+        check_content(FixtureFile.model_validate(snapshot(session)))
+    except ValidationError as exc:
+        return "; ".join(str(e["msg"]).removeprefix("Value error, ") for e in exc.errors())
+    except ValueError as exc:
+        return str(exc)
+    return None
+
+
+def _same(fixture: BaseModel, data: Any, exclude: set[str] | None = None) -> bool:
+    """The database's version (`data`, in the fixture's shape) is the fixture's."""
+    try:
+        stored = type(fixture).model_validate(data)
+    except ValidationError:
+        return False
+    return stored.model_dump(exclude=exclude) == fixture.model_dump(exclude=exclude)
+
+
+def _same_segments(session: Session, home: Any, segments: list[SegmentFixture]) -> bool:
+    stored = segments_as_fixture(session, home)
+    return len(stored) == len(segments) and all(
+        _same(seg, data) for seg, data in zip(segments, stored, strict=True)
+    )
+
+
+# The tables staff edit row by row, each with an `edited_at`.
+Edited = TypeVar("Edited", Objective, Module, Activity, GraphScenario)
+
+
+def load(
+    session: Session,
+    folder: Path = FIXTURES,
+    kept: list[str] | None = None,
+    caught_up: list[str] | None = None,
+    problems: list[str] | None = None,
+) -> FixtureFile:
+    """Validate every fixture, then insert or update its rows in one transaction. A row staff have
+    edited in the portal is left as it is, and named in `kept` (when given).
+
+    An edit the repository has caught up with (the portal's content was exported and committed,
+    so the fixture now says the same) is no longer marked edited: from then on the repository
+    decides again, and a later change there reaches the database. It is named in `caught_up`.
+
+    When `problems` is given, the content in the database is then checked as a whole
+    (`database_problem`), and a problem is put in `problems` rather than raised: the content is
+    loaded either way, and the API should start so staff can fix it in the portal."""
+    content = read_fixtures(folder)
+    held: list[str] = [] if kept is None else kept
+    handed_back: list[str] = [] if caught_up is None else caught_up
+
+    def edited(
+        model: type[Edited],
+        fixture: ObjectiveFixture | ModuleFixture | ActivityFixture | GraphFixture,
+        as_fixture: Callable[[Edited], dict[str, Any]],
+        exclude: set[str] | None = None,
+    ) -> bool:
+        row = session.get(model, fixture.id)
+        if row is None or row.edited_at is None:
             return False
-        kept.append(f"{model.__tablename__} {row_id}")
+        name = f"{model.__tablename__} {row.id}"
+        if _same(fixture, as_fixture(row), exclude):
+            row.edited_at = None
+            handed_back.append(name)
+            return False
+        held.append(name)
         return True
 
     move_editor_activities(session)
     # Parents first: activities point at modules and objectives, segments at activities.
     for o in content.objectives:
-        if edited(Objective, o.id):
+        if edited(Objective, o, objective_as_fixture):
             continue
         session.merge(
             Objective(
@@ -404,11 +574,11 @@ def load(session: Session, folder: Path = FIXTURES, kept: list[str] | None = Non
             )
         )
     for m in content.modules:
-        if edited(Module, m.id):
+        if edited(Module, m, module_as_fixture, exclude={"segments"}):
             continue
         clash = session.scalar(select(Module.id).where(Module.slug == m.slug, Module.id != m.id))
         if clash is not None:
-            kept.append(f"modules {m.id} (module {clash}, made in the portal, uses its slug)")
+            held.append(f"modules {m.id} (module {clash}, made in the portal, uses its slug)")
             continue
         session.merge(
             Module(
@@ -422,10 +592,10 @@ def load(session: Session, folder: Path = FIXTURES, kept: list[str] | None = Non
         )
     session.flush()
     for a in content.activities:
-        if edited(Activity, a.id):
+        if edited(Activity, a, lambda row: activity_as_fixture(session, row)):
             continue
         if a.module_id is not None and session.get(Module, a.module_id) is None:
-            kept.append(f"activities {a.id} (its module {a.module_id} was held back)")
+            held.append(f"activities {a.id} (its module {a.module_id} was held back)")
             continue
         session.merge(
             Activity(
@@ -449,17 +619,24 @@ def load(session: Session, folder: Path = FIXTURES, kept: list[str] | None = Non
         if module is None:  # held back above: a portal module uses its slug
             continue
         if module.segments_edited_at is not None:
-            kept.append(f"segments of module {m.id}")
-            continue
+            if not _same_segments(session, Segment.module_id == m.id, m.segments):
+                held.append(f"segments of module {m.id}")
+                continue
+            module.segments_edited_at = None
+            handed_back.append(f"segments of module {m.id}")
         _load_segments(session, m.segments, module_id=m.id)
     for r in content.review_paths:
         objective = session.get_one(Objective, r.objective_id)
         if objective.segments_edited_at is not None:
-            kept.append(f"segments of review path {r.objective_id}")
-            continue
+            home = Segment.review_objective_id == r.objective_id
+            if not _same_segments(session, home, r.segments):
+                held.append(f"segments of review path {r.objective_id}")
+                continue
+            objective.segments_edited_at = None
+            handed_back.append(f"segments of review path {r.objective_id}")
         _load_segments(session, r.segments, review_objective_id=r.objective_id)
     for g in content.graphs:
-        if edited(GraphScenario, g.id):
+        if edited(GraphScenario, g, graph_as_fixture):
             continue
         session.merge(
             GraphScenario(
@@ -477,6 +654,8 @@ def load(session: Session, folder: Path = FIXTURES, kept: list[str] | None = Non
     recompute_all(session)
     move_sequences(session)
     session.commit()
+    if problems is not None and (problem := database_problem(session)):
+        problems.append(problem)
     return content
 
 

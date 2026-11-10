@@ -6,15 +6,64 @@
       "title": "A graph in Python",
       "estimated_minutes": 10,
       "goals": [
-        "Store a graph in Python as a dictionary of neighbours.",
-        "Complete add_vertex and add_edge for directed and undirected graphs."
+        "Store a graph in Python as a dictionary that maps each vertex to its neighbours, for directed and undirected graphs.",
+        "Write add_vertex and add_edge for a Graph class, ready to use in BFS."
       ],
       "segments": [
         {
           "id": 201,
-          "kind": "text",
-          "title": "Placeholder: adjacency lists in Python",
-          "body": "An **adjacency list** stores each vertex with the vertices connected to it. In Python, a dictionary can represent this: `graph = {\"A\": [\"B\", \"C\"]}`. The retrieval question above is a quick reminder before this lesson."
+          "kind": "activity",
+          "title": "Quick recall: queues",
+          "activity_id": 201
+        },
+        {
+          "id": 202,
+          "kind": "activity",
+          "title": "Quick recall: neighbours",
+          "activity_id": 202
+        },
+        {
+          "id": 203,
+          "kind": "video",
+          "title": "From a picture to a dictionary",
+          "body": "Staff attach the narrated video to this segment in the video editor, with its checkpoint questions: see `docs/id/module-2/narration-script.md`."
+        },
+        {
+          "id": 204,
+          "kind": "worked_example",
+          "title": "Worked example: building a graph in code",
+          "body": "We'll build the corner of campus with the `Graph` class, one call at a time, and watch `adjacency` change.\n\n```python\nclass Graph:\n    def __init__(self, directed=False):\n        self.directed = directed\n        self.adjacency = {}  # vertex -> list of neighbours\n```\n\n| Call | `adjacency` afterwards | Why |\n|---|---|---|\n| `g = Graph()` | `{}` | A new graph has no vertices. |\n| `g.add_vertex(\"A\")` | `{\"A\": []}` | A is new, so it gets an empty list. |\n| `g.add_vertex(\"A\")` | `{\"A\": []}` | A is already there, so nothing changes. |\n| `g.add_edge(\"A\", \"C\")` | `{\"A\": [\"C\"], \"C\": [\"A\"]}` | C is added first. The edge goes in both lists. |\n| `g.add_edge(\"A\", \"E\")` | `{\"A\": [\"C\", \"E\"], \"C\": [\"A\"], \"E\": [\"A\"]}` | E is appended to A's list; A keeps C. |\n\n**With arrows.** For `h = Graph(directed=True)`, `h.add_edge(\"A\", \"D\")` gives `{\"A\": [\"D\"], \"D\": []}`. D is added, but the edge is only stored in A's list.\n\n**Three rules:** a new vertex gets its own empty list; never replace a list that already exists; an undirected edge goes in both lists.",
+          "skip_check_activity_id": 203
+        },
+        {
+          "id": 205,
+          "kind": "activity",
+          "title": "Match graphs to dictionaries",
+          "activity_id": 204
+        },
+        {
+          "id": 206,
+          "kind": "activity",
+          "title": "Code: add_vertex",
+          "activity_id": 205
+        },
+        {
+          "id": 207,
+          "kind": "activity",
+          "title": "Code: add_edge, both ways",
+          "activity_id": 206
+        },
+        {
+          "id": 208,
+          "kind": "activity",
+          "title": "Code: directed or undirected",
+          "activity_id": 207
+        },
+        {
+          "id": 209,
+          "kind": "activity",
+          "title": "Closing task: predict the output",
+          "activity_id": 208
         }
       ]
     }
@@ -23,24 +72,463 @@
     {
       "id": 201,
       "kind": "multiple_choice",
-      "title": "Placeholder: graph representation recall",
+      "title": "Quick recall: queues",
       "module_id": 2,
       "purpose": "retrieval",
+      "objective_id": null,
       "config": {
-        "prompt": "In an adjacency list, what does the value for a vertex usually contain?",
+        "prompt": "Quick recall from module 0. A queue holds A, B (front first). You enqueue C, then dequeue once. What is in the queue now, front first?",
         "options": [
-          { "id": "neighbors", "label": "The vertices connected to it" },
-          { "id": "weight", "label": "The number of times it was visited" },
-          { "id": "position", "label": "Its position in the graph" }
+          {
+            "id": "a",
+            "label": "B, C"
+          },
+          {
+            "id": "b",
+            "label": "A, B"
+          },
+          {
+            "id": "c",
+            "label": "A, B, C"
+          },
+          {
+            "id": "d",
+            "label": "C"
+          }
         ]
       },
       "solution": {
-        "correct": "neighbors",
+        "correct": "a",
         "feedback": {
-          "weight": "An adjacency list stores connections, not traversal counts.",
-          "position": "A vertex's list contains its neighbors, not a position."
+          "b": "Not quite. That's how a stack works. A stack removes the newest item (C). A queue removes the oldest item from the front (A). Redo it: put C at the back, then take from the front.",
+          "c": "Not quite. You didn't dequeue. After enqueueing C the queue is A, B, C. Dequeuing removes A. Apply both steps in order.",
+          "d": "Not quite. Dequeue removes one item, not two. Only A leaves. B and C are still waiting. Take just one item from the front."
         }
-      }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Enqueue adds to the back. Dequeue removes from the front."
+        },
+        {
+          "level": 2,
+          "body": "After enqueueing C: A, B, C."
+        },
+        {
+          "level": 3,
+          "body": "Dequeue once: the item at the front leaves."
+        },
+        {
+          "level": 4,
+          "body": "Answer: B, C. A was at the front, so A left."
+        }
+      ]
+    },
+    {
+      "id": 202,
+      "kind": "multiple_choice",
+      "title": "Quick recall: neighbours",
+      "module_id": 2,
+      "purpose": "retrieval",
+      "objective_id": 2,
+      "config": {
+        "prompt": "Quick recall from module 1. On the campus graph, the walkways join A–C, A–E, B–C, B–G, C–F, D–E and E–F. Which vertices are neighbours of the Engineering building (E)?",
+        "options": [
+          {
+            "id": "a",
+            "label": "A, D and F"
+          },
+          {
+            "id": "b",
+            "label": "D only"
+          },
+          {
+            "id": "c",
+            "label": "A, C, D and F"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "a",
+        "feedback": {
+          "b": "Not quite. D is one neighbour, but not the only one. Count every edge that touches E: E–A, E–D and E–F. Follow each line from E to the vertex at its other end.",
+          "c": "Not quite. C isn't joined to E. C and E are both joined to A and F, but there's no edge between C and E. Only count vertices joined to E by their own edge."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "A neighbour is joined to E by an edge."
+        },
+        {
+          "level": 2,
+          "body": "Count the lines that touch E."
+        },
+        {
+          "level": 3,
+          "body": "E has three edges."
+        },
+        {
+          "level": 4,
+          "body": "Answer: A, D and F (edges E–A, E–D, E–F)."
+        }
+      ]
+    },
+    {
+      "id": 203,
+      "kind": "multiple_choice",
+      "title": "Check: building a graph in code",
+      "module_id": 2,
+      "purpose": "practice",
+      "objective_id": 2,
+      "config": {
+        "prompt": "Already confident? What is g.adjacency after this code? g = Graph(), then g.add_edge(\"P\", \"Q\"), then g.add_edge(\"Q\", \"R\").",
+        "options": [
+          {
+            "id": "a",
+            "label": "{\"P\": [\"Q\"], \"Q\": [\"P\", \"R\"], \"R\": [\"Q\"]}"
+          },
+          {
+            "id": "b",
+            "label": "{\"P\": [\"Q\"], \"Q\": [\"R\"], \"R\": []}"
+          },
+          {
+            "id": "c",
+            "label": "{\"P\": [\"Q\"], \"Q\": [\"R\"]}"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "a",
+        "feedback": {
+          "b": "Not quite. Undirected edges go both ways. Q must also list P, and R must list Q. Read the worked example to see both directions being stored.",
+          "c": "Not quite. Two things are missing. R needs its own key, and each edge goes in both lists. Read the worked example."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Graph() is undirected unless you say otherwise."
+        },
+        {
+          "level": 2,
+          "body": "Each add_edge call puts each vertex in the other's list."
+        },
+        {
+          "level": 3,
+          "body": "add_edge adds a vertex first if it's not there yet."
+        },
+        {
+          "level": 4,
+          "body": "Answer: {\"P\": [\"Q\"], \"Q\": [\"P\", \"R\"], \"R\": [\"Q\"]}."
+        }
+      ]
+    },
+    {
+      "id": 204,
+      "kind": "matching",
+      "title": "Match graphs to dictionaries",
+      "module_id": 2,
+      "purpose": "practice",
+      "objective_id": 2,
+      "config": {
+        "prompt": "Match each graph to the dictionary that stores it. An edge written A → B is an arrow that only goes from A to B. An edge written A–B goes both ways.",
+        "left": [
+          {
+            "id": "g1",
+            "label": "Graph 1. Vertices A, B, C. Edges: A–B, B–C."
+          },
+          {
+            "id": "g2",
+            "label": "Graph 2 (directed). Vertices A, B, C. Edges: A → B, B → C."
+          },
+          {
+            "id": "g3",
+            "label": "Graph 3. Vertices A, B, C. Edges: A–B, A–C, B–C."
+          }
+        ],
+        "right": [
+          {
+            "id": "r1",
+            "label": "{\"A\": [\"B\"], \"B\": [\"A\", \"C\"], \"C\": [\"B\"]}"
+          },
+          {
+            "id": "r2",
+            "label": "{\"A\": [\"B\"], \"B\": [\"C\"], \"C\": []}"
+          },
+          {
+            "id": "r3",
+            "label": "{\"A\": [\"B\", \"C\"], \"B\": [\"A\", \"C\"], \"C\": [\"A\", \"B\"]}"
+          },
+          {
+            "id": "r4",
+            "label": "{\"A\": [\"B\"], \"B\": [\"C\"], \"C\": [\"A\"]}"
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "g1": "r1",
+          "g2": "r2",
+          "g3": "r3"
+        },
+        "feedback": {
+          "g1": "Check graph 1. Graph 1 has edges A–B and B–C with no arrows, so B lists both A and C. Find the dictionary where B has two neighbours and C has one.",
+          "g2": "Check graph 2. Graph 2 has arrows A → B and B → C. C has no arrows leaving it, so its list is empty. Find the dictionary where C maps to an empty list.",
+          "g3": "Check graph 3. Graph 3 is a triangle with no arrows, so every vertex lists the other two. Find the dictionary where every list has two vertices."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "First look for arrows. Directed edges are stored once; undirected edges twice."
+        },
+        {
+          "level": 2,
+          "body": "Count each vertex's neighbours in the edge list, then find a dictionary with the same counts."
+        },
+        {
+          "level": 3,
+          "body": "Graph 2 is the only directed one. In it, C has no outgoing edges. The fourth dictionary matches none of the graphs."
+        },
+        {
+          "level": 4,
+          "body": "Answer: graph 1 → {\"A\": [\"B\"], \"B\": [\"A\", \"C\"], \"C\": [\"B\"]}; graph 2 → {\"A\": [\"B\"], \"B\": [\"C\"], \"C\": []}; graph 3 → {\"A\": [\"B\", \"C\"], \"B\": [\"A\", \"C\"], \"C\": [\"A\", \"B\"]}."
+        }
+      ]
+    },
+    {
+      "id": 205,
+      "kind": "fill_in",
+      "title": "Code: add_vertex",
+      "module_id": 2,
+      "purpose": "practice",
+      "objective_id": 6,
+      "config": {
+        "code": "class Graph:\n    def __init__(self):\n        self.adjacency = {}  # vertex -> list of neighbours\n\n    def add_vertex(self, v):\n        # Add v with an empty list of neighbours, unless v is already in the graph.\n        if v __1__ self.adjacency:\n            self.adjacency[v] = __2__",
+        "blanks": [
+          1,
+          2
+        ],
+        "options": [
+          "not in",
+          "in",
+          "[]",
+          "None",
+          "{}"
+        ]
+      },
+      "solution": {
+        "answers": {
+          "1": "not in",
+          "2": "[]"
+        },
+        "feedback": {
+          "1": {
+            "in": "Not quite. With in, add_vertex only acts on a vertex that is already in the graph, and replacing its list with [] throws away its edges. Only add v if it's not already a key."
+          },
+          "2": {
+            "None": "Not quite. A new vertex isn't stored correctly. Each vertex must map to an empty list, so neighbours can be appended later, and None has no append. Give it a new empty list.",
+            "{}": "Not quite. {} is an empty dictionary, not a list. A vertex's neighbours are a list, so they can be appended in order. Give it a new empty list."
+          }
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Each vertex maps to a list of its neighbours. A new vertex has none yet."
+        },
+        {
+          "level": 2,
+          "body": "Before adding, check whether v is already a key in self.adjacency."
+        },
+        {
+          "level": 3,
+          "body": "Use if v not in self.adjacency: and then give it a new empty list."
+        },
+        {
+          "level": 4,
+          "body": "Answer: blank 1 is not in, and blank 2 is []. So: if v not in self.adjacency, then self.adjacency[v] = []."
+        }
+      ]
+    },
+    {
+      "id": 206,
+      "kind": "fill_in",
+      "title": "Code: add_edge, both ways",
+      "module_id": 2,
+      "purpose": "practice",
+      "objective_id": 6,
+      "config": {
+        "code": "class Graph:\n    def __init__(self):\n        self.adjacency = {}  # vertex -> list of neighbours\n\n    def add_vertex(self, v):\n        if v not in self.adjacency:\n            self.adjacency[v] = []\n\n    def add_edge(self, a, b):\n        # Connect a and b in both directions.\n        # If a or b isn't in the graph yet, add it first.\n        self.__1__(a)\n        self.__2__(b)\n        self.adjacency[a].__3__(b)\n        __4__",
+        "blanks": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "options": [
+          "add_vertex",
+          "add_edge",
+          "append",
+          "self.adjacency[b].append(a)",
+          "self.adjacency[b] = [a]",
+          "pass"
+        ]
+      },
+      "solution": {
+        "answers": {
+          "1": "add_vertex",
+          "2": "add_vertex",
+          "3": "append",
+          "4": "self.adjacency[b].append(a)"
+        },
+        "feedback": {
+          "1": {
+            "add_edge": "Not quite. add_edge would call itself again and again and never finish. Before storing the edge, make sure both ends are in the graph: call add_vertex for each one."
+          },
+          "2": {
+            "add_edge": "Not quite. add_edge would call itself again and again and never finish. Before storing the edge, make sure both ends are in the graph: call add_vertex for each one."
+          },
+          "4": {
+            "pass": "The edge is only stored one way. In an undirected graph you can walk a–b in both directions, so each vertex must list the other. Append a to b's list as well.",
+            "self.adjacency[b] = [a]": "Adding an edge removes earlier neighbours. Assigning a new list replaces the old one. A vertex can have many neighbours. Use .append() instead of =."
+          }
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "An undirected edge a–b means b is a neighbour of a, and a is a neighbour of b."
+        },
+        {
+          "level": 2,
+          "body": "Call self.add_vertex for both ends first, so their lists exist."
+        },
+        {
+          "level": 3,
+          "body": "Then append b to a's list and a to b's list."
+        },
+        {
+          "level": 4,
+          "body": "Answer: blanks 1 and 2 are add_vertex, blank 3 is append, and blank 4 is self.adjacency[b].append(a)."
+        }
+      ]
+    },
+    {
+      "id": 207,
+      "kind": "fill_in",
+      "title": "Code: directed or undirected",
+      "module_id": 2,
+      "purpose": "practice",
+      "objective_id": 6,
+      "config": {
+        "code": "class Graph:\n    def __init__(self, directed=False):\n        self.directed = directed\n        self.adjacency = {}  # vertex -> list of neighbours\n\n    def add_vertex(self, v):\n        if v not in self.adjacency:\n            self.adjacency[v] = []\n\n    def add_edge(self, a, b):\n        self.add_vertex(a)\n        self.add_vertex(b)\n        # Always connect a to b.\n        self.adjacency[a].append(b)\n        # Connect b back to a only if the graph is undirected.\n        if __1__:\n            self.adjacency[__2__].append(__3__)",
+        "blanks": [
+          1,
+          2,
+          3
+        ],
+        "options": [
+          "not self.directed",
+          "self.directed",
+          "True",
+          "a",
+          "b"
+        ]
+      },
+      "solution": {
+        "answers": {
+          "1": "not self.directed",
+          "2": "b",
+          "3": "a"
+        },
+        "feedback": {
+          "1": {
+            "self.directed": "Not quite. The condition is the wrong way round: it stores the reverse edge only in a directed graph. Graph() is undirected by default, so a–c must appear in both lists. Add the reverse edge only when the graph is undirected.",
+            "True": "Not quite. With True, every edge is stored both ways, even with arrows. An arrow D → G means you can go from D to G, not back. G's list should stay empty. Only add the reverse when the graph is undirected."
+          },
+          "2": {
+            "a": "Not quite. This line stores the reverse edge, from b back to a, so it goes in b's list."
+          },
+          "3": {
+            "b": "Not quite. b's list should hold the vertex at the other end of the edge, which is a."
+          }
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "self.directed is True for a graph with arrows."
+        },
+        {
+          "level": 2,
+          "body": "The edge a → b always goes in a's list."
+        },
+        {
+          "level": 3,
+          "body": "Add a to b's list only when not self.directed."
+        },
+        {
+          "level": 4,
+          "body": "Answer: blank 1 is not self.directed, blank 2 is b, and blank 3 is a. So: if not self.directed, then self.adjacency[b].append(a)."
+        }
+      ]
+    },
+    {
+      "id": 208,
+      "kind": "multiple_choice",
+      "title": "Closing task: predict the output",
+      "module_id": 2,
+      "purpose": "practice",
+      "objective_id": 6,
+      "config": {
+        "prompt": "Closing task. Using your finished class, what does the last line print? g = Graph(directed=True), then g.add_edge(\"A\", \"D\"), then g.add_edge(\"D\", \"G\"), then g.add_edge(\"G\", \"A\"), then print(g.adjacency[\"D\"]).",
+        "options": [
+          {
+            "id": "a",
+            "label": "[\"G\"]"
+          },
+          {
+            "id": "b",
+            "label": "[\"A\", \"G\"]"
+          },
+          {
+            "id": "c",
+            "label": "[]"
+          },
+          {
+            "id": "d",
+            "label": "[\"A\"]"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "a",
+        "feedback": {
+          "b": "Not quite. That would be an undirected graph. The arrow A → D is stored in A's list only, so A isn't in D's list. Look at which arrows start at D.",
+          "c": "Not quite. D does have an outgoing edge. add_edge(\"D\", \"G\") stores G in D's list. Find the call where D is the first argument.",
+          "d": "Not quite. The arrow points the other way. A → D is stored in A's list. D's list holds where you can go from D. Find the call where D is the first argument."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "The graph is directed, so each edge goes in one list only."
+        },
+        {
+          "level": 2,
+          "body": "An edge is stored in the list of its first argument."
+        },
+        {
+          "level": 3,
+          "body": "Only one call has D as its first argument."
+        },
+        {
+          "level": 4,
+          "body": "Answer: [\"G\"], from add_edge(\"D\", \"G\")."
+        }
+      ]
     }
   ]
 }

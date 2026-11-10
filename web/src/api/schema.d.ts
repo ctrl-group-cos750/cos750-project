@@ -1234,24 +1234,19 @@ export interface components {
     }
     /**
      * RetrievalActivityOut
-     * @description An answer-free multiple-choice item shown before the module segments.
+     * @description A retrieval question the module opens with, before its segments (FR-2.4).
+     *
+     *     The page loads the question itself from ``GET /api/activities/{id}``, so it is shown like any
+     *     other activity, with feedback and hints. ``answered`` is true once the student has made an
+     *     attempt at it: the page resumes at the first one still unanswered.
      */
     RetrievalActivityOut: {
       /** Id */
       id: number
       /** Title */
       title: string
-      /** Prompt */
-      prompt: string
-      /** Options */
-      options: components['schemas']['RetrievalOptionOut'][]
-    }
-    /** RetrievalOptionOut */
-    RetrievalOptionOut: {
-      /** Id */
-      id: string
-      /** Label */
-      label: string
+      /** Answered */
+      answered: boolean
     }
     /**
      * ReviewPathOut

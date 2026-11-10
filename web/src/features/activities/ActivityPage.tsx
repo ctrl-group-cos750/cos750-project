@@ -12,7 +12,14 @@ import {
 import { ActivityRenderer } from './ActivityRenderer.tsx'
 import type { AttemptResult, Submission } from './activities.types.ts'
 
-function ActivityView({ activityId }: { activityId: number }) {
+type ActivityViewProps = {
+  activityId: number
+  /** Called with each checked answer, e.g. so a module's recall questions know when to move on. */
+  onResult?: (result: AttemptResult) => void
+}
+
+/** One activity with its feedback and hint ladder: the activity page, and a module's recall. */
+export function ActivityView({ activityId, onResult }: ActivityViewProps) {
   const [result, setResult] = useState<AttemptResult>()
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
@@ -31,6 +38,7 @@ function ActivityView({ activityId }: { activityId: number }) {
     try {
       const nextResult = await submitActivityAttempt(activityId, submitted)
       setResult(nextResult)
+      onResult?.(nextResult)
       if (nextResult.correct) refreshRewards()
     } catch (error) {
       setSubmitError(

@@ -28,11 +28,12 @@ export type Segment = {
   activityId: number | null
 }
 
+/** A retrieval question the module asks before its segments (FR-2.4). */
 export type RetrievalActivity = {
   id: number
   title: string
-  prompt: string
-  options: { id: string; label: string }[]
+  /** The student has already made an attempt at it, so a later visit skips it. */
+  answered: boolean
 }
 
 /** Matches `ModuleDetailOut` from `GET /api/modules/{id}` and `POST /api/modules/{id}/position`. */

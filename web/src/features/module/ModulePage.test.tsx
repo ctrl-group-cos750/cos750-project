@@ -117,36 +117,58 @@ describe('ModulePage — goals', () => {
   })
 })
 
+// A recall question is an ordinary activity: the page loads it like the activity page does.
+const recallActivity = {
+  id: 201,
+  kind: 'multiple_choice',
+  title: 'Recall graph storage',
+  visible: true,
+  config: {
+    prompt: 'What does an adjacency list store?',
+    options: [
+      { id: 'neighbors', label: 'Connected vertices' },
+      { id: 'visited', label: 'Visited count' },
+    ],
+  },
+}
+
+const recallAttempt = {
+  id: 1,
+  activityId: 201,
+  correct: true,
+  score: 1,
+  parts: [],
+  feedback: 'Correct: it stores connected vertices.',
+  hintLevel: 0,
+}
+
+function recallApi(detail: ModuleDetail) {
+  return fakeApi({
+    user: ada,
+    overrides: {
+      'GET /api/modules': () => Response.json([]),
+      'GET /api/modules/:id': () => Response.json(detail),
+      'POST /api/modules/:id/position': () => Response.json(detail),
+      'GET /api/activities/201': () => Response.json(recallActivity),
+      'GET /api/activities/201/hints': () => Response.json([]),
+      'POST /api/activities/201/attempts': () => Response.json(recallAttempt),
+    },
+  })
+}
+
+const recall = { id: 201, title: 'Recall graph storage', answered: false }
+
 describe('ModulePage — retrieval', () => {
-  it('records retrieval answers and shows them before the first segment', async () => {
-    const retrievalDetail: ModuleDetail = {
-      ...twoSegmentDetail,
-      retrieval: [
-        {
-          id: 201,
-          title: 'Recall graph storage',
-          prompt: 'What does an adjacency list store?',
-          options: [
-            { id: 'neighbors', label: 'Connected vertices' },
-            { id: 'visited', label: 'Visited count' },
-          ],
-        },
-      ],
-    }
-    const api = fakeApi({
-      user: ada,
-      overrides: {
-        'GET /api/modules': () => Response.json([]),
-        'GET /api/modules/:id': () => Response.json(retrievalDetail),
-        'POST /api/modules/:id/position': () => Response.json(retrievalDetail),
-        'POST /api/activities/:id/attempts': () =>
-          Response.json({ correct: true, feedback: 'Correct: it stores connected vertices.' }),
-      },
-    })
+  it('asks the recall questions, with hints, before the first segment', async () => {
+    const api = recallApi({ ...twoSegmentDetail, retrieval: [recall] })
     renderApp('/modules/1')
 
     expect(await screen.findByText('What does an adjacency list store?')).toBeInTheDocument()
+    expect(screen.getByText('Quick recall · Question 1 of 1')).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Introduction to graphs' })).toBeNull()
+    expect(await screen.findByRole('button', { name: 'Show next hint' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Start module' })).toBeDisabled()
+
     await userEvent.click(screen.getByLabelText('Connected vertices'))
     await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
 
@@ -156,6 +178,16 @@ describe('ModulePage — retrieval', () => {
     expect(
       await screen.findByRole('heading', { name: 'Introduction to graphs' }),
     ).toBeInTheDocument()
+  })
+
+  it('skips the recall questions already answered on an earlier visit', async () => {
+    recallApi({ ...twoSegmentDetail, retrieval: [{ ...recall, answered: true }] })
+    renderApp('/modules/1')
+
+    expect(
+      await screen.findByRole('heading', { name: 'Introduction to graphs' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('What does an adjacency list store?')).toBeNull()
   })
 })
 
@@ -431,34 +463,18 @@ describe('ModulePage — loading and error states', () => {
   })
 
   it('explains when retrieval is complete but lesson segments are still placeholders', async () => {
-    const emptyWithRetrieval: ModuleDetail = {
+    const api = recallApi({
       ...moduleSummary,
       segmentCount: 0,
       segments: [],
-      retrieval: [
-        {
-          id: 201,
-          title: 'Recall graph storage',
-          prompt: 'What does an adjacency list store?',
-          options: [{ id: 'neighbors', label: 'Connected vertices' }],
-        },
-      ],
-    }
-    const api = fakeApi({
-      user: ada,
-      overrides: {
-        'GET /api/modules': () => Response.json([]),
-        'GET /api/modules/:id': () => Response.json(emptyWithRetrieval),
-        'POST /api/modules/:id/position': () => Response.json(emptyWithRetrieval),
-        'POST /api/activities/:id/attempts': () =>
-          Response.json({ correct: true, feedback: 'Correct.' }),
-      },
+      retrieval: [recall],
     })
     renderApp('/modules/1')
 
     await userEvent.click(await screen.findByLabelText('Connected vertices'))
     await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
-    await userEvent.click(await screen.findByRole('button', { name: 'Start module' }))
+    await screen.findByText('Correct: it stores connected vertices.')
+    await userEvent.click(screen.getByRole('button', { name: 'Start module' }))
 
     expect(
       await screen.findByText(

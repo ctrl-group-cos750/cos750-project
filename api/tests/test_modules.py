@@ -171,18 +171,10 @@ def test_module_retrieval_items_are_answer_free_and_attempts_do_not_count_as_mas
     client.post("/api/modules/1/position", json={"segmentPosition": 1})
 
     detail = client.get(f"/api/modules/{module_id}").json()
+    # The page loads the question from the activity endpoint, which leaves out the answer.
     assert detail["retrieval"] == [
-        {
-            "id": 201,
-            "title": "Recall adjacency lists",
-            "prompt": "What does an adjacency list store?",
-            "options": [
-                {"id": "neighbors", "label": "Connected vertices"},
-                {"id": "counts", "label": "Visit counts"},
-            ],
-        }
+        {"id": 201, "title": "Recall adjacency lists", "answered": False}
     ]
-    assert "solution" not in detail["retrieval"][0]
     blocked = client.post(f"/api/modules/{module_id}/position", json={"segmentPosition": 0})
     assert blocked.status_code == 409
 
@@ -194,6 +186,8 @@ def test_module_retrieval_items_are_answer_free_and_attempts_do_not_count_as_mas
     assert stored is not None
     assert stored.correct
     assert not counts(activity)
+    detail = client.get(f"/api/modules/{module_id}").json()
+    assert detail["retrieval"][0]["answered"]  # a later visit resumes past it
     assert (
         client.post(f"/api/modules/{module_id}/position", json={"segmentPosition": 0}).status_code
         == 200

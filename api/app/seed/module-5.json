@@ -20,20 +20,47 @@
       "module_id": 5,
       "purpose": "retrieval",
       "config": {
-        "prompt": "When should BFS mark a neighbor as visited to avoid adding it to the queue twice?",
+        "prompt": "When does BFS count a neighbour as found, so that it never adds it to the queue twice?",
         "options": [
-          { "id": "enqueue", "label": "When it is added to the queue" },
-          { "id": "dequeue", "label": "Only after it is removed from the queue" },
-          { "id": "finish", "label": "After the whole traversal finishes" }
+          {
+            "id": "enqueue",
+            "label": "When it joins the queue"
+          },
+          {
+            "id": "dequeue",
+            "label": "Only when it leaves the queue"
+          },
+          {
+            "id": "finish",
+            "label": "After the whole traversal finishes"
+          }
         ]
       },
       "solution": {
         "correct": "enqueue",
         "feedback": {
-          "dequeue": "Marking it on removal lets another vertex enqueue it first.",
-          "finish": "The visited set must be updated during traversal, not after it."
+          "dequeue": "Not quite. Until it leaves the queue, another vertex could find it again and add it a second time. Count it as found the moment it joins.",
+          "finish": "Not quite. BFS needs to know what it has found while it is still running, or it adds vertices twice. Count it as found the moment it joins."
         }
-      }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Picture a vertex that two other vertices both have as a neighbour."
+        },
+        {
+          "level": 2,
+          "body": "If BFS waited to count it, the second vertex could add it to the queue again."
+        },
+        {
+          "level": 3,
+          "body": "Module 3: a vertex is found when it joins the queue, and visited when it leaves."
+        },
+        {
+          "level": 4,
+          "body": "Answer: when it joins the queue."
+        }
+      ]
     }
   ]
 }

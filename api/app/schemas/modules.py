@@ -69,18 +69,17 @@ class SegmentOut(ApiModel):
     activity_id: int | None = None
 
 
-class RetrievalOptionOut(ApiModel):
-    id: str
-    label: str
-
-
 class RetrievalActivityOut(ApiModel):
-    """An answer-free multiple-choice item shown before the module segments."""
+    """A retrieval question the module opens with, before its segments (FR-2.4).
+
+    The page loads the question itself from ``GET /api/activities/{id}``, so it is shown like any
+    other activity, with feedback and hints. ``answered`` is true once the student has made an
+    attempt at it: the page resumes at the first one still unanswered.
+    """
 
     id: int
     title: str
-    prompt: str
-    options: list[RetrievalOptionOut]
+    answered: bool
 
 
 class ModuleDetailOut(ModuleOut):
@@ -91,6 +90,7 @@ class ModuleDetailOut(ModuleOut):
     """
 
     segments: list[SegmentOut]
+    # The retrieval questions, answered before the segments (FR-2.4). Not segments themselves.
     retrieval: list[RetrievalActivityOut]
 
 

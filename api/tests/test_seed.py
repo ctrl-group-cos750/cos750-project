@@ -127,6 +127,24 @@ def test_invalid_fixtures_are_refused(tmp_path: Path, data: dict[str, Any], prob
         read_fixtures(write(tmp_path, data))
 
 
+@pytest.mark.parametrize("field", ["activity_id", "skip_check_activity_id"])
+def test_a_retrieval_question_placed_in_a_segment_is_refused(tmp_path: Path, field: str) -> None:
+    """The module page asks them before its segments (FR-2.4): in a segment too, twice."""
+    module = {
+        "id": 2,
+        "slug": "two",
+        "title": "Two",
+        "goals": ["Goal."],
+        "estimated_minutes": 5,
+        "segments": [{"id": 1, "kind": "activity", "title": "Recall", field: 1}],
+    }
+    if field == "skip_check_activity_id":
+        module["segments"][0] |= {"kind": "worked_example", "body": "x"}  # type: ignore[index]
+    recall = activity(module_id=2, purpose="retrieval")
+    with pytest.raises(ValueError, match="retrieval question"):
+        read_fixtures(write(tmp_path, {"modules": [module], "activities": [recall]}))
+
+
 def test_a_valid_trace_activity_loads(tmp_path: Path) -> None:
     read_fixtures(write(tmp_path, {"activities": [trace_activity()]}))  # must not raise
 

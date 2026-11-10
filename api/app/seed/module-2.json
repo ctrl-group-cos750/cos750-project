@@ -11,18 +11,6 @@
       ],
       "segments": [
         {
-          "id": 201,
-          "kind": "activity",
-          "title": "Quick recall: queues",
-          "activity_id": 201
-        },
-        {
-          "id": 202,
-          "kind": "activity",
-          "title": "Quick recall: neighbours",
-          "activity_id": 202
-        },
-        {
           "id": 203,
           "kind": "video",
           "title": "From a picture to a dictionary",

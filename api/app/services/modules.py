@@ -149,6 +149,7 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
         .where(Activity.module_id == module_id, Activity.purpose == "retrieval")
         .order_by(Activity.id)
     ).all()
+    answered = _answered(session, user_id, [activity.id for activity in retrieval])
     # A video segment's video points at it (Video.segment_id): videos are made in the app.
     videos = {
         video.segment_id: video.id
@@ -174,13 +175,21 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
         ],
         retrieval=[
             RetrievalActivityOut(
-                id=activity.id,
-                title=activity.title,
-                prompt=activity.config["prompt"],
-                options=activity.config["options"],
+                id=activity.id, title=activity.title, answered=activity.id in answered
             )
             for activity in retrieval
         ],
+    )
+
+
+def _answered(session: Session, user_id: int, activity_ids: Sequence[int]) -> set[int]:
+    """Which of these activities the student has made at least one attempt at."""
+    return set(
+        session.scalars(
+            select(Attempt.activity_id).where(
+                Attempt.user_id == user_id, Attempt.activity_id.in_(activity_ids)
+            )
+        )
     )
 
 
@@ -200,14 +209,7 @@ def save_position(
     retrieval_ids = session.scalars(
         select(Activity.id).where(Activity.module_id == module_id, Activity.purpose == "retrieval")
     ).all()
-    answered_ids = set(
-        session.scalars(
-            select(Attempt.activity_id).where(
-                Attempt.user_id == user_id, Attempt.activity_id.in_(retrieval_ids)
-            )
-        )
-    )
-    if retrieval_ids and not set(retrieval_ids) <= answered_ids:
+    if not set(retrieval_ids) <= _answered(session, user_id, retrieval_ids):
         raise RetrievalIncomplete(module_id)
     last = len(_segments(session, module_id)) - 1
     if last < 0:

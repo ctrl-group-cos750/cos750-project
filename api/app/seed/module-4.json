@@ -22,9 +22,18 @@
       "config": {
         "prompt": "Which structure makes BFS process the earliest discovered vertex first?",
         "options": [
-          { "id": "queue", "label": "A first-in, first-out queue" },
-          { "id": "stack", "label": "A last-in, first-out stack" },
-          { "id": "set", "label": "An unordered set" }
+          {
+            "id": "queue",
+            "label": "A first-in, first-out queue"
+          },
+          {
+            "id": "stack",
+            "label": "A last-in, first-out stack"
+          },
+          {
+            "id": "set",
+            "label": "An unordered set"
+          }
         ]
       },
       "solution": {
@@ -33,7 +42,25 @@
           "stack": "A stack follows the most recently added item, which is not breadth-first order.",
           "set": "An unordered set does not preserve the next vertex to process."
         }
-      }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "BFS takes the vertex it found first before any it found later."
+        },
+        {
+          "level": 2,
+          "body": "Which structure hands items back in the order they went in?"
+        },
+        {
+          "level": 3,
+          "body": "A stack gives back the newest item, and a set has no order at all."
+        },
+        {
+          "level": 4,
+          "body": "Answer: a first-in, first-out queue."
+        }
+      ]
     }
   ]
 }

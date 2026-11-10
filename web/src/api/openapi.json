@@ -3195,16 +3195,9 @@
             "type": "string",
             "title": "Title"
           },
-          "prompt": {
-            "type": "string",
-            "title": "Prompt"
-          },
-          "options": {
-            "items": {
-              "$ref": "#/components/schemas/RetrievalOptionOut"
-            },
-            "type": "array",
-            "title": "Options"
+          "answered": {
+            "type": "boolean",
+            "title": "Answered"
           }
         },
         "additionalProperties": false,
@@ -3212,30 +3205,10 @@
         "required": [
           "id",
           "title",
-          "prompt",
-          "options"
+          "answered"
         ],
         "title": "RetrievalActivityOut",
-        "description": "An answer-free multiple-choice item shown before the module segments."
-      },
-      "RetrievalOptionOut": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "label": {
-            "type": "string",
-            "title": "Label"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "id",
-          "label"
-        ],
-        "title": "RetrievalOptionOut"
+        "description": "A retrieval question the module opens with, before its segments (FR-2.4).\n\nThe page loads the question itself from ``GET /api/activities/{id}``, so it is shown like any\nother activity, with feedback and hints. ``answered`` is true once the student has made an\nattempt at it: the page resumes at the first one still unanswered."
       },
       "ReviewPathOut": {
         "properties": {

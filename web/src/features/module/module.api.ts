@@ -21,13 +21,3 @@ export function savePosition(moduleId: number, segmentPosition: number): Promise
     body: { segmentPosition },
   })
 }
-
-export type RetrievalResult = { correct: boolean; feedback: string }
-
-/** Record a retrieval response through the normal activity attempt endpoint. */
-export function submitRetrieval(activityId: number, selected: string): Promise<RetrievalResult> {
-  return api<RetrievalResult>(`/api/activities/${activityId}/attempts`, {
-    method: 'POST',
-    body: { submitted: { selected } },
-  })
-}

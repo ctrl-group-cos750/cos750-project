@@ -252,6 +252,13 @@ def check_references(content: FixtureFile) -> None:
             for ref in (seg.activity_id, seg.skip_check_activity_id):
                 if ref is not None and ref not in activities:
                     raise ValueError(f"segment {seg.id}: no activity {ref}")
+                # The module page asks its retrieval questions before the segments (FR-2.4), so
+                # one placed in a segment as well would be asked twice.
+                if ref is not None and activities[ref].purpose == "retrieval":
+                    raise ValueError(
+                        f"segment {seg.id}: activity {ref} is a retrieval question, which the "
+                        "module asks before its segments, not in one"
+                    )
             if seg.activity_id is None:
                 continue
             if seg.activity_id in placed:

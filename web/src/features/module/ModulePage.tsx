@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { Alert, Button, ProgressBar, Spinner } from '../../components'
-import { fetchModule, savePosition, submitRetrieval } from './module.api.ts'
+import { ActivityView } from '../activities/ActivityPage.tsx'
+import { fetchModule, savePosition } from './module.api.ts'
 import { SegmentView } from './SegmentView.tsx'
 
 /** /modules/:moduleId — plays a module's segments in order, saves position (FR-2.3, FR-2.5). */
@@ -15,12 +16,10 @@ export function ModulePage() {
 
   // Drive current index from the fetched position; update locally on navigation.
   const [segmentIndex, setSegmentIndex] = useState<number | null>(null)
-  const [retrievalIndex, setRetrievalIndex] = useState(0)
-  const [selected, setSelected] = useState('')
-  const [retrievalResult, setRetrievalResult] = useState<{
-    correct: boolean
-    feedback: string
-  } | null>(null)
+  // Which recall question is on screen; null until the student moves, so it starts at the first
+  // one they haven't answered yet (FR-2.4).
+  const [retrievalIndex, setRetrievalIndex] = useState<number | null>(null)
+  const [retrievalChecked, setRetrievalChecked] = useState(false)
 
   // Saves how far the student has got. The server keeps the furthest segment reached, so only
   // moving forward is saved; stepping back just changes what's on screen.
@@ -31,11 +30,6 @@ export function ModulePage() {
       void queryClient.invalidateQueries({ queryKey: ['module', id] })
     },
   })
-  const retrievalMutation = useMutation({
-    mutationFn: () => submitRetrieval(query.data!.retrieval[retrievalIndex].id, selected),
-    onSuccess: setRetrievalResult,
-  })
-
   if (query.isPending) return <Spinner label="Loading module" />
   if (query.isError) return <Alert tone="danger">{query.error.message}</Alert>
 
@@ -43,8 +37,16 @@ export function ModulePage() {
   const segments = module.segments
   const retrieval = module.retrieval ?? []
 
-  if (retrievalIndex < retrieval.length) {
-    const item = retrieval[retrievalIndex]
+  // The recall questions come before the segments. Each is a full activity, with feedback and
+  // hints; any checked answer moves the student on, and the server needs one for every question
+  // before it saves a position.
+  const firstUnanswered = retrieval.findIndex((item) => !item.answered)
+  const recallIndex =
+    retrievalIndex ?? (firstUnanswered === -1 ? retrieval.length : firstUnanswered)
+
+  if (recallIndex < retrieval.length) {
+    const item = retrieval[recallIndex]
+    const next = retrieval.findIndex((other, index) => index > recallIndex && !other.answered)
     return (
       <section className="grid max-w-3xl gap-6" aria-label={`Module ${module.number} retrieval`}>
         <div className="grid gap-2">
@@ -52,58 +54,25 @@ export function ModulePage() {
             Module {module.number} · {module.title}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Quick recall · Question {retrievalIndex + 1} of {retrieval.length}
+            Quick recall · Question {recallIndex + 1} of {retrieval.length}
           </p>
         </div>
-        <fieldset className="grid gap-3" disabled={retrievalResult !== null}>
-          <legend className="mb-3 text-lg font-semibold">{item.prompt}</legend>
-          {item.options.map((option) => (
-            <label
-              key={option.id}
-              className="flex cursor-pointer items-start gap-3 rounded-md border border-border p-3"
-            >
-              <input
-                type="radio"
-                name={`retrieval-${item.id}`}
-                value={option.id}
-                checked={selected === option.id}
-                onChange={() => setSelected(option.id)}
-              />
-              <span>{option.label}</span>
-            </label>
-          ))}
-        </fieldset>
-        {retrievalResult && (
-          <Alert
-            tone={retrievalResult.correct ? 'success' : 'info'}
-            title={retrievalResult.correct ? 'Correct' : 'Review'}
-          >
-            {retrievalResult.feedback}
-          </Alert>
-        )}
-        {retrievalMutation.isError && (
-          <Alert tone="danger">{retrievalMutation.error.message}</Alert>
-        )}
+        <ActivityView
+          key={item.id}
+          activityId={item.id}
+          onResult={() => setRetrievalChecked(true)}
+        />
         <div className="flex justify-end">
-          {retrievalResult ? (
-            <Button
-              onClick={() => {
-                setRetrievalIndex((index) => index + 1)
-                setSelected('')
-                setRetrievalResult(null)
-              }}
-            >
-              {retrievalIndex + 1 === retrieval.length ? 'Start module' : 'Next question'}
-            </Button>
-          ) : (
-            <Button
-              onClick={() => retrievalMutation.mutate()}
-              disabled={!selected || retrievalMutation.isPending}
-              loading={retrievalMutation.isPending}
-            >
-              Check answer
-            </Button>
-          )}
+          <Button
+            disabled={!retrievalChecked && !item.answered}
+            onClick={() => {
+              setRetrievalChecked(false)
+              setRetrievalIndex(next === -1 ? retrieval.length : next)
+              if (next === -1) void queryClient.invalidateQueries({ queryKey: ['module', id] })
+            }}
+          >
+            {next === -1 ? 'Start module' : 'Next question'}
+          </Button>
         </div>
       </section>
     )

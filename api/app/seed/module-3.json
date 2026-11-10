@@ -11,18 +11,6 @@
       ],
       "segments": [
         {
-          "id": 311,
-          "kind": "activity",
-          "title": "Quick recall: graphs",
-          "activity_id": 311
-        },
-        {
-          "id": 312,
-          "kind": "activity",
-          "title": "Quick recall: a graph in Python",
-          "activity_id": 312
-        },
-        {
           "id": 313,
           "kind": "video",
           "title": "Why BFS? The fewest walkways",

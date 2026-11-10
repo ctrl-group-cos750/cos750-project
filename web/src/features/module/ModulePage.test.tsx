@@ -81,13 +81,18 @@ const allKindsDetail: ModuleDetail = {
 // `positionResponse` defaults to the same detail object (idempotent position save).
 // ---------------------------------------------------------------------------
 
-function setupModuleApi(detail: ModuleDetail, positionResponse: ModuleDetail = detail) {
+function setupModuleApi(
+  detail: ModuleDetail,
+  positionResponse: ModuleDetail = detail,
+  extra: Record<string, () => Response> = {},
+) {
   return fakeApi({
     user: ada,
     overrides: {
       'GET /api/modules': () => Response.json([]),
       'GET /api/modules/:id': () => Response.json(detail),
       'POST /api/modules/:id/position': () => Response.json(positionResponse),
+      ...extra,
     },
   })
 }
@@ -286,48 +291,85 @@ describe('ModulePage — navigation and position saving', () => {
 })
 
 // ---------------------------------------------------------------------------
-// (d) Video segment shows link to /videos/:videoId
+// (d) Video segment plays inside the module
 // ---------------------------------------------------------------------------
 
 describe('ModulePage — video segment', () => {
-  it('shows a "Watch video" link pointing to the video page', async () => {
-    // Navigate to the video segment (position 1 in allKindsDetail)
-    const detailAtVideo: ModuleDetail = {
-      ...allKindsDetail,
-      currentSegmentPosition: 1,
-    }
-    setupModuleApi(detailAtVideo)
+  it('plays the video in the module, with the module navigation still there', async () => {
+    const detail = { ...allKindsDetail, currentSegmentPosition: 1 }
+    setupModuleApi(detail, detail, {
+      'GET /api/videos/42': () =>
+        Response.json({
+          id: 42,
+          title: 'BFS in action',
+          mediaPath: '/media/bfs.mp4',
+          captionsPath: '/media/bfs.vtt',
+          transcript: 'BFS visits the start vertex first.',
+          durationSeconds: 60,
+          checkpoints: [],
+        }),
+    })
     renderApp('/modules/1')
 
-    // Wait for segment to load
     expect(await screen.findByRole('heading', { name: 'Watch: BFS in action' })).toBeInTheDocument()
-
-    const link = screen.getByRole('link', { name: '▶ Watch video' })
-    expect(link).toBeInTheDocument()
-    expect(link).toHaveAttribute('href', '/videos/42')
+    expect(await screen.findByText('BFS visits the start vertex first.')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: '▶ Watch video' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Next →' })).toBeEnabled()
   })
 })
 
 // ---------------------------------------------------------------------------
-// (e) Activity segment links to the activity page
+// (e) Activity segment is answered inside the module
 // ---------------------------------------------------------------------------
 
 describe('ModulePage — activity segment', () => {
-  it('links to the activity page', async () => {
-    const detailAtActivity: ModuleDetail = {
-      ...allKindsDetail,
-      currentSegmentPosition: 2,
-    }
-    setupModuleApi(detailAtActivity)
+  it('shows the activity in the module, and Next moves on once it is answered', async () => {
+    const detail = { ...allKindsDetail, currentSegmentPosition: 2 }
+    setupModuleApi(detail, detail, {
+      'GET /api/activities/7': () =>
+        Response.json({
+          id: 7,
+          kind: 'multiple_choice',
+          title: 'Which vertex is next?',
+          visible: true,
+          config: {
+            prompt: 'BFS has just visited A. Which vertex comes next?',
+            options: [
+              { id: 'b', label: 'B, the first neighbour queued' },
+              { id: 'd', label: 'D, the last neighbour queued' },
+            ],
+          },
+        }),
+      'GET /api/activities/7/hints': () => Response.json([]),
+      'POST /api/activities/7/attempts': () =>
+        Response.json({
+          id: 1,
+          activityId: 7,
+          correct: true,
+          score: 1,
+          parts: [],
+          feedback: 'Correct: B joined the queue first.',
+          hintLevel: 0,
+        }),
+    })
     renderApp('/modules/1')
 
     expect(
       await screen.findByRole('heading', { name: 'Practice: BFS step by step' }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Start the activity' })).toHaveAttribute(
-      'href',
-      '/activities/7',
-    )
+    expect(
+      await screen.findByRole('heading', { level: 3, name: 'Which vertex is next?' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Start the activity' })).toBeNull()
+
+    await userEvent.click(screen.getByLabelText('B, the first neighbour queued'))
+    await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(await screen.findByText('Correct: B joined the queue first.')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Next →' }))
+    expect(
+      await screen.findByRole('heading', { name: 'Worked example: adjacency list' }),
+    ).toBeInTheDocument()
   })
 })
 

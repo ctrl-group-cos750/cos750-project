@@ -14,6 +14,7 @@ type ActivityRendererProps = {
   onSubmit: (submitted: Submission) => Promise<void>
   requestHint: (activityId: number) => Promise<Hint>
   loadHints?: (activityId: number) => Promise<readonly Hint[]>
+  heading?: 'h1' | 'h3'
 }
 
 const SUPPORTED: ReadonlySet<Activity['kind']> = new Set([
@@ -26,10 +27,11 @@ const SUPPORTED: ReadonlySet<Activity['kind']> = new Set([
 /** Chooses the activity control and consistently adds server feedback and the hint ladder. */
 export function ActivityRenderer(props: ActivityRendererProps) {
   const isSupported = SUPPORTED.has(props.activity.kind)
+  const Title = props.heading ?? 'h1'
 
   return (
     <Card>
-      <h1>{props.activity.title}</h1>
+      <Title>{props.activity.title}</Title>
       {props.activity.kind === 'parsons' ? (
         <ParsonsProblem
           activity={props.activity}

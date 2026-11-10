@@ -1,4 +1,11 @@
-import { ChartColumn, Clapperboard, ShieldCheck, UsersRound, type LucideIcon } from 'lucide-react'
+import {
+  BookOpenText,
+  ChartColumn,
+  Clapperboard,
+  ShieldCheck,
+  UsersRound,
+  type LucideIcon,
+} from 'lucide-react'
 
 /**
  * Every setup area in the staff portal. The portal's side menu and its overview page are both
@@ -14,6 +21,13 @@ export type StaffSection = {
 }
 
 export const STAFF_SECTIONS: StaffSection[] = [
+  {
+    path: 'content',
+    title: 'Content',
+    description:
+      'Edit the modules and their steps, activities and hints, objectives, review paths and graphs.',
+    icon: BookOpenText,
+  },
   {
     path: 'videos',
     title: 'Videos',

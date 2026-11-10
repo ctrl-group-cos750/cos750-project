@@ -14,6 +14,13 @@ Each fixture file may hold any of:
   Its activities belong to no module. Numbered from 1000 + 100 times the objective (objective 5:
   1501, 1502, …), in `review.json`.
 
+The fixtures seed the database; the database is the content from then on. Staff edit it in the
+portal (app/routers/staff_content.py), and an edited row is marked (`edited_at`, or
+`segments_edited_at` for a module's list of segments). A re-run inserts what is missing and
+updates what nobody has edited, but never writes over a staff edit: those are listed in `kept`
+and stay as staff left them. To bring the repository back, staff use "Use the repository's
+version" on that item, or export the portal's content as fixtures and commit them.
+
 Everything has a fixed id, so a re-run updates the same rows. By convention a module's segments and
 activities are numbered from 100 times its number (module 3: 301, 302, …; module 0: 1, 2, …), and a
 module lives in its own file (`module-3.json`), so content for different modules never collides.
@@ -63,6 +70,10 @@ FIXTURES = Path(__file__).parent
 # EDITOR_IDS_FROM, and the editor's start there. Otherwise a fixture would overwrite an editor
 # question that happens to have its id: `load` writes fixtures by id.
 EDITOR_IDS_FROM = 100_000
+# Activities, segments and graphs made in the content editor (app/routers/staff_content.py) are
+# numbered from here, below the video editor's range, so the portal's content can be exported and
+# committed as fixtures. Hand-written fixtures keep to ids below this by convention.
+PORTAL_IDS_FROM = 50_000
 
 
 class HintFixture(BaseModel, extra="forbid"):
@@ -332,6 +343,19 @@ def read_fixtures(folder: Path = FIXTURES) -> FixtureFile:
         merged.activities.extend(data.activities)
         merged.graphs.extend(data.graphs)
         merged.review_paths.extend(data.review_paths)
+    if too_big := sorted(a.id for a in merged.activities if a.id >= EDITOR_IDS_FROM):
+        raise ValueError(
+            f"activity ids {too_big} are for the video editor: fixtures use ids below "
+            f"{EDITOR_IDS_FROM}"
+        )
+    check_content(merged)
+    return merged
+
+
+def check_content(merged: FixtureFile) -> None:
+    """The checks across all content, wherever it comes from: the fixtures (`read_fixtures`) or
+    the database after a staff edit (app/services/content_editor.py). Ids are unique, slugs are
+    unique, and every reference holds (`check_references`). Raises ValueError naming the item."""
     for what, ids in (
         ("objective", [o.id for o in merged.objectives]),
         ("module", [m.id for m in merged.modules]),
@@ -345,24 +369,30 @@ def read_fixtures(folder: Path = FIXTURES) -> FixtureFile:
     ):
         if dupes := sorted({i for i in ids if ids.count(i) > 1}):
             raise ValueError(f"{what} ids used twice: {dupes}")
-    if too_big := sorted(a.id for a in merged.activities if a.id >= EDITOR_IDS_FROM):
-        raise ValueError(
-            f"activity ids {too_big} are for the video editor: fixtures use ids below "
-            f"{EDITOR_IDS_FROM}"
-        )
     slugs = [m.slug for m in merged.modules]
     if repeated := sorted({slug for slug in slugs if slugs.count(slug) > 1}):
         raise ValueError(f"module slugs used twice: {repeated}")
     check_references(merged)
-    return merged
 
 
-def load(session: Session, folder: Path = FIXTURES) -> FixtureFile:
-    """Validate every fixture, then insert or update its rows in one transaction."""
+def load(session: Session, folder: Path = FIXTURES, kept: list[str] | None = None) -> FixtureFile:
+    """Validate every fixture, then insert or update its rows in one transaction. A row staff have
+    edited in the portal is left as it is, and named in `kept` (when given)."""
     content = read_fixtures(folder)
+    kept = [] if kept is None else kept
+
+    def edited(model: type[Objective | Module | Activity | GraphScenario], row_id: int) -> bool:
+        row = session.get(model, row_id)
+        if row is None or getattr(row, "edited_at", None) is None:
+            return False
+        kept.append(f"{model.__tablename__} {row_id}")
+        return True
+
     move_editor_activities(session)
     # Parents first: activities point at modules and objectives, segments at activities.
     for o in content.objectives:
+        if edited(Objective, o.id):
+            continue
         session.merge(
             Objective(
                 id=o.id,
@@ -374,6 +404,12 @@ def load(session: Session, folder: Path = FIXTURES) -> FixtureFile:
             )
         )
     for m in content.modules:
+        if edited(Module, m.id):
+            continue
+        clash = session.scalar(select(Module.id).where(Module.slug == m.slug, Module.id != m.id))
+        if clash is not None:
+            kept.append(f"modules {m.id} (module {clash}, made in the portal, uses its slug)")
+            continue
         session.merge(
             Module(
                 id=m.id,
@@ -386,6 +422,11 @@ def load(session: Session, folder: Path = FIXTURES) -> FixtureFile:
         )
     session.flush()
     for a in content.activities:
+        if edited(Activity, a.id):
+            continue
+        if a.module_id is not None and session.get(Module, a.module_id) is None:
+            kept.append(f"activities {a.id} (its module {a.module_id} was held back)")
+            continue
         session.merge(
             Activity(
                 id=a.id,
@@ -404,10 +445,22 @@ def load(session: Session, folder: Path = FIXTURES) -> FixtureFile:
         session.add_all(Hint(activity_id=a.id, level=h.level, body=h.body) for h in a.hints)
     session.flush()
     for m in content.modules:
+        module = session.get(Module, m.id)
+        if module is None:  # held back above: a portal module uses its slug
+            continue
+        if module.segments_edited_at is not None:
+            kept.append(f"segments of module {m.id}")
+            continue
         _load_segments(session, m.segments, module_id=m.id)
     for r in content.review_paths:
+        objective = session.get_one(Objective, r.objective_id)
+        if objective.segments_edited_at is not None:
+            kept.append(f"segments of review path {r.objective_id}")
+            continue
         _load_segments(session, r.segments, review_objective_id=r.objective_id)
     for g in content.graphs:
+        if edited(GraphScenario, g.id):
+            continue
         session.merge(
             GraphScenario(
                 id=g.id,
@@ -422,23 +475,28 @@ def load(session: Session, folder: Path = FIXTURES) -> FixtureFile:
     retire_dropped_activities(session, {a.id for a in content.activities})
     # A changed rule or mastery item applies to every student's result straight away (FR-7.6).
     recompute_all(session)
-    if session.get_bind().dialect.name == "postgresql":
-        # Fixed ids don't move Postgres's id sequences; move them past the largest id, so a row
-        # added without an id later doesn't collide with seeded content.
-        # The editor's activities start at EDITOR_IDS_FROM, clear of every fixture id.
-        for table, floor in (
-            ("activities", EDITOR_IDS_FROM),
-            ("graph_scenarios", 1),
-            ("segments", 1),
-        ):
-            session.execute(
-                text(
-                    f"SELECT setval(pg_get_serial_sequence('{table}', 'id'), "  # noqa: S608 (fixed names)
-                    f"GREATEST((SELECT MAX(id) FROM {table}), {floor}))"
-                )
-            )
+    move_sequences(session)
     session.commit()
     return content
+
+
+def move_sequences(session: Session) -> None:
+    """On Postgres, move the id sequences past the largest id. Fixed ids don't move them, and a
+    row added without an id later would collide with seeded content. The video editor's
+    activities start at EDITOR_IDS_FROM, clear of every fixture id."""
+    if session.get_bind().dialect.name != "postgresql":
+        return
+    for table, floor in (
+        ("activities", EDITOR_IDS_FROM),
+        ("graph_scenarios", 1),
+        ("segments", 1),
+    ):
+        session.execute(
+            text(
+                f"SELECT setval(pg_get_serial_sequence('{table}', 'id'), "  # noqa: S608 (fixed names)
+                f"GREATEST((SELECT MAX(id) FROM {table}), {floor}))"
+            )
+        )
 
 
 def retire_dropped_activities(session: Session, listed: set[int]) -> list[int]:
@@ -447,12 +505,28 @@ def retire_dropped_activities(session: Session, listed: set[int]) -> list[int]:
     One nobody has used is deleted with its hints. One a student has answered or asked a hint
     for keeps its row, so their history stays, but is hidden and stops being a mastery item: an
     objective whose old placeholder still counted could never be reached. The video editor's
-    questions (ids from EDITOR_IDS_FROM) are never touched.
+    questions (ids from EDITOR_IDS_FROM) are never touched, and neither is one staff edited in the
+    portal or one a staff-edited module still shows: those belong to the portal now.
     """
     dropped = session.scalars(
-        select(Activity).where(Activity.id < EDITOR_IDS_FROM, Activity.id.not_in(listed))
+        select(Activity).where(
+            Activity.id < EDITOR_IDS_FROM,
+            Activity.id.not_in(listed),
+            Activity.edited_at.is_(None),
+        )
     ).all()
+    retired = []
     for activity in dropped:
+        shown = session.scalar(
+            select(Segment.id)
+            .where(
+                (Segment.activity_id == activity.id)
+                | (Segment.skip_check_activity_id == activity.id)
+            )
+            .limit(1)
+        )
+        if shown is not None:
+            continue
         used = any(
             session.scalar(select(child.id).where(child.activity_id == activity.id).limit(1))
             for child in (Attempt, HintView, Checkpoint)
@@ -465,8 +539,9 @@ def retire_dropped_activities(session: Session, listed: set[int]) -> list[int]:
         else:
             session.execute(delete(Hint).where(Hint.activity_id == activity.id))
             session.delete(activity)
+        retired.append(activity.id)
     session.flush()
-    return [activity.id for activity in dropped]
+    return retired
 
 
 def move_editor_activities(session: Session) -> list[int]:

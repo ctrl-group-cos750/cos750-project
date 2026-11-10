@@ -8,7 +8,10 @@ from app.seed import load
 from app.seed.demo_accounts import load_demo_accounts
 
 with SessionLocal() as session:
-    content = load(session)  # broken content stops here, and so does the API (Dockerfile)
+    kept: list[str] = []  # content staff edited in the portal, which the seed leaves alone
+    content = load(
+        session, kept=kept
+    )  # broken content stops here, and so does the API (Dockerfile)
     notes: list[str] = []  # where a demo account's progress stopped short, and why
     try:
         demo = load_demo_accounts(session, os.environ.get("DEMO_PASSWORD"), notes=notes)
@@ -23,6 +26,8 @@ print(
     f"{segments} segments, {len(content.review_paths)} review paths, "
     f"{len(content.activities)} activities, {len(content.graphs)} graphs"
 )
+if kept:
+    print(f"seed: left as staff edited them in the portal: {', '.join(kept)}")
 if demo_problem:
     print(f"seed: demo accounts NOT rebuilt, the previous ones are kept: {demo_problem}")
 elif demo:

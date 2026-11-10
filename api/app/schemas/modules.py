@@ -67,6 +67,9 @@ class SegmentOut(ApiModel):
     video_id: int | None = None
     # Populated only for activity segments.
     activity_id: int | None = None
+    # The student has done it, so they can move past it (FR-2.7): an activity answered at least
+    # once, or every checkpoint of a video passed. Always true for every other kind.
+    done: bool = True
 
 
 class ModuleDetailOut(ModuleOut):

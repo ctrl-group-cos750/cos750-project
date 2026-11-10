@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { ada, fakeApi, renderApp } from '../../test/app.tsx'
@@ -16,6 +16,7 @@ const textSegment: Segment = {
   body: '# What is a graph?\n\nA graph has **nodes** and edges.',
   videoId: null,
   activityId: null,
+  done: true,
 }
 
 const workedExampleSegment: Segment = {
@@ -26,6 +27,7 @@ const workedExampleSegment: Segment = {
   body: '## Example\n\nHere is a worked example paragraph.',
   videoId: null,
   activityId: null,
+  done: true,
 }
 
 const videoSegment: Segment = {
@@ -36,6 +38,7 @@ const videoSegment: Segment = {
   body: null,
   videoId: 42,
   activityId: null,
+  done: true,
 }
 
 const activitySegment: Segment = {
@@ -46,6 +49,7 @@ const activitySegment: Segment = {
   body: null,
   videoId: null,
   activityId: 7,
+  done: true,
 }
 
 const moduleSummary: ModuleSummary = {
@@ -323,53 +327,106 @@ describe('ModulePage — video segment', () => {
 // ---------------------------------------------------------------------------
 
 describe('ModulePage — activity segment', () => {
-  it('shows the activity in the module, and Next moves on once it is answered', async () => {
-    const detail = { ...allKindsDetail, currentSegmentPosition: 2 }
+  it('keeps Next disabled until the activity is answered, then moves on', async () => {
+    let answered = false
+    const detail = (): ModuleDetail => ({
+      ...allKindsDetail,
+      currentSegmentPosition: 2,
+      status: 'in_progress',
+      segments: [
+        textSegment,
+        videoSegment,
+        { ...activitySegment, done: answered },
+        workedExampleSegment,
+      ],
+    })
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules': () => Response.json([]),
+        'GET /api/modules/:id': () => Response.json(detail()),
+        'POST /api/modules/:id/position': () => Response.json(detail()),
+        'GET /api/activities/7': () =>
+          Response.json({
+            id: 7,
+            kind: 'multiple_choice',
+            title: 'Which vertex is next?',
+            visible: true,
+            config: {
+              prompt: 'BFS has just visited A. Which vertex comes next?',
+              options: [
+                { id: 'b', label: 'B, the first neighbour queued' },
+                { id: 'd', label: 'D, the last neighbour queued' },
+              ],
+            },
+          }),
+        'GET /api/activities/7/hints': () => Response.json([]),
+        'POST /api/activities/7/attempts': () => {
+          answered = true
+          return Response.json({
+            id: 1,
+            activityId: 7,
+            correct: false,
+            score: 0,
+            parts: [],
+            feedback: 'Not quite: D joined the queue last.',
+            hintLevel: 0,
+          })
+        },
+      },
+    })
+    renderApp('/modules/1')
+
+    expect(
+      await screen.findByRole('heading', { level: 3, name: 'Which vertex is next?' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Start the activity' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Next →' })).toBeDisabled()
+    expect(
+      screen.getByText('Answer the activity to continue. A wrong answer still counts.'),
+    ).toBeInTheDocument()
+
+    await userEvent.click(screen.getByLabelText('D, the last neighbour queued'))
+    await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(await screen.findByText('Not quite: D joined the queue last.')).toBeInTheDocument()
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Next →' })).toBeEnabled())
+    await userEvent.click(screen.getByRole('button', { name: 'Next →' }))
+    expect(
+      await screen.findByRole('heading', { name: 'Worked example: adjacency list' }),
+    ).toBeInTheDocument()
+  })
+
+  it('asks for the video’s checkpoints before moving on', async () => {
+    const detail: ModuleDetail = {
+      ...allKindsDetail,
+      currentSegmentPosition: 1,
+      status: 'in_progress',
+      segments: [
+        textSegment,
+        { ...videoSegment, done: false },
+        activitySegment,
+        workedExampleSegment,
+      ],
+    }
     setupModuleApi(detail, detail, {
-      'GET /api/activities/7': () =>
+      'GET /api/videos/42': () =>
         Response.json({
-          id: 7,
-          kind: 'multiple_choice',
-          title: 'Which vertex is next?',
-          visible: true,
-          config: {
-            prompt: 'BFS has just visited A. Which vertex comes next?',
-            options: [
-              { id: 'b', label: 'B, the first neighbour queued' },
-              { id: 'd', label: 'D, the last neighbour queued' },
-            ],
-          },
-        }),
-      'GET /api/activities/7/hints': () => Response.json([]),
-      'POST /api/activities/7/attempts': () =>
-        Response.json({
-          id: 1,
-          activityId: 7,
-          correct: true,
-          score: 1,
-          parts: [],
-          feedback: 'Correct: B joined the queue first.',
-          hintLevel: 0,
+          id: 42,
+          title: 'BFS in action',
+          mediaPath: '/media/bfs.mp4',
+          captionsPath: '/media/bfs.vtt',
+          transcript: 'BFS visits the start vertex first.',
+          durationSeconds: 60,
+          checkpoints: [],
         }),
     })
     renderApp('/modules/1')
 
     expect(
-      await screen.findByRole('heading', { name: 'Practice: BFS step by step' }),
+      await screen.findByText('Answer the video’s checkpoints to continue.'),
     ).toBeInTheDocument()
-    expect(
-      await screen.findByRole('heading', { level: 3, name: 'Which vertex is next?' }),
-    ).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Start the activity' })).toBeNull()
-
-    await userEvent.click(screen.getByLabelText('B, the first neighbour queued'))
-    await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
-    expect(await screen.findByText('Correct: B joined the queue first.')).toBeInTheDocument()
-
-    await userEvent.click(screen.getByRole('button', { name: 'Next →' }))
-    expect(
-      await screen.findByRole('heading', { name: 'Worked example: adjacency list' }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Next →' })).toBeDisabled()
   })
 })
 

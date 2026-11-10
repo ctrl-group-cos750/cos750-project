@@ -348,6 +348,7 @@ Figure: Use cases. The student takes part in every use case in both groups excep
 - **FR-2.4** Each module from module 2 onwards opens with one or two retrieval questions on earlier modules.
 - **FR-2.5** Save progress after every segment. A student who returns resumes at the segment they left.
 - **FR-2.6** Show a module map with each module's state (locked, open, in progress, complete) and estimated duration.
+- **FR-2.7** A student moves past a segment only once it is done: an activity segment once its activity has been answered at least once (a wrong answer counts), a video segment once every checkpoint in the video is passed. Other segments are done when shown. A module is complete once its last segment is done. A complete module can be reread freely.
 
 ## Narrated video with checkpoints (FR-3)
 - **FR-3.1** Play narrated videos (screen recordings with a voice-over, no presenter) with play, pause and seek.

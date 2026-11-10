@@ -26,6 +26,7 @@ from app.services.modules import (
     ModuleLocked,
     ModuleNotFound,
     PositionTooFar,
+    SegmentNotDone,
     get_module_detail,
     get_modules_for_user,
     save_position,
@@ -37,6 +38,7 @@ router = APIRouter(prefix="/api/modules", tags=["modules"])
 _NOT_FOUND = "Module not found."
 _LOCKED = "This module is not available yet. Complete the previous module to unlock it."
 _TOO_FAR = "Work through the module one segment at a time."
+_NOT_DONE = "Answer this segment's activity, or the video's checkpoints, before moving on."
 
 
 @router.get("")
@@ -71,15 +73,17 @@ def save_module_position(
     """Record the student's current segment position and return the updated module.
 
     The client calls this whenever the student advances to a new segment.
-    The furthest segment reached is kept, so stepping back changes nothing. Reaching the last
-    segment marks the module ``complete`` for good.
+    The furthest segment reached is kept, so stepping back changes nothing. A segment must be
+    done (its activity answered, or its video's checkpoints passed) before moving past it, and
+    saving the last segment again once it is done marks the module ``complete`` for good.
 
     Returns the updated ``ModuleDetailOut`` so the frontend can re-render the
     module detail page with the new status in one round-trip (consistent with
     ``submit_attempt`` returning ``AttemptOut``).
 
     Returns 404 if the module does not exist; 403 if it is locked; 409 if the position is more
-    than one segment past the furthest the student has reached."""
+    than one segment past the furthest the student has reached, or past (or finishing on) a
+    segment they haven't done yet."""
     try:
         save_position(session, user.id, module_id, body.segment_position)
         session.commit()
@@ -91,3 +95,5 @@ def save_module_position(
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=_LOCKED) from None
     except PositionTooFar:
         raise HTTPException(status.HTTP_409_CONFLICT, detail=_TOO_FAR) from None
+    except SegmentNotDone:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=_NOT_DONE) from None

@@ -6,11 +6,639 @@
       "title": "What is a graph?",
       "estimated_minutes": 12,
       "goals": [
-        "Name the vertices and edges of a graph.",
-        "Tell a directed graph from an undirected one.",
-        "Match a real situation to a graph."
+        "Say what a data structure, an algorithm, a graph and a graph traversal are, with an example of each.",
+        "Point out the vertices and edges in a graph, and tell a directed graph from an undirected one.",
+        "Turn a real situation, like a campus map, into a graph."
       ],
-      "segments": []
+      "segments": [
+        {
+          "id": 101,
+          "kind": "text",
+          "title": "The campus map",
+          "body": "This is the campus you'll use in this module, and again in module 3.\n\n```\n   A ─── C ─── B ─── G\n   │     │\n   E ─── F\n   │\n   D\n```\n\nA Admin block · B Bookshop · C Computer Science building · D Dining hall · E Engineering building · F Fountain · G Green (sports field)\n\nEach line is a walkway, and you can walk every walkway both ways. The walkways join A–C, A–E, B–C, B–G, C–F, D–E and E–F."
+        },
+        {
+          "id": 102,
+          "kind": "activity",
+          "title": "Puzzle: the fewest walkways",
+          "activity_id": 101
+        },
+        {
+          "id": 103,
+          "kind": "video",
+          "title": "From a map to a graph",
+          "body": "Staff attach the narrated video to this segment in the video editor, with its checkpoint questions: see `docs/id/module-1/narration-script.md`."
+        },
+        {
+          "id": 104,
+          "kind": "activity",
+          "title": "Key terms",
+          "activity_id": 102
+        },
+        {
+          "id": 105,
+          "kind": "worked_example",
+          "title": "Worked example: reading a graph",
+          "body": "Here is how to read any graph. We'll use the campus graph.\n\n**Step 1. List the vertices.** Every circle is a vertex. The campus has 7: A, B, C, D, E, F, G.\n\n**Step 2. List the edges.** Every line is one edge, named by the two vertices it joins. Count each line once, even though it touches two vertices.\n\n| Edge | Joins |\n|---|---|\n| A–C | Admin block and Computer Science |\n| A–E | Admin block and Engineering |\n| B–C | Bookshop and Computer Science |\n| B–G | Bookshop and Green |\n| C–F | Computer Science and Fountain |\n| D–E | Dining hall and Engineering |\n| E–F | Engineering and Fountain |\n\n**Step 3. Find neighbours.** Two vertices are neighbours if an edge joins them. E's neighbours are A, D and F. D has only one neighbour: E.\n\n**Step 4. Check the direction.** These edges are plain lines, so you can walk them both ways. The graph is **undirected**. If the edges had arrows, it would be **directed**.\n\n**Result:** 7 vertices, 7 edges, undirected.",
+          "skip_check_activity_id": 103
+        },
+        {
+          "id": 106,
+          "kind": "activity",
+          "title": "Label the bus-stop graph",
+          "activity_id": 104
+        },
+        {
+          "id": 107,
+          "kind": "activity",
+          "title": "Build the campus graph",
+          "activity_id": 105
+        },
+        {
+          "id": 108,
+          "kind": "video",
+          "title": "One-way or two-way?",
+          "body": "Staff attach the narrated video to this segment in the video editor, with its checkpoint questions: see `docs/id/module-1/narration-script.md`."
+        },
+        {
+          "id": 109,
+          "kind": "activity",
+          "title": "Directed or undirected?",
+          "activity_id": 106
+        },
+        {
+          "id": 110,
+          "kind": "activity",
+          "title": "Closing task: graphs in real life",
+          "activity_id": 107
+        }
+      ]
+    }
+  ],
+  "activities": [
+    {
+      "id": 101,
+      "kind": "multiple_choice",
+      "title": "Puzzle: the fewest walkways",
+      "module_id": 1,
+      "purpose": "practice",
+      "objective_id": 3,
+      "config": {
+        "prompt": "It's your first day on campus. You're at the Admin block (A) and your friends are waiting at the Green (G). The walkways on the map join A–C, A–E, B–C, B–G, C–F, D–E and E–F. What is the fewest number of walkways you need to walk along to reach them?",
+        "options": [
+          {
+            "id": "2",
+            "label": "2"
+          },
+          {
+            "id": "3",
+            "label": "3"
+          },
+          {
+            "id": "4",
+            "label": "4"
+          },
+          {
+            "id": "7",
+            "label": "7"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "3",
+        "feedback": {
+          "2": "Not quite. Two walkways isn't enough. The Green is only joined to the Bookshop, and the Bookshop isn't joined to the Admin block. So you need at least three. Trace a route from the Admin block, counting each walkway you use.",
+          "4": "Not quite. You can do it in fewer. Going via Engineering and the Fountain takes 5 walkways, but going via Computer Science and the Bookshop takes only 3. Look for a route that goes through Computer Science.",
+          "7": "Not quite. 7 is the number of walkways on the whole map. You only need the walkways on one route, not all of them. Pick one route from the Admin block to the Green and count only its walkways."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Find the Admin block (A) and the Green (G) on the map."
+        },
+        {
+          "level": 2,
+          "body": "Which building is the Green joined to? You must pass through it."
+        },
+        {
+          "level": 3,
+          "body": "The Green is joined only to the Bookshop (B). Now find the shortest way from A to B."
+        },
+        {
+          "level": 4,
+          "body": "Answer: 3 walkways, A → C → B → G (Admin block, Computer Science, Bookshop, Green)."
+        }
+      ]
+    },
+    {
+      "id": 102,
+      "kind": "matching",
+      "title": "Key terms",
+      "module_id": 1,
+      "purpose": "practice",
+      "objective_id": 1,
+      "config": {
+        "prompt": "Match each term to what it means and an example.",
+        "left": [
+          {
+            "id": "t1",
+            "label": "Data structure"
+          },
+          {
+            "id": "t2",
+            "label": "Algorithm"
+          },
+          {
+            "id": "t3",
+            "label": "Graph"
+          },
+          {
+            "id": "t4",
+            "label": "Graph traversal"
+          }
+        ],
+        "right": [
+          {
+            "id": "d1",
+            "label": "A way to organise and store data so it can be used. Example: a queue."
+          },
+          {
+            "id": "d2",
+            "label": "A finite list of steps that solves a problem. Example: the steps for finding the largest number in a list."
+          },
+          {
+            "id": "d3",
+            "label": "A set of vertices joined by edges. Example: buildings joined by walkways."
+          },
+          {
+            "id": "d4",
+            "label": "Visiting the vertices of a graph by following its edges. Example: walking to every building along walkways."
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "t1": "d1",
+          "t2": "d2",
+          "t3": "d3",
+          "t4": "d4"
+        },
+        "feedback": {
+          "t1": "Check \"data structure\". A data structure stores and organises data. The queue from COS110 is one. Find the description that talks about storing data.",
+          "t2": "Check \"algorithm\". An algorithm is a list of steps. It does something; it doesn't store anything. Find the description that talks about steps.",
+          "t3": "Check \"graph\". A graph is made of vertices and edges. Find the description that mentions vertices and edges.",
+          "t4": "Check \"graph traversal\". A traversal visits vertices by following edges. Find the description about visiting every vertex."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Two of these store or organise things; two of them do something."
+        },
+        {
+          "level": 2,
+          "body": "A queue stores data. Finding the largest number is a set of steps."
+        },
+        {
+          "level": 3,
+          "body": "A graph is a kind of data structure. A traversal is a kind of algorithm."
+        },
+        {
+          "level": 4,
+          "body": "Answer: data structure → organise and store (queue); algorithm → list of steps (largest number); graph → vertices and edges (buildings and walkways); graph traversal → visiting every vertex (walking to every building)."
+        }
+      ]
+    },
+    {
+      "id": 103,
+      "kind": "multiple_choice",
+      "title": "Check: reading a graph",
+      "module_id": 1,
+      "purpose": "practice",
+      "objective_id": 2,
+      "config": {
+        "prompt": "Already confident? This graph has vertices P, Q, R, S and edges P–Q, Q–R and Q–S. How many edges does it have, and which vertex has the most neighbours?",
+        "options": [
+          {
+            "id": "a",
+            "label": "3 edges; Q has the most neighbours"
+          },
+          {
+            "id": "b",
+            "label": "6 edges; Q has the most neighbours"
+          },
+          {
+            "id": "c",
+            "label": "3 edges; P has the most neighbours"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "a",
+        "feedback": {
+          "b": "Not quite. Each edge counts once. P–Q is one edge, not two, even though it touches P and Q. Read the worked example. It shows how to count edges.",
+          "c": "Not quite. P is joined only to Q. Q is joined to P, R and S. Read the worked example. It shows how to find neighbours."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Count the edges in the list."
+        },
+        {
+          "level": 2,
+          "body": "Neighbours of a vertex are the vertices joined to it by an edge."
+        },
+        {
+          "level": 3,
+          "body": "Q appears in all three edges."
+        },
+        {
+          "level": 4,
+          "body": "Answer: 3 edges, and Q has the most neighbours (P, R and S)."
+        }
+      ]
+    },
+    {
+      "id": 104,
+      "kind": "matching",
+      "title": "Label the bus-stop graph",
+      "module_id": 1,
+      "purpose": "practice",
+      "objective_id": 2,
+      "config": {
+        "prompt": "Four bus stops and the roads between them make a graph. The stops are the Park (P), the Quad (Q), the Residence (R) and the Station (S). Roads join P–Q, Q–R, Q–S and R–S, and buses drive them both ways. Match each part of the bus map to its name in the graph: is it a vertex or an edge, and which one?",
+        "left": [
+          {
+            "id": "1",
+            "label": "The Park bus stop"
+          },
+          {
+            "id": "2",
+            "label": "The road between the Quad and the Residence"
+          },
+          {
+            "id": "3",
+            "label": "The Station bus stop"
+          },
+          {
+            "id": "4",
+            "label": "The road between the Park and the Quad"
+          },
+          {
+            "id": "5",
+            "label": "The road between the Residence and the Station"
+          }
+        ],
+        "right": [
+          {
+            "id": "vP",
+            "label": "Vertex P"
+          },
+          {
+            "id": "vQ",
+            "label": "Vertex Q"
+          },
+          {
+            "id": "vR",
+            "label": "Vertex R"
+          },
+          {
+            "id": "vS",
+            "label": "Vertex S"
+          },
+          {
+            "id": "ePQ",
+            "label": "Edge P–Q"
+          },
+          {
+            "id": "eQR",
+            "label": "Edge Q–R"
+          },
+          {
+            "id": "eQS",
+            "label": "Edge Q–S"
+          },
+          {
+            "id": "eRS",
+            "label": "Edge R–S"
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "1": "vP",
+          "2": "eQR",
+          "3": "vS",
+          "4": "ePQ",
+          "5": "eRS"
+        },
+        "feedback": {
+          "1": "Check the Park. A bus stop is a vertex, named by its letter: the Park is P. Ask yourself: is this a stop, or a road between two stops?",
+          "2": "Check the road between the Quad and the Residence. A road is an edge, named by the two stops at its ends. Find the letters of the Quad and the Residence.",
+          "3": "Check the Station. A bus stop is a vertex, named by its letter: the Station is S. Ask yourself: is this a stop, or a road between two stops?",
+          "4": "Check the road between the Park and the Quad. A road is an edge, named by the two stops at its ends. Find the letters of the Park and the Quad.",
+          "5": "Check the road between the Residence and the Station. A road is an edge, named by the two stops at its ends. Find the letters of the Residence and the Station."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Stops are vertices. Roads are edges."
+        },
+        {
+          "level": 2,
+          "body": "Name a vertex by its letter. Name an edge by the two letters at its ends."
+        },
+        {
+          "level": 3,
+          "body": "Parts 1 and 3 are stops. Parts 2, 4 and 5 are roads."
+        },
+        {
+          "level": 4,
+          "body": "Answer: 1 = Vertex P, 2 = Edge Q–R, 3 = Vertex S, 4 = Edge P–Q, 5 = Edge R–S."
+        }
+      ]
+    },
+    {
+      "id": 105,
+      "kind": "matching",
+      "title": "Build the campus graph",
+      "module_id": 1,
+      "purpose": "practice",
+      "objective_id": 3,
+      "config": {
+        "prompt": "Now build the campus graph from the campus guide. Each building is a vertex: A Admin block, B Bookshop, C Computer Science, D Dining hall, E Engineering, F Fountain, G Green. Turn each walkway on the guide's list into its edge.",
+        "left": [
+          {
+            "id": "AC",
+            "label": "Walkway: Admin block – Computer Science"
+          },
+          {
+            "id": "AE",
+            "label": "Walkway: Admin block – Engineering"
+          },
+          {
+            "id": "BC",
+            "label": "Walkway: Bookshop – Computer Science"
+          },
+          {
+            "id": "BG",
+            "label": "Walkway: Bookshop – Green"
+          },
+          {
+            "id": "CF",
+            "label": "Walkway: Computer Science – Fountain"
+          },
+          {
+            "id": "DE",
+            "label": "Walkway: Dining hall – Engineering"
+          },
+          {
+            "id": "EF",
+            "label": "Walkway: Engineering – Fountain"
+          }
+        ],
+        "right": [
+          {
+            "id": "AB",
+            "label": "Edge A–B"
+          },
+          {
+            "id": "AC",
+            "label": "Edge A–C"
+          },
+          {
+            "id": "AE",
+            "label": "Edge A–E"
+          },
+          {
+            "id": "BC",
+            "label": "Edge B–C"
+          },
+          {
+            "id": "BG",
+            "label": "Edge B–G"
+          },
+          {
+            "id": "CE",
+            "label": "Edge C–E"
+          },
+          {
+            "id": "CF",
+            "label": "Edge C–F"
+          },
+          {
+            "id": "DE",
+            "label": "Edge D–E"
+          },
+          {
+            "id": "DF",
+            "label": "Edge D–F"
+          },
+          {
+            "id": "EF",
+            "label": "Edge E–F"
+          },
+          {
+            "id": "FG",
+            "label": "Edge F–G"
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "AC": "AC",
+          "AE": "AE",
+          "BC": "BC",
+          "BG": "BG",
+          "CF": "CF",
+          "DE": "DE",
+          "EF": "EF"
+        },
+        "feedback": {
+          "AC": "Check the walkway between the Admin block and the Computer Science. A walkway is one edge, named by the letters of the two buildings it joins: the Admin block is A and the Computer Science is C. Look up both letters, then find that edge.",
+          "AE": "Check the walkway between the Admin block and the Engineering. A walkway is one edge, named by the letters of the two buildings it joins: the Admin block is A and the Engineering is E. Look up both letters, then find that edge.",
+          "BC": "Check the walkway between the Bookshop and the Computer Science. A walkway is one edge, named by the letters of the two buildings it joins: the Bookshop is B and the Computer Science is C. Look up both letters, then find that edge.",
+          "BG": "Check the walkway between the Bookshop and the Green. A walkway is one edge, named by the letters of the two buildings it joins: the Bookshop is B and the Green is G. Look up both letters, then find that edge.",
+          "CF": "Check the walkway between the Computer Science and the Fountain. A walkway is one edge, named by the letters of the two buildings it joins: the Computer Science is C and the Fountain is F. Look up both letters, then find that edge.",
+          "DE": "Check the walkway between the Dining hall and the Engineering. A walkway is one edge, named by the letters of the two buildings it joins: the Dining hall is D and the Engineering is E. Look up both letters, then find that edge.",
+          "EF": "Check the walkway between the Engineering and the Fountain. A walkway is one edge, named by the letters of the two buildings it joins: the Engineering is E and the Fountain is F. Look up both letters, then find that edge."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Each walkway joins exactly two buildings, so it is one edge."
+        },
+        {
+          "level": 2,
+          "body": "Name the edge by the letters of the two buildings at its ends."
+        },
+        {
+          "level": 3,
+          "body": "There are 7 walkways, so the graph has 7 edges. The Dining hall has only one: to Engineering (D–E)."
+        },
+        {
+          "level": 4,
+          "body": "Answer: the edges are A–C, A–E, B–C, B–G, C–F, D–E and E–F."
+        }
+      ]
+    },
+    {
+      "id": 106,
+      "kind": "matching",
+      "title": "Directed or undirected?",
+      "module_id": 1,
+      "purpose": "practice",
+      "objective_id": 2,
+      "config": {
+        "prompt": "Classify each graph as directed or undirected. An edge written A → B is an arrow that only goes from A to B. An edge written A–B is a plain line that goes both ways.",
+        "left": [
+          {
+            "id": "friends",
+            "label": "Friendships at a residence. Vertices: Thandi (T), Sipho (S), Lerato (L). Edges: L–S, S–T, T–L."
+          },
+          {
+            "id": "follows",
+            "label": "Who follows whom online. Vertices: Ana (A), Ben (B), Cara (C). Edges: A → B, B → A, B → C."
+          },
+          {
+            "id": "route",
+            "label": "A delivery route. Vertices: the Warehouse (W), Shop X (X), Shop Y (Y). Edges: W → X, X → Y, Y → W."
+          },
+          {
+            "id": "roads",
+            "label": "Roads between towns. Vertices: Johannesburg (J), Pretoria (P), Soweto (S). Edges: J–P, J–S."
+          }
+        ],
+        "right": [
+          {
+            "id": "directed",
+            "label": "Directed"
+          },
+          {
+            "id": "undirected",
+            "label": "Undirected"
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "friends": "undirected",
+          "follows": "directed",
+          "route": "directed",
+          "roads": "undirected"
+        },
+        "feedback": {
+          "friends": "Check the friendships graph. Friendship goes both ways: if Thandi is Sipho's friend, Sipho is Thandi's friend. The edges have no arrows. Look at how the edges are written. No arrows means undirected.",
+          "follows": "Check the follows graph. Ana and Ben follow each other, but that's two separate arrows. Ben follows Cara without Cara following back. Any arrow makes a graph directed. Look closely: the edges are arrows (→).",
+          "route": "Check the delivery route. The van drives Warehouse → Shop X → Shop Y → Warehouse, one way only. The edges are arrows. Ask: can you travel each edge in both directions?",
+          "roads": "Check the roads graph. Roads between towns can be driven both ways, so the edges are plain lines. No arrows means undirected."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Look at the edges: are they arrows (→) or plain lines (–)?"
+        },
+        {
+          "level": 2,
+          "body": "Edges with arrows mean the connection only goes one way. That's a directed graph."
+        },
+        {
+          "level": 3,
+          "body": "Watch out for the follows graph: two arrows between the same pair still make it directed."
+        },
+        {
+          "level": 4,
+          "body": "Answer: friendships = undirected, follows = directed, delivery route = directed, roads = undirected."
+        }
+      ]
+    },
+    {
+      "id": 107,
+      "kind": "matching",
+      "title": "Closing task: graphs in real life",
+      "module_id": 1,
+      "purpose": "practice",
+      "objective_id": 3,
+      "config": {
+        "prompt": "Match each real situation to the graph that models it: what the vertices are, what the edges are, and whether it's directed.",
+        "left": [
+          {
+            "id": "s1",
+            "label": "Gautrain stations and the tracks between them. Trains run both ways."
+          },
+          {
+            "id": "s2",
+            "label": "Instagram accounts and who follows whom."
+          },
+          {
+            "id": "s3",
+            "label": "Web pages and the links from one page to another."
+          },
+          {
+            "id": "s4",
+            "label": "Classmates and who has shaken hands with whom."
+          }
+        ],
+        "right": [
+          {
+            "id": "r1",
+            "label": "Vertices: stations. Edges: tracks. Undirected."
+          },
+          {
+            "id": "r2",
+            "label": "Vertices: accounts. Edges: follows. Directed."
+          },
+          {
+            "id": "r3",
+            "label": "Vertices: pages. Edges: links. Directed."
+          },
+          {
+            "id": "r4",
+            "label": "Vertices: classmates. Edges: handshakes. Undirected."
+          },
+          {
+            "id": "r5",
+            "label": "Vertices: tracks. Edges: stations. Undirected."
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "s1": "r1",
+          "s2": "r2",
+          "s3": "r3",
+          "s4": "r4"
+        },
+        "feedback": {
+          "s1": "Check the Gautrain. The stations are the things (vertices) and the tracks connect them (edges). Trains run both ways, so it's undirected. Watch out for the option that swaps tracks and stations.",
+          "s2": "Check Instagram. Following someone doesn't mean they follow you back, so the edges are one-way. Look for the option with accounts and directed edges.",
+          "s3": "Check the web pages. A link from page X to page Y doesn't create a link back, so it's directed. Look for the option with pages and links.",
+          "s4": "Check the handshakes. A handshake involves both people equally, so it's undirected. Look for the option with classmates and handshakes."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "For each situation, ask: what are the things, and what connects them?"
+        },
+        {
+          "level": 2,
+          "body": "The things are vertices. The connections are edges."
+        },
+        {
+          "level": 3,
+          "body": "Then ask: does the connection work both ways? If not, the graph is directed. Following and linking are one-way."
+        },
+        {
+          "level": 4,
+          "body": "Answer: Gautrain → stations/tracks/undirected; Instagram → accounts/follows/directed; web → pages/links/directed; handshakes → classmates/handshakes/undirected."
+        }
+      ]
     }
   ]
 }

@@ -533,7 +533,7 @@
         },
         "feedback": {
           "s1": "Not quite. The squares are vertices and each knight move is an edge, so the fewest moves is the fewest edges from the start. Look for the reason about the fewest edges.",
-          "s2": "Not quite. The rooms are vertices and the doors are edges, and no more than two doors means everything within two edges. Look for the reason about one ring of neighbours at a time.",
+          "s2": "Not quite. The rooms are vertices and the doors are edges, and no more than two doors means everything within two edges. Look for the reason about finding everything one edge away first.",
           "s3": "Not quite. There is a graph, but each road uses its own amount of petrol, and BFS only counts edges: a trip along more roads can still use less petrol. Look for the reason about each edge having its own length.",
           "s4": "Not quite. Counting learners needs no connections between them, so there is no graph and nothing for BFS to search. Look for the reason that says there is no graph."
         }
@@ -553,7 +553,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: knight → the fewest edges; castle rooms → one ring at a time; least petrol → each edge has its own length; counting learners → no graph to search."
+          "body": "Answer: knight → the fewest edges; castle rooms → everything one edge away before two; least petrol → each edge has its own length; counting learners → no graph to search."
         }
       ]
     }

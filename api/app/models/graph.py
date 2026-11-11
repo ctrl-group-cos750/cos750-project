@@ -1,6 +1,7 @@
+from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, String, false
+from sqlalchemy import JSON, Boolean, DateTime, String, false
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -23,3 +24,5 @@ class GraphScenario(Base):
     vertices: Mapped[list[Any]] = mapped_column(JSON)
     edges: Mapped[list[Any]] = mapped_column(JSON)
     start_vertex: Mapped[str] = mapped_column(String(32))
+    # Set when staff change it in the portal; the seed never writes over it then.
+    edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

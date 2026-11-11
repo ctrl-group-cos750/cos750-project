@@ -350,7 +350,7 @@ _BUILDERS: dict[str, tuple[Build, Build]] = {
         lambda a: {"pairs": {}},
     ),
     "parsons": (
-        lambda a: {"order": ParsonsSolution.model_validate(a.solution).order},
+        lambda a: {"order": ParsonsSolution.model_validate(a.solution).first_order()},
         lambda a: {"order": []},
     ),
     "fill_in": (
@@ -358,7 +358,7 @@ _BUILDERS: dict[str, tuple[Build, Build]] = {
         lambda a: {"answers": {}},
     ),
     "fix_the_bug": (
-        lambda a: {"order": FixTheBugSolution.model_validate(a.solution).order},
+        lambda a: {"order": FixTheBugSolution.model_validate(a.solution).first_order()},
         lambda a: {"order": [line.id for line in FixTheBugConfig.model_validate(a.config).lines]},
     ),
     "choose_tests": (

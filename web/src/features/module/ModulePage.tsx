@@ -1,26 +1,37 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import { Alert, Button, ProgressBar, Spinner } from '../../components'
 import { ActivityView } from '../activities/ActivityPage.tsx'
 import { fetchModule, savePosition } from './module.api.ts'
 import { SegmentView } from './SegmentView.tsx'
+import { buttonVariants } from '@/components/ui/button-variants'
 import { ApiError } from '../../api/client.ts'
 
-/** The API refused the module (403 locked, 404 no such module): asking again gets the same answer,
- * so it isn't retried and the page says so at once instead of spinning (#136 review). */
+/** The API refused the request (any 4xx: 403 locked, 404 no such module, 429 too many): asking
+ * again gets the same answer, so it isn't retried and the page says so at once instead of spinning
+ * (#136 review). Once fix/api-integrity (A1) is merged, this and the refusal view below can become
+ * its `retryUnlessRefused` and `NotAvailable`. */
 const refused = (error: Error) =>
-  error instanceof ApiError && (error.status === 403 || error.status === 404)
+  error instanceof ApiError && error.status >= 400 && error.status < 500
+
+/** A module id as the route gives it: a whole number, or nothing the API is asked about. */
+const MODULE_ID = /^\d{1,9}$/
 
 /** /modules/:moduleId — plays a module's segments in order, saves position (FR-2.3, FR-2.5). */
 export function ModulePage() {
-  const id = Number(useParams().moduleId)
+  // The id exactly as it is in the address. "abc", "1.5" or "-1" names no module, so the API isn't
+  // asked; and the raw text, not Number(), is what is compared below (NaN never equals itself).
+  const param = useParams().moduleId ?? ''
+  const validId = MODULE_ID.test(param)
+  const id = Number(param)
   const queryClient = useQueryClient()
   const navigate = useNavigate()
 
   const query = useQuery({
     queryKey: ['module', id],
     queryFn: () => fetchModule(id),
+    enabled: validId,
     retry: (failures, error) => !refused(error) && failures < 3,
   })
 
@@ -43,29 +54,36 @@ export function ModulePage() {
   // Another module opened in place (a link, or Back and Forward): start it afresh, so a segment
   // index from the last module never carries over (#136 review). React's pattern for state that
   // resets when a prop changes.
-  const [shownId, setShownId] = useState(id)
-  if (shownId !== id) {
-    setShownId(id)
+  const [shownParam, setShownParam] = useState(param)
+  if (shownParam !== param) {
+    setShownParam(param)
     setSegmentIndex(null)
     setRetrievalIndex(null)
     setRetrievalChecked(false)
   }
 
+  if (!validId)
+    return (
+      <ModuleRefused
+        title="There’s no such module"
+        message="A module’s address ends in its number, such as /modules/3."
+      />
+    )
   if (query.isPending) return <Spinner label="Loading module" />
   if (query.isError) {
     if (!refused(query.error)) return <Alert tone="danger">{query.error.message}</Alert>
+    const status = query.error instanceof ApiError ? query.error.status : 0
     return (
-      <section className="grid justify-items-start gap-3">
-        <h1 className="text-2xl font-bold">
-          {query.error instanceof ApiError && query.error.status === 404
+      <ModuleRefused
+        title={
+          status === 404
             ? 'There’s no such module'
-            : 'This module isn’t open yet'}
-        </h1>
-        <Alert tone="info">{query.error.message}</Alert>
-        <Button variant="ghost" size="sm" onClick={() => void navigate('/')}>
-          Back to your modules
-        </Button>
-      </section>
+            : status === 403
+              ? 'This module isn’t open yet'
+              : 'This module can’t be shown right now'
+        }
+        message={query.error.message}
+      />
     )
   }
 
@@ -270,6 +288,20 @@ export function ModulePage() {
           </Button>
         </nav>
       </div>
+    </section>
+  )
+}
+
+/** Why a module can't be shown, in the API's words, with the way back to the map instead of a
+ * spinner that never ends. */
+function ModuleRefused({ title, message }: { title: string; message: string }) {
+  return (
+    <section className="grid justify-items-start gap-3">
+      <h1 className="text-2xl font-bold">{title}</h1>
+      <Alert tone="info">{message}</Alert>
+      <Link to="/" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+        Back to your modules
+      </Link>
     </section>
   )
 }

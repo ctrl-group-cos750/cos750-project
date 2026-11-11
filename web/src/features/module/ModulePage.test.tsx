@@ -470,8 +470,73 @@ describe('ModulePage — refused and switched', () => {
       await screen.findByRole('heading', { name: 'This module isn’t open yet' }),
     ).toBeInTheDocument()
     expect(screen.getByText(/Complete the previous module to unlock it/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Back to your modules' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Back to your modules' })).toHaveAttribute('href', '/')
     expect(api.callsTo('GET /api/modules/6')).toHaveLength(1)
+  })
+
+  it('does not retry any refusal, such as too many requests (429)', async () => {
+    const api = fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules/:id': () =>
+          Response.json({ detail: 'Too many requests. Wait a moment.' }, { status: 429 }),
+      },
+    })
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={['/modules/2']}>
+          <Routes>
+            <Route path="/modules/:moduleId" element={<ModulePage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(
+      await screen.findByRole('heading', { name: 'This module can’t be shown right now' }),
+    ).toBeInTheDocument()
+    expect(api.callsTo('GET /api/modules/2')).toHaveLength(1)
+  })
+
+  it.each(['abc', '1.5', '-1', '1e3'])(
+    'says /modules/%s is no module, without asking the API (no endless re-render)',
+    async (param) => {
+      const api = fakeApi({ user: ada })
+      renderApp(`/modules/${param}`)
+      expect(await screen.findByRole('heading', { name: 'There’s no such module' })).toBeVisible()
+      expect(screen.getByRole('link', { name: 'Back to your modules' })).toHaveAttribute(
+        'href',
+        '/',
+      )
+      expect(api.calls.filter((c) => c.path.startsWith('/api/modules/'))).toHaveLength(0)
+    },
+  )
+
+  it('switches in place to an address that is no module, and back again', async () => {
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules': () => Response.json([]),
+        'GET /api/modules/:id': () => Response.json(twoSegmentDetail),
+      },
+    })
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <MemoryRouter initialEntries={['/modules/1']}>
+          <Link to="/modules/abc">Bad address</Link>
+          <Link to="/modules/1">Module one</Link>
+          <Routes>
+            <Route path="/modules/:moduleId" element={<ModulePage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(await screen.findByText('Segment 1 of 2')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('link', { name: 'Bad address' }))
+    expect(await screen.findByRole('heading', { name: 'There’s no such module' })).toBeVisible()
+    await userEvent.click(screen.getByRole('link', { name: 'Module one' }))
+    expect(await screen.findByText('Segment 1 of 2')).toBeInTheDocument()
   })
 
   it('says there is no such module on a 404', async () => {

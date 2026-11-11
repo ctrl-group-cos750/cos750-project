@@ -437,6 +437,86 @@ describe('ModulePage — navigation and position saving', () => {
 })
 
 // ---------------------------------------------------------------------------
+// (#136 review) A refused module, and one module opened after another
+// ---------------------------------------------------------------------------
+
+describe('ModulePage — refused and switched', () => {
+  it('says at once that a locked module is not open, without retrying (403)', async () => {
+    const api = fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules/:id': () =>
+          Response.json(
+            {
+              detail:
+                'This module is not available yet. Complete the previous module to unlock it.',
+            },
+            { status: 403 },
+          ),
+      },
+    })
+    // Retries on, as in the app: the module query itself must not retry a refusal.
+    const queryClient = new QueryClient()
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/modules/6']}>
+          <Routes>
+            <Route path="/modules/:moduleId" element={<ModulePage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(
+      await screen.findByRole('heading', { name: 'This module isn’t open yet' }),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/Complete the previous module to unlock it/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Back to your modules' })).toBeInTheDocument()
+    expect(api.callsTo('GET /api/modules/6')).toHaveLength(1)
+  })
+
+  it('says there is no such module on a 404', async () => {
+    fakeApi({ user: ada })
+    renderApp('/modules/99')
+    expect(await screen.findByRole('heading', { name: 'There’s no such module' })).toBeVisible()
+  })
+
+  it('starts a module afresh when another opens in place, not at the last one’s segment', async () => {
+    const second: ModuleDetail = { ...allKindsDetail, id: 2, number: 1, title: 'Second module' }
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules': () => Response.json([]),
+        'GET /api/modules/:id': (_body, params) =>
+          Response.json(
+            params.id === '2'
+              ? second
+              : { ...allKindsDetail, status: 'complete', currentSegmentPosition: 3 },
+          ),
+        'GET /api/videos/42': () => Response.json({ detail: 'Not needed.' }, { status: 404 }),
+      },
+    })
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/modules/1']}>
+          <Link to="/modules/2">Open the second module</Link>
+          <Routes>
+            <Route path="/modules/:moduleId" element={<ModulePage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(await screen.findByText('Segment 4 of 4')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: '← Previous' }))
+    expect(await screen.findByText('Segment 3 of 4')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('link', { name: 'Open the second module' }))
+    expect(await screen.findByRole('heading', { name: /Second module/ })).toBeInTheDocument()
+    expect(screen.getByText('Segment 1 of 4')).toBeInTheDocument()
+  })
+})
+
+// ---------------------------------------------------------------------------
 // (d) Video segment plays inside the module
 // ---------------------------------------------------------------------------
 
@@ -808,85 +888,5 @@ describe('ModulePage — loading and error states', () => {
       ),
     ).toBeInTheDocument()
     expect(api.callsTo('POST /api/activities/201/attempts')).toHaveLength(1)
-  })
-})
-
-// ---------------------------------------------------------------------------
-// (#136 review) A refused module, and one module opened after another
-// ---------------------------------------------------------------------------
-
-describe('ModulePage — refused and switched', () => {
-  it('says at once that a locked module is not open, without retrying (403)', async () => {
-    const api = fakeApi({
-      user: ada,
-      overrides: {
-        'GET /api/modules/:id': () =>
-          Response.json(
-            {
-              detail:
-                'This module is not available yet. Complete the previous module to unlock it.',
-            },
-            { status: 403 },
-          ),
-      },
-    })
-    // Retries on, as in the app: the module query itself must not retry a refusal.
-    const queryClient = new QueryClient()
-    render(
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={['/modules/6']}>
-          <Routes>
-            <Route path="/modules/:moduleId" element={<ModulePage />} />
-          </Routes>
-        </MemoryRouter>
-      </QueryClientProvider>,
-    )
-    expect(
-      await screen.findByRole('heading', { name: 'This module isn’t open yet' }),
-    ).toBeInTheDocument()
-    expect(screen.getByText(/Complete the previous module to unlock it/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Back to your modules' })).toBeInTheDocument()
-    expect(api.callsTo('GET /api/modules/6')).toHaveLength(1)
-  })
-
-  it('says there is no such module on a 404', async () => {
-    fakeApi({ user: ada })
-    renderApp('/modules/99')
-    expect(await screen.findByRole('heading', { name: 'There’s no such module' })).toBeVisible()
-  })
-
-  it('starts a module afresh when another opens in place, not at the last one’s segment', async () => {
-    const second: ModuleDetail = { ...allKindsDetail, id: 2, number: 1, title: 'Second module' }
-    fakeApi({
-      user: ada,
-      overrides: {
-        'GET /api/modules': () => Response.json([]),
-        'GET /api/modules/:id': (_body, params) =>
-          Response.json(
-            params.id === '2'
-              ? second
-              : { ...allKindsDetail, status: 'complete', currentSegmentPosition: 3 },
-          ),
-        'GET /api/videos/42': () => Response.json({ detail: 'Not needed.' }, { status: 404 }),
-      },
-    })
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    render(
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={['/modules/1']}>
-          <Link to="/modules/2">Open the second module</Link>
-          <Routes>
-            <Route path="/modules/:moduleId" element={<ModulePage />} />
-          </Routes>
-        </MemoryRouter>
-      </QueryClientProvider>,
-    )
-    expect(await screen.findByText('Segment 4 of 4')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: '← Previous' }))
-    expect(await screen.findByText('Segment 3 of 4')).toBeInTheDocument()
-
-    await userEvent.click(screen.getByRole('link', { name: 'Open the second module' }))
-    expect(await screen.findByRole('heading', { name: /Second module/ })).toBeInTheDocument()
-    expect(screen.getByText('Segment 1 of 4')).toBeInTheDocument()
   })
 })

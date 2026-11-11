@@ -137,6 +137,22 @@ def test_matching_all_right() -> None:
     assert (result.correct, result.score, result.feedback) == (True, 1.0, "All correct.")
 
 
+def test_a_right_answer_gets_the_content_s_explanation() -> None:
+    """A right answer says why it is right when the content explains it (FR-4.2); a wrong one
+    keeps its own feedback."""
+    solution = {**MATCHING_SOLUTION, "explanation": "Each vertex pairs with its own neighbours."}
+    right = grade("matching", MATCHING_CONFIG, solution, pairs=MATCHING_SOLUTION["pairs"])
+    assert (right.correct, right.feedback) == (True, "Each vertex pairs with its own neighbours.")
+    wrong = grade("matching", MATCHING_CONFIG, solution, pairs={})
+    assert not wrong.correct
+    assert wrong.feedback != solution["explanation"]
+
+
+def test_an_empty_explanation_is_refused() -> None:
+    with pytest.raises(ValueError, match="explanation"):
+        validate_activity("matching", MATCHING_CONFIG, {**MATCHING_SOLUTION, "explanation": ""})
+
+
 def test_matching_marks_each_pair_with_the_reason() -> None:
     result = grade(
         "matching",

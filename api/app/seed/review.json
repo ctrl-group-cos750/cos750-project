@@ -1807,16 +1807,16 @@
         ],
         "corrections": [
           {
+            "id": 22,
+            "text": "            if n != v:"
+          },
+          {
             "id": 20,
             "text": "            if n not in visited:"
           },
           {
             "id": 21,
             "text": "            if n not in queue:"
-          },
-          {
-            "id": 22,
-            "text": "            if n != v:"
           }
         ]
       },
@@ -1928,12 +1928,12 @@
         ],
         "corrections": [
           {
-            "id": 20,
-            "text": "    visited = {start}"
-          },
-          {
             "id": 21,
             "text": "    visited = []"
+          },
+          {
+            "id": 20,
+            "text": "    visited = {start}"
           },
           {
             "id": 22,

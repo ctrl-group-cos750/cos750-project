@@ -1198,19 +1198,23 @@
         "edges": [
           {
             "source": "A",
-            "target": "B"
-          },
-          {
-            "source": "A",
             "target": "D"
           },
           {
-            "source": "B",
-            "target": "C"
+            "source": "A",
+            "target": "F"
           },
           {
             "source": "B",
-            "target": "E"
+            "target": "F"
+          },
+          {
+            "source": "C",
+            "target": "D"
+          },
+          {
+            "source": "C",
+            "target": "G"
           },
           {
             "source": "D",
@@ -1218,15 +1222,11 @@
           },
           {
             "source": "E",
-            "target": "F"
-          },
-          {
-            "source": "C",
             "target": "G"
           },
           {
-            "source": "F",
-            "target": "G"
+            "source": "B",
+            "target": "E"
           }
         ],
         "start_vertex": "A"
@@ -1243,11 +1243,11 @@
         },
         {
           "level": 3,
-          "body": "The first row: A leaves; the queue becomes B, D."
+          "body": "The first row: A leaves; the queue becomes D, F."
         },
         {
           "level": 4,
-          "body": "Answer: order A, B, D, C, E, G, F. Queues after each row: [B, D]; [D, C, E]; [C, E]; [E, G]; [G, F]; [F]; []."
+          "body": "Answer: order A, D, F, C, E, B, G. Queues after each row: [D, F]; [F, C, E]; [C, E, B]; [E, B, G]; [B, G]; [G]; []."
         }
       ]
     },
@@ -1506,20 +1506,20 @@
         ],
         "corrections": [
           {
-            "id": 20,
-            "text": "    visited = {start}"
+            "id": 22,
+            "text": "    visited = []"
           },
           {
             "id": 21,
             "text": "                visited.add(n)"
           },
           {
-            "id": 22,
-            "text": "    visited = []"
-          },
-          {
             "id": 23,
             "text": "                order.append(n)"
+          },
+          {
+            "id": 20,
+            "text": "    visited = {start}"
           }
         ]
       },
@@ -1628,16 +1628,16 @@
         ],
         "corrections": [
           {
-            "id": 20,
-            "text": "        v = queue.popleft()"
-          },
-          {
             "id": 21,
             "text": "        v = queue.pop(0)"
           },
           {
             "id": 22,
             "text": "        v = queue[0]"
+          },
+          {
+            "id": 20,
+            "text": "        v = queue.popleft()"
           }
         ]
       },

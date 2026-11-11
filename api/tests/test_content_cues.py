@@ -24,7 +24,9 @@ from typing import Any
 
 import pytest
 
+from app.schemas.graphs import GraphScenarioOut
 from app.seed import ActivityFixture, FixtureFile, read_fixtures
+from app.services.bfs import run_bfs
 from app.services.mastery import Rule
 
 CONTENT: FixtureFile = read_fixtures()
@@ -366,3 +368,74 @@ def test_a_retired_option_id_is_never_reused() -> None:
     for activity_id, option_id in RETIRED.items():
         options = {o["id"] for o in ACTIVITIES[activity_id].config["options"]}
         assert option_id not in options, activity_id
+
+
+# --- Items don't answer each other (#136 review) -------------------------------------------------
+
+
+def graph_key(directed: bool, vertices: Any, edges: Any, start: str) -> tuple[Any, ...]:
+    pairs = (
+        (e["source"], e["target"]) if directed else tuple(sorted((e["source"], e["target"])))
+        for e in edges
+    )
+    return (directed, frozenset(vertices), frozenset(pairs), start)
+
+
+TRACES = [a for a in CONTENT.activities if a.kind == "trace"]
+
+
+@pytest.mark.parametrize("a", TRACES, ids=lambda a: str(a.id))
+def test_a_trace_graph_is_shown_nowhere_else(a: ActivityFixture) -> None:
+    """A choose-tests case prints its graph's expected order, which is a trace's Order column:
+    618 was the "sports-centre" case and 1502 the "residence" one."""
+    c = a.config
+    mine = graph_key(c.get("directed", False), c["vertices"], c["edges"], c["start_vertex"])
+    for other in CONTENT.activities:
+        if other.kind == "choose_tests":
+            for t in other.config["tests"]:
+                key = graph_key(t["directed"], t["vertices"], t["edges"], t["start_vertex"])
+                assert key != mine, (other.id, t["id"])
+        if other.kind == "trace" and other.id != a.id:
+            oc = other.config
+            key = graph_key(
+                oc.get("directed", False), oc["vertices"], oc["edges"], oc["start_vertex"]
+            )
+            assert key != mine, other.id
+    for g in CONTENT.graphs:
+        key = graph_key(g.directed, g.vertices, [e.model_dump() for e in g.edges], g.start_vertex)
+        assert key != mine, g.name
+    # Nor does any other item, or any segment, spell out its order.
+    order = ", ".join(run_bfs(GraphScenarioOut(id=0, name="", **dict(c))).order)
+    for where, text in everything_shown():
+        if not where.startswith(f"activity {a.id} "):
+            assert order not in text, where
+
+
+def test_no_two_choose_tests_items_have_the_same_answer() -> None:
+    """624's feedback answered 1705: the same bug, so the same failing cases (#136)."""
+    seen: dict[frozenset[str], int] = {}
+    for a in (a for a in CONTENT.activities if a.kind == "choose_tests"):
+        exposing = frozenset(a.solution["exposing"])
+        assert exposing not in seen, (a.id, seen.get(exposing))
+        seen[exposing] = a.id
+
+
+FIXES = [a for a in CONTENT.activities if a.kind == "fix_the_bug"]
+
+
+@pytest.mark.parametrize("a", FIXES, ids=lambda a: str(a.id))
+def test_the_first_correction_listed_is_never_a_right_one(a: ActivityFixture) -> None:
+    """ "Always take the first correction" got every fix-the-bug item right on staging, and
+    objective 7's rule (all parts) with it."""
+    first = a.config["corrections"][0]["id"]
+    assert first not in a.solution["order"]
+
+
+def test_right_corrections_are_not_in_one_place() -> None:
+    places = {
+        [c["id"] for c in a.config["corrections"]].index(i)
+        for a in FIXES
+        for i in a.solution["order"]
+        if i in {c["id"] for c in a.config["corrections"]}
+    }
+    assert len(places) > 1

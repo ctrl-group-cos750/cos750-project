@@ -1546,19 +1546,23 @@
         "edges": [
           {
             "source": "P",
-            "target": "Q"
+            "target": "S"
           },
           {
             "source": "P",
-            "target": "R"
+            "target": "U"
           },
           {
             "source": "Q",
             "target": "S"
           },
           {
+            "source": "Q",
+            "target": "T"
+          },
+          {
             "source": "R",
-            "target": "S"
+            "target": "U"
           },
           {
             "source": "R",
@@ -1566,11 +1570,7 @@
           },
           {
             "source": "S",
-            "target": "U"
-          },
-          {
-            "source": "T",
-            "target": "U"
+            "target": "T"
           }
         ],
         "start_vertex": "P"
@@ -1587,11 +1587,11 @@
         },
         {
           "level": 3,
-          "body": "The first row: P leaves; the queue becomes Q, R."
+          "body": "The first row: P leaves; the queue becomes S, U."
         },
         {
           "level": 4,
-          "body": "Answer: order P, Q, R, S, T, U. Queues after each row: [Q, R]; [R, S]; [S, T]; [T, U]; [U]; []."
+          "body": "Answer: order P, S, U, Q, T, R. Queues after each row: [S, U]; [U, Q, T]; [Q, T, R]; [T, R]; [R]; []."
         }
       ]
     },
@@ -1827,16 +1827,16 @@
         ],
         "corrections": [
           {
+            "id": 22,
+            "text": "            if n != v:"
+          },
+          {
             "id": 20,
             "text": "            if n not in visited:"
           },
           {
             "id": 21,
             "text": "            if n not in queue:"
-          },
-          {
-            "id": 22,
-            "text": "            if n != v:"
           }
         ]
       },
@@ -1944,16 +1944,16 @@
         ],
         "corrections": [
           {
-            "id": 20,
-            "text": "    visited = {start}"
-          },
-          {
             "id": 21,
             "text": "    visited = []"
           },
           {
             "id": 22,
             "text": "            if n not in visited and n != v:"
+          },
+          {
+            "id": 20,
+            "text": "    visited = {start}"
           }
         ]
       },
@@ -2258,7 +2258,7 @@
       "objective_id": 7,
       "config": {
         "prompt": "This BFS has a bug. Choose every test case it fails: each one is a graph, a start vertex and the order a correct BFS visits it in.",
-        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                visited.add(n)\n                queue.append(n)\n    return order + [v for v in sorted(graph.adjacency) if v not in order]",
+        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.pop()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                visited.add(n)\n                queue.append(n)\n    return order",
         "tests": [
           {
             "id": "cycle",
@@ -2468,34 +2468,35 @@
       },
       "solution": {
         "exposing": [
-          "two-islands",
-          "one-way"
+          "cycle",
+          "residence",
+          "out-of-order"
         ],
         "feedback": {
-          "cycle": "Every vertex here can be reached from A, so nothing is added at the end: the faulty version passes it.",
-          "residence": "Every vertex here can be reached from P, so nothing is added at the end: the faulty version passes it.",
-          "out-of-order": "Every vertex here can be reached from A, so nothing is added at the end: the faulty version passes it.",
-          "two-islands": "D and E can't be reached from A, but the faulty version lists them at the end, so it fails this test.",
-          "one-way": "D can't be reached from A, but the faulty version lists it at the end, so it fails this test.",
-          "one-vertex": "There is only A, so there is nothing to add at the end: the faulty version passes it."
+          "cycle": "A's neighbours B, C and D all join the queue. The faulty version takes D, the newest, next instead of B, so it fails this test.",
+          "residence": "P's neighbours Q and R both join the queue. The faulty version takes R, the newest, before Q, so it fails this test.",
+          "out-of-order": "A's neighbours B, C and E all join the queue. The faulty version takes E, the newest, first, so it fails this test.",
+          "two-islands": "No vertex here ever has two vertices waiting in the queue at once, so newest and oldest are the same: the faulty version passes it.",
+          "one-way": "Each vertex here finds at most one new vertex, so the queue never holds two at once: the faulty version passes it.",
+          "one-vertex": "There is only A, so there is nothing to take in the wrong order: the faulty version passes it."
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Read the return line: what does it add to the order?"
+          "body": "Read the line that takes a vertex out of the queue."
         },
         {
           "level": 2,
-          "body": "It adds every vertex in the graph that BFS didn't reach."
+          "body": "pop() takes the vertex that joined last, from the back, so the search goes deep instead of wide."
         },
         {
           "level": 3,
-          "body": "That only changes the answer when some vertex can't be reached from the start."
+          "body": "That only changes the order when two or more vertices are waiting in the queue at the same time."
         },
         {
           "level": 4,
-          "body": "Answer: two-islands and one-way."
+          "body": "Answer: cycle, residence and out-of-order. The faulty version passes the other three."
         }
       ]
     }

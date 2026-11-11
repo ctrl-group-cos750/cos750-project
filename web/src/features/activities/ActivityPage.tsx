@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useParams } from 'react-router'
 import { Alert, Spinner } from '../../components'
@@ -28,6 +28,9 @@ type ActivityViewProps = {
 export function ActivityView({ activityId, heading, onResult }: ActivityViewProps) {
   const [result, setResult] = useState<AttemptResult>()
   const [submitting, setSubmitting] = useState(false)
+  // Set synchronously, so a second Enter that lands before React re-renders the busy button
+  // doesn't send the same answer twice.
+  const inFlight = useRef(false)
   const [submitError, setSubmitError] = useState('')
   const refreshRewards = useRefreshRewards()
   const query = useQuery({
@@ -39,6 +42,8 @@ export function ActivityView({ activityId, heading, onResult }: ActivityViewProp
   if (query.isError) return <Alert tone="danger">{query.error.message}</Alert>
 
   async function submit(submitted: Submission) {
+    if (inFlight.current) return
+    inFlight.current = true
     setSubmitting(true)
     setSubmitError('')
     try {
@@ -53,6 +58,7 @@ export function ActivityView({ activityId, heading, onResult }: ActivityViewProp
           : 'We could not check your answer. Please try again.',
       )
     } finally {
+      inFlight.current = false
       setSubmitting(false)
     }
   }

@@ -20,11 +20,10 @@ export function ModulePage() {
   // one they haven't answered yet (FR-2.4).
   const [retrievalIndex, setRetrievalIndex] = useState<number | null>(null)
   const [retrievalChecked, setRetrievalChecked] = useState(false)
-  // Set by Previous, Next and "Next question": after the new content renders, focus moves to its
-  // heading (WCAG 2.4.3, #142). The button that was pressed may be gone or disabled, which would
-  // drop focus on the page, and a screen reader then reads where the student now is. This is the
-  // WAI-ARIA APG practice for replacing content in place; never set on first load, so opening a
-  // module doesn't move focus.
+  // Set by Previous, Next, "Next question" and "Start module": after the new content renders,
+  // focus moves to its heading (WCAG 2.4.3 Focus Order, #142). The button that was pressed may be
+  // gone or disabled, which would drop focus on the page, and a screen reader then reads where
+  // the student now is. Never set on first load, so opening a module doesn't move focus.
   const moveFocus = useRef(false)
   const contentRef = useRef<HTMLElement>(null)
   useEffect(() => {
@@ -136,6 +135,7 @@ export function ModulePage() {
       : 'Answer the activity to continue. A wrong answer still counts.'
 
   function handlePrevious() {
+    if (mutation.isPending) return // aria-disabled while Next saves: the press does nothing
     moveFocus.current = true
     setSegmentIndex(Math.max(0, currentIndex - 1))
   }
@@ -215,7 +215,8 @@ export function ModulePage() {
 
       {/* Save error */}
       {mutation.isError && (
-        <Alert tone="warning" title="Could not save progress">
+        // Danger, so it is announced at once (role="alert") while focus stays on Next.
+        <Alert tone="danger" title="Could not save progress">
           {mutation.error.message}
         </Alert>
       )}
@@ -231,7 +232,9 @@ export function ModulePage() {
           <Button
             variant="secondary"
             onClick={handlePrevious}
-            disabled={isFirst || mutation.isPending}
+            // Not disabled while Next saves, so focus is never dropped on the page (2.4.3).
+            disabled={isFirst}
+            aria-disabled={mutation.isPending || undefined}
           >
             ← Previous
           </Button>
@@ -239,11 +242,13 @@ export function ModulePage() {
             variant={isLast ? 'primary' : 'secondary'}
             onClick={isLast ? handleFinish : handleNext}
             // aria-disabled rather than disabled while blocked: a disabled button can't be
-            // focused, so its reason would never be read. The handlers ignore the click.
-            disabled={mutation.isPending}
+            // focused, so its reason would never be read. The handlers ignore the click. While
+            // the position saves it stays focusable too (keepFocusWhileLoading), so a failed save
+            // leaves focus here with the error announced.
             aria-disabled={blocked || undefined}
             aria-describedby={blocked ? 'segment-blocked' : undefined}
             loading={mutation.isPending}
+            keepFocusWhileLoading
           >
             {isLast ? 'Finish module' : 'Next →'}
           </Button>

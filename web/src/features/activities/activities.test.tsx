@@ -336,7 +336,8 @@ describe('code keeps its indentation (#140)', () => {
     render(indentedFillIn)
     const region = screen.getByRole('region', { name: 'Python code with blanks' })
     expect(region).toHaveAttribute('tabindex', '0')
-    expect(region).toHaveClass('overflow-x-auto')
+    // More code is off to the right, so the frame shows the scroll cue on that edge.
+    expect(region.parentElement).toHaveAttribute('data-more-end')
     vi.restoreAllMocks()
   })
 
@@ -499,16 +500,26 @@ describe('Parsons without dragging (WCAG 2.2 SC 2.5.7, #142)', () => {
 })
 
 describe('focus after Check answer (WCAG 2.4.3, #142)', () => {
-  const result = () => screen.getByRole('group', { name: 'Not quite' })
+  // The fixture's feedback starts with the title, so the feedback alone names the group: the
+  // title would otherwise be read twice ("Not quite" then "Not quite, 1 of 3 correct.").
+  const result = () => screen.getByRole('group', { name: 'Not quite, 1 of 3 correct.' })
 
-  it('moves focus to the result itself, named by its title and described by its feedback', () => {
+  it('moves focus to the result itself, named once, with no repeated title', () => {
     const { rerender } = render(<FeedbackPanel result={undefined} />)
     rerender(<FeedbackPanel result={wrong} />)
     expect(result()).toHaveFocus()
-    expect(result()).toHaveAccessibleDescription('Not quite, 1 of 3 correct.')
+    expect(result()).not.toHaveAttribute('aria-describedby')
     expect(result()).toHaveAttribute('tabindex', '-1')
     // Still inside the "Submission results" region the page had before.
     expect(screen.getByRole('region', { name: 'Submission results' })).toContainElement(result())
+  })
+
+  it('names the result by its title and describes it by the feedback when they differ', () => {
+    const { rerender } = render(<FeedbackPanel result={undefined} />)
+    rerender(<FeedbackPanel result={{ ...wrong, feedback: 'Q must also list P.' }} />)
+    const group = screen.getByRole('group', { name: 'Not quite' })
+    expect(group).toHaveFocus()
+    expect(group).toHaveAccessibleDescription('Q must also list P.')
   })
 
   it('announces a second result in the same place once: focused again, and not a live region', () => {
@@ -519,19 +530,20 @@ describe('focus after Check answer (WCAG 2.4.3, #142)', () => {
     first.addEventListener('focus', focusEvents)
 
     rerender(<FeedbackPanel result={{ ...wrong, id: 2, feedback: 'Still not quite.' }} />)
-    expect(result()).toBe(first) // the same node, updated in place
-    expect(result()).toHaveFocus()
+    const second = screen.getByRole('group', { name: 'Not quite' })
+    expect(second).toBe(first) // the same node, updated in place
+    expect(second).toHaveFocus()
     expect(focusEvents).toHaveBeenCalledTimes(1) // re-focused, so it is read again
-    expect(result()).toHaveAccessibleDescription('Still not quite.')
+    expect(second).toHaveAccessibleDescription('Still not quite.')
     expect(screen.queryByRole('status')).toBeNull()
     expect(screen.queryByRole('alert')).toBeNull()
     expect(document.querySelector('[aria-live]')).toBeNull()
   })
 
-  it('names a correct result "Correct"', () => {
+  it('names a correct result once ("Correct." under "Correct")', () => {
     const { rerender } = render(<FeedbackPanel result={undefined} />)
-    rerender(<FeedbackPanel result={{ ...wrong, correct: true, feedback: 'All correct.' }} />)
-    expect(screen.getByRole('group', { name: 'Correct' })).toHaveFocus()
+    rerender(<FeedbackPanel result={{ ...wrong, correct: true, feedback: 'Correct.' }} />)
+    expect(screen.getByRole('group', { name: 'Correct.' })).toHaveFocus()
   })
 
   it('does not take focus for a result already there when it first renders', () => {
@@ -539,25 +551,77 @@ describe('focus after Check answer (WCAG 2.4.3, #142)', () => {
     expect(result()).not.toHaveFocus()
   })
 
-  it('lands on the feedback after a keyboard user checks an answer on the activity page', async () => {
-    fakeApi({
+  /** The activity page with a controllable attempts endpoint. */
+  function activityPage(attempt: () => Response | Promise<Response>) {
+    const api = fakeApi({
       user: ada,
       overrides: {
         'GET /api/activities/7': () => Response.json(parsons),
         'GET /api/activities/7/hints': () => Response.json([]),
-        'POST /api/activities/7/attempts': () => Response.json({ ...wrong, activityId: 7 }),
+        'POST /api/activities/7/attempts': attempt,
       },
     })
-    const user = userEvent.setup()
     renderApp('/activities/7')
+    return api
+  }
 
+  it('lands on the feedback after a keyboard user checks an answer on the activity page', async () => {
+    activityPage(() => Response.json({ ...wrong, activityId: 7 }))
+    const user = userEvent.setup()
     ;(await screen.findByRole('button', { name: 'Check answer' })).focus()
     await user.keyboard('{Enter}')
 
-    const panel = await screen.findByRole('group', { name: 'Not quite' })
+    const panel = await screen.findByRole('group', { name: 'Not quite, 1 of 3 correct.' })
     await waitFor(() => expect(panel).toHaveFocus())
-    expect(panel).toHaveAccessibleDescription('Not quite, 1 of 3 correct.')
   })
+
+  it('keeps focus on a busy Check answer while a slow check runs, and ignores more presses', async () => {
+    let release: (response: Response) => void = () => {}
+    const api = activityPage(() => new Promise<Response>((resolve) => (release = resolve)))
+    const user = userEvent.setup()
+    const button = await screen.findByRole('button', { name: 'Check answer' })
+    button.focus()
+    await user.keyboard('{Enter}')
+
+    await waitFor(() => expect(button).toHaveAttribute('aria-busy', 'true'))
+    expect(button).toHaveAttribute('aria-disabled', 'true')
+    expect(button).toBeEnabled()
+    expect(button).toHaveFocus() // not <body>
+    await user.keyboard('{Enter}')
+    await user.click(button)
+    expect(api.callsTo('POST /api/activities/7/attempts')).toHaveLength(1)
+
+    release(Response.json({ ...wrong, activityId: 7 }))
+    const panel = await screen.findByRole('group', { name: 'Not quite, 1 of 3 correct.' })
+    await waitFor(() => expect(panel).toHaveFocus())
+  })
+
+  it('sends one attempt for two submits in the same moment (a fast double Enter)', async () => {
+    const api = activityPage(() => Response.json({ ...wrong, activityId: 7 }))
+    const button = await screen.findByRole('button', { name: 'Check answer' })
+    const form = button.closest('form')!
+    fireEvent.submit(form)
+    fireEvent.submit(form) // before React has re-rendered the busy button
+    await screen.findByRole('group', { name: 'Not quite, 1 of 3 correct.' })
+    expect(api.callsTo('POST /api/activities/7/attempts')).toHaveLength(1)
+  })
+
+  it.each([500, 422])(
+    'keeps focus on Check answer when the check fails (%i), with the error announced',
+    async (status) => {
+      activityPage(() => Response.json({ detail: 'Internal Server Error' }, { status }))
+      const user = userEvent.setup()
+      const button = await screen.findByRole('button', { name: 'Check answer' })
+      button.focus()
+      await user.keyboard('{Enter}')
+
+      const alert = await screen.findByRole('alert')
+      expect(alert).toHaveTextContent('Try again')
+      expect(button).toHaveFocus()
+      expect(button).not.toHaveAttribute('aria-busy')
+      expect(document.activeElement).not.toBe(document.body)
+    },
+  )
 })
 
 describe('focus in the hint ladder (WCAG 2.4.3, #142 review)', () => {

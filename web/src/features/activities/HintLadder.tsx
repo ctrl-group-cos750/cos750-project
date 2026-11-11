@@ -15,8 +15,9 @@ type HintLadderProps = {
  *
  * Focus (WCAG 2.4.3, #142): the new hint takes focus when it arrives, named by its title
  * ("Hint 2") and described by its text, so it is read once and the student is where the new
- * content is. While a hint loads the button stays focusable (aria-disabled and aria-busy, not
- * disabled), and after the last hint, when the button goes, focus is already on that hint.
+ * content is. While a hint loads the button shows its spinner but stays focusable (Button's
+ * keepFocusWhileLoading: aria-disabled and aria-busy, not disabled), and after the last hint,
+ * when the button goes, focus is already on that hint.
  */
 export function HintLadder({
   activityId,
@@ -111,9 +112,10 @@ export function HintLadder({
             variant="secondary"
             onClick={() => void showNextHint()}
             disabled={disabled}
-            // Not `loading`, which disables the button and so drops focus on the page.
-            aria-disabled={loading || undefined}
-            aria-busy={loading || undefined}
+            // Spinner and aria-busy while the hint loads, but still focusable (not disabled), so
+            // focus isn't dropped on the page; presses are ignored meanwhile.
+            loading={loading}
+            keepFocusWhileLoading
           >
             Show next hint
           </Button>

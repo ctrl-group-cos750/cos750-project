@@ -90,7 +90,7 @@ const allKindsDetail: ModuleDetail = {
 function setupModuleApi(
   detail: ModuleDetail,
   positionResponse: ModuleDetail = detail,
-  extra: Record<string, () => Response> = {},
+  extra: Record<string, () => Response | Promise<Response>> = {},
 ) {
   return fakeApi({
     user: ada,
@@ -773,6 +773,43 @@ describe('ModulePage — focus after navigation', () => {
     const heading = await screen.findByRole('heading', { level: 1, name: /Module 0/ })
     await waitFor(() => expect(heading).toHaveFocus())
     expect(document.activeElement).not.toBe(document.body)
+  })
+
+  it('keeps focus on Next while a slow save runs, and Previous does nothing meanwhile', async () => {
+    let release: (response: Response) => void = () => {}
+    const api = setupModuleApi(allKindsDetail, allKindsDetail, {
+      'POST /api/modules/:id/position': () =>
+        new Promise<Response>((resolve) => (release = resolve)),
+    })
+    renderApp('/modules/1')
+    const next = await screen.findByRole('button', { name: 'Next →' })
+    next.focus()
+    await userEvent.keyboard('{Enter}')
+
+    await waitFor(() => expect(next).toHaveAttribute('aria-busy', 'true'))
+    expect(next).toHaveFocus()
+    expect(next).toBeEnabled()
+    await userEvent.keyboard('{Enter}') // a second press while saving is ignored
+    expect(api.callsTo('POST /api/modules/1/position')).toHaveLength(1)
+
+    release(Response.json(allKindsDetail))
+    const heading = await screen.findByRole('heading', { name: 'Watch: BFS in action' })
+    await waitFor(() => expect(heading).toHaveFocus())
+  })
+
+  it('keeps focus on Next when the save fails, and announces the error at once', async () => {
+    setupModuleApi(allKindsDetail, allKindsDetail, {
+      'POST /api/modules/:id/position': () => Response.json({ detail: 'boom' }, { status: 500 }),
+    })
+    renderApp('/modules/1')
+    const next = await screen.findByRole('button', { name: 'Next →' })
+    next.focus()
+    await userEvent.keyboard('{Enter}')
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Could not save progress')
+    expect(next).toHaveFocus()
+    expect(screen.getByRole('heading', { name: 'Introduction to graphs' })).toBeInTheDocument()
   })
 
   it('moves focus to the new question after "Next question"', async () => {

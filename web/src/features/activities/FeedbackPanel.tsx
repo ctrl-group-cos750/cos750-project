@@ -7,14 +7,15 @@ type FeedbackPanelProps = { result: AttemptResult | undefined; partName?: 'line'
 /**
  * Summary of a submission result.
  *
- * Each new result takes keyboard focus (WCAG 2.4.3, #142): "Check answer" is disabled while the
- * answer is checked, which drops focus on the page, and a status message inserted together with
- * its text is often not read. The focused element is the result itself, a group named by its
- * title ("Not quite") and described by the feedback, so a screen reader reads the result, not a
- * container. It is not also a live region, so a second result in the same place is read once.
- * Tab then carries on to the hints and the module's Next. This is the APG practice of moving
- * focus to content that appears in response to the user's own action; a result already there
- * when the panel first renders is left alone, so opening a page never moves focus.
+ * Each new result takes keyboard focus (WCAG 2.4.3, #142), because a status message inserted
+ * together with its text is often not read. The focused element is the result itself (Alert announce="focus"):
+ * a group named by its title and described by the feedback, or named by the feedback alone when
+ * that already starts with the title, so a screen reader reads the result once, not a container.
+ * It is not also a live region, so a second result in the same place is read once. Tab then
+ * carries on to the hints and the module's Next. Focus moves only for a result the student just
+ * asked for; a result already there when the panel first renders is left alone, so opening a
+ * page never moves focus. "Check answer" stays focusable while checking (Button's
+ * keepFocusWhileLoading), so a failed check leaves focus on it.
  */
 export function FeedbackPanel({ result }: FeedbackPanelProps) {
   const alert = useRef<HTMLDivElement>(null)

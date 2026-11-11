@@ -44,7 +44,7 @@ export function SegmentView({ segment, onAnswered }: SegmentViewProps) {
         <section aria-label={segment.title} className="grid gap-4">
           <h2 className="text-xl font-semibold">{segment.title}</h2>
           {segment.activityId !== null ? (
-            <ActivityView activityId={segment.activityId} heading="h3" onResult={onAnswered} />
+            <ActivityView activityId={segment.activityId} showTitle={false} onResult={onAnswered} />
           ) : (
             <Alert tone="warning">Activity not available.</Alert>
           )}

@@ -1,7 +1,7 @@
 from typing import Literal, cast
 
 from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.auth import CurrentUser
 from app.db import DbSession
@@ -15,7 +15,7 @@ from app.schemas.mastery import (
     ReviewProgressOut,
     ReviewStepOut,
 )
-from app.services.mastery import evaluate, is_ready
+from app.services.mastery import Tally, evaluate, is_ready, review_items
 
 router = APIRouter(prefix="/api/me", tags=["mastery"])
 
@@ -58,7 +58,7 @@ def get_report(user: CurrentUser, session: DbSession) -> MasteryReportOut:
 def get_review_path(objective_id: RowId, user: CurrentUser, session: DbSession) -> ReviewPathOut:
     """The objective's review path: its steps in order, and which the student has answered
     (FR-7.5). 404 if the objective has no path; 403 until module 6 marks it "not yet", so the
-    fresh items stay unseen until the student needs them."""
+    fresh items stay unseen until the student needs them. Staff may always open it, to preview."""
     segments = session.scalars(
         select(Segment)
         .where(Segment.review_objective_id == objective_id)
@@ -67,7 +67,18 @@ def get_review_path(objective_id: RowId, user: CurrentUser, session: DbSession) 
     if not segments:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NO_PATH)
     outcome = next(o for o in evaluate(session, user.id) if o.objective.id == objective_id)
-    if outcome.review is None:
+    review = outcome.review
+    if review is None and user.is_staff:
+        # Staff may open any review path to preview it, as they may any activity (#137). Its
+        # progress counts their answers to the fresh items, which decide nothing for them.
+        fresh = [a.id for a in review_items(session).get(objective_id, [])]
+        answered_fresh = session.scalars(
+            select(func.count(func.distinct(Attempt.activity_id))).where(
+                Attempt.user_id == user.id, Attempt.activity_id.in_(fresh)
+            )
+        ).one()
+        review = Tally("not_attempted", answered_fresh, len(fresh), ())
+    if review is None:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=NOT_OPEN)
 
     activity_ids = [s.activity_id for s in segments if s.activity_id is not None]
@@ -87,7 +98,7 @@ def get_review_path(objective_id: RowId, user: CurrentUser, session: DbSession) 
         objective_text=outcome.objective.text,
         criterion=outcome.objective.criterion,
         state=outcome.state,
-        progress=ReviewProgressOut(answered=outcome.review.answered, total=outcome.review.total),
+        progress=ReviewProgressOut(answered=review.answered, total=review.total),
         steps=[
             ReviewStepOut(
                 id=s.id,

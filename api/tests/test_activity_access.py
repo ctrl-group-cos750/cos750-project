@@ -201,6 +201,56 @@ def test_an_activity_a_module_segment_shows_follows_that_module(
     assert client.get(f"/api/activities/{activity.id}").status_code == 200
 
 
+def skip_check(db: Session, module_id: int, activity_id: int) -> None:
+    """A worked example in `module_id` that names `activity_id` as its skip check (FR-8.2)."""
+    db.add(
+        Segment(
+            module_id=module_id,
+            position=98,
+            kind="worked_example",
+            title="Skippable",
+            skip_check_activity_id=activity_id,
+        )
+    )
+    db.commit()
+
+
+def test_a_skip_check_never_opens_a_mastery_item(client: TestClient, committed: Session) -> None:
+    """Module 0 is open from the start; naming 601 as one of its skip checks must not open it."""
+    db = committed
+    skip_check(db, 0, 601)
+    register(client)
+    all_refused(client, db, 601, 403, MODULE_LOCKED)
+
+
+def test_a_skip_check_never_opens_another_modules_item(
+    client: TestClient, committed: Session
+) -> None:
+    db = committed
+    skip_check(db, 0, 401)  # a module 4 practice item, named by open module 0
+    register(client)
+    all_refused(client, db, 401, 403, MODULE_LOCKED)
+
+
+def test_a_skip_check_of_no_module_opens_with_the_module_that_names_it(
+    client: TestClient, committed: Session
+) -> None:
+    db = committed
+    activity = Activity(
+        kind="multiple_choice",
+        title="Quick check",
+        config={"prompt": "Q", "options": [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}]},
+        solution={"correct": "a"},
+    )
+    db.add(activity)
+    db.commit()
+    skip_check(db, 1, activity.id)
+    register(client)
+    all_refused(client, db, activity.id, 403, MODULE_LOCKED)
+    complete_modules_before(db, STUDENT["email"], 1)
+    assert client.get(f"/api/activities/{activity.id}").status_code == 200
+
+
 # --- Review paths (FR-7.5) ----------------------------------------------------------------------
 
 
@@ -249,6 +299,23 @@ def test_a_review_path_opens_when_module_6_says_not_yet(
         assert client.get(f"/api/activities/{step}").status_code == 200
     for step in review_items(db, 2):  # objective 2's path is still closed
         assert client.get(f"/api/activities/{step}").status_code == 403
+
+
+def test_staff_may_preview_a_review_path_that_is_closed_for_students(
+    client: TestClient, committed: Session
+) -> None:
+    db = committed
+    make_staff(db, register(client, STAFF))
+    response = client.get("/api/me/review/3")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["progress"] == {
+        "answered": 0,
+        "total": len([s for s in body["steps"] if s["purpose"] == "mastery"]),
+    }
+    client.post("/api/auth/logout")
+    register(client)
+    assert client.get("/api/me/review/3").status_code == 403
 
 
 # --- Videos and their checkpoint questions (FR-3) -----------------------------------------------

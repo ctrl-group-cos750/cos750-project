@@ -5,7 +5,8 @@ above all the mastery check's unseen items, can't be read, answered or hinted at
 Every place an activity can appear is one of its *homes*:
 
 - **a module**: its own `module_id` (practice, retrieval, module 0's diagnostic, module 6's
-  mastery items), or a module segment that shows it or uses it as a skip check. Open when the
+  mastery items), a module segment that shows it, or a module segment that uses it as a skip
+  check, if it is that module's or no module's and not a mastery item. Open when the
   module is not locked for this student (`modules._statuses`, the same rule as the module map).
 - **a review path**: a segment of an objective's review path. Open once module 6 has marked that
   objective "not yet" (`mastery.review_open`), so its fresh items stay unseen until then.
@@ -26,7 +27,7 @@ they write content. Their attempts are left out of the evaluation export (FR-10)
 from dataclasses import dataclass
 from typing import Literal
 
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Activity, Checkpoint, Segment, User, Video
@@ -46,13 +47,22 @@ class Homes:
 
 
 def activity_homes(session: Session, activity: Activity) -> Homes:
-    """Every module, review path and video this activity appears in."""
-    rows = session.execute(
+    """Every module, review path and video this activity appears in.
+
+    A segment's skip check (FR-8.2) is a home only for an activity that belongs to that module
+    or to none, and never for a mastery item: a segment naming another module's item, or a
+    module 6 item, as its skip check must not open it early."""
+    shown = session.execute(
         select(Segment.module_id, Segment.review_objective_id).where(
-            or_(Segment.activity_id == activity.id, Segment.skip_check_activity_id == activity.id)
+            Segment.activity_id == activity.id
         )
     ).all()
-    modules = {m for m, _ in rows if m is not None}
+    checks = session.scalars(
+        select(Segment.module_id).where(Segment.skip_check_activity_id == activity.id)
+    ).all()
+    modules = {m for m, _ in shown if m is not None}
+    if activity.purpose != "mastery":
+        modules |= {m for m in checks if m is not None and activity.module_id in (None, m)}
     if activity.module_id is not None:
         modules.add(activity.module_id)
     videos = frozenset(
@@ -60,7 +70,7 @@ def activity_homes(session: Session, activity: Activity) -> Homes:
     )
     return Homes(
         modules=frozenset(modules),
-        review_paths=frozenset(o for _, o in rows if o is not None),
+        review_paths=frozenset(o for _, o in shown if o is not None),
         videos=videos,
     )
 

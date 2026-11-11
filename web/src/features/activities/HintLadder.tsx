@@ -6,6 +6,8 @@ import type { Hint } from './activities.types.ts'
 type HintLadderProps = {
   activityId: number
   disabled?: boolean
+  /** The student has answered correctly: the hints already shown stay, but no more are offered. */
+  solved?: boolean
   requestHint: (activityId: number) => Promise<Hint>
   loadHints?: (activityId: number) => Promise<readonly Hint[]>
 }
@@ -22,6 +24,7 @@ type HintLadderProps = {
 export function HintLadder({
   activityId,
   disabled = false,
+  solved = false,
   requestHint,
   loadHints = fetchActivityHints,
 }: HintLadderProps) {
@@ -64,7 +67,7 @@ export function HintLadder({
   }, [activityId, loadHints])
 
   const lastHint = hints.at(-1)
-  const hasMore = !loadFailed && !loadingInitial && (lastHint?.hasMore ?? true)
+  const hasMore = !solved && !loadFailed && !loadingInitial && (lastHint?.hasMore ?? true)
 
   async function showNextHint() {
     // aria-disabled while a hint loads or an answer is checked: the press does nothing
@@ -100,7 +103,8 @@ export function HintLadder({
           {hint.body}
         </Alert>
       ))}
-      {confirmingSupport && (
+      {/* Only while another hint is on offer: once solved, there is no button left to press. */}
+      {confirmingSupport && hasMore && (
         <Alert tone="warning" title="The next hint gives a lot away">
           Using it means a later correct answer counts as met with support. Choose “Show next hint”
           again if you want to continue.

@@ -93,9 +93,12 @@ def test_the_puzzle_answer_is_the_fewest_walkways_from_a_to_g() -> None:
 def test_the_worked_example_reads_the_campus() -> None:
     worked = next(s for s in MODULE.segments if s.kind == "worked_example")
     assert worked.skip_check_activity_id == 103
-    rows = re.findall(rf"^\| ([A-Z]){DASH}([A-Z]) \|", worked.body, re.M)
-    assert {frozenset(r) for r in rows} == campus_edges()
-    assert len(rows) == len(CAMPUS.edges)
+    # It shows the method on one walkway, which is a campus edge, and leaves the rest to activity
+    # 105: a list of every walkway beside its edge would make 105 a copying task (#147).
+    shown = edges_in(worked.body)
+    assert shown
+    assert shown <= campus_edges()
+    assert len(shown) < len(campus_edges()) - 3
     n, m = len(CAMPUS.vertices), len(CAMPUS.edges)
     assert f"**Result:** {n} vertices, {m} edges, undirected." in worked.body
     neighbours_of_e = sorted(v for e in campus_edges() if "E" in e for v in set(e) - {"E"})

@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+import { reportEvent } from '../../api/events.ts'
 import { Alert, Markdown } from '../../components'
 import { ActivityView } from '../activities/ActivityPage.tsx'
 import { VideoView } from '../video/VideoPage.tsx'
@@ -14,6 +16,9 @@ export type SegmentViewProps = {
  * is focusable from script only (tabIndex -1, data-focus-heading): ModulePage moves focus to it
  * after Previous or Next. */
 export function SegmentView({ segment, onAnswered }: SegmentViewProps) {
+  // The pilot's timeline of what each student saw (FR-10.1, #141): one event per segment shown.
+  useEffect(() => reportEvent('segment_viewed', segment.id), [segment.id])
+
   switch (segment.kind) {
     case 'text':
     case 'worked_example':

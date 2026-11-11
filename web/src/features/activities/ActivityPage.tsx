@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router'
+import { retryUnlessRefused } from '../../api/retry.ts'
 import { Alert, Spinner } from '../../components'
 import { useRefreshRewards } from '../rewards/hooks.ts'
 import {
@@ -35,9 +36,11 @@ export function ActivityView({ activityId, heading, showTitle, onResult }: Activ
   const inFlight = useRef(false)
   const [submitError, setSubmitError] = useState('')
   const refreshRewards = useRefreshRewards()
+  const queryClient = useQueryClient()
   const query = useQuery({
     queryKey: ['activities', activityId],
     queryFn: () => fetchActivity(activityId),
+    retry: retryUnlessRefused, // a locked or missing activity says so at once
   })
 
   if (query.isPending) return <Spinner label="Loading activity" />
@@ -52,7 +55,12 @@ export function ActivityView({ activityId, heading, showTitle, onResult }: Activ
       const nextResult = await submitActivityAttempt(activityId, submitted)
       setResult(nextResult)
       onResult?.(nextResult)
-      if (nextResult.correct) refreshRewards()
+      if (nextResult.correct) {
+        refreshRewards()
+        // It is solved now: the next time it is shown (Back, a refresh), the server says so, and
+        // no hints are offered (#158).
+        void queryClient.invalidateQueries({ queryKey: ['activities', activityId] })
+      }
     } catch (error) {
       setSubmitError(
         error instanceof Error

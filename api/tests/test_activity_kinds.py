@@ -24,6 +24,7 @@ from app.services.checking import (
     WRONG_FIX,
     WRONG_MATCH,
     check_activity,
+    is_blank,
 )
 from app.services.content import validate_activity
 
@@ -135,6 +136,22 @@ def grade(kind: str, config: dict[str, Any], solution: dict[str, Any], **submitt
 def test_matching_all_right() -> None:
     result = grade("matching", MATCHING_CONFIG, MATCHING_SOLUTION, pairs=MATCHING_SOLUTION["pairs"])
     assert (result.correct, result.score, result.feedback) == (True, 1.0, "All correct.")
+
+
+def test_a_right_answer_gets_the_content_s_explanation() -> None:
+    """A right answer says why it is right when the content explains it (FR-4.2); a wrong one
+    keeps its own feedback."""
+    solution = {**MATCHING_SOLUTION, "explanation": "Each vertex pairs with its own neighbours."}
+    right = grade("matching", MATCHING_CONFIG, solution, pairs=MATCHING_SOLUTION["pairs"])
+    assert (right.correct, right.feedback) == (True, "Each vertex pairs with its own neighbours.")
+    wrong = grade("matching", MATCHING_CONFIG, solution, pairs={})
+    assert not wrong.correct
+    assert wrong.feedback != solution["explanation"]
+
+
+def test_an_empty_explanation_is_refused() -> None:
+    with pytest.raises(ValueError, match="explanation"):
+        validate_activity("matching", MATCHING_CONFIG, {**MATCHING_SOLUTION, "explanation": ""})
 
 
 def test_matching_marks_each_pair_with_the_reason() -> None:
@@ -601,3 +618,50 @@ def test_a_solution_stored_with_string_ids_still_grades() -> None:
     assert check_activity("fix_the_bug", FIX_CONFIG, fix, {"order": FIX_RIGHT}).correct
     with pytest.raises(ValueError, match="'2' in the group"):
         validate_activity("parsons", config, stored)
+
+
+def test_no_mastery_item_explains_its_answer_yet() -> None:
+    """The mastery check shows feedback at once, so one item's explanation would be on screen
+    before the next item is answered, and could answer it (603 → 604, 610 → 611 to 613; #167
+    review). Mastery items get explanations once #144 decides when the check shows feedback."""
+    explained = [
+        a.id
+        for a in read_fixtures().activities
+        if a.purpose == "mastery" and (a.solution or {}).get("explanation")
+    ]
+    assert explained == []
+
+
+def test_choose_tests_text_never_names_a_test_by_its_stored_id() -> None:
+    """The screen numbers the test cases ("Test 1: start at A") because an id such as
+    `two-islands` names what the student has to spot. Hints, feedback and explanations must use the
+    numbers too (#167 review)."""
+    for a in read_fixtures().activities:
+        if a.kind != "choose_tests":
+            continue
+        ids = [t["id"] for t in a.config["tests"] if "-" in t["id"]]  # the telling ones
+        texts = [h.body for h in a.hints]
+        texts += list((a.solution or {}).get("feedback", {}).values())
+        texts.append((a.solution or {}).get("explanation") or "")
+        for text in texts:
+            assert not [i for i in ids if i in text], (a.id, text)
+
+
+@pytest.mark.parametrize(
+    ("kind", "submission"),
+    [
+        ("choose_tests", {"selected": [""]}),
+        ("choose_tests", {"selected": [" ", ""]}),
+        ("trace", {"rows": [{"visitedVertex": "", "queue": [], "visited": [], "order": []}]}),
+        ("matching", {"pairs": {"a": ""}}),
+        ("multiple_choice", {"selected": "  "}),
+    ],
+)
+def test_answers_that_choose_nothing_are_blank(kind: str, submission: dict[str, Any]) -> None:
+    """These answer nothing, so they are refused rather than recorded (#143, #165 review)."""
+    assert is_blank(kind, submission)
+
+
+def test_a_partly_filled_trace_is_not_blank() -> None:
+    row = {"visitedVertex": "A", "queue": [], "visited": [], "order": []}
+    assert not is_blank("trace", {"rows": [row]})

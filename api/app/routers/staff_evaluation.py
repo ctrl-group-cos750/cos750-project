@@ -80,7 +80,8 @@ def export_csv(
       result, as JSON.
     - `hints`: each hint shown.
     - `events`: the timeline (app/services/events.py): videos started and finished, checkpoints
-      reached, segments viewed, hints shown, results changing; `payload` as JSON.
+      reached, segments viewed, hints shown, results changing, modules completed; `payload` as JSON.
+      Segment views and module completions give time per segment and per module.
     - `objective_results`: each student's current result per objective, with the attempts it was
       decided from (`evidence`).
     """

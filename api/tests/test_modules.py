@@ -17,9 +17,24 @@ from fastapi.testclient import TestClient
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, Checkpoint, Module, Objective, Segment, Video
+from app.models import (
+    Activity,
+    Attempt,
+    Checkpoint,
+    Event,
+    Hint,
+    Module,
+    ModuleProgress,
+    Objective,
+    PointsEntry,
+    Segment,
+    User,
+    UserBadge,
+    Video,
+)
 from app.services import modules as modules_service
 from app.services.mastery import counts
+from app.services.modules import backfill_module_rewards
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -670,13 +685,16 @@ def test_each_segment_says_whether_it_is_done(client: TestClient, db: Session) -
 
     done = [s["done"] for s in client.get("/api/modules/0").json()["segments"]]
     assert done == [True, False, False, False]
-    _answer(client, 1, "b")
+    _answer(client, 1, "b")  # wrong, without the last hint: not done yet (#143)
     _answer(client, 2, "a")
+    done = [s["done"] for s in client.get("/api/modules/0").json()["segments"]]
+    assert done == [True, False, True, False]
+    _answer(client, 1, "a")
     done = [s["done"] for s in client.get("/api/modules/0").json()["segments"]]
     assert done == [True, True, True, False]
 
 
-def test_an_activity_must_be_answered_once_right_or_wrong_before_moving_on(
+def test_an_activity_must_be_answered_correctly_before_moving_on(
     client: TestClient, db: Session
 ) -> None:
     _make_gated_module(db)
@@ -688,8 +706,84 @@ def test_an_activity_must_be_answered_once_right_or_wrong_before_moving_on(
     assert "activity" in res.json()["detail"]
     assert client.get("/api/modules/0").json()["currentSegmentPosition"] == 1
 
-    _answer(client, 1, "b")  # wrong is enough: it is practice
+    _answer(client, 1, "b")  # a wrong answer, without the last hint, isn't enough (#143)
+    assert _move(client, 2) == 409
+    _answer(client, 1, "a")
     assert _move(client, 2) == 200
+
+
+def test_a_wrong_answer_after_the_last_hint_lets_the_student_move_on(
+    client: TestClient, db: Session
+) -> None:
+    """The last hint gives the answer away: a student who needed it isn't kept on the segment."""
+    _make_gated_module(db)
+    db.add_all(Hint(activity_id=1, level=level, body=f"Hint {level}.") for level in (1, 2, 3, 4))
+    db.commit()
+    _register_and_login(client, ALICE)
+    assert _move(client, 1) == 200
+
+    for _ in range(3):
+        assert client.post("/api/activities/1/hints").status_code == 201
+    _answer(client, 1, "b")  # after hint 3: not yet
+    assert _move(client, 2) == 409
+    assert client.post("/api/activities/1/hints").status_code == 201  # hint 4, the last
+    _answer(client, 1, "b")
+    assert _move(client, 2) == 200
+
+
+@pytest.mark.parametrize("purpose", ["mastery", "diagnostic"])
+def test_one_real_answer_is_enough_for_a_mastery_or_diagnostic_item(
+    client: TestClient, db: Session, purpose: str
+) -> None:
+    """Only the first answer counts on the mastery check (FR-7.1), and the diagnostic finds gaps
+    rather than gating, so a wrong answer there moves the student on (#165 review)."""
+    _make_gated_module(db)
+    activity = db.get_one(Activity, 1)
+    activity.purpose = purpose
+    if purpose == "mastery":
+        activity.objective_id = None
+    db.commit()
+    _register_and_login(client, ALICE)
+    assert _move(client, 1) == 200
+
+    _answer(client, 1, "b")  # wrong
+    assert _move(client, 2) == 200
+
+
+def test_a_wrong_practice_answer_still_does_not_move_the_student_on(
+    client: TestClient, db: Session
+) -> None:
+    _make_gated_module(db)
+    _register_and_login(client, ALICE)
+    assert _move(client, 1) == 200
+    _answer(client, 1, "b")
+    assert _move(client, 2) == 409
+
+
+def test_each_segment_says_whether_its_activity_was_attempted(
+    client: TestClient, db: Session
+) -> None:
+    """The page opens a module at an activity passed without trying, never at one answered wrong
+    (#165 review), so it needs to tell the two apart."""
+    _make_gated_module(db)
+    _register_and_login(client, ALICE)
+    _answer(client, 1, "b")  # wrong: attempted, not done
+    segments = client.get("/api/modules/0").json()["segments"]
+    assert [(s["attempted"], s["done"]) for s in segments] == [
+        (False, True),
+        (True, False),
+        (False, False),
+        (False, False),
+    ]
+
+
+def test_a_blank_answer_is_refused_and_not_recorded(client: TestClient, db: Session) -> None:
+    _make_gated_module(db)
+    _register_and_login(client, ALICE)
+    res = client.post("/api/activities/1/attempts", json={"submitted": {"selected": " "}})
+    assert res.status_code == 422
+    assert res.json()["detail"] == "Answer the activity before checking it."
+    assert db.scalars(select(Attempt)).all() == []
 
 
 def test_a_video_needs_every_checkpoint_passed(client: TestClient, db: Session) -> None:
@@ -720,7 +814,7 @@ def test_reaching_the_last_segment_completes_the_module_only_once_it_is_done(
     # refused, but the module isn't complete either.
     assert _move(client, 3) == 200
     assert client.get("/api/modules/0").json()["status"] == "in_progress"
-    _answer(client, 3, "b")
+    _answer(client, 3, "a")
     assert _move(client, 3) == 200  # "Finish module" once it is done completes the module
     statuses = {m["id"]: m["status"] for m in client.get("/api/modules").json()}
     assert statuses == {0: "complete", 1: "open"}
@@ -844,10 +938,12 @@ def test_a_trace_fix_the_bug_or_choose_tests_segment_blocks_until_answered(
 ) -> None:
     """Regression for #136: on staging these kinds counted as done unanswered (so a student
     skipped module 3's trace practice without trying it). Now they gate like any other activity
-    (FR-2.7): the module can't be finished until the student answers, and a wrong answer counts."""
+    (FR-2.7): the module can't be finished until the student answers it correctly, or answers
+    after its last hint (#143)."""
     _make_gated_module(db)
     activity = db.get_one(Activity, 3)
     activity.kind, activity.config, activity.solution = kind, config, solution
+    db.add_all(Hint(activity_id=3, level=level, body=f"Hint {level}.") for level in (1, 2, 3, 4))
     db.commit()
     _register_and_login(client, ALICE)
     _answer(client, 1, "a")
@@ -863,6 +959,14 @@ def test_a_trace_fix_the_bug_or_choose_tests_segment_blocks_until_answered(
     res = client.post("/api/activities/3/attempts", json={"submitted": wrong})
     assert res.status_code == 201, res.text
     assert res.json()["correct"] is False
+    # A wrong answer on its own isn't enough (#143)...
+    assert [s["done"] for s in client.get("/api/modules/0").json()["segments"]][3] is False
+    _move(client, 3)
+    assert client.get("/api/modules/0").json()["status"] == "in_progress"
+    # ...but one given after the last hint, which shows the answer, is.
+    for _ in range(4):
+        assert client.post("/api/activities/3/hints").status_code == 201
+    assert client.post("/api/activities/3/attempts", json={"submitted": wrong}).status_code == 201
     assert [s["done"] for s in client.get("/api/modules/0").json()["segments"]][3] is True
     assert _move(client, 3) == 200
     assert client.get("/api/modules/0").json()["status"] == "complete"
@@ -878,3 +982,127 @@ def test_a_complete_module_can_be_stepped_through_freely(client: TestClient, db:
         assert _move(client, position) == 200
     assert _move(client, 0) == 200
     assert client.get("/api/modules/0").json()["status"] == "complete"
+
+
+# ---------------------------------------------------------------------------
+# 13. Completing a module: points, badge and event (FR-9.1, FR-9.3, FR-10.1, #141)
+# ---------------------------------------------------------------------------
+
+
+def _module_points(db: Session, module_id: int = 0) -> list[int]:
+    return list(
+        db.scalars(select(PointsEntry.points).where(PointsEntry.ref == f"module:{module_id}"))
+    )
+
+
+def _badges(client: TestClient) -> list[str]:
+    return [b["badge"] for b in client.get("/api/rewards").json()["badges"]]
+
+
+def test_completing_a_module_earns_its_points_and_badge_and_is_logged_once(
+    client: TestClient, db: Session
+) -> None:
+    _make_gated_module(db)
+    _register_and_login(client, ALICE)
+    for activity_id in (1, 2, 3):
+        _answer(client, activity_id, "a")
+    for position in (1, 2, 3, 3):
+        assert _move(client, position) == 200
+    assert client.get("/api/modules/0").json()["status"] == "complete"
+
+    assert _module_points(db) == [25]
+    assert _badges(client) == ["first-module"]
+    completed = db.scalars(select(Event).where(Event.type == "module_completed")).all()
+    assert [e.ref for e in completed] == ["module:0"]
+
+    # Rereading and finishing again changes nothing.
+    assert _move(client, 0) == 200
+    assert _move(client, 3) == 200
+    assert _module_points(db) == [25]
+    assert len(db.scalars(select(Event).where(Event.type == "module_completed")).all()) == 1
+
+
+def test_a_module_clicked_through_with_hints_earns_no_points_until_real_work(
+    client: TestClient, db: Session
+) -> None:
+    """Every hint opened, then a wrong answer: the module completes, but its points and badge need
+    at least one right answer without hint 3 or 4 (FR-9.6; #166 review). One that comes later
+    earns them then."""
+    _make_gated_module(db)
+    db.add_all(
+        Hint(activity_id=a, level=level, body=f"Hint {level}.")
+        for a in (1, 2, 3)
+        for level in (1, 2, 3, 4)
+    )
+    db.commit()
+    _register_and_login(client, ALICE)
+    for activity_id in (1, 3):
+        for _ in range(4):
+            client.post(f"/api/activities/{activity_id}/hints")
+        _answer(client, activity_id, "b")  # wrong, after the last hint: done (#143)
+    for _ in range(4):
+        client.post("/api/activities/2/hints")
+    _answer(client, 2, "a")  # the checkpoint: right, but after hint 4
+    for position in (1, 2, 3, 3):
+        assert _move(client, position) == 200
+    assert client.get("/api/modules/0").json()["status"] == "complete"
+    assert _module_points(db) == []
+    assert "first-module" not in _badges(client)
+
+    # A right answer without heavy hints, later, in the complete module: now it's earned.
+    hintless = Activity(
+        id=4,
+        kind="multiple_choice",
+        title="Recall",
+        module_id=0,
+        purpose="retrieval",
+        config={
+            "prompt": "Which?",
+            "options": [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}],
+        },
+        solution={"correct": "a", "feedback": {}},
+    )
+    db.add(hintless)
+    db.commit()
+    _answer(client, 4, "a")
+    assert _module_points(db) == [25]
+    assert "first-module" in _badges(client)
+
+
+def test_the_seed_backfills_modules_completed_before_module_points(db: Session) -> None:
+    """A module completed before module points existed earns them on the next seed, if earned,
+    once (#166 review)."""
+    _make_gated_module(db)
+    user = User(email="ama@example.com", display_name="Ama", password_hash="x")  # noqa: S106
+    db.add(user)
+    db.flush()
+    db.add(ModuleProgress(user_id=user.id, module_id=0, status="complete"))
+    db.add(
+        Attempt(user_id=user.id, activity_id=1, submitted={}, correct=True, score=1.0, detail={})
+    )
+    db.commit()
+
+    assert backfill_module_rewards(db) == 1
+    assert backfill_module_rewards(db) == 0  # safe to run on every seed
+    db.commit()
+    assert _module_points(db) == [25]
+    badges = db.scalars(select(UserBadge.badge).where(UserBadge.user_id == user.id)).all()
+    assert badges == ["first-module"]
+
+
+def test_a_segment_in_a_locked_module_is_not_logged_as_viewed(
+    client: TestClient, db: Session
+) -> None:
+    _make_gated_module(db)  # module 1 stays locked until module 0 is complete
+    _register_and_login(client, ALICE)
+    assert (
+        client.post("/api/events", json={"type": "segment_viewed", "targetId": 5}).status_code
+        == 204
+    )
+    assert (
+        client.post("/api/events", json={"type": "segment_viewed", "targetId": 1}).status_code
+        == 204
+    )
+    assert [e.ref for e in db.scalars(select(Event).where(Event.type == "segment_viewed"))] == [
+        "segment:1"
+    ]

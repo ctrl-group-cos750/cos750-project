@@ -6,6 +6,7 @@ import os
 from app.db import SessionLocal
 from app.seed import load
 from app.seed.demo_accounts import load_demo_accounts
+from app.services.modules import backfill_module_rewards
 
 with SessionLocal() as session:
     kept: list[str] = []  # content staff edited in the portal, which the seed leaves alone
@@ -22,6 +23,9 @@ with SessionLocal() as session:
         # Demo accounts never stop the API: the previous ones are kept, and CI catches the same
         # problem in the PR that caused it (tests/test_demo_accounts.py).
         demo, demo_problem = [], str(exc)
+    # Modules completed before module points were awarded get them now, if earned (#166).
+    backfilled = backfill_module_rewards(session)
+    session.commit()
 segments = sum(len(m.segments) for m in content.modules)
 print(
     f"seed: {len(content.objectives)} objectives, {len(content.modules)} modules, "
@@ -48,3 +52,5 @@ elif demo:
         print(f"seed: demo progress {note}")
 else:
     print("seed: no demo accounts (DEMO_PASSWORD is not set)")
+if backfilled:
+    print(f"seed: {backfilled} complete modules gained their points (completed before #166)")

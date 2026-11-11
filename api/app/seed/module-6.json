@@ -1965,11 +1965,11 @@
         },
         {
           "level": 3,
-          "body": "That needs two routes to the same vertex: a cycle."
+          "body": "That needs a second route to a vertex that is still waiting in the queue. A cycle that only leads back to the start doesn't do it: the start has already left the queue."
         },
         {
           "level": 4,
-          "body": "Answer: cycle and sports-centre. The faulty version passes the other four."
+          "body": "Answer: Tests 1 and 2. The faulty version passes the other four."
         }
       ]
     },
@@ -2250,7 +2250,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: two-islands and one-way. The faulty version passes the other four."
+          "body": "Answer: Tests 5 and 6. The faulty version passes the other four."
         }
       ]
     },
@@ -2278,6 +2278,7 @@
         ]
       },
       "solution": {
+        "explanation": "In a graph with a cycle, BFS can meet a vertex again along a second path, so it shows whether BFS adds it twice.",
         "correct": "cycle",
         "feedback": {
           "single": "A single vertex cannot reveal repeated visits through a cycle.",

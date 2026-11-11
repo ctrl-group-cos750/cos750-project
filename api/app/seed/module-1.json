@@ -105,6 +105,7 @@
         ]
       },
       "solution": {
+        "explanation": "The shortest way is A–C, C–B, B–G: three walkways. Two isn't possible, because neither of A's neighbours (C and E) is joined to G.",
         "correct": "3",
         "feedback": {
           "2": "Not quite. Two walkways isn't enough. The Green is only joined to the Bookshop, and the Bookshop isn't joined to the Admin block. So you need at least three. Trace a route from the Admin block, counting each walkway you use.",
@@ -178,6 +179,7 @@
         ]
       },
       "solution": {
+        "explanation": "A data structure stores data, an algorithm is a list of steps, a graph is vertices joined by edges, and a traversal visits the vertices by following the edges.",
         "pairs": {
           "t1": "d1",
           "t2": "d2",
@@ -235,6 +237,7 @@
         ]
       },
       "solution": {
+        "explanation": "There are three edges, and Q is in all of them, so Q has three neighbours: P, R and S. Every other vertex has only one.",
         "correct": "a",
         "feedback": {
           "b": "Not quite. Each edge counts once. P–Q is one edge, not two, even though it touches P and Q. Read the worked example. It shows how to count edges.",
@@ -327,6 +330,7 @@
         ]
       },
       "solution": {
+        "explanation": "Each stop is a vertex, and each road is an edge between the two stops it joins. Buses drive both ways, so the edges have no direction.",
         "pairs": {
           "1": "vP",
           "2": "eQR",
@@ -448,6 +452,7 @@
         ]
       },
       "solution": {
+        "explanation": "Each walkway joins two buildings, so it becomes the edge between their two letters. Seven walkways give seven edges.",
         "pairs": {
           "AC": "AC",
           "AE": "AE",
@@ -525,6 +530,7 @@
         ]
       },
       "solution": {
+        "explanation": "A graph is directed when its edges are one-way arrows, like following someone or a delivery route. Friendships, and roads you can drive both ways, are undirected.",
         "pairs": {
           "friends": "undirected",
           "follows": "directed",
@@ -608,6 +614,7 @@
         ]
       },
       "solution": {
+        "explanation": "The things are the vertices and the connections between them are the edges. A connection that works both ways, like a track or a handshake, makes the graph undirected. A one-way one, like a follow or a link, makes it directed.",
         "pairs": {
           "s1": "r1",
           "s2": "r2",

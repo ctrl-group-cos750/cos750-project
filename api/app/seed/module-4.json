@@ -76,6 +76,7 @@
         ]
       },
       "solution": {
+        "explanation": "BFS visits A, then its neighbours C and E, then their new neighbours in turn: B and F from C, D from E, and finally G from B.",
         "correct": "a",
         "feedback": {
           "b": "Not quite. That's just alphabetical order. Alphabetical order only decides which neighbour joins the queue first; BFS still goes ring by ring. Think about which buildings are one walkway from A.",
@@ -126,6 +127,7 @@
         ]
       },
       "solution": {
+        "explanation": "Each add_edge call adds a neighbour to both vertices. C is in A–C, B–C and C–F, so its list gets A, B and F, in that order.",
         "correct": "a",
         "feedback": {
           "b": "Not quite. That stores edges one way only. A–C and B–C are undirected, so A and B must also be in C's list. Remember: an undirected edge goes in both lists.",
@@ -176,6 +178,7 @@
         ]
       },
       "solution": {
+        "explanation": "BFS visits W, then its neighbours X and Z. Y is found from X, so when Z is processed, Y is already found and isn't added again.",
         "correct": "a",
         "feedback": {
           "b": "Not quite. That goes deep first. Y is two edges from W, so it comes after both X and Z. Read the worked example: the queue keeps the rings in order.",
@@ -265,6 +268,7 @@
         ]
       },
       "solution": {
+        "explanation": "Start with the start vertex found and in the queue. Then, while the queue isn't empty, visit the vertex at the front, and mark each neighbour not found yet as found and add it at the back.",
         "order": [
           1,
           2,
@@ -329,6 +333,7 @@
         ]
       },
       "solution": {
+        "explanation": "popleft takes the vertex that has waited longest, from the front. A new neighbour is marked found and added at the back in the same step, so it is never added twice.",
         "answers": {
           "1": "queue.popleft()",
           "2": "visited.add(n)",
@@ -409,6 +414,7 @@
         ]
       },
       "solution": {
+        "explanation": "The start is found and queued first. Each round takes the front of the queue, visits it, and adds the neighbours not found yet, in alphabetical order, at the back. When the queue is empty, order holds every vertex BFS reached.",
         "answers": {
           "1": "{start}",
           "2": "deque([start])",
@@ -496,6 +502,7 @@
         ]
       },
       "solution": {
+        "explanation": "From D the only arrow out is D → G, and from G the only arrow out is G → A. Arrows can't be followed backwards, so BFS visits D, G, A.",
         "correct": "a",
         "feedback": {
           "b": "Not quite. That treats the edges as two-way. There's no arrow from D to A, and BFS can only follow arrows forwards. Follow the arrows leaving D, then the ones leaving G.",

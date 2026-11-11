@@ -284,6 +284,7 @@
         ]
       },
       "solution": {
+        "explanation": "The queue stores the tasks, so it is the data structure. Removing them one by one is a list of steps, so it is the algorithm.",
         "correct": "a",
         "feedback": {
           "b": "Not quite. That's the wrong way round. The queue stores the tasks; the function is the steps. Swap the roles.",
@@ -597,6 +598,7 @@
         ]
       },
       "solution": {
+        "explanation": "Each arrow goes one way only, so the graph is directed, even though there is an arrow each way between A and B.",
         "correct": "c",
         "feedback": {
           "a": "Not quite. Each arrow is its own one-way edge, so the graph is directed. Look at whether the edges have arrows.",
@@ -981,6 +983,7 @@
         ]
       },
       "solution": {
+        "explanation": "The students are the things, and an email joins two of them. An email goes from one student to another, so the edges have a direction.",
         "correct": "a",
         "feedback": {
           "b": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
@@ -1251,6 +1254,7 @@
         ]
       },
       "solution": {
+        "explanation": "BFS finds the route with the fewest edges, so with stops as vertices and bus rides as edges it finds the fewest changes. It doesn't count road distance.",
         "correct": "c",
         "feedback": {
           "a": "Not quite. BFS counts edges, not kilometres. Look for a problem about the fewest edges.",
@@ -1501,6 +1505,7 @@
         ]
       },
       "solution": {
+        "explanation": "C leaves the front of the queue, leaving D. Of C's neighbours, A has already been found and D is already waiting, so only E joins, at the back.",
         "correct": "b",
         "feedback": {
           "a": "Not quite. A has already been found. A vertex that has been found never joins the queue again. Skip every neighbour that has been found.",
@@ -1620,6 +1625,7 @@
         ]
       },
       "solution": {
+        "explanation": "When a neighbour hasn't been found yet, BFS does two things together: marks it found and adds it to the back of the queue.",
         "correct": "c",
         "feedback": {
           "d": "Not quite. A vertex joins the order when it leaves the queue, not when it's found. What should happen to a newly found neighbour?",
@@ -1737,6 +1743,7 @@
         ]
       },
       "solution": {
+        "explanation": "On a triangle, a BFS that visits a vertex twice returns more than three vertices. Checking the exact order catches that. Checking only that the list isn't empty wouldn't.",
         "correct": "a",
         "feedback": {
           "b": "Not quite. With no edges, nothing can be added twice, so the bug never shows. Use a graph with a cycle.",
@@ -2253,7 +2260,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: every test except one-vertex."
+          "body": "Answer: every test except Test 6."
         }
       ]
     },
@@ -2504,7 +2511,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: cycle, residence and out-of-order. The faulty version passes the other three."
+          "body": "Answer: Tests 1, 2 and 3. The faulty version passes the other three."
         }
       ]
     }

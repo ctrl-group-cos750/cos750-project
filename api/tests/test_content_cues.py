@@ -250,20 +250,37 @@ def longest(a: ActivityFixture) -> str:
 
 
 def most_like_the_rest(a: ActivityFixture) -> str | None:
-    """The option sharing the most words with the others: the "middle" one that each distractor
-    changes in one way. None when there is a tie."""
-
-    def words(label: str) -> set[str]:
-        return set(re.findall(r"\w+", label.lower()))
-
+    """The option closest to all the others, in order as well as words: the "middle" one that each
+    distractor changes in one way (vertices swapped, or the direction flipped). None on a tie."""
     opts = a.config["options"]
     score = {
-        o["id"]: sum(len(words(o["label"]) & words(p["label"])) for p in opts if p is not o)
+        o["id"]: sum(
+            difflib.SequenceMatcher(None, o["label"].lower(), p["label"].lower()).ratio()
+            for p in opts
+            if p is not o
+        )
         for o in opts
     }
     best = max(score.values())
-    top = [i for i, v in score.items() if v == best]
+    top = [i for i, v in score.items() if v > best - 0.02]
     return top[0] if len(top) == 1 else None
+
+
+def nearest_to_the_others(a: ActivityFixture) -> str | None:
+    """Split each option into its parts ("Vertices: … . Edges: … . Directed.") and pick the one
+    that differs from the others in the fewest parts in total, if only one does: the "middle"
+    option each distractor changes in one way. Staging's objective 3 items fell to it, 4 of 4."""
+    split = {o["id"]: re.split(r"(?<=\.)\s+", o["label"].strip()) for o in a.config["options"]}
+    if len({len(p) for p in split.values()}) != 1 or len(next(iter(split.values()))) < 2:
+        return None
+
+    def apart(x: list[str], y: list[str]) -> int:
+        return sum(i != j for i, j in zip(x, y, strict=True))
+
+    total = {i: sum(apart(p, q) for j, q in split.items() if j != i) for i, p in split.items()}
+    best = min(total.values())
+    hits = [i for i, t in total.items() if t == best]
+    return hits[0] if len(hits) == 1 else None
 
 
 def at(index: int) -> Any:
@@ -283,6 +300,7 @@ STRATEGIES = {
     "odd one out by first word": odd_one_out,
     "longest option": longest,
     "most like the rest": most_like_the_rest,
+    "nearest to the other options": nearest_to_the_others,
     "always the first option": at(0),
     "always the second option": at(1),
     "always the middle option": middle,

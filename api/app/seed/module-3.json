@@ -82,6 +82,7 @@
         ]
       },
       "solution": {
+        "explanation": "A walkway can be used both ways, so its edge has no direction: the graph is undirected. Lengths don't change whether it is a graph.",
         "correct": "a",
         "feedback": {
           "b": "A directed edge only goes one way, like a one-way street. These walkways go both ways.",
@@ -132,6 +133,7 @@
         ]
       },
       "solution": {
+        "explanation": "In an undirected graph add_edge connects both ways, so A gets C as a neighbour and C gets A.",
         "correct": "a",
         "feedback": {
           "b": "That is a directed edge from A to C. In an undirected graph C must also list A.",
@@ -196,6 +198,7 @@
         ]
       },
       "solution": {
+        "explanation": "BFS fits when there are connections to follow and you want the fewest steps, or everyone within a few steps. Adding up prices has no connections, so it isn't a graph problem.",
         "pairs": {
           "s1": "r1",
           "s2": "r2",
@@ -251,6 +254,7 @@
         ]
       },
       "solution": {
+        "explanation": "After A, the queue was C, E. Processing C takes it from the front and adds its new neighbours, B and F, at the back, so the queue is E, B, F.",
         "correct": "a",
         "feedback": {
           "b": "E was already waiting. New vertices join at the back, so E stays in front.",
@@ -361,6 +365,7 @@
         ]
       },
       "solution": {
+        "explanation": "BFS reaches G through A, C, B, G: three walkways. BFS finds each vertex by the fewest edges from the start, so there is no shorter route.",
         "correct": "a",
         "feedback": {
           "b": "6 is G's position in the order, not its distance. Follow who discovered whom back to A.",

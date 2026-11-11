@@ -86,6 +86,7 @@
         ]
       },
       "solution": {
+        "explanation": "C joins at the back, giving A, B, C. Dequeuing takes A from the front, which leaves B, C.",
         "correct": "a",
         "feedback": {
           "b": "Not quite. That's how a stack works. A stack removes the newest item (C). A queue removes the oldest item from the front (A). Redo it: put C at the back, then take from the front.",
@@ -137,6 +138,7 @@
         ]
       },
       "solution": {
+        "explanation": "E's neighbours are the buildings it shares a walkway with: A (A–E), D (D–E) and F (E–F).",
         "correct": "a",
         "feedback": {
           "b": "Not quite. D is one neighbour, but not the only one. Count every edge that touches E: E–A, E–D and E–F. Follow each line from E to the vertex at its other end.",
@@ -187,6 +189,7 @@
         ]
       },
       "solution": {
+        "explanation": "In an undirected graph add_edge connects both ways, so Q gets P and R as neighbours, and P and R each get Q.",
         "correct": "a",
         "feedback": {
           "b": "Not quite. Undirected edges go both ways. Q must also list P, and R must list Q. Read the worked example to see both directions being stored.",
@@ -255,6 +258,7 @@
         ]
       },
       "solution": {
+        "explanation": "In an undirected graph each edge is in both vertices' lists. In a directed graph an arrow A → B only puts B in A's list, so C, with no arrows out, has an empty list.",
         "pairs": {
           "g1": "r1",
           "g2": "r2",
@@ -307,6 +311,7 @@
         ]
       },
       "solution": {
+        "explanation": "A new vertex has no neighbours yet, so it gets an empty list. Checking not in first means adding a vertex twice doesn't wipe out its neighbours.",
         "answers": {
           "1": "not in",
           "2": "[]"
@@ -365,6 +370,7 @@
         ]
       },
       "solution": {
+        "explanation": "add_edge first makes sure both vertices exist, then adds each one to the other's list, so the edge goes both ways.",
         "answers": {
           "1": "add_vertex",
           "2": "add_vertex",
@@ -426,6 +432,7 @@
         ]
       },
       "solution": {
+        "explanation": "Every edge connects a to b. Only an undirected graph (not self.directed) also connects b back to a.",
         "answers": {
           "1": "not self.directed",
           "2": "b",
@@ -492,6 +499,7 @@
         ]
       },
       "solution": {
+        "explanation": "The graph is directed, so only the arrow out of D counts: D → G. The arrow A → D puts D in A's list, not A in D's.",
         "correct": "a",
         "feedback": {
           "b": "Not quite. That would be an undirected graph. The arrow A → D is stored in A's list only, so A isn't in D's list. Look at which arrows start at D.",

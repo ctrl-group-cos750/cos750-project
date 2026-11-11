@@ -83,6 +83,7 @@
         ]
       },
       "solution": {
+        "explanation": "A queue is first in, first out. Ama joined first, so she is at the front and is served first.",
         "correct": "a",
         "feedback": {
           "b": "Cebo joined last, so Cebo is served last. A queue is first in, first out.",
@@ -111,6 +112,7 @@
         ]
       },
       "solution": {
+        "explanation": "Python counts list positions from 0. items[0] is \"B\", so items[1] is the second item, \"C\".",
         "correct": "a",
         "feedback": {
           "b": "\"B\" is `items[0]`: a list is indexed from 0, so index 1 is the second item.",
@@ -139,6 +141,7 @@
         ]
       },
       "solution": {
+        "explanation": "The loop takes each item in turn and prints it, so you get B, then C, then D, one per line.",
         "correct": "a",
         "feedback": {
           "b": "`x` is the loop variable: each time round it holds the next item, so it prints the items, not the word x.",

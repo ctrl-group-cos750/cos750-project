@@ -189,6 +189,7 @@
         ]
       },
       "solution": {
+        "explanation": "A dictionary stores data, here each vertex's neighbours, so it is a data structure. The other two are steps and a traversal, which are algorithms.",
         "correct": "a",
         "feedback": {
           "b": "Not quite. That's an algorithm. A list of steps that does something is an algorithm. A data structure stores data. Find the option that stores information.",
@@ -239,6 +240,7 @@
         ]
       },
       "solution": {
+        "explanation": "Finding the largest mark is a list of steps that solves a problem, so it is an algorithm. A queue and a map of stations hold information, so they are data structures.",
         "correct": "b",
         "feedback": {
           "a": "Not quite. That's a data structure. A queue stores items in order. It doesn't do anything by itself. Find the option that is a set of steps.",
@@ -299,6 +301,7 @@
         ]
       },
       "solution": {
+        "explanation": "A family tree is people joined by parent links, so it is a graph. Walking through every room by its doors visits each vertex by following the edges: a traversal.",
         "pairs": {
           "t1": "e1",
           "t2": "e2"
@@ -352,6 +355,7 @@
         ]
       },
       "solution": {
+        "explanation": "A traversal visits the vertices by following the edges between them, as BFS does.",
         "correct": "c",
         "feedback": {
           "a": "Not quite. Drawing shows a graph; a traversal moves through it. Think about what BFS does to a graph.",
@@ -402,6 +406,7 @@
         ]
       },
       "solution": {
+        "explanation": "A graph stores vertices and edges, so it is a data structure. BFS is a list of steps that visits them, so it is an algorithm.",
         "correct": "a",
         "feedback": {
           "b": "Not quite. BFS doesn't store anything; it's a list of steps. Decide which is the algorithm and which is the data structure.",
@@ -482,6 +487,7 @@
         ]
       },
       "solution": {
+        "explanation": "Each tap is a vertex, and each hose is an edge between the two taps it joins. Water flows both ways, so the edges have no direction.",
         "pairs": {
           "1": "vQ",
           "2": "ePQ",
@@ -571,6 +577,7 @@
         ]
       },
       "solution": {
+        "explanation": "Each room is a vertex, and each doorway is an edge between the two rooms it joins.",
         "pairs": {
           "1": "eKM",
           "2": "vN",
@@ -656,6 +663,7 @@
         ]
       },
       "solution": {
+        "explanation": "Each stop is a vertex, and each one-way road is an arrow from the stop it leaves to the stop it reaches.",
         "pairs": {
           "1": "eXY",
           "2": "vZ",
@@ -725,6 +733,7 @@
         ]
       },
       "solution": {
+        "explanation": "Calls and prerequisites go one way, so those graphs are directed. Shared walls and two-way radio links work both ways, so those graphs are undirected.",
         "pairs": {
           "phone-calls": "directed",
           "shared-walls-between-houses": "undirected",
@@ -782,6 +791,7 @@
         ]
       },
       "solution": {
+        "explanation": "The airports are the things, so they are the vertices, and the routes join them, so they are the edges. Each route flies one way, so the graph is directed.",
         "correct": "b",
         "feedback": {
           "a": "Not quite. These connections only go one way. One-way connections need arrows, so the graph is directed. Check the direction.",
@@ -832,6 +842,7 @@
         ]
       },
       "solution": {
+        "explanation": "The substations are the things and the power lines join them. Power flows both ways, so the graph is undirected.",
         "correct": "c",
         "feedback": {
           "a": "Not quite. These connections work both ways. Each connection works both ways, so the edges have no arrows. Check the direction.",
@@ -882,6 +893,7 @@
         ]
       },
       "solution": {
+        "explanation": "The modules are the things, joined by “must pass first” links. Each link goes one way, from one module to the next, so the graph is directed.",
         "correct": "a",
         "feedback": {
           "b": "Not quite. These connections only go one way. One-way connections need arrows, so the graph is directed. Check the direction.",
@@ -932,6 +944,7 @@
         ]
       },
       "solution": {
+        "explanation": "The students are the things, and a shared desk joins two of them. Sharing goes both ways, so the graph is undirected.",
         "correct": "b",
         "feedback": {
           "a": "Not quite. These connections work both ways. Each connection works both ways, so the edges have no arrows. Check the direction.",
@@ -982,6 +995,7 @@
         ]
       },
       "solution": {
+        "explanation": "BFS reaches each vertex by the fewest edges from the start, so the first route it finds to a station has the fewest changes.",
         "correct": "c",
         "feedback": {
           "a": "Not quite. BFS reaches each vertex by the fewest edges from the start. Ask: is this about the fewest steps through connections?",
@@ -1032,6 +1046,7 @@
         ]
       },
       "solution": {
+        "explanation": "BFS counts edges, so it finds the fewest flights. When flights cost different amounts, the fewest flights can still cost more.",
         "correct": "a",
         "feedback": {
           "b": "Not quite. BFS counts edges, not prices. The fewest flights isn't always the cheapest. Ask: is this about the fewest steps through connections?",
@@ -1082,6 +1097,7 @@
         ]
       },
       "solution": {
+        "explanation": "BFS visits every vertex it can reach from the server, so any computer it never visits can't be reached.",
         "correct": "b",
         "feedback": {
           "a": "Not quite. A traversal visits everything reachable from the start, so any computer it misses can't be reached. Ask: is this about the fewest steps through connections?",
@@ -1132,6 +1148,7 @@
         ]
       },
       "solution": {
+        "explanation": "Averaging marks has no connections to follow, so it isn't a graph problem and BFS has nothing to do.",
         "correct": "c",
         "feedback": {
           "a": "Not quite. There are no connections to follow, so it isn't a graph problem. Ask: is this about the fewest steps through connections?",
@@ -1311,6 +1328,7 @@
         ]
       },
       "solution": {
+        "explanation": "Start with the start vertex found and in the queue. Then, while the queue isn't empty, visit the vertex at the front, and mark each neighbour not found yet as found and add it at the back.",
         "order": [
           1,
           2,
@@ -1377,6 +1395,7 @@
         ]
       },
       "solution": {
+        "explanation": "The start is marked found before the loop, popleft takes the vertex that has waited longest, and neighbours are taken in alphabetical order. order holds the visits, so it is what BFS returns.",
         "answers": {
           "1": "{start}",
           "2": "popleft()",
@@ -1500,6 +1519,7 @@
         ]
       },
       "solution": {
+        "explanation": "With the start marked found from the beginning, and each neighbour marked found as it joins the queue, no vertex can join the queue twice, even on a graph with a cycle.",
         "order": [
           1,
           2,
@@ -1622,6 +1642,7 @@
         ]
       },
       "solution": {
+        "explanation": "popleft takes the vertex that has waited longest, from the front of the queue, so BFS finishes one ring of neighbours before the next.",
         "order": [
           1,
           2,
@@ -1913,6 +1934,7 @@
         ]
       },
       "solution": {
+        "explanation": "This version marks a vertex only when it leaves the queue, so a vertex waiting in the queue can be found again. Only a graph with a cycle lets that happen: the cycle and the sports centre.",
         "exposing": [
           "cycle",
           "sports-centre"
@@ -2194,6 +2216,7 @@
         ]
       },
       "solution": {
+        "explanation": "This version adds every vertex it didn't reach at the end. Only a graph with vertices the start can't reach shows it: the two islands and the one-way graph.",
         "exposing": [
           "two-islands",
           "one-way"
@@ -2250,6 +2273,7 @@
         ]
       },
       "solution": {
+        "explanation": "In a graph with a cycle, BFS can meet a vertex again along a second path, so it shows whether BFS adds it twice.",
         "correct": "cycle",
         "feedback": {
           "single": "A single vertex cannot reveal repeated visits through a cycle.",

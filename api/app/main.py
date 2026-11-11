@@ -138,7 +138,15 @@ async def data_error(request: Request, exc: DataError) -> JSONResponse:
 @app.exception_handler(IntegrityError)
 async def integrity_error(request: Request, exc: IntegrityError) -> JSONResponse:
     """A unique or foreign-key constraint refused a write, e.g. a race the locks don't cover: 409."""
-    log.warning("409 %s %s: %s", request.method, request.url.path, type(exc.orig).__name__)
+    diag = getattr(exc.orig, "diag", None)  # psycopg: which constraint refused it
+    constraint = getattr(diag, "constraint_name", None) or "?"
+    log.warning(
+        "409 %s %s: %s on %s",
+        request.method,
+        request.url.path,
+        type(exc.orig).__name__,
+        constraint,
+    )
     return JSONResponse(status_code=409, content={"detail": CONFLICT})
 
 

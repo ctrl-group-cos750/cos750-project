@@ -25,6 +25,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import Attempt, PointsEntry, PointsRule, User, UserBadge
+from app.services.locking import lock_student
 
 Mastery = Literal["independent", "supported", "not_yet"]
 Tier = Literal["bronze", "gold"]
@@ -220,7 +221,10 @@ def badges_of(session: Session, user_id: int) -> list[UserBadge]:
 
 
 def mark_seen(session: Session, user_id: int) -> None:
-    """The student has been shown every badge they have (not committed)."""
+    """The student has been shown every badge they have (not committed). Takes the student's write
+    lock (app/services/locking.py), so a badge an answer is awarding at the same moment is either
+    marked seen with the rest or announced next time, never half of each."""
+    lock_student(session, user_id)
     now = datetime.now(UTC)
     for badge in badges_of(session, user_id):
         if badge.seen_at is None:

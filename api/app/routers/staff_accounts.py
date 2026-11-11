@@ -19,6 +19,7 @@ from app.schemas.accounts import (
 )
 from app.schemas.ids import RowId
 from app.services.history import delete_history
+from app.services.locking import lock_student
 
 router = APIRouter(prefix="/api/staff/accounts", tags=["staff"])
 
@@ -155,6 +156,9 @@ def delete_account(user_id: RowId, session: DbSession, staff: StaffUser) -> None
     user = session.get(User, user_id)
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NOT_FOUND)
+    # Wait for any answer, hint or position save the student has in flight, and hold the next
+    # ones back, so none adds a row after their history is deleted (app/services/locking.py).
+    lock_student(session, user_id)
     delete_history(session, user_id)
     session.delete(user)
     session.commit()

@@ -195,6 +195,79 @@ def test_two_hint_requests_at_once_reveal_two_levels(committed: Session) -> None
     assert sorted(levels) == [1, 2]
 
 
+def test_deleting_an_account_waits_for_its_answer_in_flight(
+    client: TestClient, committed: Session
+) -> None:
+    """Staff delete an account (DELETE /api/staff/accounts/{id}) while the student's answer is
+    being recorded: the deletion waits for it, then removes it with the rest. It used to delete
+    the history first, miss the answer still uncommitted, and fail on the foreign key (500)."""
+    db = committed
+    user_id = student(db)
+    assert client.post("/api/auth/register", json=STUDENT).status_code == 201
+    db.get_one(User, user_id_of(db, STUDENT["email"])).is_staff = True
+    db.commit()
+    engine = db.get_bind()
+    assert isinstance(engine, Engine)
+    status: list[int] = []
+    with Session(engine) as answering:
+        record_attempt(answering, user_id, answering.get_one(Activity, 1), right(db, 1))
+        thread = threading.Thread(
+            target=lambda: status.append(
+                client.delete(f"/api/staff/accounts/{user_id}").status_code
+            )
+        )
+        thread.start()
+        thread.join(timeout=WAIT)
+        assert thread.is_alive(), "the deletion should wait for the answer"
+        answering.commit()
+        thread.join(timeout=20)
+    assert status == [204]
+    db.expire_all()
+    assert db.get(User, user_id) is None
+    assert db.scalar(select(func.count()).where(Attempt.user_id == user_id)) == 0
+
+
+def test_an_answer_to_an_activity_the_seed_is_deleting_does_not_deadlock(
+    committed: Session,
+) -> None:
+    """On a deploy the seed deletes unused activities, then recomputes students. An answer to one
+    of them used to take the student's lock first and then wait for the activity, while the seed
+    held the activity and waited for the student. Now the answer waits for the activity first,
+    holding nothing, and finds it gone."""
+    from sqlalchemy import delete
+
+    from app.services.locking import ActivityGone
+
+    db = committed
+    user_id = student(db)
+    engine = db.get_bind()
+    assert isinstance(engine, Engine)
+    doomed = Activity(
+        kind="multiple_choice",
+        title="Dropped",
+        module_id=0,
+        config={"prompt": "Q", "options": [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}]},
+        solution={"correct": "a"},
+    )
+    db.add(doomed)
+    db.commit()
+    with Session(engine) as seed:
+        seed.execute(delete(Activity).where(Activity.id == doomed.id))  # retire_dropped_activities
+        seed.flush()
+        racer = Racer(
+            engine,
+            lambda s: record_attempt(s, user_id, s.get_one(Activity, doomed.id), {"selected": "a"}),
+        )
+        racer.thread.join(timeout=WAIT)
+        assert racer.thread.is_alive(), "the answer should wait for the activity"
+        mastery.recompute(seed, user_id)  # recompute_all; staging deadlocked here
+        seed.commit()
+        with pytest.raises(ActivityGone):
+            racer.join()
+    db.expire_all()
+    assert db.scalar(select(func.count()).where(Attempt.user_id == user_id)) == 0
+
+
 def test_one_students_lock_never_holds_up_another(committed: Session) -> None:
     db = committed
     ada = student(db)
@@ -251,8 +324,12 @@ def burst(tabs: list[TestClient], send: Callable[[TestClient, int], Any]) -> lis
     return out
 
 
+def user_id_of(db: Session, email: str) -> int:
+    return db.scalars(select(User.id).where(User.email == email)).one()
+
+
 def user_id(db: Session) -> int:
-    return db.scalars(select(User.id).where(User.email == STUDENT["email"])).one()
+    return user_id_of(db, STUDENT["email"])
 
 
 def test_a_burst_of_mastery_answers_all_record(

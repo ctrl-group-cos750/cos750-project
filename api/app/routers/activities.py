@@ -26,6 +26,7 @@ from app.schemas.activities import (
 from app.schemas.ids import RowId
 from app.services.access import activity_refusal
 from app.services.attempts import hint_level_seen, record_attempt, reveal_next_hint
+from app.services.locking import ActivityGone
 
 router = APIRouter(prefix="/api/activities", tags=["activities"])
 
@@ -104,6 +105,8 @@ def submit_attempt(
         attempt, result = record_attempt(session, user.id, activity, body.submitted)
     except ValidationError as exc:  # the submission didn't match the kind's shape
         raise HTTPException(422, detail=BAD_SUBMISSION) from exc  # constant is deprecated upstream
+    except ActivityGone:  # the seed deleted it while this answer waited
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NOT_FOUND) from None
     session.commit()
     return AttemptOut(
         id=attempt.id,
@@ -154,7 +157,10 @@ def reveal_hint(activity_id: RowId, user: CurrentUser, session: DbSession) -> Hi
     requests sent at once reveal two levels in turn, never the same level twice."""
     hints_limiter.check(f"user:{user.id}")
     activity = _activity_or_404(session, activity_id, user)
-    revealed = reveal_next_hint(session, user.id, activity)
+    try:
+        revealed = reveal_next_hint(session, user.id, activity)
+    except ActivityGone:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NOT_FOUND) from None
     if revealed is None:
         raise HTTPException(status.HTTP_409_CONFLICT, detail=NO_MORE_HINTS)
     session.commit()

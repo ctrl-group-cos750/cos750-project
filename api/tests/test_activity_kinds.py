@@ -354,6 +354,12 @@ def test_the_examples_are_valid_content() -> None:
         ("parsons", PARSONS_CONFIG, {"order": [1, [2], 3]}, "at least two ids, not .2."),
         ("parsons", PARSONS_CONFIG, {"order": [1, [2, "x"]]}, "'x' in the group .2, 'x'. is not"),
         ("parsons", PARSONS_CONFIG, {"order": [1, [[2, 3]]]}, "not another group"),
+        (
+            "parsons",
+            PARSONS_CONFIG,
+            {"order": [1, [2, 3]], "alternatives": [[1, [2, 3]]]},
+            "alternative 1 is the order itself",
+        ),
         ("parsons", PARSONS_CONFIG, {"order": 5}, "order must be a list of line ids"),
         ("parsons", PARSONS_CONFIG, {"order": [1, True, 3]}, "True is not a line id"),
         ("parsons", PARSONS_CONFIG, {"order": [1, "2", 3]}, "'2' is not a line id"),
@@ -582,3 +588,16 @@ def test_the_reviewers_objective_7_case_is_correct() -> None:
         {"order": [1, 2, 20, 4, 5, 6, 7, 9, 10, 11, 12, 21, 13]},
     )
     assert result.correct
+
+
+def test_a_solution_stored_with_string_ids_still_grades() -> None:
+    """Strict ids are a content rule (validate_activity); grading parses a stored solution
+    laxly, so a "3" stored by an older seed or an edit still grades (#145 review)."""
+    config = {"lines": [{"id": i, "text": f"line {i}"} for i in (1, 2, 3)]}
+    stored = {"order": [1, ["2", "3"]]}
+    assert check_activity("parsons", config, stored, {"order": [1, 3, 2]}).correct
+    assert not check_activity("parsons", config, stored, {"order": [3, 2, 1]}).correct
+    fix = {**FIX_SOLUTION, "order": [str(i) for i in FIX_SOLUTION["order"]]}
+    assert check_activity("fix_the_bug", FIX_CONFIG, fix, {"order": FIX_RIGHT}).correct
+    with pytest.raises(ValueError, match="'2' in the group"):
+        validate_activity("parsons", config, stored)

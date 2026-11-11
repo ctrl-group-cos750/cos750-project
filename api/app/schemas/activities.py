@@ -9,7 +9,7 @@ so nothing a student sends here is ever executed or stored as free-form code.
 
 from typing import Annotated, Any, Literal
 
-from pydantic import Field, StrictInt, field_validator, model_validator
+from pydantic import Field, ValidationInfo, field_validator, model_validator
 
 from app.schemas.base import ApiModel
 from app.schemas.graphs import VERTEX, GraphEdge
@@ -65,12 +65,22 @@ class ParsonsConfig(ApiModel):
 
 
 # One step of an accepted order: a line id, or a group of line ids that may go in any order among
-# themselves (they still fill that stretch of the answer together), e.g. `[3, 4, 5]`. Strict, so
-# `true` is not line 1 and `"3"` is not line 3.
-ParsonsStep = StrictInt | Annotated[list[StrictInt], Field(max_length=100)]
+# themselves (they still fill that stretch of the answer together), e.g. `[3, 4, 5]`.
+ParsonsStep = int | Annotated[list[int], Field(max_length=100)]
+
+# Validation context for content being stored (app/services/content.py): line ids must be real
+# integers there, so `true` is not line 1 and `"3"` is not line 3. Grading parses a stored solution
+# without it, so a solution stored before this rule still grades.
+STRICT_IDS = {"strict_ids": True}
 
 
-def _check_steps(steps: Any, name: str) -> None:
+def _is_id(value: Any, strict: bool) -> bool:
+    if strict:
+        return isinstance(value, int) and not isinstance(value, bool)
+    return not isinstance(value, (list, dict))  # pydantic's lax int decides the rest
+
+
+def _check_steps(steps: Any, name: str, strict: bool) -> None:
     """A readable error for a malformed order, instead of pydantic's dump of the union."""
     if not isinstance(steps, list):
         raise ValueError(f"{name} must be a list of line ids")
@@ -79,10 +89,14 @@ def _check_steps(steps: Any, name: str) -> None:
             for line in step:
                 if isinstance(line, list):
                     raise ValueError(f"{name}: a group holds line ids, not another group: {step}")
-                if isinstance(line, bool) or not isinstance(line, int):
+                if not _is_id(line, strict):
                     raise ValueError(f"{name}: {line!r} in the group {step} is not a line id")
-        elif isinstance(step, bool) or not isinstance(step, int):
+        elif not _is_id(step, strict):
             raise ValueError(f"{name}: {step!r} is not a line id or a group of line ids")
+
+
+def _strict(info: ValidationInfo) -> bool:
+    return bool(info.context and info.context.get("strict_ids"))
 
 
 class OrderedSolution(ApiModel):
@@ -105,17 +119,17 @@ class OrderedSolution(ApiModel):
 
     @field_validator("order", mode="before")
     @classmethod
-    def _order_shape(cls, value: Any) -> Any:
-        _check_steps(value, "order")
+    def _order_shape(cls, value: Any, info: ValidationInfo) -> Any:
+        _check_steps(value, "order", _strict(info))
         return value
 
     @field_validator("alternatives", mode="before")
     @classmethod
-    def _alternatives_shape(cls, value: Any) -> Any:
+    def _alternatives_shape(cls, value: Any, info: ValidationInfo) -> Any:
         if not isinstance(value, list):
             raise ValueError("alternatives must be a list of orders")
         for n, steps in enumerate(value, start=1):
-            _check_steps(steps, f"alternative {n}")
+            _check_steps(steps, f"alternative {n}", _strict(info))
         return value
 
     def accepted(self) -> list[list[ParsonsStep]]:

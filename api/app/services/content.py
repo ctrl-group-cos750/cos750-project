@@ -9,6 +9,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from app.schemas.activities import (
+    STRICT_IDS,
     ChooseTestsConfig,
     ChooseTestsSolution,
     FillInConfig,
@@ -95,6 +96,8 @@ def _orders(known: set[int], solution: OrderedSolution) -> None:
             # line at once, so the feedback couldn't say which.
             raise ValueError(f"{name} must use the same lines as the order")
     for n, steps in enumerate(accepted[1:], start=1):
+        if steps == solution.order:
+            raise ValueError(f"alternative {n} is the order itself")
         for m, other in enumerate(accepted):
             if m != n and _covers(other, steps):
                 where = "the order" if m == 0 else f"alternative {m}"
@@ -202,7 +205,7 @@ def validate_activity(kind: str, config: dict[str, Any], solution: dict[str, Any
         raise ValueError(f"unknown activity kind: {kind!r}")
     config_shape, solution_shape = SHAPES[kind]
     parsed_config = config_shape.model_validate(config)
-    parsed_solution = solution_shape.model_validate(solution)
+    parsed_solution = solution_shape.model_validate(solution, context=STRICT_IDS)
     match parsed_config, parsed_solution:
         case MultipleChoiceConfig(), MultipleChoiceSolution():
             _multiple_choice(parsed_config, parsed_solution)

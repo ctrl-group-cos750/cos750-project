@@ -2,6 +2,8 @@
 by the one-order checker are graded again, results follow, rewards are never taken back, and a
 second run changes nothing."""
 
+import os
+import threading
 from typing import Any
 
 import pytest
@@ -14,6 +16,7 @@ from app import regrade
 from app.models import Activity, Attempt, ObjectiveResult, PointsEntry, User, UserBadge
 from app.schemas.activities import FixTheBugSolution, ParsonsSolution
 from app.seed import load
+from app.services import mastery
 from app.services.attempts import record_attempt
 from app.services.mastery import evaluate, recompute
 
@@ -218,3 +221,65 @@ def test_the_command_is_a_dry_run_unless_told_to_apply(
     assert db.get_one(Attempt, attempt.id).correct is True
     regrade.main(["--apply"])
     assert "attempts re-graded: 0" in capsys.readouterr().out
+
+
+@pytest.mark.skipif(not os.environ.get("TEST_DATABASE_URL"), reason="needs Postgres row locks")
+def test_a_student_answering_during_the_regrade_waits_and_both_succeed(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The re-grade locks a student before it touches their rows. A student answering 619 at that
+    moment (their attempt references the locked user row) waits, then finds the points already
+    given: no deadlock, no duplicate points (review of #145, /tmp/a4r2/race.py)."""
+    load(db)
+    one = student(db, 1)
+    stored_as_on_staging(db, one, db.get_one(Activity, 619), EQUIVALENT)
+    db.commit()
+    engine = db.get_bind()
+    locked, release = threading.Event(), threading.Event()
+    real = mastery.recompute  # attempts.py holds its own reference, so the student is unpaused
+
+    def paused(session: Session, user_id: int) -> Any:
+        locked.set()  # the student is locked and their attempt re-graded, not yet committed
+        release.wait(10)
+        return real(session, user_id)
+
+    monkeypatch.setattr(mastery, "recompute", paused)
+    errors: list[BaseException] = []
+    done: dict[str, Any] = {}
+
+    def run_regrade() -> None:
+        try:
+            with Session(engine) as session:
+                done["regrade"] = regrade.regrade(session, "commit")
+        except BaseException as exc:
+            errors.append(exc)
+
+    def run_student() -> None:
+        try:
+            with Session(engine) as session:
+                activity = session.get_one(Activity, 619)
+                _, result = record_attempt(session, one, activity, {"order": list(range(1, 14))})
+                session.commit()
+                done["student"] = result.correct
+        except BaseException as exc:
+            errors.append(exc)
+
+    grader = threading.Thread(target=run_regrade)
+    grader.start()
+    assert locked.wait(10)
+    answering = threading.Thread(target=run_student)
+    answering.start()
+    answering.join(1.0)
+    assert answering.is_alive()  # waiting for the re-grade's lock, not racing it
+    release.set()
+    grader.join(30)
+    answering.join(30)
+    assert errors == []
+    assert done["student"] is True
+    assert len(done["regrade"].changed) == 1
+    with Session(engine) as session:
+        rows = session.scalars(
+            select(PointsEntry).where(PointsEntry.user_id == one, PointsEntry.ref == "activity:619")
+        ).all()
+        assert len(rows) == 1
+        assert state(session, one, 6) == "not_attempted"  # the other module 6 items: unanswered

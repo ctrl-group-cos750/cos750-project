@@ -328,3 +328,15 @@ def test_hostile_parsons_submissions_are_refused_or_graded_wrong(
         res = client.post(url, json={"submitted": {"order": wrong}})
         assert res.status_code == 201, wrong
         assert res.json()["correct"] is False, wrong
+
+
+def test_a_solution_stored_with_a_string_id_still_grades_over_http(
+    client: TestClient, db: Session
+) -> None:
+    activity_id = make_activity(db, **{**GROUPED, "solution": {"order": [0, ["1", "2"], "3"]}})
+    log_in(client)
+    res = client.post(
+        f"/api/activities/{activity_id}/attempts", json={"submitted": {"order": [0, 2, 1, 3]}}
+    )
+    assert res.status_code == 201, res.text
+    assert res.json()["correct"] is True

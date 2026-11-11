@@ -5,11 +5,16 @@ Before #145 an attempt was graded against one order, position by position: a cor
 another order was stored as wrong, and one misplaced line made every later line wrong. Those rows
 keep deciding objective results (only the first attempt at a mastery item counts, FR-7.1), so this
 re-runs `check_activity` on each attempt's stored `submitted` and, where the result differs,
-updates `correct`, `score` and `detail`, then recomputes every student's results
-(`mastery.recompute_all`).
+updates `correct`, `score` and `detail`, then recomputes the results of each student it changed
+(`mastery.recompute`).
 
-- **Dry run by default.** It makes every change inside a transaction, prints what changed, and
-  rolls back. `--apply` commits. Run the dry run first and read the counts.
+- **One student at a time, locked.** Students are taken in id order. Each is locked
+  (`SELECT … FOR UPDATE` on their user row, the lock `mastery.recompute` takes) before any of their
+  rows is read or written, so a student answering at the same moment waits for the re-grade of
+  their attempts, or the re-grade waits for them, and neither deadlocks. With `--apply` each
+  student is committed on their own, so a lock is held only briefly.
+- **Dry run by default.** Each student's changes are made, reported and rolled back, so the counts
+  are real. `--apply` commits them. Run the dry run first and read the counts.
 - **Never lowers.** An attempt stored as correct that would now be wrong (its content was edited
   since) is left as it is and counted as "kept". Points and badges are never taken back
   (app/services/rewards.py); an attempt that becomes correct earns the points a first correct
@@ -24,12 +29,13 @@ import argparse
 from collections import Counter, defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from typing import Literal
 
 from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, ObjectiveResult
+from app.models import Activity, Attempt, ObjectiveResult, User
 from app.services import mastery, rewards
 from app.services.checking import check_activity
 
@@ -76,22 +82,27 @@ class Report:
         return out
 
 
-def _states(session: Session) -> dict[tuple[int, int], str]:
-    rows = session.scalars(select(ObjectiveResult))
-    return {(r.user_id, r.objective_id): r.state for r in rows}
+def _lock(session: Session, user_id: int) -> None:
+    """The per-student lock attempts and mastery take (app/services/mastery.py `recompute`)."""
+    session.execute(select(User.id).where(User.id == user_id).with_for_update())
 
 
-def regrade(session: Session) -> Report:
-    """Re-grade every Parsons and fix-the-bug attempt and recompute results, in `session`
-    (not committed: the caller commits or rolls back)."""
-    report = Report()
-    before = _states(session)
+def _states(session: Session, user_id: int) -> dict[int, str]:
+    rows = session.scalars(select(ObjectiveResult).where(ObjectiveResult.user_id == user_id))
+    return {r.objective_id: r.state for r in rows}
+
+
+def _regrade_student(session: Session, user_id: int, report: Report) -> None:
+    """Re-grade one student's attempts and recompute their results, under their lock."""
+    _lock(session, user_id)
     rows = session.execute(
         select(Attempt, Activity)
         .join(Activity, Activity.id == Attempt.activity_id)
-        .where(Activity.kind.in_(KINDS))
+        .where(Attempt.user_id == user_id, Activity.kind.in_(KINDS))
         .order_by(Attempt.id)
     ).all()
+    changed = False
+    before: dict[int, str] = {}
     for attempt, activity in rows:
         try:
             result = check_activity(
@@ -110,20 +121,44 @@ def regrade(session: Session) -> Report:
         if attempt.correct and not result.correct:
             report.kept.append(attempt.id)
             continue
+        if not changed:
+            before = _states(session, user_id)
+            changed = True
         became_correct = result.correct and not attempt.correct
         attempt.correct, attempt.score, attempt.detail = result.correct, result.score, detail
         session.flush()
         if became_correct:
             rewards.on_attempt(session, attempt)  # once per activity: points are keyed by ref
-        report.changed.append((attempt.id, attempt.user_id, activity.id, result.correct))
-    mastery.recompute_all(session)
-    session.flush()
-    after = _states(session)
-    report.results = [
-        (user, objective, before.get((user, objective), "not_attempted"), state)
-        for (user, objective), state in sorted(after.items())
-        if before.get((user, objective), "not_attempted") != state
-    ]
+        report.changed.append((attempt.id, user_id, activity.id, result.correct))
+    if changed:
+        mastery.recompute(session, user_id)
+        session.flush()
+        after = _states(session, user_id)
+        report.results += [
+            (user_id, objective, before.get(objective, "not_attempted"), state)
+            for objective, state in sorted(after.items())
+            if before.get(objective, "not_attempted") != state
+        ]
+
+
+def regrade(session: Session, after_each: Literal["commit", "rollback"] | None = None) -> Report:
+    """Re-grade every Parsons and fix-the-bug attempt, student by student, and recompute the
+    results of the students it changed. `after_each` ends each student's transaction (commit for
+    --apply, rollback for a dry run), releasing their lock; None leaves it to the caller."""
+    report = Report()
+    users = session.scalars(
+        select(Attempt.user_id)
+        .join(Activity, Activity.id == Attempt.activity_id)
+        .where(Activity.kind.in_(KINDS))
+        .distinct()
+        .order_by(Attempt.user_id)
+    ).all()
+    for user_id in users:
+        _regrade_student(session, user_id, report)
+        if after_each == "commit":
+            session.commit()
+        elif after_each == "rollback":
+            session.rollback()
     return report
 
 
@@ -134,14 +169,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     from app.db import SessionLocal  # here, so importing this module opens no database
 
     with SessionLocal() as session:
-        report = regrade(session)
+        report = regrade(session, "commit" if args.apply else "rollback")
         for line in report.lines():
             print(line)
         if args.apply:
-            session.commit()
             print("applied")
         else:
-            session.rollback()
             print("dry run: nothing written (run again with --apply to write)")
 
 

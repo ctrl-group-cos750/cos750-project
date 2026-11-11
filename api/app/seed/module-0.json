@@ -75,7 +75,7 @@
       "module_id": 0,
       "purpose": "diagnostic",
       "config": {
-        "prompt": "Three people join an empty queue, one after another: first Ama, then Ben, then Cebo. Who is served first?",
+        "prompt": "Three people join an empty queue: Ama joins, then Ben, then Cebo. Who is served first?",
         "options": [
           { "id": "b", "label": "Cebo" },
           { "id": "a", "label": "Ama" },
@@ -134,7 +134,7 @@
         "prompt": "What does this loop print? It is written on one line: for x in [\"B\", \"C\", \"D\"]: print(x)",
         "options": [
           { "id": "a", "label": "B then C then D, one per line" },
-          { "id": "b", "label": "The letter x, three times" },
+          { "id": "b", "label": "The letter x, printed three times" },
           { "id": "c", "label": "[\"B\", \"C\", \"D\"] on one line" }
         ]
       },

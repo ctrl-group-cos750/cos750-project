@@ -180,7 +180,7 @@
           },
           {
             "id": "b",
-            "label": "The steps BFS follows to visit every vertex"
+            "label": "The steps BFS follows to visit every vertex of a graph, one by one"
           },
           {
             "id": "c",
@@ -393,7 +393,7 @@
           },
           {
             "id": "b",
-            "label": "BFS is a data structure that stores a graph's vertices and edges."
+            "label": "BFS is a data structure that stores all of a graph's vertices and edges."
           },
           {
             "id": "c",
@@ -435,19 +435,19 @@
       "purpose": "mastery",
       "objective_id": 2,
       "config": {
-        "prompt": "Taps in a garden, joined by hoses. The taps are P, Q, R and S. Hoses join P–Q, Q–R and R–S, and water can flow either way along a hose. Each marker below describes one part of the graph by how it is joined. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
+        "prompt": "Taps in a garden, joined by hoses. The taps are the pool tap (P), the quince-tree tap (Q), the rose-bed tap (R) and the shed tap (S). Hoses join P–Q, Q–R and R–S, and water can flow either way along a hose. Each marker below names one part of this graph. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
         "left": [
           {
             "id": "1",
-            "label": "Marker 1: the tap joined by a hose to tap P"
+            "label": "Marker 1: the quince-tree tap"
           },
           {
             "id": "2",
-            "label": "Marker 2: the only hose that touches tap P"
+            "label": "Marker 2: what joins the pool tap and the quince-tree tap"
           },
           {
             "id": "3",
-            "label": "Marker 3: the only hose that touches tap S"
+            "label": "Marker 3: what joins the rose-bed tap and the shed tap"
           }
         ],
         "right": [
@@ -488,9 +488,9 @@
           "3": "eRS"
         },
         "feedback": {
-          "1": "Check marker 1. It describes a tap, so it is a vertex, named by its own letter. Use the hose list to work out which tap it is.",
-          "2": "Check marker 2. It describes a hose, so it is an edge, named by the two vertices at its ends. Find the hose in the list that the marker describes.",
-          "3": "Check marker 3. It describes a hose, so it is an edge, named by the two vertices at its ends. Find the hose in the list that the marker describes."
+          "1": "Check marker 1. It names one of the things in the graph, so it is a vertex, named by its own letter. Look up its letter in the prompt.",
+          "2": "Check marker 2. It joins two things, so it is an edge, named by the letters of its two ends. Look up both letters in the prompt.",
+          "3": "Check marker 3. It joins two things, so it is an edge, named by the letters of its two ends. Look up both letters in the prompt."
         }
       },
       "hints": [
@@ -504,7 +504,7 @@
         },
         {
           "level": 3,
-          "body": "Read the hose list: P–Q, Q–R, R–S. Only one hose has P at one end, and only one has S."
+          "body": "Look up each name's letter: the pool tap is P and the quince-tree tap is Q."
         },
         {
           "level": 4,
@@ -520,19 +520,19 @@
       "purpose": "mastery",
       "objective_id": 2,
       "config": {
-        "prompt": "Rooms on a floor, joined by doorways. The rooms are K, L, M and N. Doorways join K–L, K–M, L–N and M–N, and you can walk through a doorway either way. Each marker below describes one part of the graph by how it is joined. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
+        "prompt": "Rooms on a floor, joined by doorways. The rooms are the kitchen (K), the lounge (L), the music room (M) and the nursery (N). Doorways join K–L, K–M, L–N and M–N, and you can walk through a doorway either way. Each marker below names one part of this graph. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
         "left": [
           {
             "id": "1",
-            "label": "Marker 1: the doorway from room K that doesn't lead to room L"
+            "label": "Marker 1: what joins the kitchen and the music room"
           },
           {
             "id": "2",
-            "label": "Marker 2: the room, other than K, with doorways to both L and M"
+            "label": "Marker 2: the nursery"
           },
           {
             "id": "3",
-            "label": "Marker 3: the doorway between room N and a room other than M"
+            "label": "Marker 3: what joins the lounge and the nursery"
           }
         ],
         "right": [
@@ -577,9 +577,9 @@
           "3": "eLN"
         },
         "feedback": {
-          "1": "Check marker 1. It describes a doorway, so it is an edge, named by the two vertices at its ends. Find the doorway in the list that the marker describes.",
-          "2": "Check marker 2. It describes a room, so it is a vertex, named by its own letter. Use the doorway list to work out which room it is.",
-          "3": "Check marker 3. It describes a doorway, so it is an edge, named by the two vertices at its ends. Find the doorway in the list that the marker describes."
+          "1": "Check marker 1. It joins two things, so it is an edge, named by the letters of its two ends. Look up both letters in the prompt.",
+          "2": "Check marker 2. It names one of the things in the graph, so it is a vertex, named by its own letter. Look up its letter in the prompt.",
+          "3": "Check marker 3. It joins two things, so it is an edge, named by the letters of its two ends. Look up both letters in the prompt."
         }
       },
       "hints": [
@@ -593,7 +593,7 @@
         },
         {
           "level": 3,
-          "body": "Read the doorway list: K–L, K–M, L–N, M–N. Room K has two doorways; room N has two."
+          "body": "Look up each name's letter: the kitchen is K and the music room is M."
         },
         {
           "level": 4,
@@ -609,19 +609,19 @@
       "purpose": "mastery",
       "objective_id": 2,
       "config": {
-        "prompt": "A one-way route through three stops, X, Y and Z. One-way roads go X → Y and Y → Z: you can only drive them in that direction. Each marker below describes one part of the graph by how it is joined. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
+        "prompt": "A one-way route through three stops: Xavier Street (X), Yarrow Park (Y) and the Zoo gate (Z). One-way roads go X → Y and Y → Z: you can only drive them in that direction. Each marker below names one part of this graph. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
         "left": [
           {
             "id": "1",
-            "label": "Marker 1: the one-way road that leaves stop X"
+            "label": "Marker 1: what takes you one way from Xavier Street to Yarrow Park"
           },
           {
             "id": "2",
-            "label": "Marker 2: the stop you can drive into but never out of"
+            "label": "Marker 2: the Zoo gate"
           },
           {
             "id": "3",
-            "label": "Marker 3: the one-way road that arrives at stop Z"
+            "label": "Marker 3: what takes you one way from Yarrow Park to the Zoo gate"
           }
         ],
         "right": [
@@ -662,9 +662,9 @@
           "3": "eYZ"
         },
         "feedback": {
-          "1": "Check marker 1. It describes a one-way road, so it is an edge, named in the direction of its arrow, from the first vertex to the second. Find the arrow in the list that the marker describes, and check which way it goes.",
-          "2": "Check marker 2. It describes a stop, so it is a vertex, named by its own letter. Use the one-way road list to work out which stop it is.",
-          "3": "Check marker 3. It describes a one-way road, so it is an edge, named in the direction of its arrow, from the first vertex to the second. Find the arrow in the list that the marker describes, and check which way it goes."
+          "1": "Check marker 1. It joins two things one way, so it is an edge, named in the direction it goes, from where it starts to where it ends. Look up both letters in the prompt and check which way it goes.",
+          "2": "Check marker 2. It names one of the things in the graph, so it is a vertex, named by its own letter. Look up its letter in the prompt.",
+          "3": "Check marker 3. It joins two things one way, so it is an edge, named in the direction it goes, from where it starts to where it ends. Look up both letters in the prompt and check which way it goes."
         }
       },
       "hints": [
@@ -678,7 +678,7 @@
         },
         {
           "level": 3,
-          "body": "Read the arrows: X → Y, Y → Z. An arrow leaves the stop at its tail and arrives at the stop at its head."
+          "body": "Look up each name's letter, then name a one-way edge from where it starts to where it ends: Xavier Street is X and Yarrow Park is Y."
         },
         {
           "level": 4,
@@ -778,6 +778,10 @@
           {
             "id": "c",
             "label": "Vertices: flight routes. Edges: airports. Directed."
+          },
+          {
+            "id": "d",
+            "label": "Vertices: flight routes. Edges: airports. Undirected."
           }
         ]
       },
@@ -785,7 +789,8 @@
         "correct": "b",
         "feedback": {
           "a": "Not quite. These connections only go one way. One-way connections need arrows, so the graph is directed. Check the direction.",
-          "c": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round."
+          "c": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
+          "d": "Not quite. Vertices and edges are swapped, and the direction is wrong too. The things are the vertices; the connections between them are the edges. Then check whether each connection works both ways."
         }
       },
       "hints": [
@@ -828,6 +833,10 @@
           {
             "id": "c",
             "label": "Vertices: substations. Edges: power lines. Undirected."
+          },
+          {
+            "id": "d",
+            "label": "Vertices: power lines. Edges: substations. Directed."
           }
         ]
       },
@@ -835,7 +844,8 @@
         "correct": "c",
         "feedback": {
           "a": "Not quite. These connections work both ways. Each connection works both ways, so the edges have no arrows. Check the direction.",
-          "b": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round."
+          "b": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
+          "d": "Not quite. Vertices and edges are swapped, and the direction is wrong too. The things are the vertices; the connections between them are the edges. Then check whether each connection works both ways."
         }
       },
       "hints": [
@@ -878,6 +888,10 @@
           {
             "id": "c",
             "label": "Vertices: “must pass first” links. Edges: modules. Directed."
+          },
+          {
+            "id": "d",
+            "label": "Vertices: “must pass first” links. Edges: modules. Undirected."
           }
         ]
       },
@@ -885,7 +899,8 @@
         "correct": "a",
         "feedback": {
           "b": "Not quite. These connections only go one way. One-way connections need arrows, so the graph is directed. Check the direction.",
-          "c": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round."
+          "c": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
+          "d": "Not quite. Vertices and edges are swapped, and the direction is wrong too. The things are the vertices; the connections between them are the edges. Then check whether each connection works both ways."
         }
       },
       "hints": [
@@ -928,6 +943,10 @@
           {
             "id": "c",
             "label": "Vertices: shared desks. Edges: students. Undirected."
+          },
+          {
+            "id": "d",
+            "label": "Vertices: shared desks. Edges: students. Directed."
           }
         ]
       },
@@ -935,7 +954,8 @@
         "correct": "b",
         "feedback": {
           "a": "Not quite. These connections work both ways. Each connection works both ways, so the edges have no arrows. Check the direction.",
-          "c": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round."
+          "c": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
+          "d": "Not quite. Vertices and edges are swapped, and the direction is wrong too. The things are the vertices; the connections between them are the edges. Then check whether each connection works both ways."
         }
       },
       "hints": [
@@ -969,15 +989,15 @@
         "options": [
           {
             "id": "a",
-            "label": "Yes, because BFS tries the words in alphabetical order, and that keeps the chain short."
+            "label": "Yes. BFS tries the words in alphabetical order, so its chain of changes is the short one."
           },
           {
-            "id": "b",
-            "label": "No. BFS follows one chain of changes to its end, so its first chain may be a long one."
+            "id": "d",
+            "label": "No. BFS follows one chain of changes to its end, so its first chain may be the long one."
           },
           {
             "id": "c",
-            "label": "Yes. Words are vertices and one-letter changes are edges; BFS reaches each by the fewest edges."
+            "label": "Yes. Words are vertices, one-letter changes are edges, and BFS finds the fewest."
           }
         ]
       },
@@ -985,7 +1005,7 @@
         "correct": "c",
         "feedback": {
           "a": "Not quite. Alphabetical order only decides which neighbour joins the queue first. The chain is short because BFS reaches words ring by ring: every word one change away, then two. Ask: what makes BFS find the fewest edges?",
-          "b": "Not quite. That describes depth-first search. BFS finishes every word one change away before any word two changes away, so the first time it reaches WARM it has used the fewest changes. Ask: does BFS go wide or deep?"
+          "d": "Not quite. That describes depth-first search. BFS finishes every word one change away before any word two changes away, so the first time it reaches WARM it has used the fewest changes. Ask: does BFS go wide or deep?"
         }
       },
       "hints": [
@@ -1019,15 +1039,15 @@
         "options": [
           {
             "id": "a",
-            "label": "No. BFS counts flights, not prices, and the fewest flights isn't always the cheapest."
+            "label": "No. BFS counts flights, not prices: the fewest flights isn't always the cheapest."
           },
           {
             "id": "b",
-            "label": "Yes. BFS finds the fewest flights, which is always the cheapest."
+            "label": "Yes. BFS finds the fewest flights, and the fewest is always the cheapest."
           },
           {
-            "id": "c",
-            "label": "Yes. The queue takes the cheapest flight first, so BFS finds the lowest price."
+            "id": "d",
+            "label": "No. These flights only go one way, and BFS only finds the fewest when edges go both ways."
           }
         ]
       },
@@ -1035,7 +1055,7 @@
         "correct": "a",
         "feedback": {
           "b": "Not quite. BFS does find the fewest flights, but two cheap flights can cost less than one expensive one. Ask: does this problem count edges, or add up prices?",
-          "c": "Not quite. A queue is first in, first out: it keeps vertices in the order they were found, not in order of price. Ask: does this problem count edges, or add up prices?"
+          "d": "Not quite. BFS follows arrows too: on a directed graph it only goes the way each edge points. The problem is the prices, which BFS doesn't add up. Ask: does this problem count edges, or add up prices?"
         }
       },
       "hints": [
@@ -1053,7 +1073,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: No. BFS counts flights, not prices, and the fewest flights isn't always the cheapest."
+          "body": "Answer: No. BFS counts flights, not prices: the fewest flights isn't always the cheapest."
         }
       ]
     },
@@ -1069,15 +1089,15 @@
         "options": [
           {
             "id": "a",
-            "label": "No. BFS only finds one path between two computers, not everything it can reach."
+            "label": "No. BFS only finds one path to one computer, so it can't list every computer it reaches."
           },
           {
             "id": "b",
-            "label": "Yes. BFS visits everything reachable from the server, so any computer it misses can't be reached."
+            "label": "Yes. BFS visits all the server can reach, so any computer it misses is cut off."
           },
           {
-            "id": "c",
-            "label": "No. BFS always visits every vertex in the graph, so it can't show which ones are cut off."
+            "id": "d",
+            "label": "Yes. BFS visits every vertex in the graph, so it lists every computer, cut off or not."
           }
         ]
       },
@@ -1085,7 +1105,7 @@
         "correct": "b",
         "feedback": {
           "a": "Not quite. BFS doesn't stop at one path: it keeps going until the queue is empty, so it visits every vertex it can reach from the start. Ask: what has BFS visited when it finishes?",
-          "c": "Not quite. BFS only follows edges from the start, so a computer with no path from the server is never found, and that missing computer is what you're looking for. Ask: can BFS reach a vertex that no path leads to?"
+          "d": "Not quite. BFS only follows edges from the start, so a computer with no path from the server is never found. That is why it fits: the computers it misses are the cut-off ones. Ask: can BFS reach a vertex that no path leads to?"
         }
       },
       "hints": [
@@ -1103,7 +1123,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: Yes. BFS visits everything reachable from the server, so any computer it misses can't be reached."
+          "body": "Answer: Yes. BFS visits all the server can reach, so any computer it misses is cut off."
         }
       ]
     },
@@ -1119,11 +1139,11 @@
         "options": [
           {
             "id": "a",
-            "label": "Yes. Put the students in a queue, and BFS visits each one so you can add up the marks."
+            "label": "Yes. BFS visits every student, so it can add up the marks as it goes."
           },
           {
-            "id": "b",
-            "label": "Yes. A class list is a graph where each student is joined to the next, so BFS walks it."
+            "id": "d",
+            "label": "No. BFS would take the students in alphabetical order, and that would change the average."
           },
           {
             "id": "c",
@@ -1134,8 +1154,8 @@
       "solution": {
         "correct": "c",
         "feedback": {
-          "a": "Not quite. A queue on its own isn't BFS: BFS follows edges from vertex to vertex, and marks have no edges between them. A loop that adds each mark does the job. Ask: are there connections to follow?",
-          "b": "Not quite. You could draw any list as a chain, but an average doesn't depend on who is next to whom, so there is nothing for a traversal to find. Ask: does the problem need the connections?"
+          "a": "Not quite. BFS visits vertices by following edges, and marks have no edges between them. A loop that adds each mark does the job. Ask: are there connections to follow?",
+          "d": "Not quite. The order you add numbers in never changes their average. BFS doesn't fit because there are no connections to follow. Ask: are there connections to follow?"
         }
       },
       "hints": [
@@ -1354,7 +1374,7 @@
       "purpose": "mastery",
       "objective_id": 6,
       "config": {
-        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    # Return the vertices in the order BFS visits them from start,\n    # taking neighbours in alphabetical order.\n    # This version skips a neighbour it has already found with continue.\n    order = []\n    visited = __1__\n    queue = deque([start])\n    while len(queue) > 0:\n        v = queue.__2__\n        order.append(v)\n        for n in __3__:\n            if n in visited:\n                continue\n            visited.add(n)\n            queue.append(n)\n    return __4__",
+        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    # Return the vertices in the order BFS visits them from start,\n    # taking neighbours in alphabetical order.\n    # This version skips a neighbour it has already found with continue.\n    visited = __1__\n    queue = deque([start])\n    order = []\n    while len(queue) > 0:\n        v = queue.__2__\n        order.append(v)\n        for n in __3__:\n            if n in visited:\n                continue\n            visited.add(n)\n            queue.append(n)\n    return __4__",
         "blanks": [
           1,
           2,
@@ -1405,7 +1425,7 @@
       "hints": [
         {
           "level": 1,
-          "body": "Each blank is something you kept track of by hand in module 3: the vertices found, the vertex at the front, its neighbours and the order."
+          "body": "visited holds every vertex BFS has found, as in module 4's worked example. Each blank is something you did by hand: start the found set, take the front vertex, look at its neighbours, and give back the order."
         },
         {
           "level": 2,

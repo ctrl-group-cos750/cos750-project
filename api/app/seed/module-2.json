@@ -11,12 +11,6 @@
       ],
       "segments": [
         {
-          "id": 210,
-          "kind": "text",
-          "title": "A map a program can read",
-          "body": "You can see at a glance that the Admin block is joined to Computer Science and Engineering. A program can't see the map. Before BFS can explore the campus, a program needs to answer one question in a single step: **which buildings are next to this one?**\n\nHow would you store the campus so it can? In this module you build the Python class that does it, and module 4's BFS runs on it."
-        },
-        {
           "id": 203,
           "kind": "video",
           "title": "From a picture to a dictionary",
@@ -26,7 +20,7 @@
           "id": 204,
           "kind": "worked_example",
           "title": "Worked example: building a graph in code",
-          "body": "We'll build the corner of campus with the `Graph` class, one call at a time, and watch `adjacency` change.\n\n```python\nclass Graph:\n    def __init__(self, directed=False):\n        self.directed = directed\n        self.adjacency = {}  # vertex -> list of neighbours\n```\n\n| Call | `adjacency` afterwards | Why |\n|---|---|---|\n| `g = Graph()` | `{}` | A new graph has no vertices. |\n| `g.add_vertex(\"A\")` | `{\"A\": []}` | A is new, so it gets an empty list. |\n| `g.add_vertex(\"A\")` | `{\"A\": []}` | A is already there, so nothing changes. |\n| `g.add_edge(\"A\", \"C\")` | `{\"A\": [\"C\"], \"C\": [\"A\"]}` | C is added first. The edge goes in both lists. |\n| `g.add_edge(\"A\", \"E\")` | `{\"A\": [\"C\", \"E\"], \"C\": [\"A\"], \"E\": [\"A\"]}` | E is appended to A's list; A keeps C. |\n\n**With arrows.** For `h = Graph(directed=True)`, `h.add_edge(\"A\", \"D\")` gives `{\"A\": [\"D\"], \"D\": []}`. D is added, but the edge is only stored in A's list.\n\n**Three rules:** a new vertex gets its own empty list; never replace a list that already exists; an undirected edge goes in both lists.",
+          "body": "You can see at a glance that the Admin block is joined to Computer Science and Engineering. A program can't see the map: it needs to answer one question in a single step, **which buildings are next to this one?** How would you store the campus so it can?\n\nWe'll build the corner of campus with the `Graph` class, one call at a time, and watch `adjacency` change.\n\n```python\nclass Graph:\n    def __init__(self, directed=False):\n        self.directed = directed\n        self.adjacency = {}  # vertex -> list of neighbours\n```\n\n| Call | `adjacency` afterwards | Why |\n|---|---|---|\n| `g = Graph()` | `{}` | A new graph has no vertices. |\n| `g.add_vertex(\"A\")` | `{\"A\": []}` | A is new, so it gets an empty list. |\n| `g.add_vertex(\"A\")` | `{\"A\": []}` | A is already there, so nothing changes. |\n| `g.add_edge(\"A\", \"C\")` | `{\"A\": [\"C\"], \"C\": [\"A\"]}` | C is added first. The edge goes in both lists. |\n| `g.add_edge(\"A\", \"E\")` | `{\"A\": [\"C\", \"E\"], \"C\": [\"A\"], \"E\": [\"A\"]}` | E is appended to A's list; A keeps C. |\n\n**With arrows.** For `h = Graph(directed=True)`, `h.add_edge(\"A\", \"D\")` gives `{\"A\": [\"D\"], \"D\": []}`. D is added, but the edge is only stored in A's list.\n\n**Three rules:** a new vertex gets its own empty list; never replace a list that already exists; an undirected edge goes in both lists.",
           "skip_check_activity_id": 203
         },
         {

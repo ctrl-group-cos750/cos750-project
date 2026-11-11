@@ -25,6 +25,7 @@ from typing import Any
 import pytest
 
 from app.seed import ActivityFixture, FixtureFile, read_fixtures
+from app.services.mastery import Rule
 
 CONTENT: FixtureFile = read_fixtures()
 ACTIVITIES = {a.id: a for a in CONTENT.activities}
@@ -205,9 +206,12 @@ def test_module_0_promises_no_skip_the_app_does_not_make() -> None:
         assert "skip" not in (s.body or "").lower(), s.id
 
 
-# The segment that gains attention in each module (Gagné's event 1). Module 3's is its first
-# video; module 5 has no segments yet (#86), so it gets its opening with its content.
-HOOKS = {0: 1, 1: 101, 2: 210, 3: 313, 4: 409, 6: 601}
+# The segment that gains attention in each module (Gagné's event 1): the module's first text or
+# worked-example segment, which opens with a question. Modules 2 and 4 start with a video that
+# may not be recorded yet, so their hook opens the worked example after it; module 3's hook is
+# its first video (the campus puzzle). Module 5 has no segments yet (#86). No segment is added
+# for a hook: saved progress is a segment index, so a new segment would move every student.
+HOOKS = {0: 1, 1: 101, 2: 204, 3: 313, 4: 404, 6: 601}
 
 
 def test_every_module_with_content_opens_by_gaining_attention() -> None:
@@ -215,10 +219,132 @@ def test_every_module_with_content_opens_by_gaining_attention() -> None:
         if not m.segments:
             assert m.id == 5
             continue
-        first = m.segments[0]
+        if m.id == 3:
+            assert m.segments[0].id == HOOKS[3]
+            assert m.segments[0].kind == "video"
+            continue
+        first = next(s for s in m.segments if s.kind in ("text", "worked_example"))
         assert first.id == HOOKS[m.id], m.id
-        assert first.kind in ("text", "video"), m.id
-        if first.kind == "text":
-            # It opens with a question, or puts a puzzle straight after it (module 1).
-            puzzle = len(m.segments) > 1 and m.segments[1].kind == "activity"
-            assert (first.body and "?" in first.body) or puzzle, m.id
+        # It opens with a question, or puts a puzzle straight after it (module 1).
+        after = m.segments[m.segments.index(first) + 1]
+        opening = (first.body or "").split("\n\n")[0]
+        assert "?" in opening or after.kind == "activity", m.id
+
+
+# --- No simple strategy passes an objective -----------------------------------------------------
+
+
+def first_word(label: str) -> str:
+    return re.split(r"[\s.,:;]", label.strip(), maxsplit=1)[0].lower()
+
+
+def odd_one_out(a: ActivityFixture) -> str | None:
+    """The option whose first word no other option starts with ("the only No"), if there is one."""
+    words = Counter(first_word(o["label"]) for o in a.config["options"])
+    odd = [o["id"] for o in a.config["options"] if words[first_word(o["label"])] == 1]
+    return odd[0] if len(odd) == 1 else None
+
+
+def longest(a: ActivityFixture) -> str:
+    return str(max(a.config["options"], key=lambda o: len(o["label"]))["id"])
+
+
+def most_like_the_rest(a: ActivityFixture) -> str | None:
+    """The option sharing the most words with the others: the "middle" one that each distractor
+    changes in one way. None when there is a tie."""
+
+    def words(label: str) -> set[str]:
+        return set(re.findall(r"\w+", label.lower()))
+
+    opts = a.config["options"]
+    score = {
+        o["id"]: sum(len(words(o["label"]) & words(p["label"])) for p in opts if p is not o)
+        for o in opts
+    }
+    best = max(score.values())
+    top = [i for i, v in score.items() if v == best]
+    return top[0] if len(top) == 1 else None
+
+
+def at(index: int) -> Any:
+    def pick(a: ActivityFixture) -> str | None:
+        opts = a.config["options"]
+        return str(opts[index]["id"]) if index < len(opts) else None
+
+    return pick
+
+
+def middle(a: ActivityFixture) -> str:
+    opts = a.config["options"]
+    return str(opts[len(opts) // 2]["id"])
+
+
+STRATEGIES = {
+    "odd one out by first word": odd_one_out,
+    "longest option": longest,
+    "most like the rest": most_like_the_rest,
+    "always the first option": at(0),
+    "always the second option": at(1),
+    "always the middle option": middle,
+    "always option a": lambda a: "a",
+    "always option b": lambda a: "b",
+}
+OBJECTIVES = {o.id: o for o in CONTENT.objectives}
+CHECK_SETS = {
+    "module 6": [
+        ACTIVITIES[s.activity_id]
+        for m in CONTENT.modules
+        if m.id == 6
+        for s in m.segments
+        if s.activity_id is not None
+    ],
+    "review path": [
+        ACTIVITIES[s.activity_id]
+        for r in CONTENT.review_paths
+        for s in r.segments
+        if s.activity_id is not None and ACTIVITIES[s.activity_id].purpose == "mastery"
+    ],
+}
+
+
+def parts(a: ActivityFixture) -> int:
+    """Only multiple choice is one part; a strategy that picks an option can't answer the rest,
+    so they count as wrong (generous to the strategy only where it can play at all)."""
+    match a.kind:
+        case "matching":
+            return len(a.config["left"])
+        case "fill_in":
+            return len(a.config["blanks"])
+        case "parsons" | "fix_the_bug":
+            return len(a.solution["order"])
+        case "choose_tests":
+            return len(a.config["tests"])
+    return 1
+
+
+@pytest.mark.parametrize("strategy", STRATEGIES)
+@pytest.mark.parametrize("where", CHECK_SETS)
+def test_no_simple_strategy_meets_any_objective(where: str, strategy: str) -> None:
+    """Answering every multiple-choice item by a surface rule must not meet an objective's rule
+    (#147: "pick the only Yes/No" met objective 4, "the middle option" objective 3)."""
+    pick = STRATEGIES[strategy]
+    for objective, o in OBJECTIVES.items():
+        items = [a for a in CHECK_SETS[where] if a.objective_id == objective]
+        mc = [a for a in items if a.kind == "multiple_choice"]
+        if not mc:
+            continue
+        right = sum(pick(a) == a.solution["correct"] for a in mc)
+        total = sum(parts(a) for a in items)
+        rule = Rule(pass_fraction=o.pass_fraction, max_wrong=o.max_wrong)
+        assert not rule.met(right, total), (where, strategy, objective, right, total)
+
+
+# Option ids whose text changed meaning in #147. They are retired, never reused: an old attempt's
+# `selected` must not be read as the new text (the lesson of #117 and #133).
+RETIRED = {614: "b", 615: "c", 616: "c", 617: "b", 1402: "c", 1403: "c", 1404: "b", 1405: "c"}
+
+
+def test_a_retired_option_id_is_never_reused() -> None:
+    for activity_id, option_id in RETIRED.items():
+        options = {o["id"] for o in ACTIVITIES[activity_id].config["options"]}
+        assert option_id not in options, activity_id

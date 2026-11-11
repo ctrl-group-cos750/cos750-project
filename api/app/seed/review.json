@@ -275,7 +275,7 @@
           },
           {
             "id": "a",
-            "label": "The queue is the data structure; removing finished tasks one by one is the algorithm."
+            "label": "The queue is the data structure; removing tasks one by one is the algorithm."
           },
           {
             "id": "c",
@@ -375,7 +375,7 @@
           },
           {
             "id": "b",
-            "label": "A network of roads between the towns in a province"
+            "label": "A network of roads between the towns and cities in a province"
           },
           {
             "id": "c",
@@ -542,7 +542,7 @@
           },
           {
             "id": "c",
-            "label": "Both a queue and BFS are data structures that hold vertices."
+            "label": "Both a queue and BFS are data structures that hold the vertices."
           }
         ]
       },
@@ -630,19 +630,19 @@
       "purpose": "mastery",
       "objective_id": 2,
       "config": {
-        "prompt": "Bus stops, joined by roads. The stops are A, B, C and D. Roads join A–B, A–C and C–D, and buses drive them both ways. Each marker below describes one part of the graph by how it is joined. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
+        "prompt": "Bus stops, joined by roads. The stops are the Aula (A), the Bus depot (B), the Clinic (C) and the Dam (D). Roads join A–B, A–C and C–D, and buses drive them both ways. Each marker below names one part of this graph. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
         "left": [
           {
             "id": "1",
-            "label": "Marker 1: the road between stop A and the stop that also has a road to D"
+            "label": "Marker 1: what joins the Aula and the Clinic"
           },
           {
             "id": "2",
-            "label": "Marker 2: the stop whose only road goes to A"
+            "label": "Marker 2: the Bus depot"
           },
           {
             "id": "3",
-            "label": "Marker 3: the only road that reaches stop D"
+            "label": "Marker 3: what joins the Clinic and the Dam"
           }
         ],
         "right": [
@@ -683,9 +683,9 @@
           "3": "eCD"
         },
         "feedback": {
-          "1": "Check marker 1. It describes a road, so it is an edge, named by the two vertices at its ends. Find the road in the list that the marker describes.",
-          "2": "Check marker 2. It describes a bus stop, so it is a vertex, named by its own letter. Use the road list to work out which bus stop it is.",
-          "3": "Check marker 3. It describes a road, so it is an edge, named by the two vertices at its ends. Find the road in the list that the marker describes."
+          "1": "Check marker 1. It joins two things, so it is an edge, named by the letters of its two ends. Look up both letters in the prompt.",
+          "2": "Check marker 2. It names one of the things in the graph, so it is a vertex, named by its own letter. Look up its letter in the prompt.",
+          "3": "Check marker 3. It joins two things, so it is an edge, named by the letters of its two ends. Look up both letters in the prompt."
         }
       },
       "hints": [
@@ -699,7 +699,7 @@
         },
         {
           "level": 3,
-          "body": "Read the road list: A–B, A–C, C–D. D has one road, and so does B."
+          "body": "Look up each name's letter: the Aula is A and the Clinic is C."
         },
         {
           "level": 4,
@@ -715,19 +715,19 @@
       "purpose": "mastery",
       "objective_id": 2,
       "config": {
-        "prompt": "Lab computers, joined by cables. The computers are E, F and G. Cables join E–F, F–G and E–G, and data goes both ways along a cable. Each marker below describes one part of the graph by how it is joined. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
+        "prompt": "Lab computers, joined by cables. The computers are the editing PC (E), the file server (F) and the games PC (G). Cables join E–F, F–G and E–G, and data goes both ways along a cable. Each marker below names one part of this graph. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
         "left": [
           {
             "id": "1",
-            "label": "Marker 1: the computer joined to both F and G"
+            "label": "Marker 1: the editing PC"
           },
           {
             "id": "2",
-            "label": "Marker 2: the cable that doesn't touch computer E"
+            "label": "Marker 2: what joins the file server and the games PC"
           },
           {
             "id": "3",
-            "label": "Marker 3: the cable between computer G and the computer that isn't F"
+            "label": "Marker 3: what joins the editing PC and the games PC"
           }
         ],
         "right": [
@@ -764,9 +764,9 @@
           "3": "eEG"
         },
         "feedback": {
-          "1": "Check marker 1. It describes a computer, so it is a vertex, named by its own letter. Use the cable list to work out which computer it is.",
-          "2": "Check marker 2. It describes a cable, so it is an edge, named by the two vertices at its ends. Find the cable in the list that the marker describes.",
-          "3": "Check marker 3. It describes a cable, so it is an edge, named by the two vertices at its ends. Find the cable in the list that the marker describes."
+          "1": "Check marker 1. It names one of the things in the graph, so it is a vertex, named by its own letter. Look up its letter in the prompt.",
+          "2": "Check marker 2. It joins two things, so it is an edge, named by the letters of its two ends. Look up both letters in the prompt.",
+          "3": "Check marker 3. It joins two things, so it is an edge, named by the letters of its two ends. Look up both letters in the prompt."
         }
       },
       "hints": [
@@ -780,7 +780,7 @@
         },
         {
           "level": 3,
-          "body": "Read the cable list: E–F, F–G, E–G. Each cable touches two of the three computers."
+          "body": "Look up each name's letter: the file server is F and the games PC is G."
         },
         {
           "level": 4,
@@ -796,19 +796,19 @@
       "purpose": "mastery",
       "objective_id": 2,
       "config": {
-        "prompt": "One-way streets between four corners, R, S, T and U. The streets go R → S, S → T and T → U: you can only drive them in that direction. Each marker below describes one part of the graph by how it is joined. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
+        "prompt": "One-way streets between four corners: the river corner (R), the school corner (S), the tower corner (T) and the university corner (U). The streets go R → S, S → T and T → U: you can only drive them in that direction. Each marker below names one part of this graph. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
         "left": [
           {
             "id": "1",
-            "label": "Marker 1: the one-way street that leaves corner S"
+            "label": "Marker 1: what takes you one way from the school corner to the tower corner"
           },
           {
             "id": "2",
-            "label": "Marker 2: the corner you can drive into but not out of"
+            "label": "Marker 2: the university corner"
           },
           {
             "id": "3",
-            "label": "Marker 3: the one-way street that arrives at corner S"
+            "label": "Marker 3: what takes you one way from the river corner to the school corner"
           }
         ],
         "right": [
@@ -861,9 +861,9 @@
           "3": "eRS"
         },
         "feedback": {
-          "1": "Check marker 1. It describes a one-way street, so it is an edge, named in the direction of its arrow, from the first vertex to the second. Find the arrow in the list that the marker describes, and check which way it goes.",
-          "2": "Check marker 2. It describes a corner, so it is a vertex, named by its own letter. Use the one-way street list to work out which corner it is.",
-          "3": "Check marker 3. It describes a one-way street, so it is an edge, named in the direction of its arrow, from the first vertex to the second. Find the arrow in the list that the marker describes, and check which way it goes."
+          "1": "Check marker 1. It joins two things one way, so it is an edge, named in the direction it goes, from where it starts to where it ends. Look up both letters in the prompt and check which way it goes.",
+          "2": "Check marker 2. It names one of the things in the graph, so it is a vertex, named by its own letter. Look up its letter in the prompt.",
+          "3": "Check marker 3. It joins two things one way, so it is an edge, named in the direction it goes, from where it starts to where it ends. Look up both letters in the prompt and check which way it goes."
         }
       },
       "hints": [
@@ -877,7 +877,7 @@
         },
         {
           "level": 3,
-          "body": "Read the arrows: R → S, S → T, T → U. An arrow leaves the corner at its tail and arrives at the corner at its head."
+          "body": "Look up each name's letter, then name a one-way edge from where it starts to where it ends: the school corner is S and the tower corner is T."
         },
         {
           "level": 4,
@@ -972,7 +972,7 @@
           },
           {
             "id": "c",
-            "label": "Vertices: students. Edges: emails. Undirected, because students reply."
+            "label": "Vertices: students. Edges: emails. Undirected, because students reply to emails."
           },
           {
             "id": "a",
@@ -1027,6 +1027,10 @@
           {
             "id": "c",
             "label": "Vertices: one-way streets. Edges: intersections. Directed."
+          },
+          {
+            "id": "d",
+            "label": "Vertices: one-way streets. Edges: intersections. Undirected."
           }
         ]
       },
@@ -1034,7 +1038,8 @@
         "correct": "b",
         "feedback": {
           "a": "Not quite. These connections only go one way. One-way connections need arrows, so the graph is directed. Check the direction.",
-          "c": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round."
+          "c": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
+          "d": "Not quite. Vertices and edges are swapped, and the direction is wrong too. The things are the vertices; the connections between them are the edges. Then check whether each connection works both ways."
         }
       },
       "hints": [
@@ -1077,6 +1082,10 @@
           {
             "id": "c",
             "label": "Vertices: cities. Edges: highways. Undirected."
+          },
+          {
+            "id": "d",
+            "label": "Vertices: highways. Edges: cities. Directed."
           }
         ]
       },
@@ -1084,7 +1093,8 @@
         "correct": "c",
         "feedback": {
           "a": "Not quite. These connections work both ways. Each connection works both ways, so the edges have no arrows. Check the direction.",
-          "b": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round."
+          "b": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
+          "d": "Not quite. Vertices and edges are swapped, and the direction is wrong too. The things are the vertices; the connections between them are the edges. Then check whether each connection works both ways."
         }
       },
       "hints": [
@@ -1127,6 +1137,10 @@
           {
             "id": "c",
             "label": "Vertices: “comes before” links. Edges: steps. Directed."
+          },
+          {
+            "id": "d",
+            "label": "Vertices: “comes before” links. Edges: steps. Undirected."
           }
         ]
       },
@@ -1134,7 +1148,8 @@
         "correct": "a",
         "feedback": {
           "b": "Not quite. These connections only go one way. One-way connections need arrows, so the graph is directed. Check the direction.",
-          "c": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round."
+          "c": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
+          "d": "Not quite. Vertices and edges are swapped, and the direction is wrong too. The things are the vertices; the connections between them are the edges. Then check whether each connection works both ways."
         }
       },
       "hints": [
@@ -1177,6 +1192,10 @@
           {
             "id": "c",
             "label": "Vertices: matches. Edges: players. Undirected."
+          },
+          {
+            "id": "d",
+            "label": "Vertices: matches. Edges: players. Directed."
           }
         ]
       },
@@ -1184,7 +1203,8 @@
         "correct": "b",
         "feedback": {
           "a": "Not quite. These connections work both ways. Each connection works both ways, so the edges have no arrows. Check the direction.",
-          "c": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round."
+          "c": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
+          "d": "Not quite. Vertices and edges are swapped, and the direction is wrong too. The things are the vertices; the connections between them are the edges. Then check whether each connection works both ways."
         }
       },
       "hints": [
@@ -1268,14 +1288,14 @@
         "options": [
           {
             "id": "a",
-            "label": "Yes. BFS explores positions ring by ring, so it reaches the solution by the fewest moves."
+            "label": "Yes. BFS explores ring by ring, so it reaches the solution by the fewest moves."
           },
           {
             "id": "b",
-            "label": "No. A puzzle has too many positions to draw, and BFS needs the whole graph drawn first."
+            "label": "No. A puzzle isn't a graph: its positions aren't places joined by roads."
           },
           {
-            "id": "c",
+            "id": "d",
             "label": "Yes, because BFS always takes the move that looks closest to the solved puzzle."
           }
         ]
@@ -1283,8 +1303,8 @@
       "solution": {
         "correct": "a",
         "feedback": {
-          "b": "Not quite. Each position is a vertex and each move an edge, whether or not anyone draws them: BFS can work out a position's neighbours as it reaches it. Ask: are there things joined by connections?",
-          "c": "Not quite. BFS doesn't guess which move looks best: it takes positions in the order it found them, ring by ring. That is why the first time it reaches the solution, it has used the fewest moves. Ask: in what order does BFS take vertices?"
+          "b": "Not quite. Any things joined by connections make a graph: each position is a vertex and each move an edge. Ask: are there things joined by connections?",
+          "d": "Not quite. BFS doesn't guess which move looks best: it takes positions in the order it found them, ring by ring. That is why the first time it reaches the solution, it has used the fewest moves. Ask: in what order does BFS take vertices?"
         }
       },
       "hints": [
@@ -1302,7 +1322,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: Yes. BFS explores positions ring by ring, so it reaches the solution by the fewest moves."
+          "body": "Answer: Yes. BFS explores ring by ring, so it reaches the solution by the fewest moves."
         }
       ]
     },
@@ -1322,11 +1342,11 @@
           },
           {
             "id": "b",
-            "label": "No. BFS finds the routes with the fewest edges; it has no way to find the most."
+            "label": "No. BFS finds the routes with the fewest edges, not the most."
           },
           {
-            "id": "c",
-            "label": "Yes. The last town BFS visits is the furthest away, so its route is the longest trip."
+            "id": "d",
+            "label": "No. BFS would visit some towns twice, so its trip would repeat towns."
           }
         ]
       },
@@ -1334,7 +1354,7 @@
         "correct": "b",
         "feedback": {
           "a": "Not quite. Visiting every town isn't the same as finding one long route through them: BFS reaches each town by its shortest route. Ask: does BFS find the fewest edges or the most?",
-          "c": "Not quite. BFS reaches the last town by its shortest route, not by the longest trip through the other towns. Ask: does BFS find the fewest edges or the most?"
+          "d": "Not quite. BFS never visits a town twice: a town it has found never joins the queue again. It doesn't fit because it finds the fewest edges, not the most. Ask: does BFS find the fewest edges or the most?"
         }
       },
       "hints": [
@@ -1352,7 +1372,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: No. BFS finds the routes with the fewest edges; it has no way to find the most."
+          "body": "Answer: No. BFS finds the routes with the fewest edges, not the most."
         }
       ]
     },
@@ -1371,12 +1391,12 @@
             "label": "No. BFS stops after the patient's direct contacts, so it never reaches their contacts."
           },
           {
-            "id": "b",
+            "id": "d",
             "label": "Yes. BFS goes from contact to contact down one chain first, so it lists them in order."
           },
           {
             "id": "c",
-            "label": "Yes. BFS finds everyone one contact away, then two contacts away, before going further."
+            "label": "Yes. BFS finds everyone one contact away, then two away, before going further."
           }
         ]
       },
@@ -1384,7 +1404,7 @@
         "correct": "c",
         "feedback": {
           "a": "Not quite. BFS keeps going after the first ring: each contact who leaves the queue adds their own contacts to the back. Ask: what happens after the first ring?",
-          "b": "Not quite. That is depth-first: following one chain to its end can reach someone three contacts away before a contact of a contact. BFS finishes each ring first. Ask: does BFS go wide or deep?"
+          "d": "Not quite. That is depth-first: following one chain to its end can reach someone three contacts away before a contact of a contact. BFS finishes each ring first. Ask: does BFS go wide or deep?"
         }
       },
       "hints": [
@@ -1402,7 +1422,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: Yes. BFS finds everyone one contact away, then two contacts away, before going further."
+          "body": "Answer: Yes. BFS finds everyone one contact away, then two away, before going further."
         }
       ]
     },
@@ -1425,8 +1445,8 @@
             "label": "Yes. BFS returns the vertices in order, so it sorts the student numbers."
           },
           {
-            "id": "c",
-            "label": "Yes. A queue keeps items in order, so BFS sorts them as they pass through it."
+            "id": "d",
+            "label": "No. BFS only sorts letters alphabetically, so it can't put numbers in order."
           }
         ]
       },
@@ -1434,7 +1454,7 @@
         "correct": "a",
         "feedback": {
           "b": "Not quite. BFS's order is the order it reaches vertices by following edges, not smallest to largest: on the campus it is A, C, E, B, F, D, G. Ask: are there edges to follow here?",
-          "c": "Not quite. A queue keeps items in the order they arrived, first in, first out; it doesn't sort them. Ask: are there edges to follow here?"
+          "d": "Not quite. BFS doesn't sort at all, letters or numbers: alphabetical order only decides which neighbour joins the queue first. Ask: are there edges to follow here?"
         }
       },
       "hints": [
@@ -1583,7 +1603,7 @@
       "purpose": "review",
       "objective_id": 6,
       "config": {
-        "prompt": "Which line belongs inside if n not in visited: in BFS?",
+        "prompt": "What belongs inside if n not in visited: in BFS?",
         "options": [
           {
             "id": "c",
@@ -1708,7 +1728,7 @@
           },
           {
             "id": "b",
-            "label": "On a single vertex A: assert bfs(g, \"A\") == [\"A\"]"
+            "label": "On one vertex A with no edges at all: assert bfs(g, \"A\") == [\"A\"]"
           },
           {
             "id": "c",

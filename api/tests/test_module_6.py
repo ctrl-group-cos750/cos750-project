@@ -320,77 +320,29 @@ def test_objective_2_has_three_labelling_items_and_one_classifying_item_in_each_
     assert len(CLASSIFYING) == 2
 
 
-class Drawn:
-    """The graph a labelling prompt describes in words, and the questions a marker asks of it."""
-
-    def __init__(self, prompt: str) -> None:
-        self.edges = [(u, arrow, v) for u, arrow, v in EDGE.findall(prompt)]
-        self.vertices = {x for u, _, v in self.edges for x in (u, v)}
-
-    def touching(self, x: str) -> set[tuple[str, str, str]]:
-        return {e for e in self.edges if x in (e[0], e[2])}
-
-    def neighbours(self, x: str) -> set[str]:
-        return {v if u == x else u for u, _, v in self.touching(x)}
-
-    def leaving(self, x: str) -> set[tuple[str, str, str]]:
-        return {e for e in self.edges if e[0] == x}
-
-    def arriving(self, x: str) -> set[tuple[str, str, str]]:
-        return {e for e in self.edges if e[2] == x}
-
-    def sinks(self) -> set[str]:
-        return {x for x in self.vertices if not self.leaving(x) and self.arriving(x)}
+NAMED = re.compile(r"(?:are|,|and|:)\s+(?:the\s+)?([^,():.]+?) \(([A-Z])\)")
 
 
-def only(found: set[Any]) -> Any:
-    assert len(found) == 1, found  # the marker picks out exactly one part
-    return next(iter(found))
+def named_part(prompt: str, marker: str) -> str:
+    """The part a marker names, worked out from the names and edges the prompt lists. A marker
+    names a thing ("the shed tap"), or what joins two things ("what joins the pool tap and the
+    quince-tree tap", "what takes you one way from X to Y"), as practice item 104 does."""
+    letters = {name.lower(): letter for name, letter in NAMED.findall(prompt)}
+    edges = {(u, arrow, v) for u, arrow, v in EDGE.findall(prompt)}
 
+    def letter(name: str) -> str:
+        return str(letters[name.lower().removeprefix("the ").strip()])
 
-def vertex(x: str) -> str:
-    return f"Vertex {x}"
-
-
-def edge(e: tuple[str, str, str]) -> str:
-    u, arrow, v = e
-    return f"Edge {u} → {v}" if arrow == "→" else f"Edge {u}{DASH}{v}"
-
-
-# What each marker describes, worked out from the edges the prompt lists. A marker used to name
-# its own answer ("Marker 1: tap Q"), so the item only tested that a tap is a vertex (#147).
-MARKERS: dict[int, dict[str, Any]] = {
-    606: {  # the tap joined to P; the only hose at P; the only hose at S
-        "1": lambda g: vertex(only(g.neighbours("P"))),
-        "2": lambda g: edge(only(g.touching("P"))),
-        "3": lambda g: edge(only(g.touching("S"))),
-    },
-    607: {  # K's doorway not to L; the room other than K joined to L and M; N's doorway not to M
-        "1": lambda g: edge(only({e for e in g.touching("K") if "L" not in e})),
-        "2": lambda g: vertex(only((g.neighbours("L") & g.neighbours("M")) - {"K"})),
-        "3": lambda g: edge(only({e for e in g.touching("N") if "M" not in e})),
-    },
-    608: {  # the road leaving X; the stop with no way out; the road arriving at Z
-        "1": lambda g: edge(only(g.leaving("X"))),
-        "2": lambda g: vertex(only(g.sinks())),
-        "3": lambda g: edge(only(g.arriving("Z"))),
-    },
-    1202: {  # A's road to the stop that also reaches D; the stop whose only road is to A; D's road
-        "1": lambda g: edge(only({e for e in g.touching("A") if "D" in g.neighbours(e[2])})),
-        "2": lambda g: vertex(only({x for x in g.vertices if g.neighbours(x) == {"A"}})),
-        "3": lambda g: edge(only(g.touching("D"))),
-    },
-    1203: {  # the computer joined to F and G; the cable not at E; G's cable not to F
-        "1": lambda g: vertex(only({x for x in g.vertices if {"F", "G"} <= g.neighbours(x)})),
-        "2": lambda g: edge(only({e for e in g.edges if "E" not in e})),
-        "3": lambda g: edge(only({e for e in g.touching("G") if "F" not in e})),
-    },
-    1204: {  # the street leaving S; the corner with no way out; the street arriving at S
-        "1": lambda g: edge(only(g.leaving("S"))),
-        "2": lambda g: vertex(only(g.sinks())),
-        "3": lambda g: edge(only(g.arriving("S"))),
-    },
-}
+    text = marker.split(": ", 1)[1]
+    if one_way := re.fullmatch(r"what takes you one way from (.+) to (.+)", text):
+        u, v = (letter(x) for x in one_way.groups())
+        assert (u, "→", v) in edges, marker
+        return f"Edge {u} → {v}"
+    if joins := re.fullmatch(r"what joins (.+) and (.+)", text):
+        u, v = (letter(x) for x in joins.groups())
+        assert (u, DASH, v) in edges or (v, DASH, u) in edges, marker
+        return f"Edge {u}{DASH}{v}"
+    return f"Vertex {letter(text)}"
 
 
 def same_part(a: str, b: str) -> bool:
@@ -401,17 +353,18 @@ def same_part(a: str, b: str) -> bool:
 
 
 @pytest.mark.parametrize("a", LABELLING, ids=lambda a: str(a.id))
-def test_each_marker_picks_out_the_part_its_answer_names(a: ActivityFixture) -> None:
-    drawn = Drawn(a.config["prompt"])
-    assert {arrow for _, arrow, _ in drawn.edges} in ({DASH}, {"→"})
-    markers = MARKERS[a.id]
-    assert sorted(markers) == sorted(item["id"] for item in a.config["left"])
+def test_each_marker_names_the_part_its_answer_names(a: ActivityFixture) -> None:
+    prompt = a.config["prompt"]
+    assert {arrow for _, arrow, _ in EDGE.findall(prompt)} in ({DASH}, {"→"})
     for item in a.config["left"]:
         answer = right_label(a, item["id"])
-        assert same_part(answer, markers[item["id"]](drawn)), item["label"]
-        # The marker no longer gives its answer away: it doesn't spell out the part's name.
-        named = set(re.findall(r"[A-Z]", answer.split(" ", 1)[1]))
-        assert not named <= set(re.findall(r"\b[A-Z]\b", item["label"].split(": ", 1)[1]))
+        assert same_part(answer, named_part(prompt, item["label"])), item["label"]
+        # A marker gives no letter, and no "vertex"/"edge" word: the student works both out (#147).
+        marker = item["label"].split(": ", 1)[1]
+        assert not re.search(r"\b[A-Z]\b", marker), marker
+        assert not re.search(r"vertex|edge|\b(?:hose|doorway|road|street|cable)\b", marker), marker
+        assert "n't" not in marker  # no negation puzzles
+        assert " not " not in marker
     # The answer hint says the same.
     for item in a.config["left"]:
         assert f"{item['id']} = {right_label(a, item['id'])}" in a.hints[-1].body

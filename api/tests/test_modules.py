@@ -716,6 +716,52 @@ def test_a_wrong_answer_after_the_last_hint_lets_the_student_move_on(
     assert _move(client, 2) == 200
 
 
+@pytest.mark.parametrize("purpose", ["mastery", "diagnostic"])
+def test_one_real_answer_is_enough_for_a_mastery_or_diagnostic_item(
+    client: TestClient, db: Session, purpose: str
+) -> None:
+    """Only the first answer counts on the mastery check (FR-7.1), and the diagnostic finds gaps
+    rather than gating, so a wrong answer there moves the student on (#165 review)."""
+    _make_gated_module(db)
+    activity = db.get_one(Activity, 1)
+    activity.purpose = purpose
+    if purpose == "mastery":
+        activity.objective_id = None
+    db.commit()
+    _register_and_login(client, ALICE)
+    assert _move(client, 1) == 200
+
+    _answer(client, 1, "b")  # wrong
+    assert _move(client, 2) == 200
+
+
+def test_a_wrong_practice_answer_still_does_not_move_the_student_on(
+    client: TestClient, db: Session
+) -> None:
+    _make_gated_module(db)
+    _register_and_login(client, ALICE)
+    assert _move(client, 1) == 200
+    _answer(client, 1, "b")
+    assert _move(client, 2) == 409
+
+
+def test_each_segment_says_whether_its_activity_was_attempted(
+    client: TestClient, db: Session
+) -> None:
+    """The page opens a module at an activity passed without trying, never at one answered wrong
+    (#165 review), so it needs to tell the two apart."""
+    _make_gated_module(db)
+    _register_and_login(client, ALICE)
+    _answer(client, 1, "b")  # wrong: attempted, not done
+    segments = client.get("/api/modules/0").json()["segments"]
+    assert [(s["attempted"], s["done"]) for s in segments] == [
+        (False, True),
+        (True, False),
+        (False, False),
+        (False, False),
+    ]
+
+
 def test_a_blank_answer_is_refused_and_not_recorded(client: TestClient, db: Session) -> None:
     _make_gated_module(db)
     _register_and_login(client, ALICE)

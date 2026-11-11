@@ -392,9 +392,17 @@ def is_blank(kind: str, submission: dict[str, Any]) -> bool:
     if kind == "matching":
         return not filled(submission.get("pairs"))
     if kind == "choose_tests":
-        return not submission.get("selected")
+        return not any(str(t).strip() for t in submission.get("selected") or [])
     if kind == "trace":
-        return not submission.get("rows")
+        # Rows that hold nothing, not even a current vertex, answer nothing either.
+        return not any(
+            str(row.get("visitedVertex") or row.get("visited_vertex") or "").strip()
+            or row.get("queue")
+            or row.get("visited")
+            or row.get("order")
+            for row in submission.get("rows") or []
+            if isinstance(row, dict)
+        )
     return False
 
 

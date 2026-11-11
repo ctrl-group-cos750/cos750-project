@@ -958,3 +958,86 @@ describe('ModulePage — loading and error states', () => {
     expect(api.callsTo('POST /api/activities/201/attempts')).toHaveLength(1)
   })
 })
+
+// ---------------------------------------------------------------------------
+// Support segments for a struggling student (FR-8.4, #172)
+// ---------------------------------------------------------------------------
+
+describe('ModulePage — support segments', () => {
+  const support = (id: number, shown: boolean, title: string): Segment => ({
+    ...textSegment,
+    id,
+    position: id - 20,
+    title,
+    body: 'An example, step by step.',
+    supportFor: 6,
+    shown,
+  })
+  const closing: Segment = { ...workedExampleSegment, id: 24, position: 4, title: 'Closing' }
+  function supportDetail(shown: boolean, currentSegmentPosition = 1): ModuleDetail {
+    return {
+      ...moduleSummary,
+      segmentCount: 5,
+      currentSegmentPosition,
+      segments: [
+        { ...textSegment, position: 0 },
+        { ...workedExampleSegment, id: 21, position: 1, title: 'Base practice' },
+        support(22, shown, 'Another way to see it'),
+        support(23, shown, 'Try a fresh one'),
+        closing,
+      ],
+      retrieval: [],
+    }
+  }
+
+  it('skips support the student doesn’t need, and doesn’t count it', async () => {
+    const api = setupModuleApi(supportDetail(false))
+    renderApp('/modules/1')
+
+    expect(await screen.findByRole('heading', { name: 'Base practice' })).toBeInTheDocument()
+    expect(screen.getByText('Segment 2 of 3')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Next →' }))
+
+    expect(await screen.findByRole('heading', { name: 'Closing' })).toBeInTheDocument()
+    expect(api.callsTo('POST /api/modules/1/position')[0].body).toEqual({ segmentPosition: 4 })
+    expect(screen.getByText('Segment 3 of 3')).toBeInTheDocument()
+    expect(screen.queryByText(/another way/i)).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: '← Previous' }))
+    expect(await screen.findByRole('heading', { name: 'Base practice' })).toBeInTheDocument()
+  })
+
+  it('shows support to a student who needs it, opened with one kind line', async () => {
+    const api = setupModuleApi(supportDetail(true))
+    renderApp('/modules/1')
+
+    expect(await screen.findByText('Segment 2 of 5')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Next →' }))
+
+    expect(
+      await screen.findByRole('heading', { name: 'Another way to see it' }),
+    ).toBeInTheDocument()
+    expect(api.callsTo('POST /api/modules/1/position')[0].body).toEqual({ segmentPosition: 2 })
+    expect(screen.getByText('Let’s look at this another way before you move on.')).toBeVisible()
+    expect(screen.queryByText(/fail|wrong/i)).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Next →' }))
+    expect(await screen.findByRole('heading', { name: 'Try a fresh one' })).toBeInTheDocument()
+    expect(screen.queryByText(/another way before/i)).not.toBeInTheDocument() // once per run
+  })
+
+  it('finishes on the last segment shown when the support at the end is hidden', async () => {
+    const detail = supportDetail(false, 1)
+    detail.segments = detail.segments.slice(0, 4) // the support is the module's end
+    setupModuleApi(detail)
+    renderApp('/modules/1')
+
+    expect(await screen.findByRole('button', { name: 'Finish module' })).toBeInTheDocument()
+    expect(screen.getByText('Segment 2 of 2')).toBeInTheDocument()
+  })
+
+  it('never opens on a hidden segment', async () => {
+    setupModuleApi(supportDetail(false, 2)) // a position left on hidden support
+    renderApp('/modules/1')
+
+    expect(await screen.findByRole('heading', { name: 'Closing' })).toBeInTheDocument()
+  })
+})

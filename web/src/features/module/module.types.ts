@@ -15,6 +15,11 @@ export type ModuleSummary = {
   segmentCount: number
   /** The furthest segment the student has reached, 0-based: where the module resumes. */
   currentSegmentPosition: number
+  /** How many segments this student is shown: `segmentCount` less the support they don't need
+   * (FR-8.4). The map's minutes count these. */
+  shownSegmentCount?: number
+  /** How many of the segments shown come before `currentSegmentPosition`. */
+  shownSegmentsPassed?: number
 }
 
 /** Matches `SegmentOut` nested inside `ModuleDetailOut`. */
@@ -26,6 +31,10 @@ export type Segment = {
   body: string | null
   videoId: number | null
   activityId: number | null
+  /** Support for this objective (FR-8.4): only shown to a student struggling with it here. */
+  supportFor?: number | null
+  /** False for support this student doesn't need: it keeps its position but is skipped. */
+  shown?: boolean
   /** The student has done it and can move past it (FR-2.7): its activity answered at least
    * once, or every checkpoint of its video passed. Always true for every other kind. */
   done: boolean

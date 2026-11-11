@@ -10,11 +10,15 @@ Using 3 modules (numbers 0, 1, 2) with 2 segments each is enough to exercise the
 unlock chain and the completion logic while keeping the setup minimal.
 """
 
+from typing import Any
+
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.models import Activity, Attempt, Checkpoint, Module, Objective, Segment, Video
+from app.services import modules as modules_service
 from app.services.mastery import counts
 
 # ---------------------------------------------------------------------------
@@ -740,14 +744,32 @@ def test_back_then_forward_again_onto_an_unanswered_last_segment_is_not_refused(
     assert (detail["currentSegmentPosition"], detail["status"]) == (3, "in_progress")
 
 
-def test_an_activity_kind_with_no_student_ui_yet_does_not_block(
-    client: TestClient, db: Session
-) -> None:
-    """A trace activity can't be answered in the web yet, so it counts as done: a module that
-    ends on one can be finished without an attempt (KINDS_WITHOUT_STUDENT_UI)."""
-    _make_gated_module(db)
-    db.get_one(Activity, 3).kind = "trace"
+# A trace on A-B from A: BFS visits A, then B.
+TRACE_CONFIG = {
+    "directed": False,
+    "vertices": ["A", "B"],
+    "edges": [{"source": "A", "target": "B"}],
+    "start_vertex": "A",
+}
+
+
+def _make_last_activity(db: Session, kind: str) -> None:
+    activity = db.get_one(Activity, 3)
+    activity.kind = kind
+    if kind == "trace":
+        activity.config, activity.solution = TRACE_CONFIG, {}
     db.commit()
+
+
+def test_an_activity_kind_with_no_student_ui_yet_does_not_block(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The mechanism stays for a kind added to the API before its screen: a kind in
+    KINDS_WITHOUT_STUDENT_UI counts as done, so a module that ends on one can be finished
+    without an attempt."""
+    monkeypatch.setattr(modules_service, "KINDS_WITHOUT_STUDENT_UI", frozenset({"trace"}))
+    _make_gated_module(db)
+    _make_last_activity(db, "trace")
     _register_and_login(client, ALICE)
     _answer(client, 1, "a")
     _answer(client, 2, "a")
@@ -760,15 +782,90 @@ def test_an_activity_kind_with_no_student_ui_yet_does_not_block(
 
 
 def test_a_supported_activity_kind_still_has_to_be_answered(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Only the kinds without a UI are let through: a multiple-choice activity still blocks."""
+    monkeypatch.setattr(modules_service, "KINDS_WITHOUT_STUDENT_UI", frozenset({"trace"}))
     _make_gated_module(db)
-    db.get_one(Activity, 3).kind = "trace"  # the last one; the first stays multiple choice
-    db.commit()
+    _make_last_activity(db, "trace")  # the last one; the first stays multiple choice
     _register_and_login(client, ALICE)
     assert _move(client, 1) == 200
     assert _move(client, 2) == 409
+
+
+def test_every_activity_kind_now_has_a_student_screen() -> None:
+    """#136: trace, fix the bug and choose tests have screens, so no kind is let through
+    unanswered any more. The web's SUPPORTED list is the mirror (ActivityRenderer.tsx)."""
+    assert not modules_service.KINDS_WITHOUT_STUDENT_UI
+
+
+@pytest.mark.parametrize(
+    ("kind", "config", "solution", "wrong"),
+    [
+        # A real but wrong trace (B can't leave first): fix/api-integrity refuses an empty one.
+        (
+            "trace",
+            TRACE_CONFIG,
+            {},
+            {"rows": [{"visitedVertex": "B", "queue": [], "visited": ["B"], "order": ["B"]}]},
+        ),
+        (
+            "fix_the_bug",
+            {
+                "prompt": "Fix it.",
+                "lines": [{"id": 1, "text": "v = queue.pop()"}],
+                "corrections": [{"id": 2, "text": "v = queue.popleft()"}],
+            },
+            {"order": [2]},
+            {"order": [1]},
+        ),
+        (
+            "choose_tests",
+            {
+                "prompt": "Which fail?",
+                "code": "def bfs(graph, start): ...",
+                "tests": [
+                    {"id": "t1", "vertices": ["A"], "start_vertex": "A", "expected": ["A"]},
+                    {"id": "t2", "vertices": ["B"], "start_vertex": "B", "expected": ["B"]},
+                ],
+            },
+            {"exposing": ["t1"]},
+            {"selected": ["t2"]},
+        ),
+    ],
+)
+def test_a_trace_fix_the_bug_or_choose_tests_segment_blocks_until_answered(
+    client: TestClient,
+    db: Session,
+    kind: str,
+    config: dict[str, Any],
+    solution: dict[str, Any],
+    wrong: dict[str, Any],
+) -> None:
+    """Regression for #136: on staging these kinds counted as done unanswered (so a student
+    skipped module 3's trace practice without trying it). Now they gate like any other activity
+    (FR-2.7): the module can't be finished until the student answers, and a wrong answer counts."""
+    _make_gated_module(db)
+    activity = db.get_one(Activity, 3)
+    activity.kind, activity.config, activity.solution = kind, config, solution
+    db.commit()
+    _register_and_login(client, ALICE)
+    _answer(client, 1, "a")
+    _answer(client, 2, "a")
+
+    done = [s["done"] for s in client.get("/api/modules/0").json()["segments"]]
+    assert done == [True, True, True, False]
+    for position in (1, 2, 3):
+        assert _move(client, position) == 200
+    _move(client, 3)  # "Finish" on the unanswered last segment
+    assert client.get("/api/modules/0").json()["status"] == "in_progress"
+
+    res = client.post("/api/activities/3/attempts", json={"submitted": wrong})
+    assert res.status_code == 201, res.text
+    assert res.json()["correct"] is False
+    assert [s["done"] for s in client.get("/api/modules/0").json()["segments"]][3] is True
+    assert _move(client, 3) == 200
+    assert client.get("/api/modules/0").json()["status"] == "complete"
 
 
 def test_a_complete_module_can_be_stepped_through_freely(client: TestClient, db: Session) -> None:

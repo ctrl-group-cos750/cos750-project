@@ -41,7 +41,7 @@ jobs:
             case $area in
               web) pattern='^web/' ;;
               api) pattern='^(api|scripts|web/src)/' ;;
-              compose) pattern='^(api|web)/|^docker-compose[^/]*\.yml$|^\.env\.example$' ;;
+              compose) pattern='^(api|web|e2e)/|^docker-compose[^/]*\.yml$|^\.env\.example$' ;;
             esac
             value=$(touched "$pattern")
             [ "$all" = true ] && value=true
@@ -106,15 +106,39 @@ jobs:
           TEST_DATABASE_URL: postgresql+psycopg://ctrl:ctrl@localhost:5432/ctrl
         run: .venv/bin/pytest
 
-      # The images Coolify will build, so a broken Dockerfile fails here, not on deploy.
+      # The images Coolify will build, so a broken Dockerfile fails here, not on deploy. With
+      # docker-compose.e2e.yml the stack is also served over HTTPS for the end-to-end tests.
       - name: Build and start the whole stack
         if: steps.paths.outputs.compose == 'true'
         run: |
           docker compose config --quiet
-          docker compose build
-          docker compose -p ctrlci up -d --wait
+          docker compose -f docker-compose.yml -f docker-compose.e2e.yml build
+          docker compose -f docker-compose.yml -f docker-compose.e2e.yml -p ctrlci up -d --wait
+
+      # End-to-end and accessibility tests in three browsers (e2e/, SE document §14.1).
+      - if: steps.paths.outputs.compose == 'true'
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - name: End-to-end tests (Chromium, Firefox, WebKit)
+        if: steps.paths.outputs.compose == 'true'
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium firefox webkit
+          npx playwright test
+      - name: Upload the Playwright report
+        if: failure() && steps.paths.outputs.compose == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/playwright-report/
+          retention-days: 7
+
       - name: Logs
         if: always() && steps.paths.outputs.compose == 'true'
-        run: docker compose -p ctrlci logs --tail 50
+        run: docker compose -f docker-compose.yml -f docker-compose.e2e.yml -p ctrlci logs --tail 50
       - if: always() && steps.paths.outputs.compose == 'true'
-        run: docker compose -p ctrlci down -v
+        run: docker compose -f docker-compose.yml -f docker-compose.e2e.yml -p ctrlci down -v

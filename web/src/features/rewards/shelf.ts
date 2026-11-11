@@ -19,7 +19,7 @@ const howToEarn: Record<string, string> = {
   'solo-run': 'Meet your bronze objectives again on your own.',
   quest: 'Finish a bonus quest.',
   'all-quests': 'Finish the bonus quests you have left.',
-  'off-the-map': 'Keep exploring.',
+  'first-module': 'Work through a whole module.',
 }
 
 function stateOf(achievement: Achievement, earned?: EarnedBadge): AchievementState {

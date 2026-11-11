@@ -194,14 +194,21 @@ describe('AchievementBadge', () => {
     expect(screen.getByRole('img', { name: 'Queue Tracer, not earned yet' })).toBeInTheDocument()
   })
 
-  it('keeps the hidden badge secret until it is found', () => {
-    const { rerender } = render(
-      <AchievementBadge achievement={byId('off-the-map')} state="locked" />,
-    )
+  it('keeps a hidden badge secret until it is found', () => {
+    // The catalogue has no hidden badge today (#141 removed Off the Map, which nothing could
+    // earn), but the badge still supports one for the ID team to add.
+    const secret = {
+      id: 'secret',
+      name: 'Secret Path',
+      kind: 'hidden' as const,
+      glyph: 'quest' as const,
+      description: 'You found it.',
+    }
+    const { rerender } = render(<AchievementBadge achievement={secret} state="locked" />)
     expect(screen.getByRole('img', { name: 'Hidden badge, not found yet' })).toBeInTheDocument()
-    expect(screen.queryByText(/Off the Map/)).not.toBeInTheDocument()
-    rerender(<AchievementBadge achievement={byId('off-the-map')} state="earned" />)
-    expect(screen.getByRole('img', { name: 'Off the Map, earned' })).toBeInTheDocument()
+    expect(screen.queryByText(/Secret Path/)).not.toBeInTheDocument()
+    rerender(<AchievementBadge achievement={secret} state="earned" />)
+    expect(screen.getByRole('img', { name: 'Secret Path, earned' })).toBeInTheDocument()
   })
 
   it('has one badge per learning objective, and no ids repeat', () => {

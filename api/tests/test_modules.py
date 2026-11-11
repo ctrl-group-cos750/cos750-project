@@ -17,9 +17,24 @@ from fastapi.testclient import TestClient
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, Checkpoint, Hint, Module, Objective, Segment, Video
+from app.models import (
+    Activity,
+    Attempt,
+    Checkpoint,
+    Event,
+    Hint,
+    Module,
+    ModuleProgress,
+    Objective,
+    PointsEntry,
+    Segment,
+    User,
+    UserBadge,
+    Video,
+)
 from app.services import modules as modules_service
 from app.services.mastery import counts
+from app.services.modules import backfill_module_rewards
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -967,3 +982,127 @@ def test_a_complete_module_can_be_stepped_through_freely(client: TestClient, db:
         assert _move(client, position) == 200
     assert _move(client, 0) == 200
     assert client.get("/api/modules/0").json()["status"] == "complete"
+
+
+# ---------------------------------------------------------------------------
+# 13. Completing a module: points, badge and event (FR-9.1, FR-9.3, FR-10.1, #141)
+# ---------------------------------------------------------------------------
+
+
+def _module_points(db: Session, module_id: int = 0) -> list[int]:
+    return list(
+        db.scalars(select(PointsEntry.points).where(PointsEntry.ref == f"module:{module_id}"))
+    )
+
+
+def _badges(client: TestClient) -> list[str]:
+    return [b["badge"] for b in client.get("/api/rewards").json()["badges"]]
+
+
+def test_completing_a_module_earns_its_points_and_badge_and_is_logged_once(
+    client: TestClient, db: Session
+) -> None:
+    _make_gated_module(db)
+    _register_and_login(client, ALICE)
+    for activity_id in (1, 2, 3):
+        _answer(client, activity_id, "a")
+    for position in (1, 2, 3, 3):
+        assert _move(client, position) == 200
+    assert client.get("/api/modules/0").json()["status"] == "complete"
+
+    assert _module_points(db) == [25]
+    assert _badges(client) == ["first-module"]
+    completed = db.scalars(select(Event).where(Event.type == "module_completed")).all()
+    assert [e.ref for e in completed] == ["module:0"]
+
+    # Rereading and finishing again changes nothing.
+    assert _move(client, 0) == 200
+    assert _move(client, 3) == 200
+    assert _module_points(db) == [25]
+    assert len(db.scalars(select(Event).where(Event.type == "module_completed")).all()) == 1
+
+
+def test_a_module_clicked_through_with_hints_earns_no_points_until_real_work(
+    client: TestClient, db: Session
+) -> None:
+    """Every hint opened, then a wrong answer: the module completes, but its points and badge need
+    at least one right answer without hint 3 or 4 (FR-9.6; #166 review). One that comes later
+    earns them then."""
+    _make_gated_module(db)
+    db.add_all(
+        Hint(activity_id=a, level=level, body=f"Hint {level}.")
+        for a in (1, 2, 3)
+        for level in (1, 2, 3, 4)
+    )
+    db.commit()
+    _register_and_login(client, ALICE)
+    for activity_id in (1, 3):
+        for _ in range(4):
+            client.post(f"/api/activities/{activity_id}/hints")
+        _answer(client, activity_id, "b")  # wrong, after the last hint: done (#143)
+    for _ in range(4):
+        client.post("/api/activities/2/hints")
+    _answer(client, 2, "a")  # the checkpoint: right, but after hint 4
+    for position in (1, 2, 3, 3):
+        assert _move(client, position) == 200
+    assert client.get("/api/modules/0").json()["status"] == "complete"
+    assert _module_points(db) == []
+    assert "first-module" not in _badges(client)
+
+    # A right answer without heavy hints, later, in the complete module: now it's earned.
+    hintless = Activity(
+        id=4,
+        kind="multiple_choice",
+        title="Recall",
+        module_id=0,
+        purpose="retrieval",
+        config={
+            "prompt": "Which?",
+            "options": [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}],
+        },
+        solution={"correct": "a", "feedback": {}},
+    )
+    db.add(hintless)
+    db.commit()
+    _answer(client, 4, "a")
+    assert _module_points(db) == [25]
+    assert "first-module" in _badges(client)
+
+
+def test_the_seed_backfills_modules_completed_before_module_points(db: Session) -> None:
+    """A module completed before module points existed earns them on the next seed, if earned,
+    once (#166 review)."""
+    _make_gated_module(db)
+    user = User(email="ama@example.com", display_name="Ama", password_hash="x")  # noqa: S106
+    db.add(user)
+    db.flush()
+    db.add(ModuleProgress(user_id=user.id, module_id=0, status="complete"))
+    db.add(
+        Attempt(user_id=user.id, activity_id=1, submitted={}, correct=True, score=1.0, detail={})
+    )
+    db.commit()
+
+    assert backfill_module_rewards(db) == 1
+    assert backfill_module_rewards(db) == 0  # safe to run on every seed
+    db.commit()
+    assert _module_points(db) == [25]
+    badges = db.scalars(select(UserBadge.badge).where(UserBadge.user_id == user.id)).all()
+    assert badges == ["first-module"]
+
+
+def test_a_segment_in_a_locked_module_is_not_logged_as_viewed(
+    client: TestClient, db: Session
+) -> None:
+    _make_gated_module(db)  # module 1 stays locked until module 0 is complete
+    _register_and_login(client, ALICE)
+    assert (
+        client.post("/api/events", json={"type": "segment_viewed", "targetId": 5}).status_code
+        == 204
+    )
+    assert (
+        client.post("/api/events", json={"type": "segment_viewed", "targetId": 1}).status_code
+        == 204
+    )
+    assert [e.ref for e in db.scalars(select(Event).where(Event.type == "segment_viewed"))] == [
+        "segment:1"
+    ]

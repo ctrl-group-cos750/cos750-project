@@ -168,7 +168,7 @@ function Downloads() {
       table: 'events',
       title: 'Events',
       file: 'events',
-      text: 'The timeline: videos started and finished, checkpoints reached, hints shown, results changing.',
+      text: 'The timeline: segments viewed, videos started and finished, checkpoints reached, hints shown, results changing, modules completed.',
     },
     {
       table: 'objective_results',

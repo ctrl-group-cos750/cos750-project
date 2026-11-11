@@ -16,6 +16,11 @@ since only the first answer counts there; and a video segment once they have pas
 the video's checkpoints. Every other kind is done when shown. An activity whose kind has no
 student UI yet (`KINDS_WITHOUT_STUDENT_UI`) counts as done, so it can't strand a student. The
 module is complete, for good, once its last segment is done.
+
+Support (FR-8.4, app/services/support.py): a support segment the student doesn't need is hidden.
+It stays in the list, so positions never shift, and counts as done: the student moves straight
+past it, and a module whose remaining segments are all hidden is complete once the last segment
+shown is done.
 """
 
 from __future__ import annotations
@@ -37,6 +42,7 @@ from app.schemas.modules import (
 from app.services import rewards
 from app.services.events import log_event
 from app.services.locks import lock_student
+from app.services.support import hidden_segments, record_shown
 
 # Activity kinds the web can't show a student yet: it says "This activity kind is not available
 # yet" instead (SUPPORTED in web/src/features/activities/ActivityRenderer.tsx is the mirror of
@@ -188,8 +194,13 @@ def video_locked(session: Session, user_id: int, video: Video) -> bool:
 
 
 def _summary(
-    module: Module, status: ModuleStatus, segment_count: int, row: ModuleProgress | None
+    module: Module,
+    status: ModuleStatus,
+    segment_count: int,
+    row: ModuleProgress | None,
+    hidden_positions: frozenset[int] = frozenset(),
 ) -> ModuleOut:
+    position = row.current_segment_position if row else 0
     return ModuleOut(
         id=module.id,
         number=module.id,
@@ -199,8 +210,36 @@ def _summary(
         estimated_minutes=module.estimated_minutes,
         status=status,
         segment_count=segment_count,
-        current_segment_position=row.current_segment_position if row else 0,
+        current_segment_position=position,
+        shown_segment_count=segment_count - len(hidden_positions),
+        shown_segments_passed=position - sum(1 for p in hidden_positions if p < position),
     )
+
+
+def _hidden_positions(segments: Sequence[Segment], hidden: set[int]) -> frozenset[int]:
+    return frozenset(index for index, segment in enumerate(segments) if segment.id in hidden)
+
+
+def _hidden_by_module(
+    session: Session, user_id: int, progress: dict[int, ModuleProgress]
+) -> dict[int, frozenset[int]]:
+    """The positions of the segments hidden from this student, for each module with support
+    segments (FR-8.4). Other modules hide nothing."""
+    with_support = set(
+        session.scalars(
+            select(Segment.module_id).where(
+                Segment.module_id.is_not(None), Segment.support_for.is_not(None)
+            )
+        )
+    )
+    hidden: dict[int, frozenset[int]] = {}
+    for module_id in with_support:
+        if module_id is None:
+            continue
+        segments = _segments(session, module_id)
+        found = hidden_segments(session, user_id, segments, progress.get(module_id))
+        hidden[module_id] = _hidden_positions(segments, found)
+    return hidden
 
 
 def get_modules_for_user(session: Session, user_id: int) -> list[ModuleOut]:
@@ -209,8 +248,15 @@ def get_modules_for_user(session: Session, user_id: int) -> list[ModuleOut]:
     progress = _progress(session, user_id)
     counts = _segment_counts(session)
     statuses = _statuses(modules, progress, counts)
+    hidden = _hidden_by_module(session, user_id, progress)
     return [
-        _summary(module, statuses[module.id], counts.get(module.id, 0), progress.get(module.id))
+        _summary(
+            module,
+            statuses[module.id],
+            counts.get(module.id, 0),
+            progress.get(module.id),
+            hidden.get(module.id, frozenset()),
+        )
         for module in modules
     ]
 
@@ -308,6 +354,7 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
         )
     )
     segments = _segments(session, module_id)
+    hidden = hidden_segments(session, user_id, segments, row)  # support not needed (FR-8.4)
     retrieval = session.scalars(
         select(Activity)
         .where(Activity.module_id == module_id, Activity.purpose == "retrieval")
@@ -319,8 +366,10 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
     attempted = _answered(session, user_id, [s.activity_id for s in segments if s.activity_id])
     # TODO (FR-8.1): leave out the refreshers module 0's diagnostic has ruled out, once the
     # diagnostic records its result. Until then every refresher is shown.
-    return ModuleDetailOut(
-        **_summary(module, status, len(segments), row).model_dump(),
+    detail = ModuleDetailOut(
+        **_summary(
+            module, status, len(segments), row, _hidden_positions(segments, hidden)
+        ).model_dump(),
         segments=[
             SegmentOut(
                 id=segment.id,
@@ -342,6 +391,47 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
             for activity in retrieval
         ],
     )
+    # Support segments (FR-8.4): which objective each is for, and the ones this student doesn't
+    # need are hidden and count as done, so they never hold the student up.
+    support_for = {segment.id: segment.support_for for segment in segments}
+    for out in detail.segments:
+        out.support_for = support_for.get(out.id)
+        if out.id in hidden:
+            out.shown = False
+            out.done = True
+    return detail
+
+
+def segment_order(session: Session, module_id: int) -> list[int]:
+    """The ids of a module's segments, in order: what `keep_places` needs from before a change."""
+    return [segment.id for segment in _segments(session, module_id)]
+
+
+def keep_places(session: Session, module_id: int, before: Sequence[int]) -> int:
+    """After a module's segments changed (the seed, or a staff edit), keep every student on the
+    segment they had reached, not on the number (FR-2.5). `before` is the module's segment ids in
+    their old order (`segment_order`). A student's position is moved to where their segment is
+    now; if it was taken out, to where the nearest segment before it is now. Without this, support
+    segments (#172) put in before a student's place would move them back to content they had done,
+    and one taken out would move them on to content they hadn't reached. Not committed. Returns how
+    many students' positions moved."""
+    after = segment_order(session, module_id)
+    if list(before) == after:
+        return 0
+    now_at = {segment_id: index for index, segment_id in enumerate(after)}
+    moved = 0
+    for row in session.scalars(select(ModuleProgress).where(ModuleProgress.module_id == module_id)):
+        reached = row.current_segment_position
+        place = next(
+            (now_at[s] for s in reversed(before[: reached + 1]) if s in now_at),
+            0,
+        )
+        place = min(place, max(len(after) - 1, 0))
+        if place != reached:
+            row.current_segment_position = place
+            moved += 1
+    session.flush()
+    return moved
 
 
 def _answered(session: Session, user_id: int, activity_ids: Sequence[int]) -> set[int]:
@@ -367,6 +457,11 @@ def save_position(
     again after doing it completes the module (the page's "Finish module"); saving it while it
     isn't done yet changes nothing. A complete module stays complete (FR-2.6). Raises
     `ModuleNotFound` or `ModuleLocked` like `get_module_detail`.
+
+    Support segments the student doesn't need (FR-8.4) are hidden and done: "one segment" means
+    the next one shown, so a save may jump over hidden ones, and "the last segment" means the
+    last one shown. Every support segment shown when the save is made is recorded as shown, so it
+    stays shown (app/services/support.py).
 
     Raises `RetrievalIncomplete` until the student has answered the module's retrieval questions
     (FR-2.4), unless the module is already complete: a student who finished it before its
@@ -394,16 +489,25 @@ def save_position(
         .with_for_update()
     )
     reached = row.current_segment_position if row else 0
-    if segment_position > min(reached + 1, last):
-        raise PositionTooFar(module_id)
-    done = done_segments(session, user_id, segments)
+    # Support the student doesn't need is hidden: it is done, and Next moves straight past it, so
+    # the next segment may be several positions on (FR-8.4). Support shown now stays shown.
+    hidden = hidden_segments(session, user_id, segments, row)
+    record_shown(session, user_id, segments, hidden)
+    allowed = reached + 1
+    while allowed < last and segments[allowed].id in hidden:
+        allowed += 1
+    if segment_position > min(allowed, last) or (
+        segment_position > reached and segments[segment_position].id in hidden
+    ):
+        raise PositionTooFar(module_id)  # too far, or onto support this student isn't shown
+    done = done_segments(session, user_id, segments) | hidden
     # Only moving on leaves a segment behind. Saving a position already reached (stepping back
     # then forward again, or "Finish module" on a last segment that isn't done) moves past
     # nothing, so it isn't refused: it just doesn't complete the module (below).
     if (
         status != "complete"
         and segment_position > reached
-        and segments[segment_position - 1].id not in done
+        and any(s.id not in done for s in segments[reached:segment_position])
     ):
         raise SegmentNotDone(module_id)
     if row is None:
@@ -412,8 +516,8 @@ def save_position(
     row.current_segment_position = max(reached, segment_position)
     if (
         row.status != "complete"
-        and row.current_segment_position == last
-        and segments[last].id in done
+        and all(s.id in hidden for s in segments[row.current_segment_position + 1 :])
+        and segments[row.current_segment_position].id in done
     ):
         row.status = "complete"
         row.completed_at = datetime.now(tz=UTC)

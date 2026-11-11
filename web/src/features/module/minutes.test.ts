@@ -46,4 +46,10 @@ describe('minutesProgress', () => {
     // A module staff shortened below where the student had got to (#128, #146).
     expect(minutesProgress([module(10, 'in_progress', 2, 7)])).toEqual({ done: 10, total: 10 })
   })
+
+  it('counts only the segments shown: support the student doesn’t need is no time (FR-8.4)', () => {
+    // 9 segments, 2 of them hidden support: at the 4th of the 7 shown, 3/7 of 14 minutes is 6.
+    const m = { ...module(14, 'in_progress', 9, 5), shownSegmentCount: 7, shownSegmentsPassed: 3 }
+    expect(minutesProgress([m])).toEqual({ done: 6, total: 14 })
+  })
 })

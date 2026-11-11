@@ -43,6 +43,11 @@ class ModuleOut(ApiModel):
     segment_count: int
     # The furthest segment the student has reached, 0-based: where the module page resumes.
     current_segment_position: int
+    # How many segments this student is shown: `segment_count` less the support segments they
+    # don't need (FR-8.4). The map's minutes and the page's "Segment N of M" count these.
+    shown_segment_count: int
+    # How many of those shown segments come before `current_segment_position`.
+    shown_segments_passed: int
 
 
 class CourseLengthOut(ApiModel):
@@ -73,6 +78,12 @@ class SegmentOut(ApiModel):
     video_id: int | None = None
     # Populated only for activity segments.
     activity_id: int | None = None
+    # Support for this objective (FR-8.4): shown only to a student struggling with it here. The
+    # page opens a run of support segments with a short, kind line saying why it is there.
+    support_for: int | None = None
+    # False for support this student doesn't need: it stays in the list, so positions never
+    # shift, and is done, but the page skips it and doesn't count it.
+    shown: bool = True
     # The student has done it, so they can move past it (FR-2.7): an activity answered at least
     # once, or every checkpoint of a video passed. Always true for every other kind.
     done: bool = True

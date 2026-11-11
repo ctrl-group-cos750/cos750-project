@@ -123,6 +123,40 @@ describe('staff content editor', () => {
     expect(await screen.findByText('Saved.')).toBeInTheDocument()
   })
 
+  it('marks a segment as support for an objective (FR-8.4)', async () => {
+    const api = fakeApi({
+      user: grace,
+      overrides: {
+        'GET /api/staff/content': () => Response.json(overview),
+        'GET /api/staff/content/modules/3': () => Response.json(module3),
+        'PUT /api/staff/content/modules/3': (body) =>
+          Response.json({ ...module3, ...(body as object) }),
+      },
+    })
+    renderApp('/staff/content/modules/3')
+    const supportFor = await screen.findAllByLabelText('Support for (optional)')
+    expect(supportFor).toHaveLength(2) // a text and an activity segment can both be support
+    fireEvent.change(supportFor[1], { target: { value: '0' } }) // objective 1, the first choice
+    fireEvent.click(screen.getByRole('button', { name: 'Save module' }))
+    await waitFor(() => expect(api.callsTo('PUT /api/staff/content/modules/3')).toHaveLength(1))
+    const sent = api.callsTo('PUT /api/staff/content/modules/3')[0]!.body as ModuleOut
+    expect(sent.segments.map((s) => s.supportFor ?? null)).toEqual([null, 1])
+  })
+
+  it('offers no support in the mastery check', async () => {
+    const module6 = { ...module3, id: 6 }
+    fakeApi({
+      user: grace,
+      overrides: {
+        'GET /api/staff/content': () => Response.json(overview),
+        'GET /api/staff/content/modules/6': () => Response.json(module6),
+      },
+    })
+    renderApp('/staff/content/modules/6')
+    expect(await screen.findByRole('button', { name: 'Save module' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Support for (optional)')).not.toBeInTheDocument()
+  })
+
   it('shows the reason the API refused a save', async () => {
     fakeApi({
       user: grace,

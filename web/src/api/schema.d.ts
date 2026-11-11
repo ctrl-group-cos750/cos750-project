@@ -1619,6 +1619,8 @@ export interface components {
       skipCheckActivityId?: number | null
       /** Refresherfor */
       refresherFor?: string | null
+      /** Supportfor */
+      supportFor?: number | null
       /** Videoid */
       videoId?: number | null
     }
@@ -1644,6 +1646,8 @@ export interface components {
       skipCheckActivityId?: number | null
       /** Refresherfor */
       refresherFor?: string | null
+      /** Supportfor */
+      supportFor?: number | null
       /** Videoid */
       videoId?: number | null
     }
@@ -1812,6 +1816,10 @@ export interface components {
       segmentCount: number
       /** Currentsegmentposition */
       currentSegmentPosition: number
+      /** Shownsegmentcount */
+      shownSegmentCount: number
+      /** Shownsegmentspassed */
+      shownSegmentsPassed: number
       /** Segments */
       segments: components['schemas']['SegmentOut'][]
       /** Retrieval */
@@ -1848,6 +1856,10 @@ export interface components {
       segmentCount: number
       /** Currentsegmentposition */
       currentSegmentPosition: number
+      /** Shownsegmentcount */
+      shownSegmentCount: number
+      /** Shownsegmentspassed */
+      shownSegmentsPassed: number
     }
     /**
      * ObjectiveReportOut
@@ -2041,6 +2053,13 @@ export interface components {
       videoId?: number | null
       /** Activityid */
       activityId?: number | null
+      /** Supportfor */
+      supportFor?: number | null
+      /**
+       * Shown
+       * @default true
+       */
+      shown: boolean
       /**
        * Done
        * @default true

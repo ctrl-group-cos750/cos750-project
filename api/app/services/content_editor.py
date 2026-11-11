@@ -35,6 +35,7 @@ from app.models import (
     ModuleProgress,
     Objective,
     Segment,
+    ShownSegment,
     Video,
 )
 from app.schemas.staff_content import (
@@ -75,6 +76,7 @@ from app.seed import (
     snapshot,
 )
 from app.services.mastery import recompute_all
+from app.services.modules import keep_places
 
 
 class ContentProblem(ValueError):
@@ -301,6 +303,7 @@ def _segments_out(session: Session, segments: list[Segment]) -> list[EditorSegme
             activity_id=s.activity_id,
             skip_check_activity_id=s.skip_check_activity_id,
             refresher_for=s.refresher_for,
+            support_for=s.support_for,
             video_id=videos.get(s.id),
         )
         for s in segments
@@ -347,9 +350,11 @@ def _save_segments(
     )
 
     if changed:
+        before = [r.id for r in rows]
         kept = {s.id for s in incoming if s.id is not None}
         if gone := [i for i in existing if i not in kept]:
             session.execute(update(Video).where(Video.segment_id.in_(gone)).values(segment_id=None))
+            session.execute(delete(ShownSegment).where(ShownSegment.segment_id.in_(gone)))
             session.execute(delete(Segment).where(Segment.id.in_(gone)))
         next_id = _next_id(session, Segment.id)
         for position, s in enumerate(incoming, start=1):
@@ -374,9 +379,13 @@ def _save_segments(
             row.activity_id = checked.activity_id
             row.skip_check_activity_id = checked.skip_check_activity_id
             row.refresher_for = checked.refresher_for
+            row.support_for = checked.support_for
             session.add(row)
             s.id = seg_id
         session.flush()
+        if module_id is not None:
+            # Students stay on the segment they had reached, wherever it moved (FR-2.5).
+            keep_places(session, module_id, before)
 
     # Videos: each video segment plays the video it names (one segment per video).
     for s in incoming:

@@ -56,3 +56,40 @@ def test_migrations_apply_on_postgres_and_match_the_models() -> None:
         conn.execute(text("DROP SCHEMA public CASCADE"))
         conn.execute(text("CREATE SCHEMA public"))
     engine.dispose()
+
+
+def test_0016_keeps_each_hint_level_s_first_view(tmp_path: Path) -> None:
+    """Hint views recorded twice by requests at the same moment (#138) are removed, keeping the
+    earliest, so the unique constraint can be added to a database that already has them."""
+    url = f"sqlite:///{tmp_path / 'hints.db'}"
+    cfg = alembic_config(url)
+    command.upgrade(cfg, "0015")
+    engine = create_engine(url)
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    "INSERT INTO users (id, email, display_name, password_hash)"
+                    " VALUES (1, 'ada@example.com', 'Ada', 'x')"
+                )
+            )
+            conn.execute(
+                text(
+                    "INSERT INTO activities (id, kind, title, config, solution)"
+                    " VALUES (1, 'multiple_choice', 'Q', '{}', '{}')"
+                )
+            )
+            for view_id, level in ((1, 1), (2, 1), (3, 2), (4, 1), (5, 2)):
+                conn.execute(
+                    text(
+                        "INSERT INTO hint_views (id, user_id, activity_id, level)"
+                        " VALUES (:id, 1, 1, :level)"
+                    ),
+                    {"id": view_id, "level": level},
+                )
+        command.upgrade(cfg, "0016")
+        with engine.connect() as conn:
+            kept = conn.execute(text("SELECT id, level FROM hint_views ORDER BY id")).all()
+        assert [tuple(row) for row in kept] == [(1, 1), (3, 2)]
+    finally:
+        engine.dispose()

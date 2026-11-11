@@ -182,15 +182,33 @@ describe('Markdown', () => {
     })
 
     const tables = fixtureTables()
-    it('finds the worked-example tables in the fixtures', () => {
-      // Modules 1 to 4 each have a worked example with a table; if this drops, the walk broke.
-      expect(tables.length).toBeGreaterThanOrEqual(4)
-    })
+    // The worked examples that teach with a table: building a graph in code (204), the trace
+    // table (317) and BFS line by line (404). Named, not counted, so a content change elsewhere
+    // (content/pass removes 105's table) doesn't break this test.
+    const segmentBody = (id: number) => {
+      const seed = `${process.cwd()}/../api/app/seed/`
+      for (const file of readdirSync(seed).filter((name) => /^module-\d+\.json$/.test(name))) {
+        const data = JSON.parse(readFileSync(`${seed}${file}`, 'utf8')) as {
+          modules?: { segments?: { id: number; body?: string }[] }[]
+        }
+        for (const module of data.modules ?? [])
+          for (const segment of module.segments ?? []) if (segment.id === id) return segment.body
+      }
+      return undefined
+    }
 
-    it.each(tables)('renders the table in $where', ({ body }) => {
-      render(<Markdown>{body}</Markdown>)
+    it.each([204, 317, 404])('renders the table in worked-example segment %i', (id) => {
+      const body = segmentBody(id)
+      expect(body, `segment ${id} in the fixtures`).toBeDefined()
+      render(<Markdown>{body!}</Markdown>)
       expect(screen.getAllByRole('table').length).toBeGreaterThan(0)
       expect(screen.getAllByRole('columnheader').length).toBeGreaterThan(1)
+      expect(document.body.textContent).not.toMatch(/\|\s*-{3}/)
+    })
+
+    it.each(tables)('renders every other fixture table too: $where', ({ body }) => {
+      render(<Markdown>{body}</Markdown>)
+      expect(screen.getAllByRole('table').length).toBeGreaterThan(0)
       expect(document.body.textContent).not.toMatch(/\|\s*-{3}/)
     })
   })

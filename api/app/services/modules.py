@@ -12,8 +12,9 @@ Progress (FR-2.5, FR-2.6): the student moves through a module one segment at a t
 furthest segment reached is kept, so stepping back to reread never loses progress. A student moves
 past a segment only once it is done (FR-2.7): an activity segment once they have answered its
 activity at least once, right or wrong, and a video segment once they have passed every one of
-the video's checkpoints. Every other kind is done when shown. The module is complete, for good,
-once its last segment is done.
+the video's checkpoints. Every other kind is done when shown. An activity whose kind has no
+student UI yet (`KINDS_WITHOUT_STUDENT_UI`) counts as done, so it can't strand a student. The
+module is complete, for good, once its last segment is done.
 """
 
 from __future__ import annotations
@@ -24,8 +25,15 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Attempt, Checkpoint, Module, ModuleProgress, Segment, Video
+from app.models import Activity, Attempt, Checkpoint, Module, ModuleProgress, Segment, Video
 from app.schemas.modules import ModuleDetailOut, ModuleOut, ModuleStatus, SegmentOut
+
+# Activity kinds the web can't show a student yet: it says "This activity kind is not available
+# yet" instead (SUPPORTED in web/src/features/activities/ActivityRenderer.tsx is the mirror of
+# this set). A student can't answer them, so FR-2.7 counts them as done rather than locking the
+# student out of the rest of the module.
+# TODO: remove a kind from this set as soon as its student UI exists.
+KINDS_WITHOUT_STUDENT_UI: frozenset[str] = frozenset({"trace", "fix_the_bug", "choose_tests"})
 
 
 class ModuleNotFound(ValueError):
@@ -41,7 +49,7 @@ class PositionTooFar(ValueError):
 
 
 class SegmentNotDone(ValueError):
-    """The student tried to move past, or finish on, a segment they haven't done yet."""
+    """The student tried to move past a segment they haven't done yet."""
 
 
 def _modules(session: Session) -> Sequence[Module]:
@@ -145,7 +153,8 @@ def done_segments(session: Session, user_id: int, segments: Sequence[Segment]) -
     """The ids of the segments this student has done (FR-2.7). An activity segment is done once
     they have answered its activity at least once, and a video segment once they have passed
     every checkpoint in its video. A segment with nothing to do (any other kind, or no activity
-    or video yet) is always done."""
+    or video yet) is always done, and so is an activity, or a checkpoint, whose kind has no
+    student UI yet (`KINDS_WITHOUT_STUDENT_UI`)."""
     videos = _videos(session, segments)
     checkpoints: dict[int, set[int]] = {}
     for video_id, activity_id in session.execute(
@@ -156,8 +165,16 @@ def done_segments(session: Session, user_id: int, segments: Sequence[Segment]) -
         checkpoints.setdefault(video_id, set()).add(activity_id)
     wanted = {s.activity_id for s in segments if s.kind == "activity" and s.activity_id}
     wanted |= {a for ids in checkpoints.values() for a in ids}
-    answered: set[int] = set()
-    passed: set[int] = set()
+    # Nobody can answer these yet, so they count as answered and passed.
+    no_ui = set(
+        session.scalars(
+            select(Activity.id).where(
+                Activity.id.in_(wanted), Activity.kind.in_(KINDS_WITHOUT_STUDENT_UI)
+            )
+        )
+    )
+    answered: set[int] = set(no_ui)
+    passed: set[int] = set(no_ui)
     for activity_id, correct in session.execute(
         select(Attempt.activity_id, Attempt.correct).where(
             Attempt.user_id == user_id, Attempt.activity_id.in_(wanted)
@@ -220,10 +237,11 @@ def save_position(
 
     The furthest position reached is kept: stepping back is allowed and changes nothing. Moving
     more than one segment past the furthest raises `PositionTooFar`, and moving past a segment
-    the student hasn't done raises `SegmentNotDone` (FR-2.7). Saving the last segment again once
-    it is done completes the module (the page's "Finish module"), and a complete module stays
-    complete (FR-2.6); finishing on a last segment that isn't done raises `SegmentNotDone`.
-    Raises `ModuleNotFound` or `ModuleLocked` like `get_module_detail`.
+    the student hasn't done raises `SegmentNotDone` (FR-2.7). The module is complete once the
+    furthest position is the last segment and that segment is done, so saving the last segment
+    again after doing it completes the module (the page's "Finish module"); saving it while it
+    isn't done yet changes nothing. A complete module stays complete (FR-2.6). Raises
+    `ModuleNotFound` or `ModuleLocked` like `get_module_detail`.
     """
     status = _status(session, user_id, module_id)
     if status == "locked":
@@ -241,13 +259,15 @@ def save_position(
     if segment_position > min(reached + 1, last):
         raise PositionTooFar(module_id)
     done = done_segments(session, user_id, segments)
-    if status != "complete":
-        # Moving on leaves the segment before this one; finishing stays on the last.
-        if segment_position > reached and segments[segment_position - 1].id not in done:
-            raise SegmentNotDone(module_id)
-        finishing = segment_position == last == reached
-        if finishing and segments[last].id not in done:
-            raise SegmentNotDone(module_id)
+    # Only moving on leaves a segment behind. Saving a position already reached (stepping back
+    # then forward again, or "Finish module" on a last segment that isn't done) moves past
+    # nothing, so it isn't refused: it just doesn't complete the module (below).
+    if (
+        status != "complete"
+        and segment_position > reached
+        and segments[segment_position - 1].id not in done
+    ):
+        raise SegmentNotDone(module_id)
     if row is None:
         row = ModuleProgress(user_id=user_id, module_id=module_id, status="in_progress")
         session.add(row)

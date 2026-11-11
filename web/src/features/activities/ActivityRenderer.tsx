@@ -17,6 +17,9 @@ type ActivityRendererProps = {
   heading?: 'h1' | 'h3'
 }
 
+// The kinds a student can answer. The API's KINDS_WITHOUT_STUDENT_UI (api/app/services/modules.py)
+// is the mirror: a module segment of any other kind counts as done (FR-2.7), so it can't block.
+// Add a kind here and remove it there together, once its control exists.
 const SUPPORTED: ReadonlySet<Activity['kind']> = new Set([
   'parsons',
   'fill_in',

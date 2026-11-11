@@ -381,23 +381,27 @@ describe('ModulePage — activity segment', () => {
       await screen.findByRole('heading', { level: 3, name: 'Which vertex is next?' }),
     ).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Start the activity' })).toBeNull()
-    expect(screen.getByRole('button', { name: 'Next →' })).toBeDisabled()
-    expect(
-      screen.getByText('Answer the activity to continue. A wrong answer still counts.'),
-    ).toBeInTheDocument()
+    const next = screen.getByRole('button', { name: 'Next →' })
+    expect(next).toHaveAttribute('aria-disabled', 'true')
+    expect(next).toHaveAccessibleDescription(
+      'Answer the activity to continue. A wrong answer still counts.',
+    )
 
     await userEvent.click(screen.getByLabelText('D, the last neighbour queued'))
     await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
     expect(await screen.findByText('Not quite: D joined the queue last.')).toBeInTheDocument()
 
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Next →' })).toBeEnabled())
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Next →' })).not.toHaveAttribute('aria-disabled'),
+    )
+    expect(document.getElementById('segment-blocked')).toBeEmptyDOMElement()
     await userEvent.click(screen.getByRole('button', { name: 'Next →' }))
     expect(
       await screen.findByRole('heading', { name: 'Worked example: adjacency list' }),
     ).toBeInTheDocument()
   })
 
-  it('asks for the video’s checkpoints before moving on', async () => {
+  it('asks for the video’s checkpoints, answered correctly, before moving on', async () => {
     const detail: ModuleDetail = {
       ...allKindsDetail,
       currentSegmentPosition: 1,
@@ -424,9 +428,103 @@ describe('ModulePage — activity segment', () => {
     renderApp('/modules/1')
 
     expect(
-      await screen.findByText('Answer the video’s checkpoints to continue.'),
+      await screen.findByText(
+        'Answer each of the video’s checkpoint questions correctly to continue.',
+      ),
     ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Next →' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Next →' })).toHaveAttribute('aria-disabled', 'true')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// (f) Blocked Next: accessible, and only at the furthest segment reached (FR-2.7)
+// ---------------------------------------------------------------------------
+
+describe('ModulePage — blocked Next', () => {
+  const blockedAt = (currentSegmentPosition: number): ModuleDetail => ({
+    ...allKindsDetail,
+    currentSegmentPosition,
+    status: 'in_progress',
+    segments: [
+      textSegment,
+      videoSegment,
+      { ...activitySegment, done: false },
+      workedExampleSegment,
+    ],
+  })
+
+  it('stays focusable, reads its reason, and ignores a click', async () => {
+    const api = setupModuleApi(blockedAt(2), blockedAt(2), {
+      'GET /api/activities/7': () => Response.json({ detail: 'Not needed here.' }, { status: 404 }),
+    })
+    renderApp('/modules/1')
+
+    const next = await screen.findByRole('button', { name: 'Next →' })
+    expect(next).not.toBeDisabled()
+    expect(next).toHaveAttribute('aria-disabled', 'true')
+    next.focus()
+    expect(next).toHaveFocus()
+    expect(next).toHaveAccessibleDescription(
+      'Answer the activity to continue. A wrong answer still counts.',
+    )
+
+    await userEvent.click(next)
+    expect(api.callsTo('POST /api/modules/1/position')).toHaveLength(0)
+    expect(screen.getByRole('heading', { name: activitySegment.title })).toBeInTheDocument()
+  })
+
+  it('keeps the reason in a status region that is there even when nothing is blocked', async () => {
+    setupModuleApi(twoSegmentDetail)
+    renderApp('/modules/1')
+
+    await screen.findByRole('button', { name: 'Next →' })
+    // <output> is a polite status region: announced when its text changes.
+    const status = document.getElementById('segment-blocked')
+    expect(screen.getAllByRole('status')).toContain(status)
+    expect(status).toBeEmptyDOMElement()
+  })
+
+  it('doesn’t block stepping forward over a segment before the furthest reached', async () => {
+    // Progress made before FR-2.7, or before staff changed the segment: it was passed already.
+    const api = setupModuleApi(blockedAt(3), blockedAt(3), {
+      'GET /api/activities/7': () => Response.json({ detail: 'Not needed here.' }, { status: 404 }),
+    })
+    renderApp('/modules/1')
+
+    await userEvent.click(await screen.findByRole('button', { name: '← Previous' }))
+    const next = await screen.findByRole('button', { name: 'Next →' })
+    expect(next).not.toHaveAttribute('aria-disabled')
+
+    await userEvent.click(next)
+    expect(
+      await screen.findByRole('heading', { name: 'Worked example: adjacency list' }),
+    ).toBeInTheDocument()
+    expect(api.callsTo('POST /api/modules/1/position')).toHaveLength(0)
+  })
+
+  it('goes back and forward again on an unanswered last segment without saving', async () => {
+    // The bug in review of #130: Next re-saved the last segment, which the server refused.
+    const detail: ModuleDetail = {
+      ...twoSegmentDetail,
+      currentSegmentPosition: 1,
+      status: 'in_progress',
+      segments: [textSegment, { ...activitySegment, position: 1, done: false }],
+    }
+    const api = setupModuleApi(detail, detail, {
+      'GET /api/activities/7': () => Response.json({ detail: 'Not needed here.' }, { status: 404 }),
+    })
+    renderApp('/modules/1')
+
+    expect(await screen.findByRole('button', { name: 'Finish module' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    )
+    await userEvent.click(screen.getByRole('button', { name: '← Previous' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Next →' }))
+
+    expect(await screen.findByRole('button', { name: 'Finish module' })).toBeInTheDocument()
+    expect(screen.queryByText('Could not save progress')).toBeNull()
+    expect(api.callsTo('POST /api/modules/1/position')).toHaveLength(0)
   })
 })
 

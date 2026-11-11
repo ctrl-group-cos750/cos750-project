@@ -32,7 +32,7 @@ export function SegmentView({ segment, onAnswered }: SegmentViewProps) {
         <section aria-label={segment.title} className="grid gap-4">
           <h2 className="text-xl font-semibold">{segment.title}</h2>
           {segment.videoId !== null ? (
-            <VideoView videoId={segment.videoId} onResult={onAnswered} />
+            <VideoView videoId={segment.videoId} heading="h3" onResult={onAnswered} />
           ) : (
             <Alert tone="warning">Video not available.</Alert>
           )}

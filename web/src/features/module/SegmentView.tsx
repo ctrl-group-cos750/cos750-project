@@ -52,7 +52,7 @@ export function SegmentView({ segment, onAnswered }: SegmentViewProps) {
             {segment.title}
           </h2>
           {segment.activityId !== null ? (
-            <ActivityView activityId={segment.activityId} heading="h3" onResult={onAnswered} />
+            <ActivityView activityId={segment.activityId} showTitle={false} onResult={onAnswered} />
           ) : (
             <Alert tone="warning">Activity not available.</Alert>
           )}

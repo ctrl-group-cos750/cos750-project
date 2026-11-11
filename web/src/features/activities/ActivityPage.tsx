@@ -17,6 +17,8 @@ type ActivityViewProps = {
   /** h1 on its own page; h2 for a module's recall questions, under the module's title; h3 inside
    * a module segment, under the segment's title. */
   heading?: 'h1' | 'h2' | 'h3'
+  /** False inside a module segment, whose own heading already names the question. */
+  showTitle?: boolean
   /** Called with each checked answer, e.g. so a module knows the segment is done, or that its
    * recall questions are answered. */
   onResult?: (result: AttemptResult) => void
@@ -25,7 +27,7 @@ type ActivityViewProps = {
 /** One activity with its feedback and hint ladder: the activity page, an activity segment in a
  * module (SegmentView), which keeps the module's own navigation on screen, and a module's recall
  * questions. */
-export function ActivityView({ activityId, heading, onResult }: ActivityViewProps) {
+export function ActivityView({ activityId, heading, showTitle, onResult }: ActivityViewProps) {
   const [result, setResult] = useState<AttemptResult>()
   const [submitting, setSubmitting] = useState(false)
   // Set synchronously, so a second Enter that lands before React re-renders the busy button
@@ -78,6 +80,7 @@ export function ActivityView({ activityId, heading, onResult }: ActivityViewProp
         requestHint={requestActivityHint}
         loadHints={fetchActivityHints}
         heading={heading}
+        showTitle={showTitle}
       />
     </>
   )

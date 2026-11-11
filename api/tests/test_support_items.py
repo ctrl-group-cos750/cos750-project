@@ -128,10 +128,36 @@ def test_a_group_is_a_worked_example_then_one_or_two_questions(module: int, obje
     assert group[0]["kind"] == "text"
     assert all(s["kind"] == "activity" for s in group[1:])
     assert 1 <= len(group) - 1 <= 2
-    # Straight after the objective's last practice segment, which everyone has done by then.
-    last_base = max(i for i, s in enumerate(SEGMENTS[module]) if base_objective(s) == objective)
-    between = SEGMENTS[module][last_base + 1 : start]
-    assert all(s.get("support_for") is not None for s in between), (module, objective)
+    # After every base practice segment on the objective except the closing task, so the trigger
+    # (#172) has evidence; before the closing task, which then checks the skill after the help.
+    at = {s["id"]: i for i, s in enumerate(SEGMENTS[module])}
+    for s in SEGMENTS[module]:
+        if base_objective(s) == objective and not closing(s):
+            assert at[s["id"]] < start, (module, objective, s["id"])
+    assert start < at[next(s["id"] for s in SEGMENTS[module] if closing(s))]
+
+
+def closing(segment: dict[str, Any]) -> bool:
+    return str(segment["title"]).startswith("Closing task")
+
+
+# Each module's segments in order after this card, support in brackets: the positions #172's
+# migration of saved progress must handle (a saved position is an index into this list).
+ORDER = {
+    1: [101, 102, 103, 104, [190, 191], 105, 106, 107, 108, 109, [192, 193, 194], [195, 196], 110],
+    2: [203, 204, 205, [290, 291], 206, 207, 208, [292, 293, 294], 209],
+    3: [313, 314, [392, 393], 315, 316, 317, 318, [390, 391], 319],
+    4: [403, 404, 405, 406, 407, [490, 491, 492], 408],
+}
+
+
+def test_the_segments_are_in_the_order_reported_for_saved_progress() -> None:
+    for n, order in ORDER.items():
+        flat = [i for x in order for i in (x if isinstance(x, list) else [x])]
+        assert [s["id"] for s in SEGMENTS[n]] == flat, n
+        assert [s["id"] for s in support_segments(n)] == [
+            i for x in order if isinstance(x, list) for i in x
+        ]
 
 
 def test_the_ids_are_the_modules_90s_and_used_once() -> None:

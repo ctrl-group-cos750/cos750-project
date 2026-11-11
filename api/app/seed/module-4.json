@@ -42,12 +42,6 @@
           "activity_id": 406
         },
         {
-          "id": 408,
-          "kind": "activity",
-          "title": "Closing task: BFS on the shuttle",
-          "activity_id": 407
-        },
-        {
           "id": 490,
           "kind": "text",
           "title": "Worked example: the four jobs of BFS",
@@ -67,6 +61,12 @@
           "title": "Try another: what does bfs return?",
           "activity_id": 491,
           "support_for": 6
+        },
+        {
+          "id": 408,
+          "kind": "activity",
+          "title": "Closing task: BFS on the shuttle",
+          "activity_id": 407
         }
       ]
     }

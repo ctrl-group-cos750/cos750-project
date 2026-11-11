@@ -102,12 +102,6 @@
           "support_for": 2
         },
         {
-          "id": 110,
-          "kind": "activity",
-          "title": "Closing task: graphs in real life",
-          "activity_id": 107
-        },
-        {
           "id": 195,
           "kind": "text",
           "title": "Worked example: from a situation to a graph",
@@ -120,6 +114,12 @@
           "title": "Try another: which graph models it?",
           "activity_id": 193,
           "support_for": 3
+        },
+        {
+          "id": 110,
+          "kind": "activity",
+          "title": "Closing task: graphs in real life",
+          "activity_id": 107
         }
       ]
     }

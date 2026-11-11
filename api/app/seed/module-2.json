@@ -62,12 +62,6 @@
           "activity_id": 207
         },
         {
-          "id": 209,
-          "kind": "activity",
-          "title": "Closing task: predict the output",
-          "activity_id": 208
-        },
-        {
           "id": 292,
           "kind": "text",
           "title": "Worked example: why each line of the Graph class is there",
@@ -87,6 +81,12 @@
           "title": "Try another: predict the list",
           "activity_id": 292,
           "support_for": 6
+        },
+        {
+          "id": 209,
+          "kind": "activity",
+          "title": "Closing task: predict the output",
+          "activity_id": 208
         }
       ]
     }

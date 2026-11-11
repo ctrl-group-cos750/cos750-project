@@ -989,7 +989,7 @@
         "options": [
           {
             "id": "a",
-            "label": "Yes. BFS takes the neighbours of a vertex alphabetically, and that is why it is short."
+            "label": "Yes. BFS orders the neighbours of a vertex alphabetically, and that keeps the ladder short."
           },
           {
             "id": "h",

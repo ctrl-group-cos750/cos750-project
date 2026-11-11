@@ -19,14 +19,18 @@ import signal
 from collections import Counter
 from collections.abc import Iterator
 from contextlib import contextmanager
+from itertools import combinations, product
 from types import FrameType
 from typing import Any
 
 import pytest
+from parsons_orders import runnable_orders
 
+from app.schemas.activities import FixTheBugSolution, ParsonsSolution
 from app.schemas.graphs import GraphEdge, GraphScenarioOut
 from app.seed import ActivityFixture, FixtureFile, ReviewPathFixture, read_fixtures
 from app.services.bfs import run_bfs
+from app.services.checking import check_activity
 from app.services.mastery import MASTERY_MODULE, Rule
 
 CONTENT: FixtureFile = read_fixtures()
@@ -160,7 +164,7 @@ def parts(a: ActivityFixture) -> int:
             config = dict(a.config)
             return len(run_bfs(GraphScenarioOut(id=0, name="", **config)).steps)
         case "parsons" | "fix_the_bug":
-            return len(a.solution["order"])
+            return len(first_order(a))
         case "fill_in":
             return len(a.config["blanks"])
         case "choose_tests":
@@ -172,6 +176,13 @@ def items_of(where: str, objective: int) -> list[ActivityFixture]:
     if where == "module 6":
         return [a for a in CHECK if a.objective_id == objective]
     return FRESH[objective]
+
+
+def first_order(a: ActivityFixture) -> list[int]:
+    """One correct order of a Parsons or fix-the-bug item's lines (its `order`, groups as
+    written)."""
+    shape = FixTheBugSolution if a.kind == "fix_the_bug" else ParsonsSolution
+    return shape.model_validate(a.solution).first_order()
 
 
 def lines_text(a: ActivityFixture, order: list[int]) -> str:
@@ -289,7 +300,7 @@ def test_every_wrong_answer_has_feedback(a: ActivityFixture) -> None:
             wrong = set(a.config["options"]) - set(a.solution["answers"].values())
             assert {t for messages in fb.values() for t in messages} == wrong
         case "fix_the_bug":
-            faulty = {x["id"] for x in a.config["lines"]} - set(a.solution["order"])
+            faulty = {x["id"] for x in a.config["lines"]} - set(first_order(a))
             assert {int(k) for k in fb} == faulty
         case "choose_tests":
             assert set(fb) == {t["id"] for t in a.config["tests"]}
@@ -395,12 +406,77 @@ def test_the_queue_practice_answer_is_what_bfs_does() -> None:
 
 def test_the_reference_bfs_passes_every_hidden_test() -> None:
     parsons = next(a for a in CHECK if a.kind == "parsons")
-    assert passes_hidden(lines_text(parsons, parsons.solution["order"]))
+    assert passes_hidden(lines_text(parsons, first_order(parsons)))
+
+
+def conventional(order: list[int], text: dict[int, str]) -> bool:
+    """The import comes first, and the order gets the vertex straight after it leaves the queue:
+    the two orders that run but are marked wrong on purpose (see test_module_4.py)."""
+    lines = [text[i].strip() for i in order]
+    after_dequeue = lines[next(n for n, t in enumerate(lines) if ".popleft()" in t) + 1]
+    return lines[0].startswith("from ") and after_dequeue.startswith("order.append(")
+
+
+ORDERED = [a for a in EVERY if a.kind in ("parsons", "fix_the_bug")]
+
+
+@pytest.mark.parametrize("a", ORDERED, ids=lambda a: str(a.id))
+def test_an_ordered_item_accepts_exactly_the_working_orders(a: ActivityFixture) -> None:
+    """Every order of the answer's lines Python can run is tried on the hidden tests: each the
+    checker accepts passes, and each that passes is accepted, but for the two conventions above
+    (FR-5.4, FR-5.5, #145). Objectives 6 and 7 need every part right, so a working order marked
+    wrong would decide the result. Distractors and corrections are covered by the tests below."""
+    every = {x["id"]: x["text"] for x in a.config["lines"] + a.config.get("corrections", [])}
+    text = {i: every[i] for i in first_order(a)}
+    working, accepted = [], []
+    for order in runnable_orders(text):
+        if passes_hidden(lines_text(a, order)):
+            working.append(order)
+        if check_activity(a.kind, a.config, a.solution, {"order": order}).correct:
+            accepted.append(order)
+    assert accepted == [order for order in working if conventional(order, text)]
+    assert len(accepted) == 12
+    assert len(working) == 48
+    shown = [x["id"] for x in a.config["lines"]]
+    assert not check_activity(a.kind, a.config, a.solution, {"order": shown}).correct
+
+
+# A correction that is harmless once the real bug is fixed: the program runs, but the line it
+# replaces was never faulty, so fix the bug marks it "did not need a correction" (flagged on #145).
+HARMLESS = {1703: [(1, 2, 20, 4, 5, 6, 7, 8, 9, 22, 11, 12, 13)]}
+
+
+@pytest.mark.parametrize(
+    "a", [a for a in EVERY if a.kind == "fix_the_bug"], ids=lambda a: str(a.id)
+)
+def test_no_other_correction_makes_a_working_program(a: ActivityFixture) -> None:
+    """Replacing one or two lines of the fixed program with any other line or correction of the
+    same indentation never runs correctly, except the listed harmless ones."""
+    every = {x["id"]: x["text"] for x in a.config["lines"] + a.config["corrections"]}
+    fixed = first_order(a)
+
+    def indent(i: int) -> int:
+        return len(every[i]) - len(every[i].lstrip())
+
+    working = set()
+    for count in (1, 2):
+        for slots in combinations(range(len(fixed)), count):
+            options = [
+                [c for c in every if c not in fixed and indent(c) == indent(fixed[s])]
+                for s in slots
+            ]
+            for pick in product(*options):
+                order = list(fixed)
+                for slot, line in zip(slots, pick, strict=True):
+                    order[slot] = line
+                if passes_hidden(lines_text(a, order)):
+                    working.add(tuple(order))
+    assert sorted(working) == HARMLESS.get(a.id, [])
 
 
 def test_each_parsons_distractor_breaks_bfs() -> None:
     a = next(a for a in CHECK if a.kind == "parsons")
-    order = a.solution["order"]
+    order = first_order(a)
     by_id = {x["id"]: x["text"] for x in a.config["lines"]}
     distractors = [x for x in a.config["lines"] if x["id"] not in order]
     assert len(distractors) == 4
@@ -445,12 +521,12 @@ CHOICES = [a for a in EVERY if a.kind == "choose_tests"]
 def test_the_faulty_program_fails_and_the_fixed_one_passes(a: ActivityFixture) -> None:
     original = [x["id"] for x in a.config["lines"]]
     assert not passes_hidden(lines_text(a, original))
-    assert passes_hidden(lines_text(a, a.solution["order"]))
+    assert passes_hidden(lines_text(a, first_order(a)))
 
 
 @pytest.mark.parametrize("a", FIXES, ids=lambda a: str(a.id))
 def test_each_wrong_correction_leaves_bfs_broken(a: ActivityFixture) -> None:
-    order = a.solution["order"]
+    order = first_order(a)
     used = [c for c in a.config["corrections"] if c["id"] in order]
     unused = [c for c in a.config["corrections"] if c["id"] not in order]
     assert unused, "a correction to choose from, not only the right one"

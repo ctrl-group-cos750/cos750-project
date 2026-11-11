@@ -8,6 +8,14 @@ import { ProfilePage } from './features/profile/ProfilePage.tsx'
 import { BadgesPage } from './features/rewards/BadgesPage.tsx'
 import { StaffAccountPage } from './features/staff/StaffAccountPage.tsx'
 import { StaffAccountsPage } from './features/staff/StaffAccountsPage.tsx'
+import { StaffActivityEditorPage } from './features/staff/content/StaffActivityEditorPage.tsx'
+import { StaffContentPage } from './features/staff/content/StaffContentPage.tsx'
+import { StaffGraphEditorPage } from './features/staff/content/StaffGraphEditorPage.tsx'
+import {
+  StaffModuleEditorPage,
+  StaffReviewPathEditorPage,
+} from './features/staff/content/StaffModuleEditorPage.tsx'
+import { StaffObjectiveEditorPage } from './features/staff/content/StaffObjectiveEditorPage.tsx'
 import { StaffLayout } from './features/staff/StaffLayout.tsx'
 import { StaffMembersPage } from './features/staff/StaffMembersPage.tsx'
 import { StaffPilotPage } from './features/staff/StaffPilotPage.tsx'
@@ -71,6 +79,12 @@ function App() {
           <Route path="videos" element={<StaffVideosPage />} />
           <Route path="videos/import" element={<StaffVideoImportPage />} />
           <Route path="videos/:videoId" element={<StaffVideoEditorPage />} />
+          <Route path="content" element={<StaffContentPage />} />
+          <Route path="content/modules/:moduleId" element={<StaffModuleEditorPage />} />
+          <Route path="content/review-paths/:objectiveId" element={<StaffReviewPathEditorPage />} />
+          <Route path="content/activities/:activityId" element={<StaffActivityEditorPage />} />
+          <Route path="content/objectives/:objectiveId" element={<StaffObjectiveEditorPage />} />
+          <Route path="content/graphs/:graphId" element={<StaffGraphEditorPage />} />
           <Route path="accounts" element={<StaffAccountsPage />} />
           <Route path="accounts/:accountId" element={<StaffAccountPage />} />
           <Route path="pilot" element={<StaffPilotPage />} />

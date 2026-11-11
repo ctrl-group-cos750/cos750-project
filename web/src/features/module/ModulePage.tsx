@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { Alert, Button, ProgressBar, Spinner } from '../../components'
 import { ActivityView } from '../activities/ActivityPage.tsx'
@@ -20,6 +20,20 @@ export function ModulePage() {
   // one they haven't answered yet (FR-2.4).
   const [retrievalIndex, setRetrievalIndex] = useState<number | null>(null)
   const [retrievalChecked, setRetrievalChecked] = useState(false)
+  // Set by Previous, Next and "Next question": after the new content renders, focus moves to its
+  // heading (WCAG 2.4.3, #142). The button that was pressed may be gone or disabled, which would
+  // drop focus on the page, and a screen reader then reads where the student now is. This is the
+  // WAI-ARIA APG practice for replacing content in place; never set on first load, so opening a
+  // module doesn't move focus.
+  const moveFocus = useRef(false)
+  const contentRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    if (!moveFocus.current) return
+    const heading = contentRef.current?.querySelector<HTMLElement>('[data-focus-heading]')
+    if (!heading) return // still loading the new content: try again after the next render
+    moveFocus.current = false
+    heading.focus()
+  })
 
   // Saves how far the student has got. The server keeps the furthest segment reached, so only
   // moving forward is saved; stepping back just changes what's on screen.
@@ -48,12 +62,16 @@ export function ModulePage() {
     const item = retrieval[recallIndex]
     const next = retrieval.findIndex((other, index) => index > recallIndex && !other.answered)
     return (
-      <section className="grid max-w-3xl gap-6" aria-label={`Module ${module.number} retrieval`}>
+      <section
+        ref={contentRef}
+        className="grid max-w-3xl gap-6"
+        aria-label={`Module ${module.number} retrieval`}
+      >
         <div className="grid gap-2">
           <h1 className="text-2xl font-bold">
             Module {module.number} · {module.title}
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground" tabIndex={-1} data-focus-heading>
             Quick recall · Question {recallIndex + 1} of {retrieval.length}
           </p>
         </div>
@@ -67,6 +85,7 @@ export function ModulePage() {
           <Button
             disabled={!retrievalChecked && !item.answered}
             onClick={() => {
+              moveFocus.current = true
               setRetrievalChecked(false)
               setRetrievalIndex(next === -1 ? retrieval.length : next)
               if (next === -1) void queryClient.invalidateQueries({ queryKey: ['module', id] })
@@ -115,6 +134,7 @@ export function ModulePage() {
       : 'Answer the activity to continue. A wrong answer still counts.'
 
   function handlePrevious() {
+    moveFocus.current = true
     setSegmentIndex(Math.max(0, currentIndex - 1))
   }
 
@@ -124,10 +144,16 @@ export function ModulePage() {
     if (blocked) return // the button stays focusable (aria-disabled), so the click is ignored here
     const next = currentIndex + 1
     if (next <= module.currentSegmentPosition) {
+      moveFocus.current = true
       setSegmentIndex(next)
       return
     }
-    mutation.mutate(segments[next].position, { onSuccess: () => setSegmentIndex(next) })
+    mutation.mutate(segments[next].position, {
+      onSuccess: () => {
+        moveFocus.current = true
+        setSegmentIndex(next)
+      },
+    })
   }
 
   // Saving the last segment again once it is done is what completes the module (the server
@@ -140,7 +166,8 @@ export function ModulePage() {
 
   return (
     <section
-      className="grid max-w-3xl gap-6"
+      ref={contentRef}
+      className="grid min-w-0 max-w-3xl gap-6"
       aria-label={`Module ${module.number}: ${module.title}`}
     >
       {/* Header */}

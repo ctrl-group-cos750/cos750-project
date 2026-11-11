@@ -686,3 +686,94 @@ describe('ModulePage — loading and error states', () => {
     expect(api.callsTo('POST /api/activities/201/attempts')).toHaveLength(1)
   })
 })
+
+// ---------------------------------------------------------------------------
+// (h) Focus management (WCAG 2.4.3, #142)
+// ---------------------------------------------------------------------------
+
+describe('ModulePage — focus after navigation', () => {
+  it('does not move focus when the module first opens', async () => {
+    setupModuleApi(allKindsDetail)
+    renderApp('/modules/1')
+
+    await screen.findByRole('heading', { name: 'Introduction to graphs' })
+    expect(screen.getByRole('heading', { name: 'Introduction to graphs' })).not.toHaveFocus()
+    expect(document.activeElement).toBe(document.body)
+  })
+
+  it('moves focus to the new segment’s heading after Next (a saved move)', async () => {
+    const api = setupModuleApi(allKindsDetail)
+    renderApp('/modules/1')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Next →' }))
+
+    const heading = await screen.findByRole('heading', { name: 'Watch: BFS in action' })
+    await waitFor(() => expect(heading).toHaveFocus())
+    expect(heading).toHaveAttribute('tabindex', '-1') // focusable by script, not a tab stop
+    expect(api.callsTo('POST /api/modules/1/position')).toHaveLength(1)
+  })
+
+  it('moves focus to the heading after Previous, and after Next over a reached segment', async () => {
+    setupModuleApi({ ...allKindsDetail, currentSegmentPosition: 2 })
+    renderApp('/modules/1')
+
+    await screen.findByRole('heading', { name: 'Practice: BFS step by step' })
+    await userEvent.click(screen.getByRole('button', { name: '← Previous' }))
+    const video = await screen.findByRole('heading', { name: 'Watch: BFS in action' })
+    await waitFor(() => expect(video).toHaveFocus())
+
+    // Previous on the first segment disables the button that was pressed; focus must not drop.
+    await userEvent.click(screen.getByRole('button', { name: '← Previous' }))
+    const first = await screen.findByRole('heading', { name: 'Introduction to graphs' })
+    await waitFor(() => expect(first).toHaveFocus())
+    expect(screen.getByRole('button', { name: '← Previous' })).toBeDisabled()
+
+    await userEvent.keyboard('{Tab}') // from the heading, on into the page: not back at the top
+    expect(document.activeElement).not.toBe(document.body)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Next →' }))
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Watch: BFS in action' })).toHaveFocus(),
+    )
+  })
+
+  it('keeps focus on a blocked Next: nothing moves, so focus stays where it was', async () => {
+    setupModuleApi({
+      ...allKindsDetail,
+      status: 'in_progress',
+      segments: [{ ...textSegment, kind: 'activity', activityId: 7, done: false }],
+    })
+    renderApp('/modules/1')
+    const finish = await screen.findByRole('button', { name: 'Finish module' })
+    finish.focus()
+    await userEvent.keyboard('{Enter}')
+    expect(finish).toHaveFocus()
+  })
+
+  it('moves focus to the question count after "Start module" leaves the recall questions', async () => {
+    recallApi({ ...twoSegmentDetail, retrieval: [recall] })
+    renderApp('/modules/1')
+
+    await userEvent.click(await screen.findByLabelText('Connected vertices'))
+    await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Start module' }))
+
+    const heading = await screen.findByRole('heading', { name: 'Introduction to graphs' })
+    await waitFor(() => expect(heading).toHaveFocus())
+  })
+
+  it('moves focus to the new question after "Next question"', async () => {
+    recallApi({
+      ...twoSegmentDetail,
+      retrieval: [recall, { id: 201, title: 'Recall graph storage', answered: false }],
+    })
+    renderApp('/modules/1')
+
+    await userEvent.click(await screen.findByLabelText('Connected vertices'))
+    await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Next question' }))
+
+    const count = await screen.findByText('Quick recall · Question 2 of 2')
+    await waitFor(() => expect(count).toHaveFocus())
+  })
+})

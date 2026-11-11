@@ -10,7 +10,9 @@ export type SegmentViewProps = {
 }
 
 /** Dispatches on segment.kind and renders the appropriate view. Videos and activities are shown
- * here, inside the module, so its Previous and Next buttons stay on screen. */
+ * here, inside the module, so its Previous and Next buttons stay on screen. Each segment's heading
+ * is focusable from script only (tabIndex -1, data-focus-heading): ModulePage moves focus to it
+ * after Previous or Next. */
 export function SegmentView({ segment, onAnswered }: SegmentViewProps) {
   switch (segment.kind) {
     case 'text':
@@ -18,7 +20,9 @@ export function SegmentView({ segment, onAnswered }: SegmentViewProps) {
     case 'refresher':
       return (
         <section aria-label={segment.title} className="grid gap-4">
-          <h2 className="text-xl font-semibold">{segment.title}</h2>
+          <h2 className="text-xl font-semibold" tabIndex={-1} data-focus-heading>
+            {segment.title}
+          </h2>
           {segment.body ? (
             <Markdown>{segment.body}</Markdown>
           ) : (
@@ -30,7 +34,9 @@ export function SegmentView({ segment, onAnswered }: SegmentViewProps) {
     case 'video':
       return (
         <section aria-label={segment.title} className="grid gap-4">
-          <h2 className="text-xl font-semibold">{segment.title}</h2>
+          <h2 className="text-xl font-semibold" tabIndex={-1} data-focus-heading>
+            {segment.title}
+          </h2>
           {segment.videoId !== null ? (
             <VideoView videoId={segment.videoId} heading="h3" onResult={onAnswered} />
           ) : (
@@ -42,7 +48,9 @@ export function SegmentView({ segment, onAnswered }: SegmentViewProps) {
     case 'activity':
       return (
         <section aria-label={segment.title} className="grid gap-4">
-          <h2 className="text-xl font-semibold">{segment.title}</h2>
+          <h2 className="text-xl font-semibold" tabIndex={-1} data-focus-heading>
+            {segment.title}
+          </h2>
           {segment.activityId !== null ? (
             <ActivityView activityId={segment.activityId} heading="h3" onResult={onAnswered} />
           ) : (

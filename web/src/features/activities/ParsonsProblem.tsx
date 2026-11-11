@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '../../components'
 import type { AttemptResult, ParsonsActivity } from './activities.types.ts'
 
@@ -11,7 +11,37 @@ type ParsonsProblemProps = {
 
 type DraggedLine = { id: number; fromAnswer: boolean }
 
-/** A Parsons activity that supports native drag/drop and ArrowUp/ArrowDown line movement. */
+/** Where keyboard focus goes after a line changes list, so it isn't dropped on the page (2.4.3). */
+type FocusTarget = { list: 'answer' | 'available'; id: number }
+
+/**
+ * One line of code with its indentation kept (#140). The indentation is drawn as padding of one
+ * character width per leading space, so a line too long for a narrow screen wraps with a hanging
+ * indent at its own level: the wrapped part never reads as a line at a shallower level, and the
+ * page doesn't scroll sideways at 320 px (WCAG 1.4.10). Below 30rem each space is half a character
+ * wide, which keeps every level distinct while leaving room for the code. The leading spaces are
+ * not in the rendered text (a screen reader skips them anyway); `data-indent` holds the count.
+ */
+export function CodeLine({ text }: { text: string }) {
+  const code = text.trimStart()
+  const indent = text.length - code.length
+  return (
+    <code
+      data-indent={indent}
+      className="block whitespace-pre-wrap [overflow-wrap:anywhere] [padding-inline-start:calc(var(--indent)*1ch)] max-[30rem]:[padding-inline-start:calc(var(--indent)*0.5ch)]"
+      style={{ '--indent': indent } as React.CSSProperties}
+    >
+      {code}
+    </code>
+  )
+}
+
+/**
+ * A Parsons activity. Lines can be reordered by dragging, with the Up and Down Arrow keys on a
+ * focused line, or with each line's move-up and move-down buttons: the buttons are the
+ * single-pointer alternative to dragging for mouse and touch users (WCAG 2.2 SC 2.5.7), and
+ * every control is at least 24 by 24 px (SC 2.5.8).
+ */
 export function ParsonsProblem({ activity, result, submitting, onSubmit }: ParsonsProblemProps) {
   const [answerOrder, setAnswerOrder] = useState(() => activity.config.lines.map((line) => line.id))
   const [available, setAvailable] = useState<number[]>([])
@@ -19,6 +49,19 @@ export function ParsonsProblem({ activity, result, submitting, onSubmit }: Parso
   const [announcement, setAnnouncement] = useState('')
   const [cleared, setCleared] = useState(false)
   const [prevResult, setPrevResult] = useState(result)
+  const formRef = useRef<HTMLFormElement>(null)
+  const focusTarget = useRef<FocusTarget | null>(null)
+
+  // After a line moves between the answer and the available lines its button is a new element,
+  // so put focus on it in its new place. Only set by a student's action, never on first render.
+  useEffect(() => {
+    const target = focusTarget.current
+    if (!target) return
+    focusTarget.current = null
+    formRef.current
+      ?.querySelector<HTMLElement>(`[data-list="${target.list}"][data-line="${target.id}"]`)
+      ?.focus()
+  })
 
   if (result !== prevResult) {
     setPrevResult(result)
@@ -27,6 +70,8 @@ export function ParsonsProblem({ activity, result, submitting, onSubmit }: Parso
 
   const lines = new Map(activity.config.lines.map((line) => [line.id, line]))
   const disabled = submitting || result?.correct === true
+  // How a line is announced after a move: its code, which is what the student sees (the id isn't).
+  const said = (lineId: number) => `“${lines.get(lineId)?.text.trim() ?? lineId}”`
   const checkedParts = cleared ? undefined : result?.parts
 
   function move(lineId: number, destination: number, inAnswer: boolean) {
@@ -41,11 +86,18 @@ export function ParsonsProblem({ activity, result, submitting, onSubmit }: Parso
     if (inAnswer) {
       setAnswerOrder(nextSource)
       setAvailable(nextTarget)
-      setAnnouncement(`Removed line ${lineId} from the answer.`)
+      setAnnouncement(`Removed ${said(lineId)} from the answer.`)
+      focusTarget.current = { list: 'available', id: lineId }
     } else {
       setAvailable(nextSource)
       setAnswerOrder(nextTarget)
-      setAnnouncement(`Added line ${lineId} to position ${destination + 1}.`)
+      setAnnouncement(`Added ${said(lineId)} at position ${destination + 1}.`)
+      // Stay in the available lines while there are more to add; then go to the line added.
+      const nextAvailable = nextSource[Math.min(from, nextSource.length - 1)]
+      focusTarget.current =
+        nextAvailable === undefined
+          ? { list: 'answer', id: lineId }
+          : { list: 'available', id: nextAvailable }
     }
   }
 
@@ -57,7 +109,7 @@ export function ParsonsProblem({ activity, result, submitting, onSubmit }: Parso
     next.splice(from, 1)
     next.splice(destination, 0, lineId)
     setAnswerOrder(next)
-    setAnnouncement(`Moved line ${lineId} to position ${destination + 1}.`)
+    setAnnouncement(`Moved ${said(lineId)} to position ${destination + 1}.`)
   }
 
   function handleDrop(destination: number) {
@@ -84,15 +136,16 @@ export function ParsonsProblem({ activity, result, submitting, onSubmit }: Parso
 
   return (
     <form
-      className="grid gap-4"
+      ref={formRef}
+      className="grid min-w-0 gap-4"
       onSubmit={(event) => {
         event.preventDefault()
         void onSubmit(answerOrder)
       }}
     >
       <p id="parsons-instructions" className="text-sm text-muted-foreground">
-        Drag lines to reorder them. With a line focused, use the Up and Down Arrow keys. Remove a
-        distractor with “Remove”.
+        Put the lines in order: drag them, or use the ↑ and ↓ buttons. With a line focused, the Up
+        and Down Arrow keys move it too. Remove a distractor with “Remove”.
       </p>
       <p className="visually-hidden" aria-live="polite">
         {announcement}
@@ -105,34 +158,64 @@ export function ParsonsProblem({ activity, result, submitting, onSubmit }: Parso
           return (
             <li
               key={line.id}
-              className={`grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded border p-2 ${part ? (part.correct ? 'border-success bg-success/10' : 'border-warning bg-warning/10') : 'border-border'}`}
+              className={`flex flex-wrap items-center gap-2 rounded border p-2 ${part ? (part.correct ? 'border-success bg-success/10' : 'border-warning bg-warning/10') : 'border-border'}`}
             >
-              <span aria-hidden="true" className="text-muted-foreground">
-                {index + 1}
+              {/* The number and the code stay on one row; on a narrow screen the buttons wrap
+                  below them. */}
+              <span className="flex min-w-0 flex-[1_1_16rem] items-center gap-2">
+                <span aria-hidden="true" className="w-6 shrink-0 text-right text-muted-foreground">
+                  {index + 1}
+                </span>
+                <button
+                  type="button"
+                  data-list="answer"
+                  data-line={line.id}
+                  className="min-h-9 min-w-0 flex-1 cursor-grab bg-transparent p-1 text-left font-mono text-sm disabled:cursor-not-allowed"
+                  aria-describedby="parsons-instructions"
+                  draggable={!disabled}
+                  onDragStart={() => setDragged({ id: line.id, fromAnswer: true })}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={() => handleDrop(index)}
+                  onKeyDown={(event) => keyboardMove(event, line.id, index)}
+                  disabled={disabled}
+                >
+                  <CodeLine text={line.text} />
+                </button>
               </span>
-              <button
-                type="button"
-                className="cursor-grab bg-transparent p-1 text-left font-mono text-sm disabled:cursor-not-allowed"
-                aria-describedby="parsons-instructions"
-                draggable={!disabled}
-                onDragStart={() => setDragged({ id: line.id, fromAnswer: true })}
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={() => handleDrop(index)}
-                onKeyDown={(event) => keyboardMove(event, line.id, index)}
-                disabled={disabled}
-              >
-                {line.text}
-              </button>
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={disabled}
-                onClick={() => move(line.id, available.length, true)}
-              >
-                Remove
-              </Button>
+              <span className="ml-auto flex shrink-0 gap-1">
+                {/* aria-disabled, not disabled, at the ends of the list: a button that becomes
+                    disabled while focused drops keyboard focus on the page. */}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={disabled}
+                  aria-disabled={index === 0 || undefined}
+                  onClick={() => index > 0 && reorder(line.id, index - 1)}
+                >
+                  <span aria-hidden="true">↑</span>
+                  <span className="visually-hidden">Move line {index + 1} up</span>
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={disabled}
+                  aria-disabled={index === answerOrder.length - 1 || undefined}
+                  onClick={() => index < answerOrder.length - 1 && reorder(line.id, index + 1)}
+                >
+                  <span aria-hidden="true">↓</span>
+                  <span className="visually-hidden">Move line {index + 1} down</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={disabled}
+                  onClick={() => move(line.id, available.length, true)}
+                >
+                  Remove
+                </Button>
+              </span>
               {part?.message && (
-                <span className="col-span-3 text-sm text-warning">{part.message}</span>
+                <span className="basis-full text-sm text-warning">{part.message}</span>
               )}
             </li>
           )
@@ -150,12 +233,20 @@ export function ParsonsProblem({ activity, result, submitting, onSubmit }: Parso
                 <li key={line.id}>
                   <Button
                     variant="secondary"
+                    className="max-w-full text-left"
+                    // The Button's own padding is for one-line labels; a wrapped code line needs room.
+                    style={{ paddingBlock: 'var(--space-2)', justifyContent: 'flex-start' }}
+                    data-list="available"
+                    data-line={line.id}
                     disabled={disabled}
                     draggable={!disabled}
                     onDragStart={() => setDragged({ id: line.id, fromAnswer: false })}
                     onClick={() => move(line.id, answerOrder.length, false)}
                   >
-                    Add: <code>{line.text}</code>
+                    <span className="shrink-0">Add:</span>
+                    <span className="min-w-0">
+                      <CodeLine text={line.text} />
+                    </span>
                   </Button>
                 </li>
               )

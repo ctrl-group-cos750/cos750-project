@@ -277,3 +277,214 @@ describe('code activities', () => {
     expect(screen.queryByRole('region', { name: 'Submission results' })).not.toBeInTheDocument()
   })
 })
+
+// ---------------------------------------------------------------------------
+// #140 code indentation, #142 accessibility
+// ---------------------------------------------------------------------------
+
+const indented: ParsonsActivity = {
+  id: 9,
+  kind: 'parsons',
+  title: 'Order the loop',
+  visible: true,
+  config: {
+    lines: [
+      { id: 1, text: 'while queue:' },
+      { id: 2, text: '    v = queue.popleft()' },
+      { id: 3, text: '        if n not in visited:' },
+    ],
+  },
+}
+
+const wrong = {
+  id: 1,
+  activityId: 7,
+  correct: false,
+  score: 0,
+  parts: [],
+  feedback: 'Not quite, 1 of 3 correct.',
+  hintLevel: 0,
+}
+
+describe('code keeps its indentation (#140)', () => {
+  it('keeps the leading spaces of each fill-in line, which renders white-space: pre', () => {
+    render(
+      <FillInCode
+        activity={{
+          ...fillIn,
+          config: { ...fillIn.config, code: 'def bfs():\n    while q:\n        return __1__' },
+        }}
+        result={undefined}
+        submitting={false}
+        onSubmit={vi.fn<() => Promise<void>>()}
+      />,
+    )
+    const region = screen.getByRole('region', { name: 'Python code with blanks' })
+    const lines = [...region.querySelectorAll('code')]
+    expect(lines.map((code) => code.textContent?.match(/^ */)?.[0].length)).toEqual([0, 4, 8])
+    for (const code of lines) expect(code).toHaveClass('whitespace-pre')
+    // A long line scrolls inside the region, which a keyboard user can reach (WCAG 2.1.1).
+    expect(region).toHaveAttribute('tabindex', '0')
+    expect(region).toHaveClass('overflow-x-auto')
+  })
+
+  it('keeps a Parsons line’s indentation, as a hanging indent of its own width', () => {
+    render(
+      <ParsonsProblem
+        activity={indented}
+        result={undefined}
+        submitting={false}
+        onSubmit={vi.fn<() => Promise<void>>()}
+      />,
+    )
+    const indentOf = (name: string) => {
+      const code = screen.getByRole('button', { name }).querySelector('code')!
+      return { count: code.dataset.indent, css: code.style.getPropertyValue('--indent'), code }
+    }
+    expect(indentOf('while queue:')).toMatchObject({ count: '0', css: '0' })
+    expect(indentOf('v = queue.popleft()')).toMatchObject({ count: '4', css: '4' })
+    const deep = indentOf('if n not in visited:')
+    expect(deep).toMatchObject({ count: '8', css: '8' })
+    // Padding (not leading spaces) draws it, so a wrapped line stays at its level.
+    expect(deep.code.className).toContain('[padding-inline-start:calc(var(--indent)*1ch)]')
+    expect(deep.code).toHaveClass('whitespace-pre-wrap')
+  })
+
+  it('keeps the indentation of a line in the available lines too', async () => {
+    const user = userEvent.setup()
+    render(
+      <ParsonsProblem
+        activity={indented}
+        result={undefined}
+        submitting={false}
+        onSubmit={vi.fn<() => Promise<void>>()}
+      />,
+    )
+    await user.click(screen.getAllByRole('button', { name: 'Remove' })[1])
+    const add = screen.getByRole('button', { name: /Add:/ })
+    expect(add.querySelector('code')?.textContent).toBe('v = queue.popleft()')
+    expect(add.querySelector('code')?.dataset.indent).toBe('4')
+  })
+})
+
+describe('Parsons without dragging (WCAG 2.2 SC 2.5.7, #142)', () => {
+  function setup() {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn<(order: number[]) => Promise<void>>().mockResolvedValue(undefined)
+    render(
+      <ParsonsProblem
+        activity={parsons}
+        result={undefined}
+        submitting={false}
+        onSubmit={onSubmit}
+      />,
+    )
+    return { user, onSubmit }
+  }
+
+  it('reorders with the move buttons alone, by pointer, and submits that order', async () => {
+    const { user, onSubmit } = setup()
+    await user.click(screen.getByRole('button', { name: 'Move line 3 up' })) // third() → 2
+    await user.click(screen.getByRole('button', { name: 'Move line 2 up' })) // third() → 1
+    await user.click(screen.getByRole('button', { name: 'Move line 2 down' })) // first() → 3
+    await user.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(onSubmit).toHaveBeenCalledWith([3, 2, 1])
+  })
+
+  it('announces each move by the line’s code, not its internal id', async () => {
+    const { user } = setup()
+    await user.click(screen.getByRole('button', { name: 'Move line 1 down' }))
+    expect(screen.getByText('Moved “first()” to position 2.')).toBeInTheDocument()
+  })
+
+  it('does nothing at the ends of the list, and keeps the end buttons focusable', async () => {
+    const { user, onSubmit } = setup()
+    const up = screen.getByRole('button', { name: 'Move line 1 up' })
+    const down = screen.getByRole('button', { name: 'Move line 3 down' })
+    expect(up).toHaveAttribute('aria-disabled', 'true')
+    expect(down).toHaveAttribute('aria-disabled', 'true')
+    expect(up).toBeEnabled()
+    await user.click(up)
+    await user.click(down)
+    await user.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(onSubmit).toHaveBeenCalledWith([1, 2, 3])
+  })
+
+  it('keeps focus on the move button as the line moves (the button moves with its line)', async () => {
+    const { user } = setup()
+    await user.click(screen.getByRole('button', { name: 'Move line 2 up' }))
+    // second() is now line 1, and its button is the one with focus, now named for line 1.
+    expect(screen.getByRole('button', { name: 'Move line 1 up' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'Move line 1 up' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    )
+  })
+
+  it('moves focus with a removed line to its Add button, and back again', async () => {
+    const { user } = setup()
+    await user.click(screen.getAllByRole('button', { name: 'Remove' })[0])
+    expect(screen.getByRole('button', { name: /Add:\s*first\(\)/ })).toHaveFocus()
+    await user.click(screen.getAllByRole('button', { name: 'Remove' })[0]) // second()
+    expect(screen.getByRole('button', { name: /Add:\s*second\(\)/ })).toHaveFocus()
+
+    // Adding goes on to the next line still to add, then to the last line added.
+    await user.click(screen.getByRole('button', { name: /Add:\s*first\(\)/ }))
+    expect(screen.getByRole('button', { name: /Add:\s*second\(\)/ })).toHaveFocus()
+    await user.click(screen.getByRole('button', { name: /Add:\s*second\(\)/ }))
+    expect(screen.getByRole('button', { name: 'second()' })).toHaveFocus()
+  })
+
+  it('locks every control once the answer is correct', () => {
+    render(
+      <ParsonsProblem
+        activity={parsons}
+        result={{ ...wrong, correct: true, score: 1, feedback: 'All correct.' }}
+        submitting={false}
+        onSubmit={vi.fn<() => Promise<void>>()}
+      />,
+    )
+    for (const name of ['Move line 1 down', 'Move line 2 up', 'Remove']) {
+      for (const button of screen.getAllByRole('button', { name })) expect(button).toBeDisabled()
+    }
+  })
+})
+
+describe('focus after Check answer (WCAG 2.4.3, #142)', () => {
+  it('moves focus to the feedback when a result arrives, and again for the next one', () => {
+    const { rerender } = render(<FeedbackPanel result={undefined} />)
+    rerender(<FeedbackPanel result={wrong} />)
+    const panel = screen.getByRole('region', { name: 'Submission results' })
+    expect(panel).toHaveFocus()
+    expect(panel).toHaveAttribute('tabindex', '-1')
+
+    panel.blur()
+    rerender(<FeedbackPanel result={{ ...wrong, id: 2, feedback: 'Still not quite.' }} />)
+    expect(screen.getByRole('region', { name: 'Submission results' })).toHaveFocus()
+  })
+
+  it('does not take focus for a result already there when it first renders', () => {
+    render(<FeedbackPanel result={wrong} />)
+    expect(screen.getByRole('region', { name: 'Submission results' })).not.toHaveFocus()
+  })
+
+  it('lands on the feedback after a keyboard user checks an answer on the activity page', async () => {
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/activities/7': () => Response.json(parsons),
+        'GET /api/activities/7/hints': () => Response.json([]),
+        'POST /api/activities/7/attempts': () => Response.json({ ...wrong, activityId: 7 }),
+      },
+    })
+    const user = userEvent.setup()
+    renderApp('/activities/7')
+
+    ;(await screen.findByRole('button', { name: 'Check answer' })).focus()
+    await user.keyboard('{Enter}')
+
+    const panel = await screen.findByRole('region', { name: 'Submission results' })
+    await waitFor(() => expect(panel).toHaveFocus())
+    expect(panel).toHaveTextContent('Not quite, 1 of 3 correct.')
+  })
+})

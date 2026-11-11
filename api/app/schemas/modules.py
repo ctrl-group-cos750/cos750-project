@@ -70,6 +70,10 @@ class SegmentOut(ApiModel):
     # The student has done it, so they can move past it (FR-2.7): an activity answered at least
     # once, or every checkpoint of a video passed. Always true for every other kind.
     done: bool = True
+    # The student has answered this segment's activity at least once, right or wrong. The page
+    # opens a module at an activity the student passed *without* trying (one that had no screen
+    # yet), never at one they tried and got wrong under an earlier rule (#165 review).
+    attempted: bool = False
 
 
 class RetrievalActivityOut(ApiModel):

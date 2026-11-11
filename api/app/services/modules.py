@@ -10,8 +10,9 @@ no segments yet is passed over, so missing content never locks the rest of the c
 
 Progress (FR-2.5, FR-2.6): the student moves through a module one segment at a time. The
 furthest segment reached is kept, so stepping back to reread never loses progress. A student moves
-past a segment only once it is done (FR-2.7): an activity segment once they have answered its
-activity at least once, right or wrong, and a video segment once they have passed every one of
+past a segment only once it is done (FR-2.7): a practice activity once they have answered it
+correctly, or after its last hint; a mastery or diagnostic item once they have answered it at all,
+since only the first answer counts there; and a video segment once they have passed every one of
 the video's checkpoints. Every other kind is done when shown. An activity whose kind has no
 student UI yet (`KINDS_WITHOUT_STUDENT_UI`) counts as done, so it can't strand a student. The
 module is complete, for good, once its last segment is done.
@@ -44,6 +45,10 @@ from app.services.locks import lock_student
 # screens (#136); kept so a kind added to the API before its screen can't strand a student.
 # Remove a kind from this set in the same change that adds it to SUPPORTED.
 KINDS_WITHOUT_STUDENT_UI: frozenset[str] = frozenset()
+
+# Purposes where one real answer is enough to move on (FR-2.7): the mastery check, where only the
+# first answer counts (FR-7.1), and module 0's diagnostic, which finds gaps rather than gating.
+ONE_ANSWER_PURPOSES: frozenset[str] = frozenset({"mastery", "diagnostic"})
 
 
 class ModuleNotFound(ValueError):
@@ -217,12 +222,16 @@ def _videos(session: Session, segments: Sequence[Segment]) -> dict[int, int]:
 
 
 def done_segments(session: Session, user_id: int, segments: Sequence[Segment]) -> set[int]:
-    """The ids of the segments this student has done (FR-2.7). An activity segment is done once
-    they have answered its activity correctly, or answered it after its last hint was shown
-    (#143): the last hint gives the answer away, so a student who needed it can still move on.
-    A video segment is done once they have passed every checkpoint in its video. A segment with nothing to do (any other kind, or no activity
-    or video yet) is always done, and so is an activity, or a checkpoint, whose kind has no
-    student UI yet (`KINDS_WITHOUT_STUDENT_UI`)."""
+    """The ids of the segments this student has done (FR-2.7).
+
+    A practice activity is done once they have answered it correctly, or answered it after its
+    last hint was shown (#143): the last hint gives the answer away, so a student who needed it can
+    still move on. A mastery or diagnostic item (`ONE_ANSWER_PURPOSES`) is done once answered at
+    all: only the first answer counts towards the report (FR-7.1) and the diagnostic finds gaps
+    rather than gating, so asking for a right answer there would add steps that change nothing.
+    A video segment is done once they have passed every checkpoint in its video. A segment with
+    nothing to do (any other kind, or no activity or video yet) is always done, and so is an
+    activity, or a checkpoint, whose kind has no student UI yet (`KINDS_WITHOUT_STUDENT_UI`)."""
     videos = _videos(session, segments)
     checkpoints: dict[int, set[int]] = {}
     for video_id, activity_id in session.execute(
@@ -249,6 +258,13 @@ def done_segments(session: Session, user_id: int, segments: Sequence[Segment]) -
             .group_by(Hint.activity_id)
         ).all()
     )
+    one_answer = set(
+        session.scalars(
+            select(Activity.id).where(
+                Activity.id.in_(wanted), Activity.purpose.in_(ONE_ANSWER_PURPOSES)
+            )
+        )
+    )
     answered: set[int] = set(no_ui)  # done: answered correctly, or after the last hint
     passed: set[int] = set(no_ui)
     for activity_id, correct, hint_level in session.execute(
@@ -257,7 +273,7 @@ def done_segments(session: Session, user_id: int, segments: Sequence[Segment]) -
         )
     ):
         last = last_hint.get(activity_id)
-        if correct or (last is not None and hint_level >= last):
+        if correct or activity_id in one_answer or (last is not None and hint_level >= last):
             answered.add(activity_id)
         if correct:
             passed.add(activity_id)
@@ -294,6 +310,7 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
     answered = _answered(session, user_id, [activity.id for activity in retrieval])
     videos = _videos(session, segments)
     done = done_segments(session, user_id, segments)
+    attempted = _answered(session, user_id, [s.activity_id for s in segments if s.activity_id])
     # TODO (FR-8.1): leave out the refreshers module 0's diagnostic has ruled out, once the
     # diagnostic records its result. Until then every refresher is shown.
     return ModuleDetailOut(
@@ -308,6 +325,7 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
                 video_id=videos.get(segment.id),
                 activity_id=segment.activity_id,
                 done=segment.id in done,
+                attempted=segment.activity_id is not None and segment.activity_id in attempted,
             )
             for index, segment in enumerate(segments)
         ],

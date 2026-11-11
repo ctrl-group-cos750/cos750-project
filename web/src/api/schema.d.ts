@@ -89,7 +89,8 @@ export interface paths {
     /**
      * Get Activity
      * @description The activity to render. `ActivityOut` has no `solution`, so the answer never reaches the
-     *     browser (FR-5.3, NFR-S2).
+     *     browser (FR-5.3, NFR-S2). `solved` says whether this student has already answered it
+     *     correctly, so the page stops offering hints after a refresh too (#158).
      */
     get: operations['get_activity_api_activities__activity_id__get']
     put?: never
@@ -148,9 +149,10 @@ export interface paths {
      * Reveal Hint
      * @description Reveal this student's next hint level, one at a time, and record it (FR-4.4, FR-4.5).
      *
-     *     No body. Each call returns the next level (1, then 2, …); once every level has been shown it
-     *     is 409. When `nextCountsAsSupport` is true, warn the student before calling again: a correct
-     *     answer after hint 3 or 4 counts as "met with support" (ID document §7.4).
+     *     No body. Each call returns the next level (1, then 2, …); once every level has been shown,
+     *     or once the student has answered correctly, it is 409. When `nextCountsAsSupport` is true,
+     *     warn the student before calling again: a correct answer after hint 3 or 4 counts as "met
+     *     with support" (ID document §7.4).
      */
     post: operations['reveal_hint_api_activities__activity_id__hints_post']
     delete?: never
@@ -1109,6 +1111,11 @@ export interface components {
       config: {
         [key: string]: unknown
       }
+      /**
+       * Solved
+       * @default false
+       */
+      solved: boolean
     }
     /**
      * AttemptIn

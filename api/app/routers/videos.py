@@ -24,7 +24,9 @@ def get_video(video_id: int, user: CurrentUser, session: DbSession) -> VideoOut:
     video = session.get(Video, video_id)
     if video is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NOT_FOUND)
-    if video_locked(session, user.id, video):  # its checkpoints stay unseen too (FR-2.1)
+    # Its checkpoints stay unseen too (FR-2.1). Staff are let through, so the video editor's
+    # "Open as a student" works on any video.
+    if not user.is_staff and video_locked(session, user.id, video):
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=MODULE_LOCKED)
     rows = session.execute(
         select(Checkpoint, Activity)

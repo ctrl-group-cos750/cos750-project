@@ -196,10 +196,15 @@ def test_fix_the_bug_a_needless_correction_and_a_moved_line() -> None:
     order = [1, 20, 3, 21, 23, 7, 8, 22, 9, 10]  # position 4 should be line 6, left as it was
     parts = grade("fix_the_bug", FIX_CONFIG, FIX_SOLUTION, order=order).parts
     assert parts[4].message == FIX_NOT_NEEDED
+    # Two lines swapped: moving either one fixes it, so one of them is marked (#145).
     moved = [1, 20, 3, 21, 7, 6, 8, 22, 9, 10]
-    assert grade("fix_the_bug", FIX_CONFIG, FIX_SOLUTION, order=moved).parts[4].message == (
-        OUT_OF_PLACE
-    )
+    wrong = [
+        p
+        for p in grade("fix_the_bug", FIX_CONFIG, FIX_SOLUTION, order=moved).parts
+        if not p.correct
+    ]
+    assert [p.ref for p in wrong] in ([4], [5])
+    assert wrong[0].message == OUT_OF_PLACE
 
 
 def test_fix_the_bug_a_short_or_long_answer_fails_the_positions_it_affects() -> None:
@@ -347,8 +352,23 @@ def test_the_examples_are_valid_content() -> None:
         ("parsons", PARSONS_CONFIG, {"order": [1, [2, 3], 3]}, "the order uses a line twice"),
         ("parsons", PARSONS_CONFIG, {"order": [1, [2, 3], []]}, "at least two ids, not .]"),
         ("parsons", PARSONS_CONFIG, {"order": [1, [2], 3]}, "at least two ids, not .2."),
-        ("parsons", PARSONS_CONFIG, {"order": [1, [2, "x"]]}, "valid integer"),
-        ("parsons", PARSONS_CONFIG, {"order": [1, [[2, 3]]]}, "valid integer"),
+        ("parsons", PARSONS_CONFIG, {"order": [1, [2, "x"]]}, "'x' in the group .2, 'x'. is not"),
+        ("parsons", PARSONS_CONFIG, {"order": [1, [[2, 3]]]}, "not another group"),
+        ("parsons", PARSONS_CONFIG, {"order": 5}, "order must be a list of line ids"),
+        ("parsons", PARSONS_CONFIG, {"order": [1, True, 3]}, "True is not a line id"),
+        ("parsons", PARSONS_CONFIG, {"order": [1, "2", 3]}, "'2' is not a line id"),
+        (
+            "parsons",
+            PARSONS_CONFIG,
+            {"order": [1, 2, 3], "alternatives": [[1, 2.5]]},
+            "alternative 1: 2.5",
+        ),
+        (
+            "parsons",
+            PARSONS_CONFIG,
+            {"order": [1, 2, 3], "alternatives": {"a": 1}},
+            "list of orders",
+        ),
         ("parsons", PARSONS_CONFIG, {"order": []}, "at least 1 item"),
         ("parsons", PARSONS_CONFIG, {"order": [1, 2], "also": [[2, 1]]}, "Extra inputs"),
         (
@@ -379,7 +399,26 @@ def test_the_examples_are_valid_content() -> None:
             "parsons",
             PARSONS_CONFIG,
             {"order": [1, [2, 3]], "alternatives": [[1, [3, 2]]]},
-            "repeats an order",
+            "alternative 1 accepts nothing that the order doesn't already",
+        ),
+        (
+            "parsons",
+            PARSONS_CONFIG,
+            {"order": [1, [2, 3]], "alternatives": [[1, 3, 2]]},  # an expansion of the order
+            "alternative 1 accepts nothing that the order",
+        ),
+        (
+            "parsons",
+            PARSONS_CONFIG,
+            {"order": [1, 2, 3], "alternatives": [[[2, 3], 1], [3, 2, 1]]},
+            "alternative 2 accepts nothing that alternative 1",
+        ),
+        ("fix_the_bug", FIX_CONFIG, {"order": [[1, 2], 3, 4, 5, 6, 7, 8, 9, 10]}, "nothing to fix"),
+        (
+            "fix_the_bug",
+            FIX_CONFIG,
+            {**FIX_SOLUTION, "alternatives": [[1, 20, 3, 21, 6, 7, 8, 22]]},
+            "alternative 1 must use the same lines",
         ),
         (
             "parsons",
@@ -494,3 +533,52 @@ def test_each_kind_through_the_api(
     assert passed.json()["correct"] is True
     # A submission in the wrong shape is refused, not crashed on.
     assert client.post(url, json={"submitted": {"nonsense": 1}}).status_code == 422
+
+
+# --- Fix the bug: every correct order (FR-5.5, #145) ---------------------------------------------
+
+# The fixed program's lines 3 and 6, and the correction 22 and line 9, may swap.
+GROUPED_FIX: dict[str, Any] = {**FIX_SOLUTION, "order": [1, 20, [3, 21], 6, 7, 8, [22, 9], 10]}
+
+
+def test_fix_the_bug_groups_accept_every_listed_order() -> None:
+    validate_activity("fix_the_bug", FIX_CONFIG, GROUPED_FIX)
+    for order in (
+        [1, 20, 3, 21, 6, 7, 8, 22, 9, 10],
+        [1, 20, 21, 3, 6, 7, 8, 9, 22, 10],
+    ):
+        result = grade("fix_the_bug", FIX_CONFIG, GROUPED_FIX, order=order)
+        assert result.correct, order
+        assert result.feedback == "All correct."
+
+
+def test_fix_the_bug_marks_the_wrong_correction_against_its_own_place() -> None:
+    # The swap inside the group is fine; the stack-style correction 23 in 21's place is not.
+    result = grade("fix_the_bug", FIX_CONFIG, GROUPED_FIX, order=[1, 20, 23, 3, 6, 7, 8, 9, 22, 10])
+    wrong = [p for p in result.parts if not p.correct]
+    assert [(p.ref, p.message) for p in wrong] == [(2, WRONG_FIX)]
+
+
+def test_fix_the_bug_a_bug_left_in_gets_the_contents_reason() -> None:
+    result = grade("fix_the_bug", FIX_CONFIG, GROUPED_FIX, order=[1, 20, 3, 4, 6, 7, 8, 22, 9, 10])
+    assert [p.message for p in result.parts if not p.correct] == [FIX_SOLUTION["feedback"][4]]
+
+
+def test_fix_the_bug_a_removed_line_is_named_in_the_summary() -> None:
+    result = grade("fix_the_bug", FIX_CONFIG, GROUPED_FIX, order=[1, 20, 3, 21, 6, 7, 8, 22, 10])
+    assert not result.correct
+    assert result.feedback == (
+        "9 of 10 correct. 1 line is missing: put it back, or add its correction."
+    )
+
+
+def test_the_reviewers_objective_7_case_is_correct() -> None:
+    # 621 with visited.add(n) and queue.append(n) swapped: was "11 of 13" (#145 review).
+    item = next(a for a in read_fixtures().activities if a.id == 621)
+    result = check_activity(
+        "fix_the_bug",
+        item.config,
+        item.solution,
+        {"order": [1, 2, 20, 4, 5, 6, 7, 9, 10, 11, 12, 21, 13]},
+    )
+    assert result.correct

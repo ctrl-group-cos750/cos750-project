@@ -24,6 +24,7 @@ from app.schemas.activities import (
     MultipleChoiceConfig,
     MultipleChoiceSolution,
     MultipleChoiceSubmission,
+    OrderedSolution,
     ParsonsConfig,
     ParsonsSolution,
     ParsonsStep,
@@ -54,13 +55,26 @@ UNKNOWN_TEST = "This is not one of the test cases."
 WRONG_TRACE_STEP = "This step does not match the traversal."
 MISSING_TRACE_STEP = "The traversal has more steps than this."
 EXTRA_TRACE_STEP = "The traversal is already finished by this step."
+# What to do about lines left out of an ordered answer: (one line, several lines).
+MISSING_PARSONS = ("add it from the available lines.", "add them from the available lines.")
+MISSING_FIX = ("put it back, or add its correction.", "put them back, or add their corrections.")
 
 
-def _result(parts: list[PartResult]) -> CheckResult:
+def _result(parts: list[PartResult], missing_hint: tuple[str, str] | None = None) -> CheckResult:
+    """The score and summary for graded parts. For an ordered answer, `missing_hint` says what to
+    do about lines left out: their parts sit past the end of the answer, so no line on screen
+    shows them, and the summary has to."""
     total = len(parts)
     right = sum(1 for part in parts if part.correct)
     correct = total > 0 and right == total
     feedback = "All correct." if correct else f"{right} of {total} correct."
+    missing = sum(1 for part in parts if part.message == MISSING_LINE)
+    if missing and missing_hint:
+        one, several = missing_hint
+        if missing == 1:
+            feedback += f" 1 line is missing: {one}"
+        else:
+            feedback += f" {missing} lines are missing: {several}"
     return CheckResult(
         correct=correct, score=right / total if total else 0.0, parts=parts, feedback=feedback
     )
@@ -68,8 +82,10 @@ def _result(parts: list[PartResult]) -> CheckResult:
 
 def _closest(steps: list[ParsonsStep], got: list[int]) -> list[int]:
     """The order `steps` accepts that is closest to `got`: each group's lines in the order the
-    student put them (lines of a group the student left out go last, as written). No order the
-    steps accept keeps more of `got` in place, so this is the one to compare with."""
+    student first put them (lines of a group the student left out go last, as written). When `got`
+    uses no line twice, no order the steps accept keeps more of `got` in sequence; with a repeated
+    line, its first place decides, which is never better for the student than an answer without
+    the repeat."""
     first: dict[int, int] = {}
     for i, line in enumerate(got):
         first.setdefault(line, i)
@@ -82,11 +98,11 @@ def _closest(steps: list[ParsonsStep], got: list[int]) -> list[int]:
     return order
 
 
-def _in_sequence(expected: list[int], got: list[int]) -> set[int]:
-    """The positions in `got` of a longest run of lines already in `expected`'s relative order
-    (a longest common subsequence; ids in `expected` are distinct). Those lines can stay where
-    they are; every other line has to move, so only they are marked wrong. A line used twice
-    counts once. O(n²) for n ≤ 100 lines."""
+def _in_sequence(expected: list[int], got: list[int]) -> dict[int, int]:
+    """A longest run of `got`'s lines already in `expected`'s relative order (a longest common
+    subsequence; ids in `expected` are distinct), as {position in got: position in expected}.
+    Those lines can stay where they are; every other line has to move, so only they are marked
+    wrong. A line used twice counts once. O(n²) for n ≤ 150 lines."""
     rank = {line: r for r, line in enumerate(expected)}
     ranked = [(i, rank[line]) for i, line in enumerate(got) if line in rank]
     best: list[int] = []  # best[k]: length of the longest run ending at ranked[k]
@@ -97,12 +113,42 @@ def _in_sequence(expected: list[int], got: list[int]) -> set[int]:
         for j in range(k):
             if ranked[j][1] < r and best[j] + 1 > best[k]:
                 best[k], back[k] = best[j] + 1, j
-    kept: set[int] = set()
+    kept: dict[int, int] = {}
     k = max(range(len(ranked)), key=lambda k: best[k], default=-1)
     while k != -1:
-        kept.add(ranked[k][0])
+        kept[ranked[k][0]] = ranked[k][1]
         k = back[k]
     return kept
+
+
+def _compare(solution: OrderedSolution, got: list[int]) -> tuple[list[int], dict[int, int]]:
+    """The accepted order closest to `got` (`order` wins a tie) and the run of `got` already in
+    sequence with it, from `_in_sequence`."""
+    closest: list[int] = []
+    kept: dict[int, int] = {}
+    for n, steps in enumerate(solution.accepted()):
+        candidate = _closest(steps, got)
+        in_order = _in_sequence(candidate, got)
+        if n == 0 or len(in_order) > len(kept):
+            closest, kept = candidate, in_order
+    return closest, kept
+
+
+def _expected_at(closest: list[int], got: list[int], kept: dict[int, int]) -> list[int | None]:
+    """For each position of `got`, the line of `closest` that belongs there: lines in sequence
+    pair up, and the lines between two of them fill the gap between them in order. None where
+    the answer has more lines in that gap than the solution."""
+    want: list[int | None] = []
+    last_got, last_expected = -1, -1
+    for i in range(len(got)):
+        if i in kept:
+            last_got, last_expected = i, kept[i]
+            want.append(closest[kept[i]])
+            continue
+        slot = last_expected + (i - last_got)
+        after = min((kept[j] for j in kept if j > i), default=len(closest))
+        want.append(closest[slot] if slot < after else None)
+    return want
 
 
 def check_parsons(
@@ -120,18 +166,12 @@ def check_parsons(
     There is one part per position of the answer, as before: right if the line there is in that
     longest run, otherwise "in the wrong place" (a solution line, or one used twice) or "does not
     belong" (a distractor, or an id not in the activity). If the answer is shorter than the
-    solution, a "missing" part per line short follows, so a short answer cannot pass and its
-    score shows how much is missing. All parts right means the answer is exactly an accepted
-    order. `config` is accepted for a uniform checker signature; grading needs only the
-    solution."""
+    solution, a "missing" part per line short follows, so a short answer cannot pass, and the
+    summary says how many lines are missing (no line on screen shows it). All parts right means
+    the answer is exactly an accepted order. `config` is accepted for a uniform checker
+    signature; grading needs only the solution."""
     got = submission.order
-    closest: list[int] = []
-    kept: set[int] = set()
-    for n, steps in enumerate(solution.accepted()):  # `order` first, so it wins a tie
-        candidate = _closest(steps, got)
-        in_order = _in_sequence(candidate, got)
-        if n == 0 or len(in_order) > len(kept):
-            closest, kept = candidate, in_order
+    closest, kept = _compare(solution, got)
     in_solution = set(closest)
     parts: list[PartResult] = []
     for i, have in enumerate(got):
@@ -144,7 +184,7 @@ def check_parsons(
         PartResult(ref=i, correct=False, message=MISSING_LINE)
         for i in range(len(got), len(closest))
     )
-    return _result(parts)
+    return _result(parts, MISSING_PARSONS)
 
 
 def check_fill_in(
@@ -248,35 +288,46 @@ def check_matching(
 def check_fix_the_bug(
     config: FixTheBugConfig, solution: FixTheBugSolution, submission: FixTheBugSubmission
 ) -> CheckResult:
-    """One part per position of the fixed program, as in Parsons. The message says what went
-    wrong there: a faulty line left in (with the content's reason it is faulty), the wrong
-    correction, a correction where the original line was fine, a line in the wrong place, or an
-    id that is neither a line nor a correction."""
-    expected, got = solution.order, submission.order
+    """Graded as Parsons is (FR-5.5): correct when the fixed program is in any order the solution
+    accepts, and the lines outside the longest run already in sequence with the closest accepted
+    order are marked. One part per position, plus a missing part per line short. The message says
+    what went wrong there, against the line that belongs in that place: a faulty line left in
+    (with the content's reason it is faulty), the wrong correction, a correction where the
+    original line was fine, a line in the wrong place, or an id that is neither a line nor a
+    correction."""
+    got = submission.order
+    closest, kept = _compare(solution, got)
+    want = _expected_at(closest, got, kept)
     corrections = {line.id for line in config.corrections}
     lines = {line.id for line in config.lines}
-    in_solution = set(expected)
+    in_solution = set(closest)
+    unplaced = (in_solution & corrections) - set(got)  # corrections the answer leaves out
     parts: list[PartResult] = []
-    for i in range(max(len(expected), len(got))):
-        want = expected[i] if i < len(expected) else None
-        have = got[i] if i < len(got) else None
-        if have == want:
+    for i, have in enumerate(got):
+        if i in kept:
             parts.append(PartResult(ref=i, correct=True))
             continue
-        if want is None:
-            message = EXTRA_LINE
-        elif have is None:
-            message = MISSING_LINE
-        elif have in in_solution:
+        if have in in_solution:
             message = OUT_OF_PLACE
         elif have in corrections:
-            message = WRONG_FIX if want in corrections else FIX_NOT_NEEDED
+            # Where a correction belongs, or none is placed but one is left out, the wrong
+            # correction; where an original line belongs, one that wasn't needed; else extra.
+            if want[i] in corrections or (want[i] is None and unplaced):
+                message = WRONG_FIX
+            elif want[i] is None:
+                message = EXTRA_LINE
+            else:
+                message = FIX_NOT_NEEDED
         elif have not in lines:  # not a line or a correction at all: made up
             message = EXTRA_LINE
         else:  # an original line the fixed program does not use: a bug left in
             message = solution.feedback.get(have, BUG_LEFT_IN)
         parts.append(PartResult(ref=i, correct=False, message=message))
-    return _result(parts)
+    parts.extend(
+        PartResult(ref=i, correct=False, message=MISSING_LINE)
+        for i in range(len(got), len(closest))
+    )
+    return _result(parts, MISSING_FIX)
 
 
 def check_choose_tests(

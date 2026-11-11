@@ -9,7 +9,7 @@ so nothing a student sends here is ever executed or stored as free-form code.
 
 from typing import Annotated, Any, Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, StrictInt, field_validator, model_validator
 
 from app.schemas.base import ApiModel
 from app.schemas.graphs import VERTEX, GraphEdge
@@ -65,25 +65,58 @@ class ParsonsConfig(ApiModel):
 
 
 # One step of an accepted order: a line id, or a group of line ids that may go in any order among
-# themselves (they still fill that stretch of the answer together), e.g. `[3, 4, 5]`.
-ParsonsStep = int | Annotated[list[int], Field(max_length=100)]
+# themselves (they still fill that stretch of the answer together), e.g. `[3, 4, 5]`. Strict, so
+# `true` is not line 1 and `"3"` is not line 3.
+ParsonsStep = StrictInt | Annotated[list[StrictInt], Field(max_length=100)]
 
 
-class ParsonsSolution(ApiModel):
-    """Server-only: the accepted orders of line IDs (FR-5.4). Any line not used is a distractor.
+def _check_steps(steps: Any, name: str) -> None:
+    """A readable error for a malformed order, instead of pydantic's dump of the union."""
+    if not isinstance(steps, list):
+        raise ValueError(f"{name} must be a list of line ids")
+    for step in steps:
+        if isinstance(step, list):
+            for line in step:
+                if isinstance(line, list):
+                    raise ValueError(f"{name}: a group holds line ids, not another group: {step}")
+                if isinstance(line, bool) or not isinstance(line, int):
+                    raise ValueError(f"{name}: {line!r} in the group {step} is not a line id")
+        elif isinstance(step, bool) or not isinstance(step, int):
+            raise ValueError(f"{name}: {step!r} is not a line id or a group of line ids")
+
+
+class OrderedSolution(ApiModel):
+    """Server-only: the accepted orders of line ids, for a kind graded by order (Parsons, fix the
+    bug; FR-5.4, FR-5.5). Any line not used is a distractor (or, in fix the bug, a faulty line or
+    an unused correction).
 
     `order` is one correct sequence. A step in it can be a list of line ids whose order doesn't
     matter, so `[1, 2, [3, 4, 5], 6]` accepts 1, 2, then 3, 4 and 5 in any of their six orders,
     then 6. `alternatives` lists more correct sequences in the same notation, for a line that can
     sit in a different place (not just swap with its neighbours); each must use the same lines as
     `order`. A plain list of ids, as before, is one order and nothing else. The checks that a
-    solution makes sense (known ids, no line twice, no group of one) are in
-    app/services/content.py."""
+    solution makes sense (known ids, no line twice, no group of one, no alternative that `order`
+    already accepts) are in app/services/content.py."""
 
     order: list[ParsonsStep] = Field(min_length=1, max_length=100)
     alternatives: list[Annotated[list[ParsonsStep], Field(min_length=1, max_length=100)]] = Field(
         default_factory=list, max_length=20
     )
+
+    @field_validator("order", mode="before")
+    @classmethod
+    def _order_shape(cls, value: Any) -> Any:
+        _check_steps(value, "order")
+        return value
+
+    @field_validator("alternatives", mode="before")
+    @classmethod
+    def _alternatives_shape(cls, value: Any) -> Any:
+        if not isinstance(value, list):
+            raise ValueError("alternatives must be a list of orders")
+        for n, steps in enumerate(value, start=1):
+            _check_steps(steps, f"alternative {n}")
+        return value
 
     def accepted(self) -> list[list[ParsonsStep]]:
         """Every accepted order, `order` first."""
@@ -97,6 +130,11 @@ class ParsonsSolution(ApiModel):
 def flatten(steps: list[ParsonsStep]) -> list[int]:
     """The line ids of an accepted order, each group's ids in the order written."""
     return [i for step in steps for i in ([step] if isinstance(step, int) else step)]
+
+
+class ParsonsSolution(OrderedSolution):
+    """Server-only: the accepted orders of the lines (see OrderedSolution). Any line not used is
+    a distractor."""
 
 
 class ParsonsSubmission(ApiModel):
@@ -188,11 +226,11 @@ class FixTheBugConfig(ApiModel):
         return self
 
 
-class FixTheBugSolution(ApiModel):
-    """Server-only: the fixed program as line and correction ids in order, and why each faulty
-    line is wrong, keyed by that line's id (FR-4.2)."""
+class FixTheBugSolution(OrderedSolution):
+    """Server-only: the fixed program as line and correction ids, in its accepted orders (see
+    OrderedSolution: groups and alternatives, FR-5.5), and why each faulty line is wrong, keyed by
+    that line's id (FR-4.2)."""
 
-    order: list[int] = Field(min_length=1, max_length=100)
     feedback: dict[int, str] = Field(default_factory=dict)
 
 

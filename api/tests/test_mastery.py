@@ -14,7 +14,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import Activity, Attempt, HintView, ObjectiveResult, Segment, User
-from app.schemas.activities import ParsonsSolution
+from app.schemas.activities import FixTheBugSolution, ParsonsSolution
 from app.schemas.graphs import GraphScenarioOut
 from app.seed import FixtureFile, ObjectiveFixture, check_references, load, read_fixtures
 from app.services import mastery, rewards
@@ -384,7 +384,7 @@ def correct_submission(activity: Activity) -> dict[str, Any]:
         case "parsons":
             return {"order": ParsonsSolution.model_validate(solution).first_order()}
         case "fix_the_bug":
-            return {"order": solution["order"]}
+            return {"order": FixTheBugSolution.model_validate(solution).first_order()}
         case "fill_in":
             return {"answers": solution["answers"]}
         case "choose_tests":
@@ -432,8 +432,8 @@ def test_the_committed_mastery_check_can_be_passed(client: TestClient, db: Sessi
 
 
 # One accepted order of module 6's Parsons item that is not the worked example's: the starting
-# values reversed, queue.append before visited.add, and order.append(v) after the neighbour loop.
-EQUIVALENT_BFS = [1, 2, 5, 4, 3, 6, 7, 9, 10, 12, 11, 8, 13]
+# values reversed, and queue.append before visited.add.
+EQUIVALENT_BFS = [1, 2, 5, 4, 3, 6, 7, 8, 9, 10, 12, 11, 13]
 
 
 def answer_module_6(client: TestClient, db: Session, parsons_order: list[int]) -> Activity:

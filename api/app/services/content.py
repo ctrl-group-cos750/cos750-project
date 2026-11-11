@@ -19,8 +19,10 @@ from app.schemas.activities import (
     MatchingSolution,
     MultipleChoiceConfig,
     MultipleChoiceSolution,
+    OrderedSolution,
     ParsonsConfig,
     ParsonsSolution,
+    ParsonsStep,
     TraceConfig,
     flatten,
 )
@@ -46,20 +48,45 @@ SHAPES: dict[str, tuple[type[BaseModel], type[BaseModel]]] = {
 }
 
 
-def _parsons(config: ParsonsConfig, solution: ParsonsSolution) -> None:
-    """Every accepted order is one a student can build from the lines shown (FR-5.4, NFR-M5)."""
-    ids = [line.id for line in config.lines]
-    if len(ids) != len(set(ids)):
-        raise ValueError("two lines share an id, so a submission could not tell them apart")
+def _matches(steps: list[ParsonsStep], order: list[int]) -> bool:
+    """Whether `steps` accepts `order` (plain line ids): each step fills the next stretch."""
+    at = 0
+    for step in steps:
+        block = [step] if isinstance(step, int) else step
+        if sorted(order[at : at + len(block)]) != sorted(block):
+            return False
+        at += len(block)
+    return at == len(order)
+
+
+def _covers(wide: list[ParsonsStep], narrow: list[ParsonsStep]) -> bool:
+    """Whether every order `narrow` accepts is already accepted by `wide`: `wide` accepts its
+    lines as written, and each of its groups sits inside one group of `wide`."""
+    if not _matches(wide, flatten(narrow)):
+        return False
+    block_of = {
+        line: n
+        for n, step in enumerate(wide)
+        for line in ([step] if isinstance(step, int) else step)
+    }
+    return all(
+        len({block_of[line] for line in step}) == 1 for step in narrow if isinstance(step, list)
+    )
+
+
+def _orders(known: set[int], solution: OrderedSolution) -> None:
+    """Every accepted order is one a student can build from the lines shown (FR-5.4, FR-5.5,
+    NFR-M5), and each alternative accepts something the others don't."""
     used = set(solution.first_order())
-    for n, steps in enumerate(solution.accepted()):
+    accepted = solution.accepted()
+    for n, steps in enumerate(accepted):
         name = "the order" if n == 0 else f"alternative {n}"
         for step in steps:
             if isinstance(step, list) and len(step) < 2:
                 # An empty group can't be placed; a group of one is just that line: write the id.
                 raise ValueError(f"{name}: a group of lines needs at least two ids, not {step}")
         lines = flatten(steps)
-        if unknown := sorted(set(lines) - set(ids)):
+        if unknown := sorted(set(lines) - known):
             raise ValueError(f"{name} uses unknown line ids {unknown}")
         if len(lines) != len(set(lines)):
             raise ValueError(f"{name} uses a line twice")
@@ -67,11 +94,18 @@ def _parsons(config: ParsonsConfig, solution: ParsonsSolution) -> None:
             # Lines one order needs and another leaves out would be a distractor and an answer
             # line at once, so the feedback couldn't say which.
             raise ValueError(f"{name} must use the same lines as the order")
-    shapes = [
-        tuple(s if isinstance(s, int) else frozenset(s) for s in o) for o in solution.accepted()
-    ]
-    if len(shapes) != len(set(shapes)):
-        raise ValueError("an alternative repeats an order already accepted")
+    for n, steps in enumerate(accepted[1:], start=1):
+        for m, other in enumerate(accepted):
+            if m != n and _covers(other, steps):
+                where = "the order" if m == 0 else f"alternative {m}"
+                raise ValueError(f"alternative {n} accepts nothing that {where} doesn't already")
+
+
+def _parsons(config: ParsonsConfig, solution: ParsonsSolution) -> None:
+    ids = [line.id for line in config.lines]
+    if len(ids) != len(set(ids)):
+        raise ValueError("two lines share an id, so a submission could not tell them apart")
+    _orders(set(ids), solution)
 
 
 def _multiple_choice(config: MultipleChoiceConfig, solution: MultipleChoiceSolution) -> None:
@@ -95,12 +129,8 @@ def _matching(config: MatchingConfig, solution: MatchingSolution) -> None:
 
 def _fix_the_bug(config: FixTheBugConfig, solution: FixTheBugSolution) -> None:
     lines = {line.id for line in config.lines}
-    known = lines | {line.id for line in config.corrections}
-    if unknown := set(solution.order) - known:
-        raise ValueError(f"the fixed program uses unknown line ids {sorted(unknown)}")
-    if len(solution.order) != len(set(solution.order)):
-        raise ValueError("the fixed program uses a line twice")
-    if solution.order == [line.id for line in config.lines]:
+    _orders(lines | {line.id for line in config.corrections}, solution)
+    if any(_matches(steps, [line.id for line in config.lines]) for steps in solution.accepted()):
         raise ValueError("the fixed program is the faulty one: there is nothing to fix")
     if unknown := set(solution.feedback) - lines:
         raise ValueError(f"feedback for ids that are not faulty-program lines {sorted(unknown)}")

@@ -223,24 +223,31 @@ def test_the_parsons_answer_is_the_worked_examples_code() -> None:
 
 
 def test_the_parsons_problem_accepts_exactly_the_orders_that_work() -> None:
-    """Every order of the lines Python can run is tried on the design's tests: each that passes
-    is accepted, and each the checker accepts passes (FR-5.4, #145). The one exception is
-    deliberate: the import after the function runs too, but the lessons and PEP 8 put imports
-    first, so that is still marked wrong."""
+    """Every order of the lines Python can run is tried on the design's tests: each the checker
+    accepts passes, and each that passes is accepted (FR-5.4, #145), with two deliberate
+    exceptions that also run. The import after the function: the lessons and PEP 8 put imports
+    first. order.append(v) after the neighbour loop: module 3 says a vertex joins the order when
+    it leaves the queue, and the worked example writes it straight after popleft()."""
     a = activity(404)
     text = {line["id"]: line["text"] for line in a.config["lines"]}
-    import_line = next(i for i, t in text.items() if t.startswith("from collections"))
     working, accepted = [], []
     for order in runnable_orders(text):
         if passes("\n".join(text[i] for i in order), TESTS[406]):
             working.append(order)
         if check_activity("parsons", a.config, a.solution, {"order": order}).correct:
             accepted.append(order)
-    assert accepted == [order for order in working if order[0] == import_line]
-    assert {order[-1] for order in working if order not in accepted} == {import_line}
-    # The three starting values (3! orders) x visited.add/queue.append (2) x order.append(v)
-    # before or after the neighbour loop (2).
-    assert len(accepted) == 24
+    assert accepted == [order for order in working if conventional(order, text)]
+    # The three starting values (3! orders) x visited.add/queue.append (2); the exceptions double
+    # it twice: the import first or last, order.append(v) before or after the neighbour loop.
+    assert len(accepted) == 12
+    assert len(working) == 48
+
+
+def conventional(order: list[int], text: dict[int, str]) -> bool:
+    """The import comes first, and order.append(v) straight after the vertex leaves the queue."""
+    lines = [text[i].strip() for i in order]
+    after_dequeue = lines[next(n for n, t in enumerate(lines) if ".popleft()" in t) + 1]
+    return lines[0].startswith("from ") and after_dequeue.startswith("order.append(")
 
 
 @pytest.mark.parametrize("activity_id", sorted(TESTS))

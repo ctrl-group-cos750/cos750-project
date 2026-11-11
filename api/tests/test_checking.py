@@ -417,8 +417,9 @@ def test_trace_bad_stored_graph_raises_not_silently_passes() -> None:
 
 # --- Several accepted orders (FR-5.4, #145) -------------------------------------------------------
 
-# The module 4 BFS: 1 import, 2 def, 3-5 the starting values, 6 while, 7 popleft, 8 order.append,
-# 9 for, 10 if, 11 visited.add, 12 queue.append, 13 return. 20 is a distractor.
+# A BFS like module 4's: 1 import, 2 def, 3-5 the starting values, 6 while, 7 popleft, 8 order.append,
+# 9 for, 10 if, 11 visited.add, 12 queue.append, 13 return. 20 is a distractor. The alternative (8 after
+# the loop) only tests `alternatives`: the fixtures leave it out (module 3 records on dequeue).
 BFS = ParsonsConfig.model_validate(
     {"lines": [{"id": i, "text": f"line {i}"} for i in [*range(1, 14), 20]]}
 )
@@ -576,3 +577,15 @@ def test_dispatch_parsons_groups_from_plain_json() -> None:
         {"order": [2, 1, 3]},
     )
     assert result.correct
+
+
+def test_a_missing_line_is_named_in_the_summary() -> None:
+    # No line on screen can show a missing one, so the summary says it (#145 review).
+    result = check_bfs([1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13])
+    assert not result.correct
+    assert all(p.correct for p in result.parts[:12])
+    assert (
+        result.feedback == "12 of 13 correct. 1 line is missing: add it from the available lines."
+    )
+    two = check_bfs([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13])
+    assert two.feedback.endswith("2 lines are missing: add them from the available lines.")

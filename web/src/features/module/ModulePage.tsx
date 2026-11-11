@@ -5,14 +5,37 @@ import { Alert, Button, ProgressBar, Spinner } from '../../components'
 import { ActivityView } from '../activities/ActivityPage.tsx'
 import { fetchModule, savePosition } from './module.api.ts'
 import { SegmentView } from './SegmentView.tsx'
+// A line of its own, so it merges cleanly with fix/web-rendering-a11y's change to the imports above.
+import { Link } from 'react-router'
+import { buttonVariants } from '@/components/ui/button-variants'
+import { ApiError } from '../../api/client.ts'
+
+/** The API refused the request (any 4xx: 403 locked, 404 no such module, 429 too many): asking
+ * again gets the same answer, so it isn't retried and the page says so at once instead of spinning
+ * (#136 review). Once fix/api-integrity (A1) is merged, this and the refusal view below can become
+ * its `retryUnlessRefused` and `NotAvailable`. */
+const refused = (error: Error) =>
+  error instanceof ApiError && error.status >= 400 && error.status < 500
+
+/** A module id as the route gives it: a whole number, or nothing the API is asked about. */
+const MODULE_ID = /^\d{1,9}$/
 
 /** /modules/:moduleId — plays a module's segments in order, saves position (FR-2.3, FR-2.5). */
 export function ModulePage() {
-  const id = Number(useParams().moduleId)
+  // The id exactly as it is in the address. "abc", "1.5" or "-1" names no module, so the API isn't
+  // asked; and the raw text, not Number(), is what is compared below (NaN never equals itself).
+  const param = useParams().moduleId ?? ''
+  const validId = MODULE_ID.test(param)
+  const id = Number(param)
   const queryClient = useQueryClient()
   const navigate = useNavigate()
 
-  const query = useQuery({ queryKey: ['module', id], queryFn: () => fetchModule(id) })
+  const query = useQuery({
+    queryKey: ['module', id],
+    queryFn: () => fetchModule(id),
+    enabled: validId,
+    retry: (failures, error) => !refused(error) && failures < 3,
+  })
 
   // Drive current index from the fetched position; update locally on navigation.
   const [segmentIndex, setSegmentIndex] = useState<number | null>(null)
@@ -43,8 +66,41 @@ export function ModulePage() {
       void queryClient.invalidateQueries({ queryKey: ['module', id] })
     },
   })
+  // Another module opened in place (a link, or Back and Forward): start it afresh, so a segment
+  // index from the last module never carries over (#136 review). React's pattern for state that
+  // resets when a prop changes.
+  const [shownParam, setShownParam] = useState(param)
+  if (shownParam !== param) {
+    setShownParam(param)
+    setSegmentIndex(null)
+    setRetrievalIndex(null)
+    setRetrievalChecked(false)
+  }
+
+  if (!validId)
+    return (
+      <ModuleRefused
+        title="There’s no such module"
+        message="A module’s address ends in its number, such as /modules/3."
+      />
+    )
   if (query.isPending) return <Spinner label="Loading module" />
-  if (query.isError) return <Alert tone="danger">{query.error.message}</Alert>
+  if (query.isError) {
+    if (!refused(query.error)) return <Alert tone="danger">{query.error.message}</Alert>
+    const status = query.error instanceof ApiError ? query.error.status : 0
+    return (
+      <ModuleRefused
+        title={
+          status === 404
+            ? 'There’s no such module'
+            : status === 403
+              ? 'This module isn’t open yet'
+              : 'This module can’t be shown right now'
+        }
+        message={query.error.message}
+      />
+    )
+  }
 
   const module = query.data
   const segments = module.segments
@@ -114,8 +170,22 @@ export function ModulePage() {
     )
   }
 
-  // Initialise from the server's position; clamp to valid range.
-  const currentIndex = segmentIndex ?? Math.min(module.currentSegmentPosition, segments.length - 1)
+  // Initialise from the server's position; clamp to valid range. But if a segment the student has
+  // already passed isn't done (or any segment, in a complete module), open there instead: a student
+  // who went past an activity before it could be answered (trace, fix the bug and choose tests
+  // until #136) lands on it, not on a later segment with nothing to show what is missing. Normally
+  // every segment before the position is done (FR-2.7), so this changes nothing else.
+  const firstNotDone = segments.findIndex((segment) => !segment.done)
+  const skipped =
+    firstNotDone >= 0 &&
+    (module.status === 'complete' || firstNotDone < module.currentSegmentPosition)
+  const currentIndex =
+    segmentIndex ??
+    (skipped ? firstNotDone : Math.min(module.currentSegmentPosition, segments.length - 1))
+  // Fix where the page opened: answering that segment refetches the module, and the page must stay
+  // on it to show the feedback, not jump on to the next segment that isn't done. (Setting state
+  // during render, guarded so it happens once, is React's pattern for state derived from props.)
+  if (segmentIndex === null) setSegmentIndex(currentIndex)
   const segment = segments[currentIndex]
   const isFirst = currentIndex === 0
   const isLast = currentIndex === segments.length - 1
@@ -253,6 +323,20 @@ export function ModulePage() {
           </Button>
         </nav>
       </div>
+    </section>
+  )
+}
+
+/** Why a module can't be shown, in the API's words, with the way back to the map instead of a
+ * spinner that never ends. */
+function ModuleRefused({ title, message }: { title: string; message: string }) {
+  return (
+    <section className="grid justify-items-start gap-3">
+      <h1 className="text-2xl font-bold">{title}</h1>
+      <Alert tone="info">{message}</Alert>
+      <Link to="/" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+        Back to your modules
+      </Link>
     </section>
   )
 }

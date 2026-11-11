@@ -99,22 +99,42 @@ export function ModulePage() {
   const segment = segments[currentIndex]
   const isFirst = currentIndex === 0
   const isLast = currentIndex === segments.length - 1
-  // The server refuses to move past a segment that isn't done (FR-2.7); say why up front.
-  const blocked = segment !== undefined && !segment.done && module.status !== 'complete'
+  // The server refuses to move past a segment that isn't done (FR-2.7); say why up front. Like
+  // the server, only the furthest segment reached gates: stepping back over earlier progress
+  // (made before this rule, or before staff changed the content) is never blocked, and nor is
+  // anything in a complete module.
+  const blocked =
+    segment !== undefined &&
+    !segment.done &&
+    module.status !== 'complete' &&
+    currentIndex >= module.currentSegmentPosition
+  const blockedReason = !blocked
+    ? ''
+    : segment.kind === 'video'
+      ? 'Answer each of the video’s checkpoint questions correctly to continue.'
+      : 'Answer the activity to continue. A wrong answer still counts.'
 
   function handlePrevious() {
     setSegmentIndex(Math.max(0, currentIndex - 1))
   }
 
+  // Only moving past the furthest segment reached is saved. Moving forward again over segments
+  // already reached (after stepping back) just changes what's on screen, like going back does.
   function handleNext() {
+    if (blocked) return // the button stays focusable (aria-disabled), so the click is ignored here
     const next = currentIndex + 1
+    if (next <= module.currentSegmentPosition) {
+      setSegmentIndex(next)
+      return
+    }
     mutation.mutate(segments[next].position, { onSuccess: () => setSegmentIndex(next) })
   }
 
-  // The last segment was saved when the student reached it, which completed the module; saving it
-  // again is harmless and covers a save that failed. Then back to the map, where the next module
-  // is now open.
+  // Saving the last segment again once it is done is what completes the module (the server
+  // completes it when the furthest position is the last segment and that segment is done). Then
+  // back to the map, where the next module is now open.
   function handleFinish() {
+    if (blocked) return
     mutation.mutate(segments[currentIndex].position, { onSuccess: () => void navigate('/') })
   }
 
@@ -171,33 +191,35 @@ export function ModulePage() {
         </Alert>
       )}
 
-      {blocked && (
-        <p id="segment-blocked" className="m-0 text-sm text-muted-foreground">
-          {segment.kind === 'video'
-            ? 'Answer the video’s checkpoints to continue.'
-            : 'Answer the activity to continue. A wrong answer still counts.'}
-        </p>
-      )}
-
-      {/* Navigation */}
-      <nav className="flex justify-between" aria-label="Segment navigation">
-        <Button
-          variant="secondary"
-          onClick={handlePrevious}
-          disabled={isFirst || mutation.isPending}
-        >
-          ← Previous
-        </Button>
-        <Button
-          variant={isLast ? 'primary' : 'secondary'}
-          onClick={isLast ? handleFinish : handleNext}
-          disabled={mutation.isPending || blocked}
-          aria-describedby={blocked ? 'segment-blocked' : undefined}
-          loading={mutation.isPending}
-        >
-          {isLast ? 'Finish module' : 'Next →'}
-        </Button>
-      </nav>
+      {/* Navigation. The reason Next is blocked is always rendered, as a polite status
+          (<output>), so a screen reader announces it when it appears and when it clears; only
+          its text changes. It sits with the buttons so an empty one costs only a small gap. */}
+      <div className="grid gap-2">
+        <output id="segment-blocked" className="block text-sm text-muted-foreground">
+          {blockedReason}
+        </output>
+        <nav className="flex justify-between" aria-label="Segment navigation">
+          <Button
+            variant="secondary"
+            onClick={handlePrevious}
+            disabled={isFirst || mutation.isPending}
+          >
+            ← Previous
+          </Button>
+          <Button
+            variant={isLast ? 'primary' : 'secondary'}
+            onClick={isLast ? handleFinish : handleNext}
+            // aria-disabled rather than disabled while blocked: a disabled button can't be
+            // focused, so its reason would never be read. The handlers ignore the click.
+            disabled={mutation.isPending}
+            aria-disabled={blocked || undefined}
+            aria-describedby={blocked ? 'segment-blocked' : undefined}
+            loading={mutation.isPending}
+          >
+            {isLast ? 'Finish module' : 'Next →'}
+          </Button>
+        </nav>
+      </div>
     </section>
   )
 }

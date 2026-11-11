@@ -12,7 +12,16 @@ export function VideoPage() {
 
 /** A narrated video with its checkpoints: the video page, and a video segment in a module
  * (SegmentView), which keeps the module's own navigation on screen. */
-export function VideoView({ videoId: id, onResult }: { videoId: number; onResult?: () => void }) {
+export function VideoView({
+  videoId: id,
+  onResult,
+  heading,
+}: {
+  videoId: number
+  onResult?: () => void
+  /** The level of its "Checkpoint" and "Transcript" headings: h3 inside a module segment. */
+  heading?: 'h2' | 'h3'
+}) {
   const query = useQuery({ queryKey: ['video', id], queryFn: () => fetchVideo(id) })
   const refreshRewards = useRefreshRewards()
   if (query.isPending) return <Spinner label="Loading the video" />
@@ -23,6 +32,7 @@ export function VideoView({ videoId: id, onResult }: { videoId: number; onResult
       video={query.data.video}
       activities={query.data.activities}
       initialPassedIds={query.data.passedIds}
+      heading={heading}
       onAttempt={async (input) => {
         const result = await submitCheckpointAttempt(input)
         if (result.correct) refreshRewards() // a correct answer can earn points (FR-9.1)

@@ -348,7 +348,7 @@ Figure: Use cases. The student takes part in every use case in both groups excep
 - **FR-2.4** Each module from module 2 onwards opens with one or two retrieval questions on earlier modules.
 - **FR-2.5** Save progress after every segment. A student who returns resumes at the segment they left.
 - **FR-2.6** Show a module map with each module's state (locked, open, in progress, complete) and estimated duration.
-- **FR-2.7** A student moves past a segment only once it is done: an activity segment once its activity has been answered at least once (a wrong answer counts), a video segment once every checkpoint in the video is passed. Other segments are done when shown. A module is complete once its last segment is done. A complete module can be reread freely.
+- **FR-2.7** A student moves past a segment only once it is done: an activity segment once its activity has been answered at least once (a wrong answer counts), a video segment once every checkpoint in the video is passed. Other segments are done when shown. An activity whose kind has no student UI yet (today `trace`, `fix_the_bug` and `choose_tests`) counts as done until its UI exists, so it never strands a student. A module is complete once its last segment is done. A complete module can be reread freely.
 
 ## Narrated video with checkpoints (FR-3)
 - **FR-3.1** Play narrated videos (screen recordings with a voice-over, no presenter) with play, pause and seek.
@@ -565,7 +565,7 @@ Base path: `/api`. JSON over HTTPS. Auth via the session cookie set by `/api/aut
 |---|---|---|---|
 | GET | `/api/modules` | user | All modules with this student's state (locked, open, in progress, complete). |
 | GET | `/api/modules/{moduleId}` | user | The module's segments, in order, with this student's position. Refreshers the diagnostic ruled out are left out. Activities come without answers. |
-| POST | `/api/modules/{moduleId}/position` | user | Save the segment the student is on (FR-2.5). |
+| POST | `/api/modules/{moduleId}/position` | user | Save the segment the student is on (FR-2.5). Refuses (409) to move past a segment that isn't done (FR-2.7). |
 | GET | `/api/videos/{videoId}` | user | Video metadata, captions and transcript paths, and checkpoints. The media itself comes from `/media/`. |
 
 ## Activities, hints and code

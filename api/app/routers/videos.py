@@ -6,10 +6,14 @@ from app.db import DbSession
 from app.models import Activity, Attempt, Checkpoint, Video
 from app.schemas.activities import ActivityOut
 from app.schemas.videos import CheckpointOut, VideoOut
+from app.services.modules import video_locked
 
 router = APIRouter(prefix="/api/videos", tags=["videos"])
 
 NOT_FOUND = "This video does not exist."
+MODULE_LOCKED = (
+    "This video is in a module that isn't open yet. Complete the module before it to unlock it."
+)
 
 
 @router.get("/{video_id}")
@@ -20,6 +24,10 @@ def get_video(video_id: int, user: CurrentUser, session: DbSession) -> VideoOut:
     video = session.get(Video, video_id)
     if video is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NOT_FOUND)
+    # Its checkpoints stay unseen too (FR-2.1). Staff are let through, so the video editor's
+    # "Open as a student" works on any video.
+    if not user.is_staff and video_locked(session, user.id, video):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=MODULE_LOCKED)
     rows = session.execute(
         select(Checkpoint, Activity)
         .join(Activity, Activity.id == Checkpoint.activity_id)

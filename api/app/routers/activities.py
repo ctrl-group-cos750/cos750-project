@@ -4,7 +4,7 @@ from sqlalchemy import select
 
 from app.auth import CurrentUser
 from app.db import DbSession
-from app.models import Activity, Hint
+from app.models import Activity, Hint, User
 from app.schemas.activities import ActivityOut, AttemptIn, AttemptOut, HintOut
 from app.services.attempts import (
     answered_correctly,
@@ -13,6 +13,7 @@ from app.services.attempts import (
     reveal_next_hint,
 )
 from app.services.mastery import review_open, review_path_of
+from app.services.modules import activity_locked
 
 router = APIRouter(prefix="/api/activities", tags=["activities"])
 
@@ -21,17 +22,28 @@ BAD_SUBMISSION = "This submission is not in the expected shape."
 NO_MORE_HINTS = "You have seen every hint for this activity."
 SOLVED = "You have already answered this correctly, so no more hints are given."
 REVIEW_CLOSED = "This activity is on a review path, which opens when the mastery check marks its objective 'not yet'."
+MODULE_LOCKED = (
+    "This activity is in a module that isn't open yet. Complete the module before it to unlock it."
+)
 SUPPORT_LEVEL = 3  # hint levels 3 and 4 make a correct answer count as "with support" (FR-7.2)
 
 
-def _activity_or_404(session: DbSession, activity_id: int, user_id: int) -> Activity:
-    """The activity, if this student may open it. An activity on a review path is 403 until the
-    path is open (FR-7.5): its fresh items must still be unseen when the student gets there."""
+def _activity_or_404(session: DbSession, activity_id: int, user: User) -> Activity:
+    """The activity, if this student may open it. An activity in a module is 403 while that module
+    is locked (FR-2.1), so module 6's mastery items stay unseen until module 6 opens (FR-7.1); that
+    covers a video checkpoint's question too, through the module that plays the video. An activity
+    on a review path is 403 until the path is open (FR-7.5): its fresh items must still be unseen
+    when the student gets there. Staff are let through both, so the content editor's "Open as a
+    student" works on any item (the team checks content that way)."""
     activity = session.get(Activity, activity_id)
     if activity is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NOT_FOUND)
+    if user.is_staff:
+        return activity
+    if activity_locked(session, user.id, activity):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=MODULE_LOCKED)
     objective = review_path_of(session, activity_id)
-    if objective is not None and not review_open(session, user_id, objective):
+    if objective is not None and not review_open(session, user.id, objective):
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=REVIEW_CLOSED)
     return activity
 
@@ -41,7 +53,7 @@ def get_activity(activity_id: int, session: DbSession, user: CurrentUser) -> Act
     """The activity to render. `ActivityOut` has no `solution`, so the answer never reaches the
     browser (FR-5.3, NFR-S2). `solved` says whether this student has already answered it
     correctly, so the page stops offering hints after a refresh too (#158)."""
-    activity = _activity_or_404(session, activity_id, user.id)
+    activity = _activity_or_404(session, activity_id, user)
     out = ActivityOut.model_validate(activity)
     out.solved = answered_correctly(session, user.id, activity.id)
     return out
@@ -60,7 +72,7 @@ def submit_attempt(
     per BFS step (graded against the engine, so a trace has no stored solution). A submission in the
     wrong shape is 422. No student code is executed: `check_activity` compares the submission with
     the solution, which stays in this process (NFR-S7)."""
-    activity = _activity_or_404(session, activity_id, user.id)
+    activity = _activity_or_404(session, activity_id, user)
     try:
         attempt, result = record_attempt(session, user.id, activity, body.submitted)
     except ValidationError as exc:  # the submission didn't match the kind's shape
@@ -82,7 +94,7 @@ def get_revealed_hints(activity_id: int, user: CurrentUser, session: DbSession) 
     """Every hint level this student has already unlocked on this activity (FR-4.4, FR-4.5).
 
     Returns an empty list if they have not asked for any hints yet."""
-    activity = _activity_or_404(session, activity_id, user.id)
+    activity = _activity_or_404(session, activity_id, user)
     all_hints = session.scalars(
         select(Hint).where(Hint.activity_id == activity.id).order_by(Hint.level)
     ).all()
@@ -111,7 +123,7 @@ def reveal_hint(activity_id: int, user: CurrentUser, session: DbSession) -> Hint
     or once the student has answered correctly, it is 409. When `nextCountsAsSupport` is true,
     warn the student before calling again: a correct answer after hint 3 or 4 counts as "met
     with support" (ID document §7.4)."""
-    activity = _activity_or_404(session, activity_id, user.id)
+    activity = _activity_or_404(session, activity_id, user)
     # A hint after a right answer helps with nothing, and would count in the pilot's hint use as
     # help the student needed (#158).
     if answered_correctly(session, user.id, activity.id):

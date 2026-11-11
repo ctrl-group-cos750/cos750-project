@@ -287,7 +287,7 @@ export function TraceTable({ activity, result, submitting, onSubmit }: TraceTabl
                       aria-label={`Step ${index + 1}, current vertex`}
                       aria-invalid={visibleErrors.has(cellId(row.key, 'current')) || undefined}
                       aria-describedby={describedBy('current')}
-                      className="w-full rounded border border-primary bg-background px-2 py-1 font-mono"
+                      className="w-full rounded border border-primary bg-background px-2 py-1 font-mono aria-invalid:border-2 aria-invalid:border-warning aria-invalid:bg-warning/10"
                       value={row.current}
                       disabled={disabled}
                       onChange={(event) => update(index, { current: event.target.value })}
@@ -313,7 +313,7 @@ export function TraceTable({ activity, result, submitting, onSubmit }: TraceTabl
                         aria-label={`Step ${index + 1}, ${heading.toLowerCase()}`}
                         aria-invalid={visibleErrors.has(cellId(row.key, column)) || undefined}
                         aria-describedby={describedBy(column)}
-                        className="w-full rounded border border-primary bg-background px-2 py-1 font-mono"
+                        className="w-full rounded border border-primary bg-background px-2 py-1 font-mono aria-invalid:border-2 aria-invalid:border-warning aria-invalid:bg-warning/10"
                         value={row[column]}
                         disabled={disabled}
                         onChange={(event) => update(index, { [column]: event.target.value })}
@@ -385,7 +385,9 @@ export function TraceTable({ activity, result, submitting, onSubmit }: TraceTabl
   )
 }
 
-/** The input error for one cell, named beside it and linked to it by aria-describedby. */
+/** The input error for one cell, named beside it and linked to it by aria-describedby. The cell
+ * itself gets a thicker warning border and tint (`aria-invalid`), so it isn't marked by colour
+ * alone: the border's weight and this message both say which cell to fix (WCAG 1.4.1, 3.3.1). */
 function CellError({
   id,
   errors,

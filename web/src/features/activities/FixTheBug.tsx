@@ -29,8 +29,10 @@ type Row = { key: number; original: number | null; current: number }
  * wrong correction, a line in the wrong place). Positions move as soon as the program changes,
  * so the marks are cleared on the first change, as in the Parsons problem.
  *
- * Corrections are offered in the order the content gives them, never sorted by id, so their order
- * gives nothing away. A line's indentation is drawn and also given in words ("indent level 2"),
+ * Corrections are offered in the order the content gives them, never sorted by id. The screen
+ * doesn't hide which is right: the content must not list the right correction first (or in any
+ * telling place), and the ids it carries can be read in the browser's developer tools. A line's
+ * indentation is drawn and also given in words ("indent level 2"),
  * in the code, the option labels and the button names, as for the Parsons lines (#142). */
 export function FixTheBug({ activity, result, submitting, onSubmit }: FixTheBugProps) {
   const { lines, corrections } = activity.config

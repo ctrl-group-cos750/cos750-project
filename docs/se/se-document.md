@@ -346,7 +346,7 @@ Figure: Use cases. The student takes part in every use case in both groups excep
 - **FR-2.2** Each module is an ordered sequence of segments: narrated video, text, worked example, activity, or code activity.
 - **FR-2.3** Each module starts by stating its objectives in plain words ("By the end of this module you can …"), taken from the content.
 - **FR-2.4** Each module from module 2 onwards opens with one or two retrieval questions on earlier modules.
-- **FR-2.5** Save progress after every segment. A student who returns resumes at the segment they left.
+- **FR-2.5** Save progress after every segment. A student who returns resumes at the segment they left, or, if they moved past a segment without doing it (possible only before its activity could be answered), at the first such segment; a complete module opens at its first segment that isn't done.
 - **FR-2.6** Show a module map with each module's state (locked, open, in progress, complete) and estimated duration.
 - **FR-2.7** A student moves past a segment only once it is done: an activity segment once its activity has been answered at least once (a wrong answer counts), a video segment once every checkpoint in the video is passed. Other segments are done when shown. An activity whose kind has no student UI yet counts as done until its UI exists, so it never strands a student; since #136 every kind has one, so none is let through unanswered. A module is complete once its last segment is done. A complete module can be reread freely.
 

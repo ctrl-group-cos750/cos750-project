@@ -16,11 +16,30 @@ function objective(id: number, more: Partial<ObjectiveReport> = {}): ObjectiveRe
   }
 }
 
-function withReport(report: MasteryReport | (() => Response)) {
+/** Module 6, the mastery check, as the module list gives it. */
+function moduleSix(status: 'locked' | 'open' | 'in_progress' | 'complete') {
+  return {
+    id: 6,
+    number: 6,
+    slug: 'mastery',
+    title: 'Mastery check and report',
+    goals: [],
+    estimatedMinutes: 10,
+    status,
+    segmentCount: 25,
+    currentSegmentPosition: 0,
+  }
+}
+
+function withReport(
+  report: MasteryReport | (() => Response),
+  checkStatus: 'locked' | 'open' | 'in_progress' | 'complete' = 'open',
+) {
   return fakeApi({
     user: ada,
     overrides: {
       'GET /api/me/report': typeof report === 'function' ? report : () => Response.json(report),
+      'GET /api/modules': () => Response.json([moduleSix(checkStatus)]),
     },
   })
 }
@@ -89,6 +108,42 @@ describe('ReportPage', () => {
     expect(row(3).getByText(/no questions on this objective yet/)).toBeVisible()
     expect(row(3).queryByRole('link')).not.toBeInTheDocument()
     expect(row(4).queryByRole('link', { name: /module 6/ })).not.toBeInTheDocument()
+  })
+
+  it('names module 6 without linking to it while it is still locked (#136 review)', async () => {
+    withReport(
+      {
+        ready: false,
+        objectives: [
+          objective(1, { state: 'not_attempted', answered: 0, total: 2 }),
+          objective(2, { state: 'not_attempted', answered: 0, total: 3 }),
+        ],
+      },
+      'locked',
+    )
+    renderApp('/report')
+    expect(
+      await screen.findByText(
+        'Not ready yet: 2 objectives to answer in module 6, once you reach it',
+      ),
+    ).toBeVisible()
+    expect(row(1).getByText(/Not answered yet: its questions are in module 6/)).toBeVisible()
+    expect(screen.queryByRole('link', { name: /questions in module 6/ })).not.toBeInTheDocument()
+  })
+
+  it('links module 6 once it is open, whatever its progress', async () => {
+    withReport(
+      {
+        ready: false,
+        objectives: [objective(5, { state: 'not_attempted', answered: 0, total: 1 })],
+      },
+      'complete',
+    )
+    renderApp('/report')
+    expect(
+      await screen.findByRole('link', { name: 'Answer its questions in module 6: objective 5' }),
+    ).toHaveAttribute('href', '/modules/6')
+    expect(screen.getByText('Not ready yet: 1 objective to answer in module 6')).toBeVisible()
   })
 
   it('counts the objectives still to answer when nothing is not yet', async () => {

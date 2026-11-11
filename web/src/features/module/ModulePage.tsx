@@ -5,6 +5,12 @@ import { Alert, Button, ProgressBar, Spinner } from '../../components'
 import { ActivityView } from '../activities/ActivityPage.tsx'
 import { fetchModule, savePosition } from './module.api.ts'
 import { SegmentView } from './SegmentView.tsx'
+import { ApiError } from '../../api/client.ts'
+
+/** The API refused the module (403 locked, 404 no such module): asking again gets the same answer,
+ * so it isn't retried and the page says so at once instead of spinning (#136 review). */
+const refused = (error: Error) =>
+  error instanceof ApiError && (error.status === 403 || error.status === 404)
 
 /** /modules/:moduleId — plays a module's segments in order, saves position (FR-2.3, FR-2.5). */
 export function ModulePage() {
@@ -12,7 +18,11 @@ export function ModulePage() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
 
-  const query = useQuery({ queryKey: ['module', id], queryFn: () => fetchModule(id) })
+  const query = useQuery({
+    queryKey: ['module', id],
+    queryFn: () => fetchModule(id),
+    retry: (failures, error) => !refused(error) && failures < 3,
+  })
 
   // Drive current index from the fetched position; update locally on navigation.
   const [segmentIndex, setSegmentIndex] = useState<number | null>(null)
@@ -30,8 +40,34 @@ export function ModulePage() {
       void queryClient.invalidateQueries({ queryKey: ['module', id] })
     },
   })
+  // Another module opened in place (a link, or Back and Forward): start it afresh, so a segment
+  // index from the last module never carries over (#136 review). React's pattern for state that
+  // resets when a prop changes.
+  const [shownId, setShownId] = useState(id)
+  if (shownId !== id) {
+    setShownId(id)
+    setSegmentIndex(null)
+    setRetrievalIndex(null)
+    setRetrievalChecked(false)
+  }
+
   if (query.isPending) return <Spinner label="Loading module" />
-  if (query.isError) return <Alert tone="danger">{query.error.message}</Alert>
+  if (query.isError) {
+    if (!refused(query.error)) return <Alert tone="danger">{query.error.message}</Alert>
+    return (
+      <section className="grid justify-items-start gap-3">
+        <h1 className="text-2xl font-bold">
+          {query.error instanceof ApiError && query.error.status === 404
+            ? 'There’s no such module'
+            : 'This module isn’t open yet'}
+        </h1>
+        <Alert tone="info">{query.error.message}</Alert>
+        <Button variant="ghost" size="sm" onClick={() => void navigate('/')}>
+          Back to your modules
+        </Button>
+      </section>
+    )
+  }
 
   const module = query.data
   const segments = module.segments

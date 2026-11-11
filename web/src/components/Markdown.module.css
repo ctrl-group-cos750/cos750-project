@@ -120,8 +120,17 @@
   overflow-wrap: normal;
 }
 
+.prose td code {
+  /* Code in a cell may break anywhere, so a cell holding {"A": ["C", "E"]} wraps inside its
+     column instead of forcing the table wider than a 320 px screen. */
+  overflow-wrap: anywhere;
+}
+
 .prose th,
 .prose td {
+  /* No column narrower than about nine characters: code breaks inside it, but not one or two
+     letters to a line. A table that can't fit then scrolls in its region. */
+  min-width: 4.5rem;
   padding: var(--space-2) var(--space-3);
   border-block-end: 1px solid var(--color-line);
   text-align: start;

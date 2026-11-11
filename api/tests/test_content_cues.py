@@ -336,7 +336,7 @@ def parts(a: ActivityFixture) -> int:
         case "fill_in":
             return len(a.config["blanks"])
         case "parsons" | "fix_the_bug":
-            return len(a.solution["order"])
+            return len(line_ids(a.solution["order"]))  # groups (#145) count each line
         case "choose_tests":
             return len(a.config["tests"])
     return 1

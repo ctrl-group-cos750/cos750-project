@@ -1,6 +1,8 @@
 """The code-activity checkers (app/services/checking.py). Pure comparison, no database, no code
 execution: these mirror the grading a student submission gets."""
 
+from typing import Any
+
 import pytest
 from pydantic import ValidationError
 
@@ -319,14 +321,60 @@ def test_trace_wrong_queue_fails_only_that_step() -> None:
     assert not result.correct
     assert result.score == pytest.approx(3 / 4)
     assert [p.correct for p in result.parts] == [True, False, True, True]
-    assert result.parts[1].message == checking.WRONG_TRACE_STEP
+    assert result.parts[1].message == " ".join(
+        [checking.WRONG_TRACE_STEP, checking.TRACE_COLUMN_HINTS["queue"]]
+    )
 
 
 def test_trace_wrong_visited_vertex_fails_that_step() -> None:
     rows = [dict(r) for r in CORRECT_ROWS]
     rows[2] = {**rows[2], "visited_vertex": "D"}  # visited D before C
     result = checking.check_trace(TRACE, TraceSubmission.model_validate({"rows": rows}))
-    assert result.parts[2].message == checking.WRONG_TRACE_STEP
+    assert result.parts[2].message == " ".join(
+        [checking.WRONG_TRACE_STEP, checking.TRACE_COLUMN_HINTS["visited_vertex"]]
+    )
+
+
+@pytest.mark.parametrize(
+    ("change", "columns"),
+    [
+        ({"visited": ["A"]}, ["visited"]),
+        ({"order": ["A", "C"]}, ["order"]),
+        # Marking on dequeue the wrong way round: B's row with C still waiting and D not found.
+        ({"queue": ["C"], "visited": ["A"], "order": ["A"]}, ["queue", "visited", "order"]),
+        (
+            {"visited_vertex": "C", "queue": [], "visited": [], "order": []},
+            ["visited_vertex", "queue", "visited", "order"],
+        ),
+    ],
+)
+def test_a_wrong_trace_step_names_each_wrong_column_in_table_order(
+    change: dict[str, Any], columns: list[str]
+) -> None:
+    """Per-row feedback says which column to look at and what it should hold (ID document §7.3,
+    Hattie and Timperley 2007), so the student knows where the slip is, not just that it's wrong."""
+    rows = [dict(r) for r in CORRECT_ROWS]
+    rows[1] = {**rows[1], **change}
+    result = checking.check_trace(TRACE, TraceSubmission.model_validate({"rows": rows}))
+    message = result.parts[1].message
+    assert message == " ".join(
+        [checking.WRONG_TRACE_STEP, *(checking.TRACE_COLUMN_HINTS[c] for c in columns)]
+    )
+
+
+def test_a_wrong_trace_step_never_gives_the_right_value_away() -> None:
+    """The hints are fixed text per column: no vertex label from the answer can appear in them."""
+    for hint in checking.TRACE_COLUMN_HINTS.values():
+        for vertex in TRACE.vertices:
+            assert f" {vertex} " not in f" {hint} ".replace(",", " ").replace(".", " ")
+    rows = [dict(r) for r in CORRECT_ROWS]
+    rows[1] = {**rows[1], "queue": []}  # the right queue is C, D
+    message = (
+        checking.check_trace(TRACE, TraceSubmission.model_validate({"rows": rows})).parts[1].message
+    )
+    assert message is not None
+    assert "C, D" not in message
+    assert "['C', 'D']" not in message
 
 
 def test_trace_visited_set_is_compared_regardless_of_order() -> None:

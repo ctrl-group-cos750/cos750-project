@@ -353,9 +353,9 @@ Figure: Use cases. The student takes part in every use case in the first two gro
 - **FR-2.2** Each module is an ordered sequence of segments: narrated video, text, worked example, refresher, or activity (a code activity is one kind of activity).
 - **FR-2.3** Each module starts by stating its objectives in plain words ("By the end of this module you can …"), taken from the content.
 - **FR-2.4** Each module from module 2 onwards opens with one or two retrieval questions on earlier modules.
-- **FR-2.5** Save progress after every segment. A student who returns resumes at the segment they left.
+- **FR-2.5** Save progress after every segment. A student who returns resumes at the segment they left, or, if they moved past a segment without doing it (possible only before its activity could be answered), at the first such segment; a complete module opens at its first segment that isn't done.
 - **FR-2.6** Show a module map with each module's state (locked, open, in progress, complete) and estimated duration.
-- **FR-2.7** A student moves past a segment only once it is done: an activity segment once its activity has been answered correctly, or answered after its last hint was shown (the last hint gives the answer away, so no student is kept there), a video segment once every checkpoint in the video is passed. Other segments are done when shown. An activity whose kind has no student UI yet (today `trace`, `fix_the_bug` and `choose_tests`) counts as done until its UI exists, so it never strands a student. A module is complete once its last segment is done. A complete module can be reread freely. A blank answer (no option, line, token, pair, test or row) is refused and not recorded, so it never counts as an attempt.
+- **FR-2.7** A student moves past a segment only once it is done: an activity segment once its activity has been answered correctly, or answered after its last hint was shown (the last hint gives the answer away, so no student is kept there), a video segment once every checkpoint in the video is passed. Other segments are done when shown. An activity whose kind has no student UI yet counts as done until its UI exists, so it never strands a student; since #136 every kind has one, so none is let through unanswered. A module is complete once its last segment is done. A complete module can be reread freely. A blank answer (no option, line, token, pair, test or row) is refused and not recorded, so it never counts as an attempt.
 
 ## Narrated video with checkpoints (FR-3)
 - **FR-3.1** Play narrated videos (screen recordings with a voice-over, no presenter) with play, pause and seek.
@@ -368,7 +368,7 @@ Figure: Use cases. The student takes part in every use case in the first two gro
 
 ## Activities, feedback and hints (FR-4)
 - **FR-4.1** Support these activity kinds, each defined entirely by content data:
-  multiple choice; matching; labelling vertices and edges on a diagram; classifying graphs (directed or undirected); building a graph by adding vertices and edges; predicting the next BFS vertex; filling in a BFS trace table (current vertex, queue, visited set, order); Parsons problems (ordering shuffled lines of code); completing code by choosing a token for each blank; fixing a faulty BFS; choosing the test cases that expose a bug.
+  multiple choice; matching; labelling vertices and edges on a diagram; classifying graphs (directed or undirected); building a graph by adding vertices and edges; predicting the next BFS vertex; filling in a BFS trace table, one row each time a vertex leaves the queue (current vertex, queue after the step, visited set, order so far), the columns of module 3's worked example; Parsons problems (ordering shuffled lines of code); completing code by choosing a token for each blank; fixing a faulty BFS; choosing the test cases that expose a bug.
 - **FR-4.2** Check every answer on the server and return feedback straight away. Feedback says why an answer is wrong, not only that it is wrong.
 - **FR-4.3** Tag every activity with the learning objective it gives evidence for (1 to 7) and its purpose: practice, diagnostic, retrieval, mastery, review or bonus.
 - **FR-4.4** Offer a four-level hint ladder on every activity, one level at a time. Level 4 is the worked solution.
@@ -382,7 +382,7 @@ Code activities never execute student-written code. The student constructs code 
 - **FR-5.2** **Check** compares the student's arrangement against the solution and shows which lines or blanks are wrong, with a message for each. There is no code execution, so there are no run-time limits or output to show. A check is practice: it is not graded and not recorded as an attempt.
 - **FR-5.3** **Submit** records a graded attempt: the server compares the submission with the solution (which the browser never receives) and returns which lines or blanks were wrong and a message for each, without revealing the full solution.
 - **FR-5.4** Parsons problems, and the fixed program in fix the bug (FR-5.5), are checked by the order of the lines, and every order the content accepts passes: a solution lists one order, in which a group of lines may go in any order among themselves (the BFS starting values; `visited.add(n)` and `queue.append(n)`), plus any alternative orders, and the seed refuses one that uses an unknown line, a line twice, a group of one or an alternative the others already accept. The BFS items accept every order that runs as BFS except two kept as conventions: the import after the function, and `order.append(v)` anywhere but straight after `popleft()`. A wrong order is compared with the closest accepted order by relative order (longest common subsequence), so only the lines that must move are marked, not every line after one misplaced line; fill-in activities are checked token by token against the expected tokens, and a wrong token gets the content's reason for that blank and token where it gives one (FR-4.2).
-- **FR-5.5** Objective 7 uses two more kinds, also checked by comparison. **Fix the bug** shows a faulty BFS: the student marks each faulty line and chooses its correction from a given set of lines, or moves a line that is in the wrong place, as in a Parsons problem. **Choose tests** shows a faulty BFS and four to six test cases, each a small graph, a start vertex and the expected order: the student selects every test case that the faulty version fails and the correct version passes. No student code or student-written test runs.
+- **FR-5.5** Objective 7 uses two more kinds, also checked by comparison. **Fix the bug** shows a faulty BFS: for each line the student keeps it or replaces it with one of a given set of corrections, moves a line that is in the wrong place, removes a line that doesn't belong, or inserts a correction as a new line; every action is a button or a list choice, with no dragging (WCAG 2.5.7). Feedback is per line, as in a Parsons problem. **Choose tests** shows a faulty BFS and four to six test cases, each a small graph, a start vertex and the expected order: the student selects every test case that the faulty version fails and the correct version passes, and each test case is marked with why it does or doesn't expose the bug. No student code or student-written test runs.
 - **FR-5.6** Because nothing is executed, a code activity always returns promptly with per-line or per-blank feedback, never a run-time error page.
 
 ## BFS visualiser (FR-6)
@@ -391,7 +391,7 @@ Code activities never execute student-written code. The student constructs code 
 - **FR-6.3** Provide controls: step forward, step back, play and pause, reset, and speed.
 - **FR-6.4** In prediction mode, pause before each step and ask the student to pick the next vertex; the animation then confirms or corrects the prediction.
 - **FR-6.5** Neighbours are visited in alphabetical order of their labels, the convention the lessons teach, so a correct prediction is always marked correct.
-- **FR-6.6** Trace-table activities are checked step by step against the engine's steps.
+- **FR-6.6** Trace-table activities are checked step by step against the engine's steps. A wrong step's feedback names each column that is wrong and what to check in it, never the right value.
 
 ## Mastery check and scaffolding (FR-7)
 - **FR-7.1** Module 6 is a mastery check: unseen activities on every objective, checked against the success criteria in the ID document's Table 1.
@@ -724,7 +724,7 @@ The returned payload (see §9.4) contains:
 - `order`: the final visitation order (the core result the lessons teach);
 - `steps`: one snapshot per dequeued vertex (the queue after the step, the vertices visited so far, the newly discovered vertices and the edges they were found along), so the frontend can highlight vertices and edges and show the queue at each step.
 
-In a step, `visited` lists the vertices already taken from the queue, so it always equals `order`. The lessons in module 4 use "visited" for the set of vertices found, which is the engine's internal `discovered` set. A trace table therefore checks the same thing twice in its visited and order columns; how to present the two words is part of the trace-table work in progress (#136).
+In a step, `visited` lists the vertices already taken from the queue, so it always equals `order`. The lessons in module 4 use "visited" for the set of vertices found, which is the engine's internal `discovered` set. A trace table therefore checks the same thing twice in its visited and order columns; the trace table's column is headed "Visited (has left the queue)" so it isn't read in module 4's sense (#136). Renaming it to a *Found* column, which would test the key idea, is open for the ID team.
 
 ## Design properties
 - **Deterministic** output for a given scenario and start vertex (reproducible animations, easy tests).
@@ -755,7 +755,7 @@ The components as they are on `staging`, organised by feature as in `web/src/fea
   - `CheckpointQuestion`: the checkpoint's multiple-choice question, with feedback and the hint ladder; playback resumes once it is correct.
 - **Activities**
   - `ActivityRenderer`: chooses the component for the activity's kind, and adds `FeedbackPanel` (the result and the reason for each wrong part) and `HintLadder` (hints one level at a time, with a warning before level 3 that a later correct answer counts as "with support").
-  - One component per kind with a student screen: `MultipleChoice`, `Matching`, `ParsonsProblem` (reorder lines by dragging or with the arrow keys) and `FillInCode` (a `<select>` for each blank in a read-only, highlighted snippet). Trace tables, fix the bug and choose tests have no screen yet and show "This activity kind is not available yet" (FR-4.1, §15.5); their screens (`TraceTable`, `FixTheBug`, `ChooseTests`) are in progress (#136).
+  - One component per kind with a student screen: `MultipleChoice`, `Matching`, `ParsonsProblem` (reorder lines by dragging or with the arrow keys) and `FillInCode` (a `<select>` for each blank in a read-only, highlighted snippet), and since #136 `TraceTable` (one row per vertex that leaves the queue, typed lists checked against the graph before sending), `FixTheBug` (keep, replace, move, remove or insert each line with buttons and selects, no dragging) and `ChooseTests` (a checkbox per test case, each shown as text). A kind with no screen shows "This activity kind is not available yet" (FR-2.7).
   - `ActivityPage`: one activity on its own page, at `/activities/{id}`.
 - **BFS visualiser** (`/graphs/{id}`)
   - `BfsVisualizer`: the step controls (forward, back, play and pause, reset, speed), the state panel (current vertex, queue, visited, order) and prediction mode, driven by `bfsPlayback.ts` from the engine's steps.
@@ -926,7 +926,7 @@ L06's model of memory (slides 28–32) adds one rule: short-term memory holds in
 |---|---|---|
 | Menus | The module map, the header, the account menu, multiple choice, a `<select>` for each blank in a fill-in activity | Choosing from what is shown needs no recall, which suits novices, and a choice can't be malformed. Choosing tokens rather than typing code also keeps NFR-S7: no student code to run. |
 | Direct manipulation | Dragging lines in a Parsons problem; stepping the BFS animation forward and back | The student acts on the thing being learned: the order of the lines, the progress of the traversal. Each drag also has a keyboard equivalent (NFR-A1). |
-| Form-filling | Registration and log-in; the trace table (in progress, #136) | A trace table is a form by nature: one row per step, one field per column. |
+| Form-filling | Registration and log-in; the trace table (#136) | A trace table is a form by nature: one row per step, one field per column. |
 
 Table: The dialogue styles the app uses (L06, slide 57).
 
@@ -1360,8 +1360,7 @@ What `staging` (commit `e8973c5`) does not yet do, or does only in part, against
 
 | Area | Limitation on `staging` | Requirement | Work |
 |---|---|---|---|
-| Activity screens | Trace tables, fix the bug and choose tests have a server checker but no student screen: the student sees "This activity kind is not available yet", and the segment counts as done. Labelling a diagram, classifying graphs, building a graph and predicting the next vertex as an activity are not built as kinds; module content uses multiple choice and matching for them, and prediction exists only in the visualiser. | FR‑4.1, FR‑5.5, FR‑6.6 | Screens for the first three in progress (#136) |
-| Objectives 5 and 7 | Their mastery items (a trace table; fix the bug and choose tests) have no screen, so a real student's result for them stays "not attempted", and nobody can become "ready for the lecture" except the seeded demo accounts. The review paths for 5 and 7 can't open for the same reason. | FR‑7.1, FR‑7.4, FR‑7.5 | In progress (#136); review paths that meet the ID design planned (#148) |
+| Activity kinds | Labelling a diagram, classifying graphs, building a graph and predicting the next vertex as an activity are not built as kinds; module content uses multiple choice and matching for them, and prediction exists only in the visualiser. Trace tables, fix the bug and choose tests have their screens (#136). | FR‑4.1 | Content uses the other kinds instead |
 | Module 5 | Test and debug has one retrieval question and no segments, so module 6 opens without it and objective 7 is not taught. | FR‑2.1, ID Table 4 | Content (#86) |
 | Objective 8 | In the ID document, but not in the app: no criterion, mastery item or review path. | FR‑4.3 | Decision pending (#70) |
 | Diagnostic, fading, bonus | The diagnostic is recorded but does not pick refreshers; every refresher is shown. Worked examples can't be skipped (four check activities exist but are in no segment). There are no bonus quests. | FR‑8.1–FR‑8.3 | #31, #87 |
@@ -1371,7 +1370,7 @@ What `staging` (commit `e8973c5`) does not yet do, or does only in part, against
 | Answer rate limit | No rate limit or size limit on answers and hints. | NFR‑S6 | In progress (#139) |
 | Mastery check | Feedback and hints 3–4 are available on mastery items, and the result shows at once. | FR‑7.1, FR‑7.2 | Planned (#144) |
 | Parsons | Only the one stored line order is accepted, though some lines could validly swap. | FR‑5.4 | In progress (#145) |
-| Badges | No "first module" badge; the bonus-quest badges can't be earned; "every objective met" can't be earned by a real student (see objectives 5 and 7). | FR‑9.3 | Follows #136, #87 |
+| Badges | The bonus-quest badges can't be earned yet. | FR‑9.3 | Follows #87 |
 | Visualiser | Predictions are checked in the browser and not recorded, so they give no evidence for an objective. The visualiser is reached only from a link in module 3. | FR‑6.4 | Not scheduled |
 | Videos | The fixtures hold no videos: staff upload them on each site. Placing a video in a module segment needs a database change on `staging`; the content editor adds it (#128). A video segment without a video shows "Video not available" and counts as done. | FR‑3, NFR‑A4 | #37; #128 (open pull request); text fallback planned (#149) |
 | Rendering and accessibility | Tables in worked examples and code indentation render wrongly in places; several issues from a browser walk-through (focus, contrast, labels). Two component kits are in use. | NFR‑U2, NFR‑A1–A3 | In progress (#140, #142) |

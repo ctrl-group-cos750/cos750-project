@@ -738,7 +738,8 @@ describe('ModulePage — activity segment', () => {
       },
     })
     renderApp('/modules/1')
-    await screen.findByRole('heading', { level: 3, name: 'Which vertex is next?' })
+    // The answer options, not the activity's own title: #161 hides that title inside a segment.
+    await screen.findByLabelText('D')
     expect(screen.getByText('Segment 3 of 4')).toBeInTheDocument()
     await userEvent.click(screen.getByLabelText('D'))
     await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))

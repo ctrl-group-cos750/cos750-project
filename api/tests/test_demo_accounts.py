@@ -14,7 +14,16 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
 from app.db import Base
-from app.models import Activity, Attempt, HintView, ModuleProgress, Segment, User
+from app.models import (
+    Activity,
+    Attempt,
+    Checkpoint,
+    HintView,
+    ModuleProgress,
+    Segment,
+    User,
+    Video,
+)
 from app.schemas.activities import ActivityKind
 from app.seed import FIXTURES, load
 from app.seed.demo_accounts import (
@@ -419,3 +428,42 @@ def test_progress_into_a_module_still_locked_stops_there_and_says_so(
         "before it isn't complete"
     ]
     assert statuses(db, "mid@demo.example.com")[3] == "locked"
+
+
+def test_the_walk_passes_a_video_s_checkpoints_before_moving_past_it(
+    tmp_path: Path, db: Session
+) -> None:
+    """A segment must be done before moving past it (FR-2.7): for a video, every checkpoint."""
+    load(db)
+    question = Activity(
+        id=99_001,
+        kind="multiple_choice",
+        title="Checkpoint",
+        config={
+            "prompt": "Which?",
+            "options": [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}],
+        },
+        solution={"correct": "a", "feedback": {}},
+    )
+    video = Video(
+        segment_id=103,  # module 1's first video
+        title="Graphs",
+        media_path="/media/v.mp4",
+        captions_path="/media/v.vtt",
+        transcript="Words.",
+        duration_seconds=60,
+    )
+    db.add_all([question, video])
+    db.flush()
+    db.add(Checkpoint(video_id=video.id, at_seconds=5, activity_id=question.id))
+    db.commit()
+
+    accounts = write(tmp_path, [account(progress=[{"module": 0}, {"module": 1}])])
+    load_demo_accounts(db, PASSWORD, accounts)
+
+    assert statuses(db, "mid@demo.example.com")[1] == "complete"
+    mid = db.scalars(select(User).where(User.email == "mid@demo.example.com")).one()
+    passed = db.scalars(
+        select(Attempt.correct).where(Attempt.user_id == mid.id, Attempt.activity_id == 99_001)
+    ).all()
+    assert passed == [True]

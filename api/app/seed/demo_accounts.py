@@ -11,6 +11,9 @@ never breaks an account, and every result is the one the real mastery rules work
 `progress` says how far the account got through each module. The seed walks it through the module
 service (app/services/modules.py) one segment at a time, as a student would, so the module map
 shows the same stage as the answers. "end" means the whole module, however many segments it has.
+A segment must be done before the walk moves past it (FR-2.7), so it answers any activity segment
+the steps haven't answered, and passes any video checkpoint, right first time. It runs after the
+steps, so the steps' answers stay the first attempts that mastery counts.
 A module with no segments yet is passed over, as it is for a student (FR-2.1). If a module is
 still locked when the walk reaches it, the walk stops there and the seed says so, rather than
 failing: the account goes as far as the course allows.
@@ -37,7 +40,7 @@ from pydantic import BaseModel, Field, ValidationError, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Module, Segment, User
+from app.models import Activity, Attempt, Checkpoint, Module, Segment, User, Video
 from app.models.user import DEMO_EMAIL_DOMAIN
 from app.passwords import password_problem
 from app.schemas.activities import (
@@ -59,7 +62,7 @@ from app.services.bfs import run_bfs
 from app.services.checking import check_activity
 from app.services.history import delete_history
 from app.services.mastery import evaluate, is_ready
-from app.services.modules import ModuleLocked, save_position
+from app.services.modules import ModuleLocked, done_segments, save_position
 
 DEMO_FILE = Path(__file__).parent / "demo" / "accounts.json"
 
@@ -177,7 +180,6 @@ def _rebuild(session: Session, account: DemoAccount, password_hash: str) -> str 
     session.flush()
 
     delete_history(session, user.id)
-    stopped = _walk(session, user.id, account)
 
     for n, step in enumerate(account.steps, start=1):
         for activity in _questions(session, step):
@@ -186,6 +188,7 @@ def _rebuild(session: Session, account: DemoAccount, password_hash: str) -> str 
                 if reveal_next_hint(session, user.id, activity) is None:
                     break  # fewer hints than asked for: show what there is
             record_attempt(session, user.id, activity, answer_for(activity, step.answer, where))
+    stopped = _walk(session, user.id, account)
 
     outcomes = evaluate(session, user.id)
     ready = is_ready(outcomes)
@@ -220,15 +223,52 @@ def _walk(session: Session, user_id: int, account: DemoAccount) -> str | None:
             )
         else:
             last = entry.through - 1
+        segments = session.scalars(
+            select(Segment).where(Segment.module_id == entry.module).order_by(Segment.position)
+        ).all()
         try:
             for position in range(last + 1):
+                if position > 0:
+                    _do(session, user_id, segments[position - 1], where)
                 save_position(session, user_id, entry.module, position)
+            if entry.through == "end":
+                _do(session, user_id, segments[last], where)
+                save_position(session, user_id, entry.module, last)  # "Finish module"
         except ModuleLocked:
             return (
                 f"{account.email}: stopped at module {entry.module}, which is still locked "
                 "because the module before it isn't complete"
             )
     return None
+
+
+def _do(session: Session, user_id: int, segment: Segment, where: str) -> None:
+    """Do the segment as a student would before moving past it (FR-2.7), if it isn't done yet:
+    answer its activity, or pass every checkpoint of its video, right first time."""
+    if segment.id in done_segments(session, user_id, [segment]):
+        return
+    if segment.kind == "activity":
+        ids = [segment.activity_id]
+    else:  # a video segment: its checkpoints not passed yet
+        ids = list(
+            session.scalars(
+                select(Checkpoint.activity_id)
+                .join(Video, Video.id == Checkpoint.video_id)
+                .where(
+                    Video.segment_id == segment.id,
+                    Checkpoint.activity_id.not_in(
+                        select(Attempt.activity_id).where(
+                            Attempt.user_id == user_id, Attempt.correct.is_(True)
+                        )
+                    ),
+                )
+                .order_by(Checkpoint.at_seconds)
+            )
+        )
+    for activity_id in ids:
+        activity = session.get_one(Activity, activity_id)
+        here = f"{where}, segment {segment.id}, activity {activity_id}"
+        record_attempt(session, user_id, activity, answer_for(activity, "right", here))
 
 
 def _questions(session: Session, step: DemoStep) -> list[Activity]:

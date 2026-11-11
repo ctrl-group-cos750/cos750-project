@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
-from app.models import Module, Objective, Segment, Video
+from app.models import Activity, Checkpoint, Module, Objective, Segment, Video
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -506,3 +506,139 @@ def test_a_module_with_no_segments_yet_doesnt_lock_the_ones_after_it(
     statuses = {m["id"]: m["status"] for m in client.get("/api/modules").json()}
     assert statuses == {m0_id: "complete", m1_id: "open", m2_id: "open"}
     assert client.get(f"/api/modules/{m2_id}").status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# 12. A segment must be done before moving past it (FR-2.7)
+# ---------------------------------------------------------------------------
+
+
+def _question(db: Session, activity_id: int) -> Activity:
+    activity = Activity(
+        id=activity_id,
+        kind="multiple_choice",
+        title=f"Question {activity_id}",
+        config={
+            "prompt": "Which?",
+            "options": [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}],
+        },
+        solution={"correct": "a", "feedback": {}},
+    )
+    db.add(activity)
+    return activity
+
+
+def _make_gated_module(db: Session) -> int:
+    """Module 0: a text segment, an activity, a video with one checkpoint, and a closing activity.
+    Module 1 after it, so completion shows in what opens."""
+    m0 = Module(id=0, slug="m0", title="Zero", goals=[], estimated_minutes=5, position=0)
+    m1 = Module(id=1, slug="m1", title="One", goals=[], estimated_minutes=5, position=1)
+    db.add_all([m0, m1])
+    for activity_id in (1, 2, 3):
+        _question(db, activity_id)
+    db.flush()
+    db.add_all(
+        [
+            Segment(id=1, module_id=0, position=0, kind="text", title="Read", body="Text."),
+            Segment(id=2, module_id=0, position=1, kind="activity", title="Try", activity_id=1),
+            Segment(id=3, module_id=0, position=2, kind="video", title="Watch"),
+            Segment(id=4, module_id=0, position=3, kind="activity", title="Last", activity_id=3),
+            Segment(id=5, module_id=1, position=0, kind="text", title="Next", body="Text."),
+        ]
+    )
+    db.flush()
+    video = Video(
+        segment_id=3,
+        title="BFS",
+        media_path="/media/v.mp4",
+        captions_path="/media/v.vtt",
+        transcript="Words.",
+        duration_seconds=60,
+    )
+    db.add(video)
+    db.flush()
+    db.add(Checkpoint(video_id=video.id, at_seconds=10, activity_id=2))
+    db.commit()
+    return m0.id
+
+
+def _answer(client: TestClient, activity_id: int, option: str) -> None:
+    res = client.post(
+        f"/api/activities/{activity_id}/attempts", json={"submitted": {"selected": option}}
+    )
+    assert res.status_code in (200, 201), res.text
+
+
+def _move(client: TestClient, position: int) -> int:
+    return client.post("/api/modules/0/position", json={"segmentPosition": position}).status_code
+
+
+def test_each_segment_says_whether_it_is_done(client: TestClient, db: Session) -> None:
+    _make_gated_module(db)
+    _register_and_login(client, ALICE)
+
+    done = [s["done"] for s in client.get("/api/modules/0").json()["segments"]]
+    assert done == [True, False, False, False]
+    _answer(client, 1, "b")
+    _answer(client, 2, "a")
+    done = [s["done"] for s in client.get("/api/modules/0").json()["segments"]]
+    assert done == [True, True, True, False]
+
+
+def test_an_activity_must_be_answered_once_right_or_wrong_before_moving_on(
+    client: TestClient, db: Session
+) -> None:
+    _make_gated_module(db)
+    _register_and_login(client, ALICE)
+    assert _move(client, 1) == 200  # past the text segment
+
+    res = client.post("/api/modules/0/position", json={"segmentPosition": 2})
+    assert res.status_code == 409
+    assert "activity" in res.json()["detail"]
+    assert client.get("/api/modules/0").json()["currentSegmentPosition"] == 1
+
+    _answer(client, 1, "b")  # wrong is enough: it is practice
+    assert _move(client, 2) == 200
+
+
+def test_a_video_needs_every_checkpoint_passed(client: TestClient, db: Session) -> None:
+    _make_gated_module(db)
+    _register_and_login(client, ALICE)
+    _answer(client, 1, "a")
+    assert _move(client, 1) == 200
+    assert _move(client, 2) == 200
+
+    _answer(client, 2, "b")  # a wrong checkpoint answer doesn't pass it
+    assert _move(client, 3) == 409
+    _answer(client, 2, "a")
+    assert _move(client, 3) == 200
+
+
+def test_reaching_the_last_segment_completes_the_module_only_once_it_is_done(
+    client: TestClient, db: Session
+) -> None:
+    _make_gated_module(db)
+    _register_and_login(client, ALICE)
+    _answer(client, 1, "a")
+    _answer(client, 2, "a")
+    for position in (1, 2, 3):
+        assert _move(client, position) == 200
+    assert client.get("/api/modules/0").json()["status"] == "in_progress"
+
+    assert _move(client, 3) == 409  # "Finish module" before answering the last activity
+    _answer(client, 3, "b")
+    assert _move(client, 3) == 200
+    statuses = {m["id"]: m["status"] for m in client.get("/api/modules").json()}
+    assert statuses == {0: "complete", 1: "open"}
+
+
+def test_a_complete_module_can_be_stepped_through_freely(client: TestClient, db: Session) -> None:
+    """Rereading never needs anything answered again, and never un-finishes the module."""
+    _make_gated_module(db)
+    _register_and_login(client, ALICE)
+    for activity_id in (1, 2, 3):
+        _answer(client, activity_id, "a")
+    for position in (1, 2, 3, 3):
+        assert _move(client, position) == 200
+    assert _move(client, 0) == 200
+    assert client.get("/api/modules/0").json()["status"] == "complete"

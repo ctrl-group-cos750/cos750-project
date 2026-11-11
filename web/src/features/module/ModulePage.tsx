@@ -48,6 +48,8 @@ export function ModulePage() {
   const segment = segments[currentIndex]
   const isFirst = currentIndex === 0
   const isLast = currentIndex === segments.length - 1
+  // The server refuses to move past a segment that isn't done (FR-2.7); say why up front.
+  const blocked = segment !== undefined && !segment.done && module.status !== 'complete'
 
   function handlePrevious() {
     setSegmentIndex(Math.max(0, currentIndex - 1))
@@ -103,13 +105,27 @@ export function ModulePage() {
       </div>
 
       {/* Current segment */}
-      {segment && <SegmentView key={segment.id} segment={segment} />}
+      {segment && (
+        <SegmentView
+          key={segment.id}
+          segment={segment}
+          onAnswered={() => void queryClient.invalidateQueries({ queryKey: ['module', id] })}
+        />
+      )}
 
       {/* Save error */}
       {mutation.isError && (
         <Alert tone="warning" title="Could not save progress">
           {mutation.error.message}
         </Alert>
+      )}
+
+      {blocked && (
+        <p id="segment-blocked" className="m-0 text-sm text-muted-foreground">
+          {segment.kind === 'video'
+            ? 'Answer the video’s checkpoints to continue.'
+            : 'Answer the activity to continue. A wrong answer still counts.'}
+        </p>
       )}
 
       {/* Navigation */}
@@ -124,7 +140,8 @@ export function ModulePage() {
         <Button
           variant={isLast ? 'primary' : 'secondary'}
           onClick={isLast ? handleFinish : handleNext}
-          disabled={mutation.isPending}
+          disabled={mutation.isPending || blocked}
+          aria-describedby={blocked ? 'segment-blocked' : undefined}
           loading={mutation.isPending}
         >
           {isLast ? 'Finish module' : 'Next →'}

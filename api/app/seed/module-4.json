@@ -11,6 +11,12 @@
       ],
       "segments": [
         {
+          "id": 409,
+          "kind": "text",
+          "title": "From a page of tracing to one function",
+          "body": "Tracing BFS on seven buildings took a whole table. How long would a campus with a hundred buildings take, or a social network with millions of people? That needs a program.\n\nEach thing you kept track of by hand in module 3 (the queue, the vertices you had found and the order) becomes a line of Python. By the end of this module your own `bfs` function gives the campus order A, C, E, B, F, D, G."
+        },
+        {
           "id": 403,
           "kind": "video",
           "title": "From a trace to code",
@@ -62,12 +68,12 @@
         "prompt": "Quick recall from module 3. On the campus graph, the walkways join A–C, A–E, B–C, B–G, C–F, D–E and E–F. You traced BFS from the Admin block (A), taking neighbours in alphabetical order. In what order did BFS visit the buildings?",
         "options": [
           {
-            "id": "a",
-            "label": "A, C, E, B, F, D, G"
-          },
-          {
             "id": "b",
             "label": "A, B, C, D, E, F, G"
+          },
+          {
+            "id": "a",
+            "label": "A, C, E, B, F, D, G"
           },
           {
             "id": "c",
@@ -112,12 +118,12 @@
         "prompt": "Quick recall from module 2. You build the campus graph with your Graph class: g = Graph(), then one g.add_edge call for each walkway, in this order: A–C, A–E, B–C, B–G, C–F, D–E and E–F. What is g.adjacency[\"C\"]?",
         "options": [
           {
-            "id": "a",
-            "label": "[\"A\", \"B\", \"F\"]"
-          },
-          {
             "id": "b",
             "label": "[\"F\"]"
+          },
+          {
+            "id": "a",
+            "label": "[\"A\", \"B\", \"F\"]"
           },
           {
             "id": "c",

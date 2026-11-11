@@ -11,6 +11,12 @@
       ],
       "segments": [
         {
+          "id": 210,
+          "kind": "text",
+          "title": "A map a program can read",
+          "body": "You can see at a glance that the Admin block is joined to Computer Science and Engineering. A program can't see the map. Before BFS can explore the campus, a program needs to answer one question in a single step: **which buildings are next to this one?**\n\nHow would you store the campus so it can? In this module you build the Python class that does it, and module 4's BFS runs on it."
+        },
+        {
           "id": 203,
           "kind": "video",
           "title": "From a picture to a dictionary",
@@ -68,16 +74,16 @@
         "prompt": "Quick recall from module 0. A queue holds A, B (front first). You enqueue C, then dequeue once. What is in the queue now, front first?",
         "options": [
           {
-            "id": "a",
-            "label": "B, C"
-          },
-          {
             "id": "b",
             "label": "A, B"
           },
           {
             "id": "c",
             "label": "A, B, C"
+          },
+          {
+            "id": "a",
+            "label": "B, C"
           },
           {
             "id": "d",
@@ -123,16 +129,16 @@
         "prompt": "Quick recall from module 1. On the campus graph, the walkways join A–C, A–E, B–C, B–G, C–F, D–E and E–F. Which vertices are neighbours of the Engineering building (E)?",
         "options": [
           {
-            "id": "a",
-            "label": "A, D and F"
-          },
-          {
             "id": "b",
             "label": "D only"
           },
           {
             "id": "c",
             "label": "A, C, D and F"
+          },
+          {
+            "id": "a",
+            "label": "A, D and F"
           }
         ]
       },
@@ -237,20 +243,20 @@
         ],
         "right": [
           {
-            "id": "r1",
-            "label": "{\"A\": [\"B\"], \"B\": [\"A\", \"C\"], \"C\": [\"B\"]}"
-          },
-          {
             "id": "r2",
             "label": "{\"A\": [\"B\"], \"B\": [\"C\"], \"C\": []}"
           },
           {
-            "id": "r3",
-            "label": "{\"A\": [\"B\", \"C\"], \"B\": [\"A\", \"C\"], \"C\": [\"A\", \"B\"]}"
-          },
-          {
             "id": "r4",
             "label": "{\"A\": [\"B\"], \"B\": [\"C\"], \"C\": [\"A\"]}"
+          },
+          {
+            "id": "r1",
+            "label": "{\"A\": [\"B\"], \"B\": [\"A\", \"C\"], \"C\": [\"B\"]}"
+          },
+          {
+            "id": "r3",
+            "label": "{\"A\": [\"B\", \"C\"], \"B\": [\"A\", \"C\"], \"C\": [\"A\", \"B\"]}"
           }
         ]
       },
@@ -433,8 +439,8 @@
         },
         "feedback": {
           "1": {
-            "self.directed": "Not quite. The condition is the wrong way round: it stores the reverse edge only in a directed graph. Graph() is undirected by default, so a–c must appear in both lists. Add the reverse edge only when the graph is undirected.",
-            "True": "Not quite. With True, every edge is stored both ways, even with arrows. An arrow D → G means you can go from D to G, not back. G's list should stay empty. Only add the reverse when the graph is undirected."
+            "self.directed": "Not quite. The condition is the wrong way round: it stores the reverse edge only in a directed graph. Graph() is undirected by default, so an edge a–b must be stored in both a's and b's lists. Add the reverse edge only when the graph is undirected.",
+            "True": "Not quite. With True, every edge is stored both ways, even with arrows. An arrow a → b means you can go from a to b, not back, so a must not join b's list. Only add the reverse when the graph is undirected."
           },
           "2": {
             "a": "Not quite. This line stores the reverse edge, from b back to a, so it goes in b's list."
@@ -474,20 +480,20 @@
         "prompt": "Closing task. Using your finished class, what does the last line print? g = Graph(directed=True), then g.add_edge(\"A\", \"D\"), then g.add_edge(\"D\", \"G\"), then g.add_edge(\"G\", \"A\"), then print(g.adjacency[\"D\"]).",
         "options": [
           {
-            "id": "a",
-            "label": "[\"G\"]"
-          },
-          {
-            "id": "b",
-            "label": "[\"A\", \"G\"]"
-          },
-          {
             "id": "c",
             "label": "[]"
           },
           {
             "id": "d",
             "label": "[\"A\"]"
+          },
+          {
+            "id": "b",
+            "label": "[\"A\", \"G\"]"
+          },
+          {
+            "id": "a",
+            "label": "[\"G\"]"
           }
         ]
       },

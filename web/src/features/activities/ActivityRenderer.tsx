@@ -15,6 +15,8 @@ type ActivityRendererProps = {
   requestHint: (activityId: number) => Promise<Hint>
   loadHints?: (activityId: number) => Promise<readonly Hint[]>
   heading?: 'h1' | 'h2' | 'h3'
+  /** False inside a module segment, whose own heading already names the question. */
+  showTitle?: boolean
 }
 
 // The kinds a student can answer. The API's KINDS_WITHOUT_STUDENT_UI (api/app/services/modules.py)
@@ -34,7 +36,7 @@ export function ActivityRenderer(props: ActivityRendererProps) {
 
   return (
     <Card>
-      <Title>{props.activity.title}</Title>
+      {props.showTitle !== false && <Title>{props.activity.title}</Title>}
       {props.activity.kind === 'parsons' ? (
         <ParsonsProblem
           activity={props.activity}

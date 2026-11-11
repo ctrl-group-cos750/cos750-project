@@ -369,6 +369,9 @@ class ActivityOut(ApiModel):
     title: str
     visible: bool
     config: dict[str, Any]
+    # This student has answered it correctly: no more hints are offered or given (#158). False
+    # where the response isn't about one student's answers (a video's checkpoints).
+    solved: bool = False
 
 
 class AttemptIn(ApiModel):

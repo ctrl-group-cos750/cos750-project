@@ -10,8 +10,9 @@ no segments yet is passed over, so missing content never locks the rest of the c
 
 Progress (FR-2.5, FR-2.6): the student moves through a module one segment at a time. The
 furthest segment reached is kept, so stepping back to reread never loses progress. A student moves
-past a segment only once it is done (FR-2.7): an activity segment once they have answered its
-activity at least once, right or wrong, and a video segment once they have passed every one of
+past a segment only once it is done (FR-2.7): a practice activity once they have answered it
+correctly, or after its last hint; a mastery or diagnostic item once they have answered it at all,
+since only the first answer counts there; and a video segment once they have passed every one of
 the video's checkpoints. Every other kind is done when shown. An activity whose kind has no
 student UI yet (`KINDS_WITHOUT_STUDENT_UI`) counts as done, so it can't strand a student. The
 module is complete, for good, once its last segment is done.
@@ -22,10 +23,10 @@ from __future__ import annotations
 from collections.abc import Sequence
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, Checkpoint, Module, ModuleProgress, Segment, Video
+from app.models import Activity, Attempt, Checkpoint, Hint, Module, ModuleProgress, Segment, Video
 from app.schemas.modules import (
     ModuleDetailOut,
     ModuleOut,
@@ -33,6 +34,7 @@ from app.schemas.modules import (
     RetrievalActivityOut,
     SegmentOut,
 )
+from app.services.locks import lock_student
 
 # Activity kinds the web can't show a student yet: it says "This activity kind is not available
 # yet" instead (SUPPORTED in web/src/features/activities/ActivityRenderer.tsx is the mirror of
@@ -41,6 +43,10 @@ from app.schemas.modules import (
 # screens (#136); kept so a kind added to the API before its screen can't strand a student.
 # Remove a kind from this set in the same change that adds it to SUPPORTED.
 KINDS_WITHOUT_STUDENT_UI: frozenset[str] = frozenset()
+
+# Purposes where one real answer is enough to move on (FR-2.7): the mastery check, where only the
+# first answer counts (FR-7.1), and module 0's diagnostic, which finds gaps rather than gating.
+ONE_ANSWER_PURPOSES: frozenset[str] = frozenset({"mastery", "diagnostic"})
 
 
 class ModuleNotFound(ValueError):
@@ -120,6 +126,59 @@ def _status(session: Session, user_id: int, module_id: int) -> ModuleStatus:
     return _statuses(modules, _progress(session, user_id), _segment_counts(session))[module_id]
 
 
+def _locked(session: Session, user_id: int, module_ids: set[int]) -> bool:
+    """True if there are modules here and every one is still locked for this student."""
+    if not module_ids:
+        return False
+    statuses = _statuses(_modules(session), _progress(session, user_id), _segment_counts(session))
+    return all(statuses.get(module_id, "locked") == "locked" for module_id in module_ids)
+
+
+def activity_locked(session: Session, user_id: int, activity: Activity) -> bool:
+    """Whether this student may not open the activity yet, because every module it belongs to
+    is still locked (FR-2.1). It belongs to its own module, to every module whose segment shows it
+    (or uses it as a skip check), and, for a video's checkpoint question, to the module whose
+    segment plays that video. So module 6's mastery items stay unseen until module 6 opens
+    (FR-7.1). An activity that belongs to no module (a review path's, which has its own rule, or a
+    checkpoint of a video that isn't in a module yet) is never locked here."""
+    homes: set[int] = set()
+    if activity.module_id is not None:
+        homes.add(activity.module_id)
+    homes.update(
+        m
+        for m in session.scalars(
+            select(Segment.module_id).where(
+                or_(
+                    Segment.activity_id == activity.id,
+                    Segment.skip_check_activity_id == activity.id,
+                ),
+                Segment.module_id.is_not(None),
+            )
+        )
+        if m is not None
+    )
+    homes.update(
+        m
+        for m in session.scalars(
+            select(Segment.module_id)
+            .join(Video, Video.segment_id == Segment.id)
+            .join(Checkpoint, Checkpoint.video_id == Video.id)
+            .where(Checkpoint.activity_id == activity.id, Segment.module_id.is_not(None))
+        )
+        if m is not None
+    )
+    return _locked(session, user_id, homes)
+
+
+def video_locked(session: Session, user_id: int, video: Video) -> bool:
+    """Whether the module whose segment plays this video is still locked for this student. A
+    video in no module yet (staff have just made it) is never locked."""
+    if video.segment_id is None:
+        return False
+    module_id = session.scalar(select(Segment.module_id).where(Segment.id == video.segment_id))
+    return module_id is not None and _locked(session, user_id, {module_id})
+
+
 def _summary(
     module: Module, status: ModuleStatus, segment_count: int, row: ModuleProgress | None
 ) -> ModuleOut:
@@ -161,11 +220,16 @@ def _videos(session: Session, segments: Sequence[Segment]) -> dict[int, int]:
 
 
 def done_segments(session: Session, user_id: int, segments: Sequence[Segment]) -> set[int]:
-    """The ids of the segments this student has done (FR-2.7). An activity segment is done once
-    they have answered its activity at least once, and a video segment once they have passed
-    every checkpoint in its video. A segment with nothing to do (any other kind, or no activity
-    or video yet) is always done, and so is an activity, or a checkpoint, whose kind has no
-    student UI yet (`KINDS_WITHOUT_STUDENT_UI`)."""
+    """The ids of the segments this student has done (FR-2.7).
+
+    A practice activity is done once they have answered it correctly, or answered it after its
+    last hint was shown (#143): the last hint gives the answer away, so a student who needed it can
+    still move on. A mastery or diagnostic item (`ONE_ANSWER_PURPOSES`) is done once answered at
+    all: only the first answer counts towards the report (FR-7.1) and the diagnostic finds gaps
+    rather than gating, so asking for a right answer there would add steps that change nothing.
+    A video segment is done once they have passed every checkpoint in its video. A segment with
+    nothing to do (any other kind, or no activity or video yet) is always done, and so is an
+    activity, or a checkpoint, whose kind has no student UI yet (`KINDS_WITHOUT_STUDENT_UI`)."""
     videos = _videos(session, segments)
     checkpoints: dict[int, set[int]] = {}
     for video_id, activity_id in session.execute(
@@ -184,14 +248,31 @@ def done_segments(session: Session, user_id: int, segments: Sequence[Segment]) -
             )
         )
     )
-    answered: set[int] = set(no_ui)
+    # Each activity's last hint level: an answer given after it was shown also counts.
+    last_hint = dict(
+        session.execute(
+            select(Hint.activity_id, func.max(Hint.level))
+            .where(Hint.activity_id.in_(wanted))
+            .group_by(Hint.activity_id)
+        ).all()
+    )
+    one_answer = set(
+        session.scalars(
+            select(Activity.id).where(
+                Activity.id.in_(wanted), Activity.purpose.in_(ONE_ANSWER_PURPOSES)
+            )
+        )
+    )
+    answered: set[int] = set(no_ui)  # done: answered correctly, or after the last hint
     passed: set[int] = set(no_ui)
-    for activity_id, correct in session.execute(
-        select(Attempt.activity_id, Attempt.correct).where(
+    for activity_id, correct, hint_level in session.execute(
+        select(Attempt.activity_id, Attempt.correct, Attempt.hint_level).where(
             Attempt.user_id == user_id, Attempt.activity_id.in_(wanted)
         )
     ):
-        answered.add(activity_id)
+        last = last_hint.get(activity_id)
+        if correct or activity_id in one_answer or (last is not None and hint_level >= last):
+            answered.add(activity_id)
         if correct:
             passed.add(activity_id)
     done: set[int] = set()
@@ -227,6 +308,7 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
     answered = _answered(session, user_id, [activity.id for activity in retrieval])
     videos = _videos(session, segments)
     done = done_segments(session, user_id, segments)
+    attempted = _answered(session, user_id, [s.activity_id for s in segments if s.activity_id])
     # TODO (FR-8.1): leave out the refreshers module 0's diagnostic has ruled out, once the
     # diagnostic records its result. Until then every refresher is shown.
     return ModuleDetailOut(
@@ -241,6 +323,7 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
                 video_id=videos.get(segment.id),
                 activity_id=segment.activity_id,
                 done=segment.id in done,
+                attempted=segment.activity_id is not None and segment.activity_id in attempted,
             )
             for index, segment in enumerate(segments)
         ],
@@ -281,6 +364,7 @@ def save_position(
     (FR-2.4), unless the module is already complete: a student who finished it before its
     questions were added can still go back over it.
     """
+    lock_student(session, user_id)  # a double-clicked Next must not insert progress twice (#138)
     status = _status(session, user_id, module_id)
     if status == "locked":
         raise ModuleLocked(module_id)

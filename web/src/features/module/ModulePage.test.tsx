@@ -394,6 +394,60 @@ describe('ModulePage — navigation and position saving', () => {
     expect(await screen.findByText('Segment 3 of 4')).toBeInTheDocument()
   })
 
+  it('says why it opened at a skipped activity', async () => {
+    setupModuleApi({
+      ...allKindsDetail,
+      status: 'in_progress',
+      currentSegmentPosition: 3,
+      segments: [
+        textSegment,
+        videoSegment,
+        { ...activitySegment, done: false },
+        workedExampleSegment,
+      ],
+    })
+    renderApp('/modules/1')
+    expect(await screen.findByText(/You moved past this activity earlier/)).toBeInTheDocument()
+  })
+
+  it('never pulls a student back to an activity they answered wrong earlier (#165 review)', async () => {
+    // Answered under the old rule (any answer counted), so not done now, but tried: the module
+    // opens where the student left off.
+    setupModuleApi({
+      ...allKindsDetail,
+      status: 'in_progress',
+      currentSegmentPosition: 3,
+      segments: [
+        textSegment,
+        videoSegment,
+        { ...activitySegment, done: false, attempted: true },
+        workedExampleSegment,
+      ],
+    })
+    renderApp('/modules/1')
+    expect(await screen.findByText('Segment 4 of 4')).toBeInTheDocument()
+    expect(screen.queryByText(/You moved past this activity earlier/)).toBeNull()
+  })
+
+  it('asks for a right answer once an activity was answered wrong', async () => {
+    setupModuleApi({
+      ...allKindsDetail,
+      status: 'in_progress',
+      currentSegmentPosition: 2,
+      segments: [
+        textSegment,
+        videoSegment,
+        { ...activitySegment, done: false, attempted: true },
+        workedExampleSegment,
+      ],
+    })
+    renderApp('/modules/1')
+    const next = await screen.findByRole('button', { name: 'Next →' })
+    expect(next).toHaveAccessibleDescription(
+      'Get it right to continue. If you’re stuck, the hints can help.',
+    )
+  })
+
   it('resumes an in-progress module on the segment the student is doing', async () => {
     setupModuleApi({
       ...allKindsDetail,
@@ -614,7 +668,7 @@ describe('ModulePage — video segment', () => {
 // ---------------------------------------------------------------------------
 
 describe('ModulePage — activity segment', () => {
-  it('keeps Next disabled until the activity is answered, then moves on', async () => {
+  it('keeps Next disabled until the activity is answered correctly, then moves on', async () => {
     let answered = false
     const detail = (): ModuleDetail => ({
       ...allKindsDetail,
@@ -653,10 +707,10 @@ describe('ModulePage — activity segment', () => {
           return Response.json({
             id: 1,
             activityId: 7,
-            correct: false,
-            score: 0,
+            correct: true,
+            score: 1,
             parts: [],
-            feedback: 'Not quite: D joined the queue last.',
+            feedback: 'Correct: B joined the queue first.',
             hintLevel: 0,
           })
         },
@@ -672,13 +726,11 @@ describe('ModulePage — activity segment', () => {
     expect(screen.queryByRole('link', { name: 'Start the activity' })).toBeNull()
     const next = screen.getByRole('button', { name: 'Next →' })
     expect(next).toHaveAttribute('aria-disabled', 'true')
-    expect(next).toHaveAccessibleDescription(
-      'Answer the activity to continue. A wrong answer still counts.',
-    )
+    expect(next).toHaveAccessibleDescription('Answer the activity to continue.')
 
-    await userEvent.click(screen.getByLabelText('D, the last neighbour queued'))
+    await userEvent.click(screen.getByLabelText('B, the first neighbour queued'))
     await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
-    expect(await screen.findByText('Not quite: D joined the queue last.')).toBeInTheDocument()
+    expect(await screen.findByText('Correct: B joined the queue first.')).toBeInTheDocument()
 
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'Next →' })).not.toHaveAttribute('aria-disabled'),
@@ -815,9 +867,7 @@ describe('ModulePage — blocked Next', () => {
     expect(next).toHaveAttribute('aria-disabled', 'true')
     next.focus()
     expect(next).toHaveFocus()
-    expect(next).toHaveAccessibleDescription(
-      'Answer the activity to continue. A wrong answer still counts.',
-    )
+    expect(next).toHaveAccessibleDescription('Answer the activity to continue.')
 
     await userEvent.click(next)
     expect(api.callsTo('POST /api/modules/1/position')).toHaveLength(0)

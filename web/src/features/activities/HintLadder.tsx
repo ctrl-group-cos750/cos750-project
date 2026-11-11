@@ -76,7 +76,8 @@ export function HintLadder({
           {hint.body}
         </Alert>
       ))}
-      {confirmingSupport && (
+      {/* Only while another hint is on offer: once solved, there is no button left to press. */}
+      {confirmingSupport && hasMore && (
         <Alert tone="warning" title="The next hint gives a lot away">
           Using it means a later correct answer counts as met with support. Choose “Show next hint”
           again if you want to continue.

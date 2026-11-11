@@ -349,13 +349,13 @@ Figure: Use cases. The student takes part in every use case in the first two gro
 - **FR-1.9** Staff can make another registered account a team member, or take staff access away. It takes effect on the next request. Nobody can remove their own access, so the portal always keeps at least one team member.
 
 ## Modules and progress (FR-2)
-- **FR-2.1** Present the seven modules of the ID document (0 to 6) in order. A module opens once the one before it is complete; module 0 is always open. A module with no segments yet (its content not written) is passed over, so it never locks the modules after it.
+- **FR-2.1** Present the seven modules of the ID document (0 to 6) in order. A module opens once the one before it is complete; module 0 is always open. A module with no segments yet (its content not written) is passed over, so it never locks the modules after it. A locked module's activities, hints and videos (with their checkpoint questions) can't be opened or answered either, so the mastery check stays unseen until module 6 opens (FR-7.1). Staff are let through, so the content and video editors' "Open as a student" works on any item.
 - **FR-2.2** Each module is an ordered sequence of segments: narrated video, text, worked example, refresher, or activity (a code activity is one kind of activity).
 - **FR-2.3** Each module starts by stating its objectives in plain words ("By the end of this module you can …"), taken from the content.
 - **FR-2.4** Each module from module 2 onwards opens with one or two retrieval questions on earlier modules.
-- **FR-2.5** Save progress after every segment. A student who returns resumes at the segment they left, or, if they moved past a segment without doing it (possible only before its activity could be answered), at the first such segment; a complete module opens at its first segment that isn't done.
+- **FR-2.5** Save progress after every segment. A student who returns resumes at the segment they left, or, if they moved past an activity without ever answering it (possible only before its activity could be answered), at the first such activity, with a note saying why; a complete module opens at its first such activity. An activity they answered, even wrongly under an earlier rule, never pulls them back.
 - **FR-2.6** Show a module map with each module's state (locked, open, in progress, complete) and estimated duration.
-- **FR-2.7** A student moves past a segment only once it is done: an activity segment once its activity has been answered at least once (a wrong answer counts), a video segment once every checkpoint in the video is passed. Other segments are done when shown. An activity whose kind has no student UI yet counts as done until its UI exists, so it never strands a student; since #136 every kind has one, so none is let through unanswered. A module is complete once its last segment is done. A complete module can be reread freely.
+- **FR-2.7** A student moves past a segment only once it is done: a practice activity once it has been answered correctly, or answered after its last hint was shown (the last hint gives the answer away, so no student is kept there); a mastery or diagnostic item once it has been answered at all, because only the first answer counts there (FR-7.1) and the diagnostic finds gaps rather than gating; a video segment once every checkpoint in the video is passed. Other segments are done when shown. An activity whose kind has no student UI yet counts as done until its UI exists, so it never strands a student; since #136 every kind has one, so none is let through unanswered. A module is complete once its last segment is done. A complete module can be reread freely. A blank answer (no option, line, token, pair, test or row) is refused and not recorded, so it never counts as an attempt.
 
 ## Narrated video with checkpoints (FR-3)
 - **FR-3.1** Play narrated videos (screen recordings with a voice-over, no presenter) with play, pause and seek.
@@ -585,14 +585,14 @@ Base path: `/api`. JSON over HTTPS. Auth via the session cookie set by `/api/aut
 | GET | `/api/modules` | user | All modules with this student's state (locked, open, in progress, complete). |
 | GET | `/api/modules/{module_id}` | user | The module's segments, in order, with this student's position, which segments are done, and the module's retrieval questions (FR-2.4). 403 while the module is locked. Activities come without answers. Every refresher is listed: the diagnostic does not filter them yet (FR-8.1, §15.5). |
 | POST | `/api/modules/{module_id}/position` | user | Save the segment the student is on (FR-2.5). Refuses (409) to move past a segment that isn't done (FR-2.7). |
-| GET | `/api/videos/{video_id}` | user | The video's title, duration, media and captions paths, the transcript as text, and its checkpoints in order, each with its activity and whether this student has passed it (FR-3.5). The media itself comes from `/media/`. |
+| GET | `/api/videos/{video_id}` | user | The video's title, duration, media and captions paths, the transcript as text, and its checkpoints in order, each with its activity and whether this student has passed it (FR-3.5). The media itself comes from `/media/`. 403 while the module that plays it is locked (FR-2.1). |
 
 ## Activities, hints and code
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/api/activities/{activity_id}` | user | The activity to show: kind, title and config, never the solution. 403 for an item on a review path that isn't open yet (FR-7.5). |
+| GET | `/api/activities/{activity_id}` | user | The activity to show: kind, title and config, never the solution, and `solved` (this student has answered it correctly, so no more hints are offered). 403 while every module it belongs to is locked (FR-2.1), and for an item on a review path that isn't open yet (FR-7.5); staff are let through. The same applies to its attempts and hints. |
 | GET | `/api/activities/{activity_id}/hints` | user | The hint levels this student has already seen, so a reload shows them again. |
-| POST | `/api/activities/{activity_id}/hints` | user | Reveal the next hint level and record it. Returns the hint, whether there are more, and whether the next one counts as support (FR-7.2). 409 once every level is shown. |
+| POST | `/api/activities/{activity_id}/hints` | user | Reveal the next hint level and record it. Returns the hint, whether there are more, and whether the next one counts as support (FR-7.2). 409 once every level is shown, or once the student has answered correctly: a hint then helps with nothing and would count in the pilot's hint use. |
 | POST | `/api/activities/{activity_id}/attempts` | user | Submit an answer. The server checks it (a code activity is compared against its stored solution), records the attempt, updates results and points, and returns the outcome. A submission in the wrong shape for the kind is 422. |
 
 The ungraded **Check** of FR-5.2 has no endpoint yet: every submission is graded and recorded (§15.5).
@@ -1368,7 +1368,6 @@ What `staging` (commit `e8973c5`) does not yet do, or does only in part, against
 | Module locks on activities | An activity can be opened and answered by id before its module is open, so a module 6 item can be seen early. | FR‑7.1 | In progress (#137) |
 | Concurrency | Two saves at once can fail: a deadlock on module 6 answers on Postgres, and a server error on a double-click. | NFR‑U3 | In progress (#138) |
 | Answer rate limit | No rate limit or size limit on answers and hints. | NFR‑S6 | In progress (#139) |
-| Segment done rule | A wrong answer counts as done, by design (FR-2.7); requiring a real answer is planned. | FR‑2.7 | Planned (#143) |
 | Mastery check | Feedback and hints 3–4 are available on mastery items, and the result shows at once. | FR‑7.1, FR‑7.2 | Planned (#144) |
 | Parsons | Only the one stored line order is accepted, though some lines could validly swap. | FR‑5.4 | In progress (#145) |
 | Points and events | Module completion earns no points (the 25-point rule is never applied). The web app does not send `segment_viewed`, and no `module_completed` event is logged, so neither time per module nor module completion can be measured from the log. | FR‑9.1, FR‑10.1 | Planned (#141) |

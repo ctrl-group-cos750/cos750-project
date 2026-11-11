@@ -24,6 +24,7 @@ from app.services.checking import (
     WRONG_FIX,
     WRONG_MATCH,
     check_activity,
+    is_blank,
 )
 from app.services.content import validate_activity
 
@@ -644,3 +645,23 @@ def test_choose_tests_text_never_names_a_test_by_its_stored_id() -> None:
         texts.append((a.solution or {}).get("explanation") or "")
         for text in texts:
             assert not [i for i in ids if i in text], (a.id, text)
+
+
+@pytest.mark.parametrize(
+    ("kind", "submission"),
+    [
+        ("choose_tests", {"selected": [""]}),
+        ("choose_tests", {"selected": [" ", ""]}),
+        ("trace", {"rows": [{"visitedVertex": "", "queue": [], "visited": [], "order": []}]}),
+        ("matching", {"pairs": {"a": ""}}),
+        ("multiple_choice", {"selected": "  "}),
+    ],
+)
+def test_answers_that_choose_nothing_are_blank(kind: str, submission: dict[str, Any]) -> None:
+    """These answer nothing, so they are refused rather than recorded (#143, #165 review)."""
+    assert is_blank(kind, submission)
+
+
+def test_a_partly_filled_trace_is_not_blank() -> None:
+    row = {"visitedVertex": "A", "queue": [], "visited": [], "order": []}
+    assert not is_blank("trace", {"rows": [row]})

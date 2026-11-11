@@ -332,8 +332,9 @@ CLASSIFYING = [
 
 
 def test_objective_2_has_three_labelling_items_and_one_classifying_item_in_each_set() -> None:
-    assert len(LABELLING) == 6
-    assert len(CLASSIFYING) == 2
+    mastery = [a for a in LABELLING + CLASSIFYING if a.purpose == "mastery"]
+    assert len([a for a in mastery if a in LABELLING]) == 6
+    assert len([a for a in mastery if a in CLASSIFYING]) == 2
 
 
 NAMED = re.compile(r"(?:are|,|and|:)\s+(?:the\s+)?([^,():.]+?) \(([A-Z])\)")

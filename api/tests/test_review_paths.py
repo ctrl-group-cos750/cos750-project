@@ -72,7 +72,7 @@ def test_each_path_opens_with_a_new_worked_example(objective: int) -> None:
     assert len(re.findall(r"\*\*(?:Step )?\d\.", first.body)) >= 3
 
 
-# Module 6's kinds per objective, which the practice must include (constructive alignment).
+# Every kind module 6 and the fresh items use is practised first (constructive alignment).
 @pytest.mark.parametrize("objective", sorted(PATHS))
 def test_the_practice_includes_every_kind_the_fresh_items_use(objective: int) -> None:
     practice = {a.kind for a in on_path(objective, "review")}
@@ -82,10 +82,8 @@ def test_the_practice_includes_every_kind_the_fresh_items_use(objective: int) ->
         if a.module_id == MASTERY_MODULE and a.purpose == "mastery" and a.objective_id == objective
     }
     fresh = {a.kind for a in on_path(objective, "mastery")}
-    if objective >= 5:  # trace, code: the kinds whose skill multiple choice can't practise
-        assert module_6 <= practice, (objective, module_6, practice)
-        assert fresh <= practice, (objective, fresh, practice)
-        assert fresh == module_6
+    assert module_6 <= practice, (objective, module_6, practice)
+    assert fresh <= practice, (objective, fresh, practice)
 
 
 def test_objective_5s_worked_example_is_the_engines_trace() -> None:

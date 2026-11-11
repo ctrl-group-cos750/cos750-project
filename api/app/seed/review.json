@@ -16,6 +16,12 @@
           "activity_id": 1101
         },
         {
+          "id": 1150,
+          "kind": "activity",
+          "title": "Review practice: match each term to part of a library",
+          "activity_id": 1150
+        },
+        {
           "id": 1103,
           "kind": "activity",
           "title": "Objective 1 · fresh item 1 of 5",
@@ -61,6 +67,12 @@
           "kind": "activity",
           "title": "Review practice: vertices, edges and direction",
           "activity_id": 1201
+        },
+        {
+          "id": 1250,
+          "kind": "activity",
+          "title": "Review practice: label the train graph",
+          "activity_id": 1250
         },
         {
           "id": 1203,
@@ -3241,6 +3253,176 @@
         {
           "level": 4,
           "body": "Answer: blank 1 is {start}, blank 2 is todo.popleft(), blank 3 is cur, and blank 4 is reached."
+        }
+      ]
+    },
+    {
+      "id": 1150,
+      "kind": "matching",
+      "title": "Review practice: match each term to part of a library",
+      "module_id": null,
+      "purpose": "review",
+      "objective_id": 1,
+      "config": {
+        "prompt": "A school library has shelves, corridors between them, a desk and a returns trolley. Match each term to the part of the library that is an example of it. One example matches no term.",
+        "left": [
+          {
+            "id": "t1",
+            "label": "Data structure"
+          },
+          {
+            "id": "t2",
+            "label": "Algorithm"
+          },
+          {
+            "id": "t3",
+            "label": "Graph"
+          },
+          {
+            "id": "t4",
+            "label": "Graph traversal"
+          }
+        ],
+        "right": [
+          {
+            "id": "x3",
+            "label": "Walking from the desk along the corridors until every shelf you can reach has been checked"
+          },
+          {
+            "id": "x1",
+            "label": "The shelves as dots, with a line for each corridor that joins two of them"
+          },
+          {
+            "id": "x5",
+            "label": "The colour of the paint on the front door of the library"
+          },
+          {
+            "id": "x2",
+            "label": "The trolley of returned books, where the oldest book goes back first"
+          },
+          {
+            "id": "x4",
+            "label": "The steps for lending a book: scan the card, scan the book, stamp the date"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "The trolley stores books, so it is a data structure. The lending steps are an algorithm. Shelves joined by corridors are a graph, and walking the corridors to reach every shelf is a graph traversal.",
+        "pairs": {
+          "t1": "x2",
+          "t2": "x4",
+          "t3": "x1",
+          "t4": "x3"
+        },
+        "feedback": {
+          "t1": "Check “data structure”. A data structure stores things in an organised way, like a queue. Find the example that holds things and decides which comes out first.",
+          "t2": "Check “algorithm”. An algorithm is a list of steps. A traversal is one too, but it belongs with graph traversal here. Find the steps that use no corridors at all.",
+          "t3": "Check “graph”. A graph is things joined by connections, drawn as dots and lines. Find the example made of dots and lines.",
+          "t4": "Check “graph traversal”. A traversal moves through a graph along its edges. Find the example that follows the corridors."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Ask of each example: does it store things, list steps, show things and connections, or move along connections?"
+        },
+        {
+          "level": 2,
+          "body": "The paint colour is none of the four. Each other example matches one term."
+        },
+        {
+          "level": 3,
+          "body": "The trolley stores books, so it is the data structure. Walking along the corridors is the traversal."
+        },
+        {
+          "level": 4,
+          "body": "Answer: data structure → the trolley of returned books; algorithm → the steps for lending a book; graph → the shelves as dots and lines; graph traversal → walking the corridors to every shelf."
+        }
+      ]
+    },
+    {
+      "id": 1250,
+      "kind": "matching",
+      "title": "Review practice: label the train graph",
+      "module_id": null,
+      "purpose": "review",
+      "objective_id": 2,
+      "config": {
+        "prompt": "Train stations, joined by tracks. The stations are the airport (P), the city (Q), the harbour (R) and the stadium (S). Tracks join P–Q, Q–R and Q–S, and trains run both ways. Each marker below describes one part of this graph. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
+        "left": [
+          {
+            "id": "1",
+            "label": "Marker 1: the track between the harbour and the city"
+          },
+          {
+            "id": "2",
+            "label": "Marker 2: the stadium"
+          },
+          {
+            "id": "3",
+            "label": "Marker 3: what joins the airport and the city"
+          }
+        ],
+        "right": [
+          {
+            "id": "vP",
+            "label": "Vertex P"
+          },
+          {
+            "id": "vQ",
+            "label": "Vertex Q"
+          },
+          {
+            "id": "vR",
+            "label": "Vertex R"
+          },
+          {
+            "id": "vS",
+            "label": "Vertex S"
+          },
+          {
+            "id": "ePQ",
+            "label": "Edge P–Q"
+          },
+          {
+            "id": "eQR",
+            "label": "Edge Q–R"
+          },
+          {
+            "id": "eQS",
+            "label": "Edge Q–S"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "Stations are vertices and tracks are edges, each named by the stations at its two ends. The harbour is R and the city is Q, so their track is Q–R; the stadium is S; the airport is P, so its track to the city is P–Q.",
+        "pairs": {
+          "1": "eQR",
+          "2": "vS",
+          "3": "ePQ"
+        },
+        "feedback": {
+          "1": "Check marker 1. It describes a track between two stations, so it is an edge, named by the letters of its two ends. Look up both names in the prompt.",
+          "2": "Check marker 2. It describes one station, so it is a vertex. Look up its letter in the prompt.",
+          "3": "Check marker 3. Something that joins two stations is a track, so it is an edge, named by the letters of its two ends. Look up both names in the prompt."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Stations are vertices. Tracks are edges."
+        },
+        {
+          "level": 2,
+          "body": "Name an edge by the two vertices at its ends."
+        },
+        {
+          "level": 3,
+          "body": "Look up each name's letter in the prompt: the harbour is R and the city is Q. Then use the track list."
+        },
+        {
+          "level": 4,
+          "body": "Answer: 1 = Edge Q–R, 2 = Vertex S, 3 = Edge P–Q."
         }
       ]
     }

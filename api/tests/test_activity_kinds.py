@@ -24,6 +24,7 @@ from app.services.checking import (
     WRONG_FIX,
     WRONG_MATCH,
     check_activity,
+    is_blank,
 )
 from app.services.content import validate_activity
 
@@ -617,3 +618,23 @@ def test_a_solution_stored_with_string_ids_still_grades() -> None:
     assert check_activity("fix_the_bug", FIX_CONFIG, fix, {"order": FIX_RIGHT}).correct
     with pytest.raises(ValueError, match="'2' in the group"):
         validate_activity("parsons", config, stored)
+
+
+@pytest.mark.parametrize(
+    ("kind", "submission"),
+    [
+        ("choose_tests", {"selected": [""]}),
+        ("choose_tests", {"selected": [" ", ""]}),
+        ("trace", {"rows": [{"visitedVertex": "", "queue": [], "visited": [], "order": []}]}),
+        ("matching", {"pairs": {"a": ""}}),
+        ("multiple_choice", {"selected": "  "}),
+    ],
+)
+def test_answers_that_choose_nothing_are_blank(kind: str, submission: dict[str, Any]) -> None:
+    """These answer nothing, so they are refused rather than recorded (#143, #165 review)."""
+    assert is_blank(kind, submission)
+
+
+def test_a_partly_filled_trace_is_not_blank() -> None:
+    row = {"visitedVertex": "A", "queue": [], "visited": [], "order": []}
+    assert not is_blank("trace", {"rows": [row]})

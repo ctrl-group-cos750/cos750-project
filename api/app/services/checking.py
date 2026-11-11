@@ -375,6 +375,37 @@ def check_choose_tests(
     return _result(parts)
 
 
+def is_blank(kind: str, submission: dict[str, Any]) -> bool:
+    """Whether a submission (already in the kind's shape) answers nothing: no option chosen, no
+    line placed, no blank filled, no pair made, no test chosen, no trace row. A blank answer isn't
+    recorded (FR-2.7, #143): it would count as an attempt without the student trying."""
+
+    def filled(values: Any) -> bool:
+        return any(str(v).strip() for v in (values or {}).values())
+
+    if kind == "multiple_choice":
+        return not str(submission.get("selected") or "").strip()
+    if kind in ("parsons", "fix_the_bug"):
+        return not submission.get("order")
+    if kind == "fill_in":
+        return not filled(submission.get("answers"))
+    if kind == "matching":
+        return not filled(submission.get("pairs"))
+    if kind == "choose_tests":
+        return not any(str(t).strip() for t in submission.get("selected") or [])
+    if kind == "trace":
+        # Rows that hold nothing, not even a current vertex, answer nothing either.
+        return not any(
+            str(row.get("visitedVertex") or row.get("visited_vertex") or "").strip()
+            or row.get("queue")
+            or row.get("visited")
+            or row.get("order")
+            for row in submission.get("rows") or []
+            if isinstance(row, dict)
+        )
+    return False
+
+
 def check_activity(
     kind: str, config: dict[str, Any], solution: dict[str, Any], submission: dict[str, Any]
 ) -> CheckResult:

@@ -7,6 +7,7 @@ from app.db import DbSession
 from app.models import Activity, Hint, User
 from app.schemas.activities import ActivityOut, AttemptIn, AttemptOut, HintOut
 from app.services.attempts import (
+    BlankAnswer,
     answered_correctly,
     hint_level_seen,
     record_attempt,
@@ -19,6 +20,7 @@ router = APIRouter(prefix="/api/activities", tags=["activities"])
 
 NOT_FOUND = "This activity does not exist."
 BAD_SUBMISSION = "This submission is not in the expected shape."
+BLANK = "Answer the activity before checking it."
 NO_MORE_HINTS = "You have seen every hint for this activity."
 SOLVED = "You have already answered this correctly, so no more hints are given."
 REVIEW_CLOSED = "This activity is on a review path, which opens when the mastery check marks its objective 'not yet'."
@@ -70,13 +72,16 @@ def submit_attempt(
     choice, `{"order": [...]}` for Parsons, `{"answers": {...}}` for fill-in, and
     `{"rows": [{"visitedVertex", "queue", "visited", "order"}, ...]}` for a trace table, one row
     per BFS step (graded against the engine, so a trace has no stored solution). A submission in the
-    wrong shape is 422. No student code is executed: `check_activity` compares the submission with
+    wrong shape, or one that answers nothing (no option, line, token, pair, test or row), is 422
+    and isn't recorded. No student code is executed: `check_activity` compares the submission with
     the solution, which stays in this process (NFR-S7)."""
     activity = _activity_or_404(session, activity_id, user)
     try:
         attempt, result = record_attempt(session, user.id, activity, body.submitted)
     except ValidationError as exc:  # the submission didn't match the kind's shape
         raise HTTPException(422, detail=BAD_SUBMISSION) from exc  # constant is deprecated upstream
+    except BlankAnswer as exc:  # nothing chosen: not an attempt (#143)
+        raise HTTPException(422, detail=BLANK) from exc
     session.commit()
     return AttemptOut(
         id=attempt.id,

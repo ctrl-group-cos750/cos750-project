@@ -775,15 +775,16 @@ def test_hint_3_on_a_fresh_item_makes_it_met_with_support(
 
 
 def wrong_submission(activity: Activity) -> dict[str, Any]:
-    """An answer to any committed item that gets every part wrong."""
+    """An answer to any committed item that gets every part wrong. Never blank: the server
+    refuses a blank answer without recording it (#143)."""
     wrong: dict[str, dict[str, Any]] = {
         "multiple_choice": {"selected": "not-an-option"},
-        "matching": {"pairs": {}},
-        "parsons": {"order": []},
-        "fix_the_bug": {"order": []},
-        "fill_in": {"answers": {}},
-        "choose_tests": {"selected": []},
-        "trace": {"rows": []},
+        "matching": {"pairs": {"no-such-item": "no-such-match"}},
+        "parsons": {"order": [-1]},
+        "fix_the_bug": {"order": [-1]},
+        "fill_in": {"answers": {-1: "no-such-token"}},
+        "choose_tests": {"selected": ["no-such-test"]},
+        "trace": {"rows": [{"visitedVertex": "Z", "queue": [], "visited": [], "order": []}]},
     }
     return wrong[activity.kind]
 

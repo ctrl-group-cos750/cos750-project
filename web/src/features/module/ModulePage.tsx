@@ -150,18 +150,21 @@ export function ModulePage() {
     )
   }
 
-  // Initialise from the server's position; clamp to valid range. But if a segment the student has
-  // already passed isn't done (or any segment, in a complete module), open there instead: a student
-  // who went past an activity before it could be answered (trace, fix the bug and choose tests
-  // until #136) lands on it, not on a later segment with nothing to show what is missing. Normally
-  // every segment before the position is done (FR-2.7), so this changes nothing else.
-  const firstNotDone = segments.findIndex((segment) => !segment.done)
+  // Initialise from the server's position; clamp to valid range. But if the student passed an
+  // activity without ever answering it (or any, in a complete module), open there instead: one
+  // that had no screen yet (trace, fix the bug and choose tests until #136) lands them on it, not
+  // on a later segment with nothing to show what is missing. An activity they did answer, even
+  // wrongly under an earlier rule, never pulls them back (#165 review).
+  const firstSkipped = segments.findIndex(
+    (s) => !s.done && !(s.kind === 'activity' && s.attempted === true),
+  )
   const skipped =
-    firstNotDone >= 0 &&
-    (module.status === 'complete' || firstNotDone < module.currentSegmentPosition)
-  const currentIndex =
-    segmentIndex ??
-    (skipped ? firstNotDone : Math.min(module.currentSegmentPosition, segments.length - 1))
+    firstSkipped >= 0 &&
+    (module.status === 'complete' || firstSkipped < module.currentSegmentPosition)
+  const openedAt = skipped
+    ? firstSkipped
+    : Math.min(module.currentSegmentPosition, segments.length - 1)
+  const currentIndex = segmentIndex ?? openedAt
   // Fix where the page opened: answering that segment refetches the module, and the page must stay
   // on it to show the feedback, not jump on to the next segment that isn't done. (Setting state
   // during render, guarded so it happens once, is React's pattern for state derived from props.)
@@ -182,7 +185,12 @@ export function ModulePage() {
     ? ''
     : segment.kind === 'video'
       ? 'Answer each of the video’s checkpoint questions correctly to continue.'
-      : 'Answer the activity to continue. A wrong answer still counts.'
+      : segment.attempted
+        ? 'Get it right to continue. If you’re stuck, the hints can help.'
+        : 'Answer the activity to continue.'
+  // The page opened here because the student moved past this activity before answering it: say
+  // so, until it is done, so the jump back isn't a mystery.
+  const showSkippedNote = skipped && currentIndex === firstSkipped && !segment?.done
 
   function handlePrevious() {
     setSegmentIndex(Math.max(0, currentIndex - 1))
@@ -243,6 +251,13 @@ export function ModulePage() {
           Segment {currentIndex + 1} of {segments.length}
         </p>
       </div>
+
+      {showSkippedNote && (
+        <Alert tone="info">
+          You moved past this activity earlier without answering it. Answer it now, then carry on
+          where you left off.
+        </Alert>
+      )}
 
       {/* Current segment */}
       {segment && (

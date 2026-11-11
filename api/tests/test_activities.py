@@ -339,16 +339,18 @@ def test_hostile_parsons_submissions_are_refused_or_graded_wrong(
     activity_id = make_activity(db, **GROUPED)
     log_in(client)
     url = f"/api/activities/{activity_id}/attempts"
-    for bad in (
+    refused: list[dict[str, Any]] = [
         {},
         {"order": "0123"},
         {"order": [[0, 1], 2, 3]},  # a group is solution notation, not an answer
         {"order": [0, None, 2, 3]},
         {"order": list(range(101))},
         {"order": [0, 1, 2, 3], "alternatives": [[3, 2, 1, 0]]},
-    ):
+        {"order": []},  # answers nothing: refused, not recorded (#143)
+    ]
+    for bad in refused:
         assert client.post(url, json={"submitted": bad}).status_code == 422, bad
-    for wrong in ([], [0, 1, 2, 3, 9], [0, 0, 0, 0], [-5, 2**62, 1, 3], [3, 2, 1, 0]):
+    for wrong in ([0, 1, 2, 3, 9], [0, 0, 0, 0], [-5, 2**62, 1, 3], [3, 2, 1, 0]):
         res = client.post(url, json={"submitted": {"order": wrong}})
         assert res.status_code == 201, wrong
         assert res.json()["correct"] is False, wrong

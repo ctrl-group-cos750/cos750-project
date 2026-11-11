@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test'
+import { expect, type Locator, type Page } from '@playwright/test'
 
 /** Logs in through the real log-in page, then proves the browser keeps the session. */
 export async function logIn(page: Page, email: string, password: string) {
@@ -38,7 +38,9 @@ export async function answerCorrectly(page: Page, option: string) {
 export async function nextSegment(page: Page) {
   const counter = page.getByText(/^Segment \d+ of \d+$/)
   const before = (await counter.textContent()) ?? ''
-  await page.getByRole('button', { name: 'Next →' }).click()
+  const next = page.getByRole('button', { name: 'Next →' })
+  await expect(next).not.toHaveAttribute('aria-disabled', 'true') // the module knows it's done
+  await next.click()
   await expect(counter).not.toHaveText(before)
 }
 
@@ -52,4 +54,14 @@ export async function finishModule(page: Page) {
   }
   await page.getByRole('button', { name: 'Finish module' }).click()
   await expect(page).toHaveURL(/\/$/) // back on the module map
+}
+
+/** Presses Tab until `target` has focus, as a keyboard user would. */
+export async function tabTo(page: Page, target: Locator) {
+  await expect(target).toBeVisible()
+  for (let i = 0; i < 60; i++) {
+    if (await target.evaluate((el) => el === document.activeElement)) return
+    await page.keyboard.press('Tab')
+  }
+  throw new Error('Could not reach the element with the keyboard')
 }

@@ -2,8 +2,13 @@ import { useQuery } from '@tanstack/react-query'
 import { LoaderCircle } from 'lucide-react'
 import { useParams } from 'react-router'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { BackLink } from '../../components/BackLink.tsx'
+import type { BackState } from '../../components/backState.ts'
 import { BfsVisualizer } from './BfsVisualizer.tsx'
 import { fetchBfsScenario } from './bfs.api.ts'
+
+/** Opened from an address rather than module 3's link: back to the map, never a dead end (#146). */
+const TO_THE_MAP: BackState = { backTo: '/', backLabel: 'Back to your modules' }
 
 export function BfsPage() {
   const scenarioId = Number(useParams().scenarioId)
@@ -35,12 +40,20 @@ export function BfsPage() {
 
   if (query.isError) {
     return (
-      <Alert variant="destructive">
-        <AlertTitle>Could not load the graph</AlertTitle>
-        <AlertDescription>{query.error.message}</AlertDescription>
-      </Alert>
+      <div className="grid justify-items-start gap-3">
+        <Alert variant="destructive">
+          <AlertTitle>Could not load the graph</AlertTitle>
+          <AlertDescription>{query.error.message}</AlertDescription>
+        </Alert>
+        <BackLink fallback={TO_THE_MAP} />
+      </div>
     )
   }
 
-  return <BfsVisualizer key={query.data.id} scenario={query.data} />
+  return (
+    <>
+      <BackLink fallback={TO_THE_MAP} />
+      <BfsVisualizer key={query.data.id} scenario={query.data} />
+    </>
+  )
 }

@@ -1,11 +1,12 @@
 """Router for module-map and progress endpoints (SE document §9, FR-2).
 
-All endpoints require an authenticated student (``CurrentUser``).  Every query is
+All endpoints but ``/length`` require an authenticated student (``CurrentUser``).  Every query is
 scoped to ``user.id`` — never touches another student's data (NFR-S2, FR-1.3).
 
 Endpoints
 ---------
 GET  /api/modules                       → list[ModuleOut]
+GET  /api/modules/length                → CourseLengthOut  (public: the register page shows it)
 GET  /api/modules/{module_id}           → ModuleDetailOut
 POST /api/modules/{module_id}/position  → ModuleDetailOut  (body: PositionIn)
 
@@ -22,13 +23,14 @@ from fastapi import APIRouter, HTTPException, status
 from app.auth import CurrentUser
 from app.db import DbSession
 from app.schemas.ids import RowId
-from app.schemas.modules import ModuleDetailOut, ModuleOut, PositionIn
+from app.schemas.modules import CourseLengthOut, ModuleDetailOut, ModuleOut, PositionIn
 from app.services.modules import (
     ModuleLocked,
     ModuleNotFound,
     PositionTooFar,
     RetrievalIncomplete,
     SegmentNotDone,
+    course_minutes,
     get_module_detail,
     get_modules_for_user,
     save_position,
@@ -51,6 +53,13 @@ def list_modules(user: CurrentUser, session: DbSession) -> list[ModuleOut]:
     Returns every module in display order.  ``status`` is one of:
     ``locked | open | in_progress | complete``.  No commit needed — read-only."""
     return get_modules_for_user(session, user.id)
+
+
+@router.get("/length")
+def course_length(session: DbSession) -> CourseLengthOut:
+    """The course's estimated length in minutes, the sum of every module's estimate. Public, so
+    the register page can say how long the course takes with the same number the map shows."""
+    return CourseLengthOut(minutes=course_minutes(session))
 
 
 @router.get("/{module_id}")

@@ -49,6 +49,7 @@ REVIEW_CLOSED = "This activity is on a review path, which opens when the mastery
 MODULE_LOCKED = (
     "This activity is in a module that isn't open yet. Complete the module before it to unlock it."
 )
+NOT_SHOWN = "This activity is extra help that isn't part of your way through the module."
 SUPPORT_LEVEL = 3  # hint levels 3 and 4 make a correct answer count as "with support" (FR-7.2)
 
 # Per student (not per address: a campus or residence shares one). A student answering as fast as
@@ -75,7 +76,8 @@ BodyBytes = Annotated[int, Depends(_body_bytes)]
 def _activity_or_404(session: DbSession, activity_id: int, user: User) -> Activity:
     """The activity, if this student may open it where the course shows it (#137): 404 if there is
     no such activity or it was retired, 403 while its module is locked (FR-2.1) or, on a review
-    path, until the path is open (FR-7.5), so module 6's and the review paths' fresh items stay
+    path, until the path is open (FR-7.5), and a support item while it isn't shown to this student
+    (FR-8.4), so module 6's and the review paths' fresh items stay
     unseen until the student gets there (FR-7.1). Staff are let through, so the content editor's
     "Open as a student" works on any item (the team checks content that way)."""
     activity = session.get(Activity, activity_id)
@@ -88,6 +90,8 @@ def _activity_or_404(session: DbSession, activity_id: int, user: User) -> Activi
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=REVIEW_CLOSED)
     if refusal == "module_locked":
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=MODULE_LOCKED)
+    if refusal == "not_shown":  # a support item this student isn't shown (FR-8.4)
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=NOT_SHOWN)
     return activity
 
 

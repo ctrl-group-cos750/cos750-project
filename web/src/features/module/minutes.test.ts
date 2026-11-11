@@ -32,13 +32,24 @@ describe('minutesProgress', () => {
     expect(minutesProgress([module(12, 'in_progress', 9, 4)])).toEqual({ done: 5, total: 12 })
   })
 
-  it('leaves modules with no content yet out of the total', () => {
+  it('counts every module in the total, with content or not, like the rows and register (#146)', () => {
     const modules = [module(5, 'complete', 5), module(15, 'open', 0), module(10, 'locked', 0)]
-    expect(minutesProgress(modules)).toEqual({ done: 5, total: 5 })
+    expect(minutesProgress(modules)).toEqual({ done: 5, total: 30 })
   })
 
-  it('reaches the total once everything with content is complete', () => {
-    const modules = [module(5, 'complete', 5), module(12, 'complete', 10), module(15, 'open', 0)]
+  it('reaches the total once every module is complete', () => {
+    const modules = [module(5, 'complete', 5), module(12, 'complete', 10)]
     expect(minutesProgress(modules)).toEqual({ done: 17, total: 17 })
+  })
+
+  it('never counts more than a module in progress is worth', () => {
+    // A module staff shortened below where the student had got to (#128, #146).
+    expect(minutesProgress([module(10, 'in_progress', 2, 7)])).toEqual({ done: 10, total: 10 })
+  })
+
+  it('counts only the segments shown: support the student doesn’t need is no time (FR-8.4)', () => {
+    // 9 segments, 2 of them hidden support: at the 4th of the 7 shown, 3/7 of 14 minutes is 6.
+    const m = { ...module(14, 'in_progress', 9, 5), shownSegmentCount: 7, shownSegmentsPassed: 3 }
+    expect(minutesProgress([m])).toEqual({ done: 6, total: 14 })
   })
 })

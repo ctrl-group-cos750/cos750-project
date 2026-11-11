@@ -1106,3 +1106,36 @@ def test_a_segment_in_a_locked_module_is_not_logged_as_viewed(
     assert [e.ref for e in db.scalars(select(Event).where(Event.type == "segment_viewed"))] == [
         "segment:1"
     ]
+
+
+def test_a_module_shortened_below_the_student_s_position_still_completes(
+    client: TestClient, db: Session
+) -> None:
+    """Staff shorten a module (#128) after a student got further than its new end: the student
+    opens it on its new last segment, and finishing it completes the module (#146)."""
+    m0, _, _ = _make_modules(db)
+    for position in (2, 3):
+        db.add(Segment(module_id=m0, position=position, kind="text", title="More", body="More."))
+    db.commit()
+    _register_and_login(client, ALICE)
+    for position in (1, 2):  # segment 2 of 0-3: in progress, not complete
+        res = client.post(f"/api/modules/{m0}/position", json={"segmentPosition": position})
+        assert res.status_code == 200
+    db.execute(delete(Segment).where(Segment.module_id == m0, Segment.position >= 1))
+    db.commit()
+
+    detail = client.get(f"/api/modules/{m0}").json()
+    assert detail["status"] == "in_progress"
+    assert detail["currentSegmentPosition"] == 0  # clamped to the only segment left
+    res = client.post(f"/api/modules/{m0}/position", json={"segmentPosition": 0})
+    assert res.status_code == 200
+    assert res.json()["status"] == "complete"
+    assert client.get("/api/modules").json()[1]["status"] == "open"
+
+
+def test_the_course_length_is_public_and_sums_every_module(client: TestClient, db: Session) -> None:
+    """The register page and the map show the same length: every module's estimate (#146)."""
+    _make_modules(db)
+    res = client.get("/api/modules/length")  # nobody logged in
+    assert res.status_code == 200
+    assert res.json() == {"minutes": 5 + 12 + 10}

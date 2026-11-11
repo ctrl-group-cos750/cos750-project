@@ -11,6 +11,11 @@ Every place an activity can appear is one of its *homes*:
 - **a review path**: a segment of an objective's review path. Open once module 6 has marked that
   objective "not yet" (`mastery.review_open`), so its fresh items stay unseen until then.
 - **a video**: the question at one of the video's checkpoints. Open when the video is (below).
+- **a support segment** (FR-8.4, #172): an activity that a module shows only on support segments
+  (`Segment.support_for`) is extra help for a struggling student. It is open only where one of
+  those segments is shown to this student (`support.hidden_segments`) in a module that is open;
+  its own `module_id` and any skip check don't open it, so a student who isn't shown the support
+  can't reach it by id either, and its data stays that of students who were offered it.
 
 The activity is open if any of its homes is. One with no home at all (a retired fixture activity,
 or a checkpoint question whose checkpoint was removed but which students had answered) is kept
@@ -32,18 +37,21 @@ from sqlalchemy.orm import Session
 
 from app.models import Activity, Checkpoint, Segment, User, Video
 from app.services.mastery import review_open
-from app.services.modules import _modules, _progress, _segment_counts, _statuses
+from app.services.modules import _modules, _progress, _segment_counts, _segments, _statuses
+from app.services.support import hidden_segments
 
-Refusal = Literal["module_locked", "review_closed", "retired"]
+Refusal = Literal["module_locked", "review_closed", "not_shown", "retired"]
 
 
 @dataclass(frozen=True)
 class Homes:
-    """Where an activity or video appears: module ids, review-path objective ids, video ids."""
+    """Where an activity or video appears: module ids, review-path objective ids, video ids and
+    support segment ids."""
 
     modules: frozenset[int] = frozenset()
     review_paths: frozenset[int] = frozenset()
     videos: frozenset[int] = frozenset()
+    support: frozenset[int] = frozenset()
 
 
 def activity_homes(session: Session, activity: Activity) -> Homes:
@@ -54,22 +62,30 @@ def activity_homes(session: Session, activity: Activity) -> Homes:
     another module's item, a module 6 item or a review path's item as its skip check must not
     open it early."""
     shown = session.execute(
-        select(Segment.module_id, Segment.review_objective_id).where(
-            Segment.activity_id == activity.id
-        )
+        select(
+            Segment.module_id, Segment.review_objective_id, Segment.support_for, Segment.id
+        ).where(Segment.activity_id == activity.id)
     ).all()
+    in_modules = [(m, support, segment) for m, _, support, segment in shown if m is not None]
+    videos = frozenset(
+        session.scalars(select(Checkpoint.video_id).where(Checkpoint.activity_id == activity.id))
+    )
+    if in_modules and all(support is not None for _, support, _ in in_modules):
+        # Support only (FR-8.4): open where one of its support segments is shown, nowhere else.
+        return Homes(
+            review_paths=frozenset(o for _, o, _, _ in shown if o is not None),
+            videos=videos,
+            support=frozenset(segment for _, _, segment in in_modules),
+        )
     checks = session.scalars(
         select(Segment.module_id).where(Segment.skip_check_activity_id == activity.id)
     ).all()
-    modules = {m for m, _ in shown if m is not None}
-    review_paths = frozenset(o for _, o in shown if o is not None)
+    modules = {m for m, _, _, _ in shown if m is not None}
+    review_paths = frozenset(o for _, o, _, _ in shown if o is not None)
     if activity.purpose != "mastery" and not review_paths:
         modules |= {m for m in checks if m is not None and activity.module_id in (None, m)}
     if activity.module_id is not None:
         modules.add(activity.module_id)
-    videos = frozenset(
-        session.scalars(select(Checkpoint.video_id).where(Checkpoint.activity_id == activity.id))
-    )
     return Homes(
         modules=frozenset(modules),
         review_paths=review_paths,
@@ -83,9 +99,32 @@ def _open_modules(session: Session, user_id: int) -> set[int]:
     return {module_id for module_id, status in statuses.items() if status != "locked"}
 
 
+def _support_refusal(session: Session, user_id: int, segment_ids: frozenset[int]) -> Refusal | None:
+    """None if one of these support segments is shown to this student in an open module."""
+    if not segment_ids:
+        return None
+    open_modules = _open_modules(session, user_id)
+    progress = _progress(session, user_id)
+    refusal: Refusal = "module_locked"
+    for module_id in set(
+        session.scalars(select(Segment.module_id).where(Segment.id.in_(segment_ids)))
+    ):
+        if module_id is None or module_id not in open_modules:
+            continue
+        refusal = "not_shown"
+        segments = _segments(session, module_id)
+        hidden = hidden_segments(session, user_id, segments, progress.get(module_id))
+        if any(s.id in segment_ids and s.id not in hidden for s in segments):
+            return None
+    return refusal
+
+
 def _first_refusal(session: Session, user_id: int, homes: Homes) -> Refusal | None:
     """None if any home is open to this student; otherwise why the first one is shut."""
     if homes.modules & _open_modules(session, user_id):
+        return None
+    support = _support_refusal(session, user_id, homes.support)
+    if homes.support and support is None:
         return None
     if any(review_open(session, user_id, objective) for objective in homes.review_paths):
         return None
@@ -97,6 +136,8 @@ def _first_refusal(session: Session, user_id: int, homes: Homes) -> Refusal | No
         shut_videos.append(refusal)
     if homes.modules:
         return "module_locked"
+    if support is not None:
+        return support
     if homes.review_paths:
         return "review_closed"
     return shut_videos[0] if shut_videos else "retired"
@@ -113,6 +154,8 @@ def _video_refusal(session: Session, user_id: int, video: Video) -> Refusal | No
     if video.segment_id is None:
         return None
     segment = session.get_one(Segment, video.segment_id)
+    if segment.support_for is not None and segment.module_id is not None:
+        return _first_refusal(session, user_id, Homes(support=frozenset({segment.id})))
     return _first_refusal(
         session,
         user_id,

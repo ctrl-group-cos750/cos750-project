@@ -23,12 +23,13 @@ export function StaffAccountsPage() {
           Accounts
         </h1>
         <p className="text-muted-foreground">
-          Everyone who has registered. Open an account to see their progress.
+          Everyone who has registered. Students’ emails are hidden here; open an account to see its
+          email and progress.
         </p>
       </div>
 
       <div className="grid max-w-md gap-2">
-        <Label htmlFor="account-search">Search by name or email</Label>
+        <Label htmlFor="account-search">Search by name</Label>
         <div className="relative">
           <Search
             aria-hidden

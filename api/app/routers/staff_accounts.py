@@ -49,16 +49,31 @@ def _summary(user: User, last_active_at: datetime | None) -> AccountSummary:
     )
 
 
+def mask_email(email: str) -> str:
+    """ "a•••@example.com": enough to tell two accounts apart, not enough to contact anyone."""
+    local, _, domain = email.partition("@")
+    return f"{local[:1]}•••@{domain}" if domain else "•••"
+
+
 @router.get("")
 def list_accounts(session: DbSession, _staff: StaffUser) -> list[AccountSummary]:
-    """Every account, newest first. The portal searches this list as you type."""
+    """Every account, newest first. The portal searches this list as you type.
+
+    Students' emails are masked here (NFR-S8, data minimisation, #146): a list of every student's
+    address is more than staff need to find an account, and it would all leak at once from one
+    staff session. Staff accounts keep their full email (the team's own). One account's page
+    (below) still shows the full email, which staff need to act on it."""
     last = _last_active().subquery()
     rows = session.execute(
         select(User, last.c.at)
         .outerjoin(last, last.c.user_id == User.id)
         .order_by(User.created_at.desc(), User.id.desc())
     ).all()
-    return [_summary(user, at) for user, at in rows]
+    summaries = [_summary(user, at) for user, at in rows]
+    for summary in summaries:
+        if not summary.is_staff:
+            summary.email = mask_email(summary.email)
+    return summaries
 
 
 def _stats(session: Session, user_id: int) -> AccountStats:

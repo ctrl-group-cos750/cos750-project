@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { ApiError } from '../../api/client.ts'
 import { Alert, Card, MasteryStatus, Spinner, Tag, type Mastery } from '../../components'
+import { backState } from '../../components/backState.ts'
 import { useReviewPath } from './hooks.ts'
 import type { ObjectiveState, ReviewStep } from './mastery.api.ts'
 import { Prose } from './Prose.tsx'
@@ -13,7 +14,7 @@ const asMastery: Partial<Record<ObjectiveState, Mastery>> = {
   not_yet: 'not-yet',
 }
 
-function Step({ step }: { step: ReviewStep }) {
+function Step({ step, objectiveId }: { step: ReviewStep; objectiveId: number }) {
   if (step.activityId === null) {
     return (
       <li className={styles.step}>
@@ -44,6 +45,8 @@ function Step({ step }: { step: ReviewStep }) {
       </div>
       <Link
         to={`/activities/${step.activityId}`}
+        // The activity page leads back to this path (#146).
+        state={backState(`/review/${objectiveId}`, 'Back to the review path')}
         className={buttonVariants({ variant: step.answered ? 'ghost' : 'secondary', size: 'sm' })}
       >
         {step.answered
@@ -106,7 +109,7 @@ export function ReviewPage() {
       <Card>
         <ol className={styles.steps}>
           {steps.map((step) => (
-            <Step key={step.id} step={step} />
+            <Step key={step.id} step={step} objectiveId={objectiveId} />
           ))}
         </ol>
       </Card>

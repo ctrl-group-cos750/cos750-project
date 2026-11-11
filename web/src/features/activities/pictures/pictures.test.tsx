@@ -6,7 +6,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ActivityRenderer } from '../ActivityRenderer.tsx'
-import type { AttemptResult, MatchingActivity } from '../activities.types.ts'
+import type { AttemptResult, Hint, MatchingActivity } from '../activities.types.ts'
 import { answerDrawing, correctDrawing } from './drawing.ts'
 import { layOut, RADIUS } from './layout.ts'
 import { PICTURED_ACTIVITY_IDS } from './pictures.ts'
@@ -100,13 +100,10 @@ describe('your graph, judged against the map', () => {
       )
       expect(new Set(drawing.edges.map((e) => keyOf(e.from, e.to)))).toEqual(chosen)
       for (const edge of drawing.edges) {
-        const key = keyOf(edge.from, edge.to)
-        if (WALKWAYS.has(key)) {
-          expect(edge.mark).toBe('plain')
-        } else {
-          expect(edge.mark).toBe('wrong')
-          expect(edge.label).toBe('✗ no such walkway')
-        }
+        const onMap = WALKWAYS.has(keyOf(edge.from, edge.to))
+        expect([edge.mark, edge.label]).toEqual(
+          onMap ? ['plain', undefined] : ['wrong', '✗ no such walkway'],
+        )
       }
     }
   })
@@ -132,8 +129,9 @@ describe('your graph, judged against the map', () => {
       expect(new Set(correct.edges.map((e) => keyOf(e.from, e.to)))).toEqual(WALKWAYS)
       for (const edge of correct.edges) {
         const missed = !drawn.has(keyOf(edge.from, edge.to))
-        expect(edge.mark).toBe(missed ? 'missed' : 'plain')
-        if (missed) expect(edge.label).toBe('✓ walkway on the map')
+        expect([edge.mark, edge.label]).toEqual(
+          missed ? ['missed', '✓ walkway on the map'] : ['plain', undefined],
+        )
       }
     }
   })
@@ -203,12 +201,12 @@ describe('the picture beside the question', () => {
 
   async function answer(hintLevel = 0, correct = false) {
     const user = userEvent.setup()
-    const onSubmit = vi.fn(() => Promise.resolve())
+    const onSubmit = vi.fn<() => Promise<void>>(() => Promise.resolve())
     const props = {
       activity: campus,
       submitting: false,
       onSubmit,
-      requestHint: vi.fn(),
+      requestHint: vi.fn<() => Promise<Hint>>(),
       loadHints: () => Promise.resolve([]),
       showTitle: false,
     }
@@ -271,8 +269,8 @@ describe('directed or undirected', () => {
     const props = {
       activity: classify,
       submitting: false,
-      onSubmit: vi.fn(() => Promise.resolve()),
-      requestHint: vi.fn(),
+      onSubmit: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+      requestHint: vi.fn<() => Promise<Hint>>(),
       loadHints: () => Promise.resolve([]),
     }
     const view = render(<ActivityRenderer {...props} result={undefined} />)
@@ -327,8 +325,8 @@ describe('view full size', () => {
         activity={campus}
         result={undefined}
         submitting={false}
-        onSubmit={vi.fn()}
-        requestHint={vi.fn()}
+        onSubmit={vi.fn<() => Promise<void>>()}
+        requestHint={vi.fn<() => Promise<Hint>>()}
         loadHints={() => Promise.resolve([])}
       />,
     )

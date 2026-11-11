@@ -103,6 +103,16 @@ describe('Markdown', () => {
       expect(screen.getByRole('region', { name: 'Table' })).toBeInTheDocument()
     })
 
+    it('renders an empty body as nothing, and a very wide table inside its scroll region', () => {
+      const { container } = render(<Markdown>{''}</Markdown>)
+      expect(container.textContent).toBe('')
+      const cols = Array.from({ length: 60 }, (_, i) => `c${i}`)
+      const wide = [`| ${cols.join(' | ')} |`, `|${'---|'.repeat(60)}`, `| ${cols.join(' | ')} |`]
+      render(<Markdown>{wide.join('\n')}</Markdown>)
+      expect(screen.getAllByRole('columnheader')).toHaveLength(60)
+      expect(screen.getByRole('table').closest('section')).toHaveAttribute('tabindex', '0')
+    })
+
     it('leaves text with stray pipes as text', () => {
       render(<Markdown>{'a | b | c'}</Markdown>)
       expect(screen.queryByRole('table')).not.toBeInTheDocument()

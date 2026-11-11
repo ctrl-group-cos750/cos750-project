@@ -9,7 +9,7 @@ import { ActivityRenderer } from './ActivityRenderer.tsx'
 import { FeedbackPanel } from './FeedbackPanel.tsx'
 import { FillInCode } from './FillInCode.tsx'
 import { HintLadder } from './HintLadder.tsx'
-import { ParsonsProblem } from './ParsonsProblem.tsx'
+import { CodeLine, ParsonsProblem } from './ParsonsProblem.tsx'
 import type { CodeActivity, FillInActivity, Hint, ParsonsActivity } from './activities.types.ts'
 
 const parsons: ParsonsActivity = {
@@ -364,6 +364,28 @@ describe('code keeps its indentation (#140)', () => {
     const add = screen.getByRole('button', { name: /Add:/ })
     expect(add.querySelector('code')?.textContent).toBe('v = queue.popleft()')
     expect(add.querySelector('code')?.dataset.indent).toBe('4')
+  })
+})
+
+describe('CodeLine edge cases', () => {
+  it.each([
+    ['', '0', ''],
+    ['      ', '6', ''],
+    ['x', '0', 'x'],
+    ['  trailing  ', '2', 'trailing  '],
+    [' '.repeat(400) + 'deep()', '400', 'deep()'],
+    ['a'.repeat(5000), '0', 'a'.repeat(5000)],
+  ])('renders %j with indent %s', (text, indent, shown) => {
+    const { container } = render(<CodeLine text={text} />)
+    const code = container.querySelector('code')!
+    expect(code.dataset.indent).toBe(indent)
+    expect(code.textContent).toBe(shown)
+  })
+
+  it('renders markup in a line as text, never as HTML', () => {
+    const { container } = render(<CodeLine text={'    <img src=x onerror=alert(1)>'} />)
+    expect(container.querySelector('img')).toBeNull()
+    expect(container.textContent).toBe('<img src=x onerror=alert(1)>')
   })
 })
 

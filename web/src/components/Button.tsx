@@ -13,7 +13,7 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
    * `aria-disabled` and `aria-busy`, shows the spinner, and ignores presses (a click, Enter,
    * Space, and a form's implicit submit, which clicks its submit button). A disabled button
    * drops keyboard focus on the page (WCAG 2.4.3), so use this where the student presses the
-   * button with the keyboard and stays there: Check answer, a module's Next and Previous.
+   * button with the keyboard and stays there: Check answer, a module's Next, Show next hint.
    * Off by default, so other forms are unchanged.
    */
   keepFocusWhileLoading?: boolean

@@ -60,6 +60,7 @@ export function ModulePage() {
         <ActivityView
           key={item.id}
           activityId={item.id}
+          headingLevel={2}
           onResult={() => setRetrievalChecked(true)}
         />
         <div className="flex justify-end">

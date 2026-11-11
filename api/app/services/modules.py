@@ -202,15 +202,22 @@ def save_position(
     more than one segment past the furthest raises `PositionTooFar`. Reaching the last segment
     completes the module, and a complete module stays complete (FR-2.6). Raises `ModuleNotFound`
     or `ModuleLocked` like `get_module_detail`.
+
+    Raises `RetrievalIncomplete` until the student has answered the module's retrieval questions
+    (FR-2.4), unless the module is already complete: a student who finished it before its
+    questions were added can still go back over it.
     """
     status = _status(session, user_id, module_id)
     if status == "locked":
         raise ModuleLocked(module_id)
-    retrieval_ids = session.scalars(
-        select(Activity.id).where(Activity.module_id == module_id, Activity.purpose == "retrieval")
-    ).all()
-    if not set(retrieval_ids) <= _answered(session, user_id, retrieval_ids):
-        raise RetrievalIncomplete(module_id)
+    if status != "complete":
+        retrieval_ids = session.scalars(
+            select(Activity.id).where(
+                Activity.module_id == module_id, Activity.purpose == "retrieval"
+            )
+        ).all()
+        if not set(retrieval_ids) <= _answered(session, user_id, retrieval_ids):
+            raise RetrievalIncomplete(module_id)
     last = len(_segments(session, module_id)) - 1
     if last < 0:
         raise PositionTooFar(module_id)  # nothing to move through yet

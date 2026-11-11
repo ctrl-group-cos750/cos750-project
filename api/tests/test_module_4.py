@@ -166,7 +166,10 @@ def setup_from(text: str) -> str:
 def test_every_activity_is_shown_once_and_every_objective_has_one() -> None:
     shown = [s.activity_id for s in MODULE.segments if s.activity_id is not None]
     skip_checks = [s.skip_check_activity_id for s in MODULE.segments if s.skip_check_activity_id]
-    assert sorted(shown + skip_checks) == sorted(a.id for a in ACTIVITIES)
+    # The recall questions are asked before the segments (FR-2.4), not in one.
+    recall = [a.id for a in ACTIVITIES if a.purpose == "retrieval"]
+    assert recall == [401, 402]
+    assert sorted(shown + skip_checks + recall) == sorted(a.id for a in ACTIVITIES)
     assert {a.objective_id for a in ACTIVITIES} == {2, 5, 6}
 
 

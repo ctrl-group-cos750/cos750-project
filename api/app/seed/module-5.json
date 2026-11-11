@@ -16,7 +16,7 @@
     {
       "id": 501,
       "kind": "multiple_choice",
-      "title": "Placeholder: BFS implementation recall",
+      "title": "Quick recall: when BFS finds a vertex",
       "module_id": 5,
       "purpose": "retrieval",
       "config": {

@@ -16,10 +16,12 @@ type ActivityViewProps = {
   activityId: number
   /** Called with each checked answer, e.g. so a module's recall questions know when to move on. */
   onResult?: (result: AttemptResult) => void
+  /** The title's heading level: 1 on the activity page, 2 inside a module page (its title is 1). */
+  headingLevel?: 1 | 2 | 3
 }
 
 /** One activity with its feedback and hint ladder: the activity page, and a module's recall. */
-export function ActivityView({ activityId, onResult }: ActivityViewProps) {
+export function ActivityView({ activityId, onResult, headingLevel }: ActivityViewProps) {
   const [result, setResult] = useState<AttemptResult>()
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
@@ -65,6 +67,7 @@ export function ActivityView({ activityId, onResult }: ActivityViewProps) {
         onSubmit={submit}
         requestHint={requestActivityHint}
         loadHints={fetchActivityHints}
+        headingLevel={headingLevel}
       />
     </>
   )

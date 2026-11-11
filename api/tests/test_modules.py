@@ -194,6 +194,43 @@ def test_module_retrieval_items_are_answer_free_and_attempts_do_not_count_as_mas
     )
 
 
+def test_a_module_completed_before_its_retrieval_questions_can_still_be_reread(
+    client: TestClient, db: Session
+) -> None:
+    """The retrieval gate (FR-2.4) holds back a module being started, not one already done."""
+    _, _, module_id = _make_modules(db)
+    _register_and_login(client, ALICE)
+    for number in (0, 1, module_id):
+        client.post(f"/api/modules/{number}/position", json={"segmentPosition": 0})
+        client.post(f"/api/modules/{number}/position", json={"segmentPosition": 1})
+    assert client.get(f"/api/modules/{module_id}").json()["status"] == "complete"
+
+    # The question is added after the student finished the module.
+    db.add(
+        Activity(
+            id=201,
+            kind="multiple_choice",
+            title="Recall adjacency lists",
+            module_id=module_id,
+            purpose="retrieval",
+            config={"prompt": "?", "options": [{"id": "a", "label": "A"}]},
+            solution={"correct": "a"},
+        )
+    )
+    db.commit()
+    reread = client.post(f"/api/modules/{module_id}/position", json={"segmentPosition": 0})
+    assert reread.status_code == 200
+    assert reread.json()["status"] == "complete"
+
+    # A student who has not finished it is still asked first.
+    _logout(client)
+    _register_and_login(client, BOB)
+    client.post("/api/modules/0/position", json={"segmentPosition": 1})
+    client.post("/api/modules/1/position", json={"segmentPosition": 1})
+    blocked = client.post(f"/api/modules/{module_id}/position", json={"segmentPosition": 0})
+    assert blocked.status_code == 409
+
+
 def test_get_missing_module_is_404(client: TestClient, db: Session) -> None:
     _make_modules(db)
     _register_and_login(client, ALICE)

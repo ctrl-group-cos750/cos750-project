@@ -165,6 +165,11 @@ describe('ModulePage — retrieval', () => {
 
     expect(await screen.findByText('What does an adjacency list store?')).toBeInTheDocument()
     expect(screen.getByText('Quick recall · Question 1 of 1')).toBeInTheDocument()
+    // One h1, the module's; the question's title sits under it, like a segment's.
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Recall graph storage' }),
+    ).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Introduction to graphs' })).toBeNull()
     expect(await screen.findByRole('button', { name: 'Show next hint' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Start module' })).toBeDisabled()

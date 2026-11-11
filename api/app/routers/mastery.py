@@ -7,6 +7,7 @@ from app.auth import CurrentUser
 from app.db import DbSession
 from app.models import Activity, Attempt, Segment
 from app.schemas.content import SegmentKind
+from app.schemas.ids import RowId
 from app.schemas.mastery import (
     MasteryReportOut,
     ObjectiveReportOut,
@@ -54,7 +55,7 @@ def get_report(user: CurrentUser, session: DbSession) -> MasteryReportOut:
 
 
 @router.get("/review/{objective_id}")
-def get_review_path(objective_id: int, user: CurrentUser, session: DbSession) -> ReviewPathOut:
+def get_review_path(objective_id: RowId, user: CurrentUser, session: DbSession) -> ReviewPathOut:
     """The objective's review path: its steps in order, and which the student has answered
     (FR-7.5). 404 if the objective has no path; 403 until module 6 marks it "not yet", so the
     fresh items stay unseen until the student needs them."""

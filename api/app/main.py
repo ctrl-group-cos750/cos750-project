@@ -1,11 +1,12 @@
 import asyncio
+import logging
 import os
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from sqlalchemy import text
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import DataError, IntegrityError, OperationalError, SQLAlchemyError
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.staticfiles import StaticFiles
 
@@ -114,6 +115,47 @@ async def validation_error(_request: Request, exc: RequestValidationError) -> JS
         for e in exc.errors()
     ]
     return JSONResponse(status_code=422, content={"detail": errors})
+
+
+log = logging.getLogger("app.errors")
+
+# What a student sees when the database refuses a request (NFR-U3). Before these handlers it was a
+# plain-text "Internal Server Error" with a traceback in the log, and uvicorn dropped the
+# connection (#139). The routes bound what they accept, so these are a safety net.
+DATA_ERROR = "Something in this request is out of range. Check it and try again."
+CONFLICT = "This changed at the same moment somewhere else. Reload the page and try again."
+UNAVAILABLE = "Ctrl Academy is busy. Try again in a moment."
+SERVER_ERROR = "Something went wrong on our side. Try again in a moment."
+
+
+@app.exception_handler(DataError)
+async def data_error(request: Request, exc: DataError) -> JSONResponse:
+    """A value the database can't store or compare, e.g. an integer past 2^31: 422."""
+    log.warning("422 %s %s: %s", request.method, request.url.path, type(exc.orig).__name__)
+    return JSONResponse(status_code=422, content={"detail": DATA_ERROR})
+
+
+@app.exception_handler(IntegrityError)
+async def integrity_error(request: Request, exc: IntegrityError) -> JSONResponse:
+    """A unique or foreign-key constraint refused a write, e.g. a race the locks don't cover: 409."""
+    log.warning("409 %s %s: %s", request.method, request.url.path, type(exc.orig).__name__)
+    return JSONResponse(status_code=409, content={"detail": CONFLICT})
+
+
+@app.exception_handler(OperationalError)
+async def operational_error(request: Request, exc: OperationalError) -> JSONResponse:
+    """A deadlock, a serialization failure or a lost connection: 503, worth retrying."""
+    log.error("503 %s %s", request.method, request.url.path, exc_info=exc)
+    return JSONResponse(
+        status_code=503, content={"detail": UNAVAILABLE}, headers={"Retry-After": "2"}
+    )
+
+
+@app.exception_handler(SQLAlchemyError)
+async def database_error(request: Request, exc: SQLAlchemyError) -> JSONResponse:
+    """Any other database error: still JSON, with the traceback in the log."""
+    log.error("500 %s %s", request.method, request.url.path, exc_info=exc)
+    return JSONResponse(status_code=500, content={"detail": SERVER_ERROR})
 
 
 @app.get("/api/health")

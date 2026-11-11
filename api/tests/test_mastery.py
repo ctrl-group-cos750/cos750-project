@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from support import complete_modules_before
 
 from app.models import Activity, Attempt, HintView, ObjectiveResult, Segment, User
 from app.schemas.graphs import GraphScenarioOut
@@ -417,6 +418,7 @@ def test_module_6_has_mastery_items_for_every_objective() -> None:
 def test_the_committed_mastery_check_can_be_passed(client: TestClient, db: Session) -> None:
     load(db)
     log_in(client)
+    complete_modules_before(db, STUDENT["email"], mastery.MASTERY_MODULE)
     items = db.scalars(
         select(Activity).where(Activity.module_id == 6, Activity.purpose == "mastery")
     ).all()
@@ -739,6 +741,7 @@ def test_the_committed_review_paths_can_take_a_student_to_ready(
 ) -> None:
     load(db)
     log_in(client)
+    complete_modules_before(db, STUDENT["email"], mastery.MASTERY_MODULE)
     check = db.scalars(
         select(Activity).where(Activity.module_id == 6, Activity.purpose == "mastery")
     ).all()

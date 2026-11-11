@@ -5,6 +5,7 @@ from app.auth import CurrentUser
 from app.db import DbSession
 from app.rate_limit import RateLimiter
 from app.schemas.base import ApiModel
+from app.schemas.ids import DB_INT_MAX
 from app.services.events import ClientEvent, log_client_event
 
 router = APIRouter(prefix="/api/events", tags=["events"])
@@ -19,7 +20,7 @@ class EventIn(ApiModel):
     `checkpoint_reached` (the checkpoint) or `segment_viewed` (the segment)."""
 
     type: ClientEvent
-    target_id: int = Field(gt=0)
+    target_id: int = Field(gt=0, le=DB_INT_MAX)
 
 
 @router.post("", status_code=status.HTTP_204_NO_CONTENT)

@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
+from support import open_module
 
 from app.models import Activity
 from app.seed import load, read_fixtures
@@ -395,7 +396,14 @@ def test_the_seed_loads_the_new_kinds_and_refuses_a_broken_one(tmp_path: Path, d
 
 
 def make(db: Session, kind: str, config: dict[str, Any], solution: dict[str, Any]) -> int:
-    activity = Activity(kind=kind, title=kind, visible=True, config=config, solution=solution)
+    activity = Activity(
+        kind=kind,
+        title=kind,
+        visible=True,
+        config=config,
+        solution=solution,
+        module_id=open_module(db),
+    )
     db.add(activity)
     db.commit()
     return activity.id

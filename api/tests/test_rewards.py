@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from support import open_module
 
 from app.models import Activity, Attempt, HintView, PointsEntry, PointsRule, User, UserBadge
 from app.services import rewards
@@ -214,7 +215,7 @@ def test_a_new_student_has_no_points_or_badges(client: TestClient, db: Session) 
 
 
 def test_a_correct_answer_shows_up_as_points(client: TestClient, db: Session) -> None:
-    activity = Activity(**MCQ)
+    activity = Activity(**MCQ, module_id=open_module(db))
     db.add(activity)
     db.commit()
     log_in(client)
@@ -227,7 +228,7 @@ def test_a_correct_answer_shows_up_as_points(client: TestClient, db: Session) ->
 def test_a_correct_answer_after_the_worked_solution_earns_4(
     client: TestClient, db: Session
 ) -> None:
-    activity = Activity(**MCQ)
+    activity = Activity(**MCQ, module_id=open_module(db))
     db.add(activity)
     db.commit()
     log_in(client)

@@ -5,21 +5,29 @@ from app.auth import CurrentUser
 from app.db import DbSession
 from app.models import Activity, Attempt, Checkpoint, Video
 from app.schemas.activities import ActivityOut
+from app.schemas.ids import RowId
 from app.schemas.videos import CheckpointOut, VideoOut
+from app.services.access import video_refusal
 
 router = APIRouter(prefix="/api/videos", tags=["videos"])
 
 NOT_FOUND = "This video does not exist."
+LOCKED = "This video is in a part of the course that isn't open yet."
 
 
 @router.get("/{video_id}")
-def get_video(video_id: int, user: CurrentUser, session: DbSession) -> VideoOut:
+def get_video(video_id: RowId, user: CurrentUser, session: DbSession) -> VideoOut:
     """Everything the player needs in one call (FR-3): media and captions paths, the transcript,
     and each checkpoint with its activity (without the answer) and whether this student has
-    passed it. Answer a checkpoint with `POST /api/activities/{activityId}/attempts`."""
+    passed it. Answer a checkpoint with `POST /api/activities/{activityId}/attempts`.
+
+    403 while the segment that plays the video is in a locked module or a closed review path
+    (#137); a video on no segment yet is open. Its checkpoint questions follow the video."""
     video = session.get(Video, video_id)
     if video is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NOT_FOUND)
+    if video_refusal(session, user, video) is not None:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=LOCKED)
     rows = session.execute(
         select(Checkpoint, Activity)
         .join(Activity, Activity.id == Checkpoint.activity_id)

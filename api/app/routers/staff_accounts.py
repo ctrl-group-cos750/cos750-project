@@ -17,6 +17,7 @@ from app.schemas.accounts import (
     AccountSummary,
     AccountVideo,
 )
+from app.schemas.ids import RowId
 from app.services.history import delete_history
 
 router = APIRouter(prefix="/api/staff/accounts", tags=["staff"])
@@ -124,7 +125,7 @@ def _recent(session: Session, user_id: int) -> list[AccountAttempt]:
 
 
 @router.get("/{user_id}")
-def get_account(user_id: int, session: DbSession, _staff: StaffUser) -> AccountDetail:
+def get_account(user_id: RowId, session: DbSession, _staff: StaffUser) -> AccountDetail:
     """One account: who they are, totals, progress through each video and their last 10 answers.
     What they answered is left out: staff see whether it was right, not the answer itself."""
     user = session.get(User, user_id)
@@ -144,7 +145,7 @@ def get_account(user_id: int, session: DbSession, _staff: StaffUser) -> AccountD
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_account(user_id: int, session: DbSession, staff: StaffUser) -> None:
+def delete_account(user_id: RowId, session: DbSession, staff: StaffUser) -> None:
     """Delete the account and everything stored about it (attempts, hint views, points, badges:
     every table of student history, app/services/history.py), in one
     transaction. Their session stops working at once: there is no user left to load. Nobody can

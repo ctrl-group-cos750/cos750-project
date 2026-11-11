@@ -4,7 +4,11 @@ NFR-S7); every kind is graded by comparing the submission with the solution in
 `app/services/checking.py`.
 
 A submission carries only line IDs and tokens the student chose from a given set, never free text,
-so nothing a student sends here is ever executed or stored as free-form code.
+so nothing a student sends here is ever executed or stored as free-form code. Every submission
+shape bounds its sizes (#139): each string to the length of the longest thing it can name (an
+option, item or test id, a token, a vertex label) and without control characters, each list and
+dict to the most the config allows, and each line id to a Postgres integer. The stored submission
+is what the student sent, so these bounds are what keeps it small.
 """
 
 from typing import Annotated, Any, Literal
@@ -15,6 +19,25 @@ from app.schemas.base import ApiModel
 from app.schemas.graphs import VERTEX, GraphEdge
 
 Vertex = Annotated[str, Field(pattern=VERTEX)]
+
+# No C0 control characters or DEL (NUL among them) in anything a student submits: no option, id,
+# token or label contains one, and they would reach the evaluation export (FR-10).
+NO_CONTROL = r"^[^\x00-\x1f\x7f]*$"
+ID_LENGTH = 50  # option, matching item and test case ids (the configs' own bound)
+TOKEN_LENGTH = 200  # a fill-in token (FillInConfig.options)
+
+# A choice the student made, by id or by token: one of a fixed set, so short and printable.
+ChosenId = Annotated[str, Field(max_length=ID_LENGTH, pattern=NO_CONTROL)]
+ChosenToken = Annotated[str, Field(max_length=TOKEN_LENGTH, pattern=NO_CONTROL)]
+# A line or blank id. Fixture ids are small; anything past a Postgres integer is never one.
+SubmittedInt = Annotated[int, Field(ge=-(2**31), le=2**31 - 1)]
+
+# The whole submission, in bytes of compact ASCII JSON. The largest right answer in the
+# committed content is a trace table of about 660 (activity 618; tests/test_submission_limits.py
+# checks the margin); this leaves room for far bigger content, and stops the one shape the
+# per-field bounds still let grow (a trace table of a 50-vertex graph with 32-character labels,
+# about 260 kB) from filling the attempts table.
+MAX_SUBMISSION_BYTES = 16_384
 
 CodeActivityKind = Literal["parsons", "fill_in", "fix_the_bug", "choose_tests"]
 ActivityKind = Literal[
@@ -46,7 +69,7 @@ class MultipleChoiceSolution(ApiModel):
 
 
 class MultipleChoiceSubmission(ApiModel):
-    selected: str = Field(max_length=50)
+    selected: ChosenId
 
 
 # --- Parsons: put shuffled lines in order ------------------------------------------------------
@@ -71,7 +94,7 @@ class ParsonsSolution(ApiModel):
 
 
 class ParsonsSubmission(ApiModel):
-    order: list[int] = Field(max_length=100)
+    order: list[SubmittedInt] = Field(max_length=100)
 
 
 # --- Fill in the blank: choose a token for each blank ------------------------------------------
@@ -82,7 +105,9 @@ class FillInConfig(ApiModel):
 
     code: str = Field(max_length=20_000)
     blanks: list[int] = Field(min_length=1, max_length=100)
-    options: list[str] = Field(min_length=1, max_length=200)
+    options: list[Annotated[str, Field(max_length=TOKEN_LENGTH)]] = Field(
+        min_length=1, max_length=200
+    )
 
 
 class FillInSolution(ApiModel):
@@ -95,7 +120,9 @@ class FillInSolution(ApiModel):
 
 
 class FillInSubmission(ApiModel):
-    answers: dict[int, str] = Field(default_factory=dict)
+    """The token chosen for each blank, keyed by blank id (at most FillInConfig's 100 blanks)."""
+
+    answers: dict[SubmittedInt, ChosenToken] = Field(default_factory=dict, max_length=100)
 
 
 # --- Matching: pair each item on the left with one on the right (FR-4.1; objectives 1 and 3) --
@@ -135,7 +162,7 @@ class MatchingSolution(ApiModel):
 class MatchingSubmission(ApiModel):
     """The right item the student chose for each left item; a left item may be left unmatched."""
 
-    pairs: dict[str, str] = Field(default_factory=dict, max_length=20)
+    pairs: dict[ChosenId, ChosenId] = Field(default_factory=dict, max_length=20)
 
 
 # --- Fix the bug: correct a faulty BFS (FR-5.5; objective 7) -----------------------------------
@@ -168,7 +195,7 @@ class FixTheBugSolution(ApiModel):
 
 
 class FixTheBugSubmission(ApiModel):
-    order: list[int] = Field(max_length=150)
+    order: list[SubmittedInt] = Field(max_length=150)
 
 
 # --- Choose tests: select the test cases that expose the bug (FR-5.5; objective 7) -------------
@@ -212,7 +239,7 @@ class ChooseTestsSolution(ApiModel):
 
 
 class ChooseTestsSubmission(ApiModel):
-    selected: list[str] = Field(default_factory=list, max_length=8)
+    selected: list[ChosenId] = Field(default_factory=list, max_length=8)
 
 
 # --- Trace table: fill the BFS trace step by step (FR-4.1, FR-6.6) ----------------------------
@@ -232,7 +259,7 @@ class TraceConfig(ApiModel):
 
 # A vertex label as the student types it. Only the length is bounded (labels are at most 32
 # characters, see VERTEX): a label that is not in the graph is a wrong answer, not a 422.
-TracedVertex = Annotated[str, Field(max_length=32)]
+TracedVertex = Annotated[str, Field(max_length=32, pattern=NO_CONTROL)]
 
 
 class TraceRow(ApiModel):
@@ -283,7 +310,8 @@ class ActivityOut(ApiModel):
 
 
 class AttemptIn(ApiModel):
-    """A submission: only the student's choices (line ids, chosen tokens), never free-form code."""
+    """A submission: only the student's choices (line ids, chosen tokens), never free-form code.
+    `submitted` is checked against the activity kind's shape above when it is graded."""
 
     submitted: dict[str, Any]
 

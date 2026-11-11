@@ -6,6 +6,7 @@ from typing import Any
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from support import open_module
 
 from app.models import Activity, Attempt, Hint, HintView
 
@@ -28,7 +29,7 @@ FILL_IN: dict[str, Any] = {
 
 
 def make_activity(db: Session, **data: Any) -> int:
-    activity = Activity(**data)
+    activity = Activity(**{"module_id": open_module(db), **data})
     db.add(activity)
     db.commit()
     return activity.id

@@ -72,3 +72,10 @@
 .danger .icon {
   background: var(--color-danger);
 }
+
+/* An alert that takes focus (announce="focus") shows the ring like every control. Its own
+   box-shadow would otherwise hide the global :focus-visible ring (the Button bug, #142). */
+.alert:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}

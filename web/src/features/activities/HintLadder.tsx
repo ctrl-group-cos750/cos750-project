@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Alert, Button } from '../../components'
 import { fetchActivityHints } from './activities.api.ts'
 import type { Hint } from './activities.types.ts'
@@ -10,7 +10,14 @@ type HintLadderProps = {
   loadHints?: (activityId: number) => Promise<readonly Hint[]>
 }
 
-/** Shows one server-recorded hint at a time, warning before a support-level hint. */
+/**
+ * Shows one server-recorded hint at a time, warning before a support-level hint.
+ *
+ * Focus (WCAG 2.4.3, #142): the new hint takes focus when it arrives, named by its title
+ * ("Hint 2") and described by its text, so it is read once and the student is where the new
+ * content is. While a hint loads the button stays focusable (aria-disabled and aria-busy, not
+ * disabled), and after the last hint, when the button goes, focus is already on that hint.
+ */
 export function HintLadder({
   activityId,
   disabled = false,
@@ -23,6 +30,16 @@ export function HintLadder({
   const [loadingInitial, setLoadingInitial] = useState(true)
   const [loadFailed, setLoadFailed] = useState(false)
   const [confirmingSupport, setConfirmingSupport] = useState(false)
+  const newestHint = useRef<HTMLDivElement>(null)
+  const focusNewest = useRef(false)
+
+  // Only a hint the student asked for takes focus; hints loaded with the page don't. Runs after
+  // every render; the flag is set only once the new hint is in state.
+  useEffect(() => {
+    if (!focusNewest.current) return
+    focusNewest.current = false
+    newestHint.current?.focus()
+  })
 
   useEffect(() => {
     let active = true
@@ -49,6 +66,7 @@ export function HintLadder({
   const hasMore = !loadFailed && !loadingInitial && (lastHint?.hasMore ?? true)
 
   async function showNextHint() {
+    if (loading) return // aria-disabled while loading: the button can be pressed, but does nothing
     if (lastHint?.nextCountsAsSupport && lastHint.level < 3 && !confirmingSupport) {
       setConfirmingSupport(true)
       return
@@ -58,6 +76,7 @@ export function HintLadder({
     setConfirmingSupport(false)
     try {
       const hint = await requestHint(activityId)
+      focusNewest.current = true
       setHints((current) => [...current, hint])
     } catch {
       setError('We could not load a hint. Please try again.')
@@ -68,8 +87,14 @@ export function HintLadder({
 
   return (
     <section aria-label="Hints" className="grid gap-3">
-      {hints.map((hint) => (
-        <Alert key={hint.level} tone="info" title={`Hint ${hint.level}`}>
+      {hints.map((hint, index) => (
+        <Alert
+          key={hint.level}
+          ref={index === hints.length - 1 ? newestHint : undefined}
+          announce="focus"
+          tone="info"
+          title={`Hint ${hint.level}`}
+        >
           {hint.body}
         </Alert>
       ))}
@@ -86,7 +111,9 @@ export function HintLadder({
             variant="secondary"
             onClick={() => void showNextHint()}
             disabled={disabled}
-            loading={loading}
+            // Not `loading`, which disables the button and so drops focus on the page.
+            aria-disabled={loading || undefined}
+            aria-busy={loading || undefined}
           >
             Show next hint
           </Button>

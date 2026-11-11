@@ -10,6 +10,7 @@ import { FeedbackPanel } from './FeedbackPanel.tsx'
 import { FillInCode } from './FillInCode.tsx'
 import { HintLadder } from './HintLadder.tsx'
 import { CodeLine, ParsonsProblem } from './ParsonsProblem.tsx'
+import { indentLabel, lineName } from './codeLines.ts'
 import type { CodeActivity, FillInActivity, Hint, ParsonsActivity } from './activities.types.ts'
 
 const parsons: ParsonsActivity = {
@@ -307,25 +308,36 @@ const wrong = {
 }
 
 describe('code keeps its indentation (#140)', () => {
+  const indentedFillIn = (
+    <FillInCode
+      activity={{
+        ...fillIn,
+        config: { ...fillIn.config, code: 'def bfs():\n    while q:\n        return __1__' },
+      }}
+      result={undefined}
+      submitting={false}
+      onSubmit={vi.fn<() => Promise<void>>()}
+    />
+  )
+
   it('keeps the leading spaces of each fill-in line, which renders white-space: pre', () => {
-    render(
-      <FillInCode
-        activity={{
-          ...fillIn,
-          config: { ...fillIn.config, code: 'def bfs():\n    while q:\n        return __1__' },
-        }}
-        result={undefined}
-        submitting={false}
-        onSubmit={vi.fn<() => Promise<void>>()}
-      />,
-    )
-    const region = screen.getByRole('region', { name: 'Python code with blanks' })
-    const lines = [...region.querySelectorAll('code')]
+    render(indentedFillIn)
+    const lines = [...document.querySelectorAll('section code')]
     expect(lines.map((code) => code.textContent?.match(/^ */)?.[0].length)).toEqual([0, 4, 8])
     for (const code of lines) expect(code).toHaveClass('whitespace-pre')
-    // A long line scrolls inside the region, which a keyboard user can reach (WCAG 2.1.1).
+    // Code that fits is not a tab stop or a landmark (#142 review).
+    expect(screen.queryByRole('region', { name: 'Python code with blanks' })).toBeNull()
+    expect(document.querySelector('section')).not.toHaveAttribute('tabindex')
+  })
+
+  it('makes overflowing fill-in code a named region a keyboard user can scroll (WCAG 2.1.1)', () => {
+    vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(900)
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(300)
+    render(indentedFillIn)
+    const region = screen.getByRole('region', { name: 'Python code with blanks' })
     expect(region).toHaveAttribute('tabindex', '0')
     expect(region).toHaveClass('overflow-x-auto')
+    vi.restoreAllMocks()
   })
 
   it('keeps a Parsons line’s indentation, as a hanging indent of its own width', () => {
@@ -341,9 +353,10 @@ describe('code keeps its indentation (#140)', () => {
       const code = screen.getByRole('button', { name }).querySelector('code')!
       return { count: code.dataset.indent, css: code.style.getPropertyValue('--indent'), code }
     }
+    // The line's name gives its indentation in words, which a screen reader would otherwise skip.
     expect(indentOf('while queue:')).toMatchObject({ count: '0', css: '0' })
-    expect(indentOf('v = queue.popleft()')).toMatchObject({ count: '4', css: '4' })
-    const deep = indentOf('if n not in visited:')
+    expect(indentOf('v = queue.popleft() (indent level 1)')).toMatchObject({ count: '4', css: '4' })
+    const deep = indentOf('if n not in visited: (indent level 2)')
     expect(deep).toMatchObject({ count: '8', css: '8' })
     // Padding (not leading spaces) draws it, so a wrapped line stays at its level.
     expect(deep.code.className).toContain('[padding-inline-start:calc(var(--indent)*1ch)]')
@@ -360,32 +373,43 @@ describe('code keeps its indentation (#140)', () => {
         onSubmit={vi.fn<() => Promise<void>>()}
       />,
     )
-    await user.click(screen.getAllByRole('button', { name: 'Remove' })[1])
-    const add = screen.getByRole('button', { name: /Add:/ })
-    expect(add.querySelector('code')?.textContent).toBe('v = queue.popleft()')
+    await user.click(
+      screen.getByRole('button', { name: 'Remove “v = queue.popleft()” (indent level 1)' }),
+    )
+    const add = screen.getByRole('button', { name: 'Add: v = queue.popleft() (indent level 1)' })
+    expect(add.querySelector('code')?.textContent).toBe('v = queue.popleft() (indent level 1)')
     expect(add.querySelector('code')?.dataset.indent).toBe('4')
   })
 })
 
 describe('CodeLine edge cases', () => {
   it.each([
-    ['', '0', ''],
-    ['      ', '6', ''],
-    ['x', '0', 'x'],
-    ['  trailing  ', '2', 'trailing  '],
-    [' '.repeat(400) + 'deep()', '400', 'deep()'],
-    ['a'.repeat(5000), '0', 'a'.repeat(5000)],
-  ])('renders %j with indent %s', (text, indent, shown) => {
+    ['', '0', '', ''],
+    ['      ', '6', 'indented 6 spaces', ''],
+    ['x', '0', '', 'x'],
+    ['  trailing  ', '2', 'indented 2 spaces', 'trailing  '],
+    [' '.repeat(400) + 'deep()', '400', 'indent level 100', 'deep()'],
+    ['a'.repeat(5000), '0', '', 'a'.repeat(5000)],
+  ])('renders %j with indent %s', (text, indent, words, shown) => {
     const { container } = render(<CodeLine text={text} />)
     const code = container.querySelector('code')!
     expect(code.dataset.indent).toBe(indent)
-    expect(code.textContent).toBe(shown)
+    const hidden = code.querySelector('.visually-hidden')
+    expect(hidden?.textContent ?? '').toBe(words ? `(${words})` : '')
+    expect(code.textContent).toBe(shown + (words ? ` (${words})` : ''))
+    expect(indentLabel(text)).toBe(words)
   })
 
   it('renders markup in a line as text, never as HTML', () => {
     const { container } = render(<CodeLine text={'    <img src=x onerror=alert(1)>'} />)
     expect(container.querySelector('img')).toBeNull()
-    expect(container.textContent).toBe('<img src=x onerror=alert(1)>')
+    expect(container.textContent).toBe('<img src=x onerror=alert(1)> (indent level 1)')
+  })
+
+  it('names two lines that differ only by indentation differently', () => {
+    expect(lineName('    queue.append(n)')).toBe('“queue.append(n)” (indent level 1)')
+    expect(lineName('            queue.append(n)')).toBe('“queue.append(n)” (indent level 3)')
+    expect(lineName('order = []')).toBe('“order = []”')
   })
 })
 
@@ -406,23 +430,23 @@ describe('Parsons without dragging (WCAG 2.2 SC 2.5.7, #142)', () => {
 
   it('reorders with the move buttons alone, by pointer, and submits that order', async () => {
     const { user, onSubmit } = setup()
-    await user.click(screen.getByRole('button', { name: 'Move line 3 up' })) // third() → 2
-    await user.click(screen.getByRole('button', { name: 'Move line 2 up' })) // third() → 1
-    await user.click(screen.getByRole('button', { name: 'Move line 2 down' })) // first() → 3
+    await user.click(screen.getByRole('button', { name: 'Move “third()” up' })) // → 2nd
+    await user.click(screen.getByRole('button', { name: 'Move “third()” up' })) // → 1st
+    await user.click(screen.getByRole('button', { name: 'Move “first()” down' })) // → 3rd
     await user.click(screen.getByRole('button', { name: 'Check answer' }))
     expect(onSubmit).toHaveBeenCalledWith([3, 2, 1])
   })
 
   it('announces each move by the line’s code, not its internal id', async () => {
     const { user } = setup()
-    await user.click(screen.getByRole('button', { name: 'Move line 1 down' }))
+    await user.click(screen.getByRole('button', { name: 'Move “first()” down' }))
     expect(screen.getByText('Moved “first()” to position 2.')).toBeInTheDocument()
   })
 
   it('does nothing at the ends of the list, and keeps the end buttons focusable', async () => {
     const { user, onSubmit } = setup()
-    const up = screen.getByRole('button', { name: 'Move line 1 up' })
-    const down = screen.getByRole('button', { name: 'Move line 3 down' })
+    const up = screen.getByRole('button', { name: 'Move “first()” up' })
+    const down = screen.getByRole('button', { name: 'Move “third()” down' })
     expect(up).toHaveAttribute('aria-disabled', 'true')
     expect(down).toHaveAttribute('aria-disabled', 'true')
     expect(up).toBeEnabled()
@@ -434,10 +458,10 @@ describe('Parsons without dragging (WCAG 2.2 SC 2.5.7, #142)', () => {
 
   it('keeps focus on the move button as the line moves (the button moves with its line)', async () => {
     const { user } = setup()
-    await user.click(screen.getByRole('button', { name: 'Move line 2 up' }))
-    // second() is now line 1, and its button is the one with focus, now named for line 1.
-    expect(screen.getByRole('button', { name: 'Move line 1 up' })).toHaveFocus()
-    expect(screen.getByRole('button', { name: 'Move line 1 up' })).toHaveAttribute(
+    await user.click(screen.getByRole('button', { name: 'Move “second()” up' }))
+    // second() is now first, and its button still has focus, now at the top of the list.
+    expect(screen.getByRole('button', { name: 'Move “second()” up' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'Move “second()” up' })).toHaveAttribute(
       'aria-disabled',
       'true',
     )
@@ -445,9 +469,9 @@ describe('Parsons without dragging (WCAG 2.2 SC 2.5.7, #142)', () => {
 
   it('moves focus with a removed line to its Add button, and back again', async () => {
     const { user } = setup()
-    await user.click(screen.getAllByRole('button', { name: 'Remove' })[0])
+    await user.click(screen.getByRole('button', { name: 'Remove “first()”' }))
     expect(screen.getByRole('button', { name: /Add:\s*first\(\)/ })).toHaveFocus()
-    await user.click(screen.getAllByRole('button', { name: 'Remove' })[0]) // second()
+    await user.click(screen.getByRole('button', { name: 'Remove “second()”' }))
     expect(screen.getByRole('button', { name: /Add:\s*second\(\)/ })).toHaveFocus()
 
     // Adding goes on to the next line still to add, then to the last line added.
@@ -466,28 +490,53 @@ describe('Parsons without dragging (WCAG 2.2 SC 2.5.7, #142)', () => {
         onSubmit={vi.fn<() => Promise<void>>()}
       />,
     )
-    for (const name of ['Move line 1 down', 'Move line 2 up', 'Remove']) {
-      for (const button of screen.getAllByRole('button', { name })) expect(button).toBeDisabled()
+    for (const name of [/^Move “/, /^Remove “/]) {
+      const buttons = screen.getAllByRole('button', { name })
+      expect(buttons.length).toBeGreaterThan(2)
+      for (const button of buttons) expect(button).toBeDisabled()
     }
   })
 })
 
 describe('focus after Check answer (WCAG 2.4.3, #142)', () => {
-  it('moves focus to the feedback when a result arrives, and again for the next one', () => {
+  const result = () => screen.getByRole('group', { name: 'Not quite' })
+
+  it('moves focus to the result itself, named by its title and described by its feedback', () => {
     const { rerender } = render(<FeedbackPanel result={undefined} />)
     rerender(<FeedbackPanel result={wrong} />)
-    const panel = screen.getByRole('region', { name: 'Submission results' })
-    expect(panel).toHaveFocus()
-    expect(panel).toHaveAttribute('tabindex', '-1')
+    expect(result()).toHaveFocus()
+    expect(result()).toHaveAccessibleDescription('Not quite, 1 of 3 correct.')
+    expect(result()).toHaveAttribute('tabindex', '-1')
+    // Still inside the "Submission results" region the page had before.
+    expect(screen.getByRole('region', { name: 'Submission results' })).toContainElement(result())
+  })
 
-    panel.blur()
+  it('announces a second result in the same place once: focused again, and not a live region', () => {
+    const { rerender } = render(<FeedbackPanel result={undefined} />)
+    rerender(<FeedbackPanel result={wrong} />)
+    const first = result()
+    const focusEvents = vi.fn<() => void>()
+    first.addEventListener('focus', focusEvents)
+
     rerender(<FeedbackPanel result={{ ...wrong, id: 2, feedback: 'Still not quite.' }} />)
-    expect(screen.getByRole('region', { name: 'Submission results' })).toHaveFocus()
+    expect(result()).toBe(first) // the same node, updated in place
+    expect(result()).toHaveFocus()
+    expect(focusEvents).toHaveBeenCalledTimes(1) // re-focused, so it is read again
+    expect(result()).toHaveAccessibleDescription('Still not quite.')
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(document.querySelector('[aria-live]')).toBeNull()
+  })
+
+  it('names a correct result "Correct"', () => {
+    const { rerender } = render(<FeedbackPanel result={undefined} />)
+    rerender(<FeedbackPanel result={{ ...wrong, correct: true, feedback: 'All correct.' }} />)
+    expect(screen.getByRole('group', { name: 'Correct' })).toHaveFocus()
   })
 
   it('does not take focus for a result already there when it first renders', () => {
     render(<FeedbackPanel result={wrong} />)
-    expect(screen.getByRole('region', { name: 'Submission results' })).not.toHaveFocus()
+    expect(result()).not.toHaveFocus()
   })
 
   it('lands on the feedback after a keyboard user checks an answer on the activity page', async () => {
@@ -505,8 +554,87 @@ describe('focus after Check answer (WCAG 2.4.3, #142)', () => {
     ;(await screen.findByRole('button', { name: 'Check answer' })).focus()
     await user.keyboard('{Enter}')
 
-    const panel = await screen.findByRole('region', { name: 'Submission results' })
+    const panel = await screen.findByRole('group', { name: 'Not quite' })
     await waitFor(() => expect(panel).toHaveFocus())
-    expect(panel).toHaveTextContent('Not quite, 1 of 3 correct.')
+    expect(panel).toHaveAccessibleDescription('Not quite, 1 of 3 correct.')
+  })
+})
+
+describe('focus in the hint ladder (WCAG 2.4.3, #142 review)', () => {
+  const hint = (level: number, hasMore: boolean): Hint => ({
+    level,
+    body: `Hint body ${level}.`,
+    hasMore,
+    nextCountsAsSupport: false,
+  })
+
+  it('keeps focus on a busy "Show next hint", then moves it to the new hint', async () => {
+    const user = userEvent.setup()
+    let release: (value: Hint) => void = () => {}
+    const requestHint = vi
+      .fn<(activityId: number) => Promise<Hint>>()
+      .mockImplementation(() => new Promise<Hint>((resolve) => (release = resolve)))
+    render(
+      <HintLadder
+        activityId={7}
+        loadHints={vi.fn<(id: number) => Promise<readonly Hint[]>>().mockResolvedValue([])}
+        requestHint={requestHint}
+      />,
+    )
+    const button = await screen.findByRole('button', { name: 'Show next hint' })
+    button.focus()
+    await user.keyboard('{Enter}')
+
+    // Loading: still focused and enabled to the browser, but marked busy and ignored.
+    expect(button).toHaveFocus()
+    expect(button).toBeEnabled()
+    expect(button).toHaveAttribute('aria-busy', 'true')
+    expect(button).toHaveAttribute('aria-disabled', 'true')
+    await user.keyboard('{Enter}')
+    expect(requestHint).toHaveBeenCalledTimes(1)
+
+    release(hint(1, true))
+    const shown = await screen.findByRole('group', { name: 'Hint 1' })
+    await waitFor(() => expect(shown).toHaveFocus())
+    expect(shown).toHaveAccessibleDescription('Hint body 1.')
+    expect(screen.getByRole('button', { name: 'Show next hint' })).not.toHaveAttribute('aria-busy')
+  })
+
+  it('leaves focus on the last hint when the ladder ends and the button goes', async () => {
+    const user = userEvent.setup()
+    render(
+      <HintLadder
+        activityId={7}
+        loadHints={vi
+          .fn<(id: number) => Promise<readonly Hint[]>>()
+          .mockResolvedValue([hint(1, true), hint(2, true), hint(3, true)])}
+        requestHint={vi.fn<(id: number) => Promise<Hint>>().mockResolvedValue(hint(4, false))}
+      />,
+    )
+    // Hints already recorded don't take focus when the page opens.
+    expect(await screen.findByRole('group', { name: 'Hint 3' })).not.toHaveFocus()
+    await user.click(screen.getByRole('button', { name: 'Show next hint' }))
+
+    const last = await screen.findByRole('group', { name: 'Hint 4' })
+    await waitFor(() => expect(last).toHaveFocus())
+    expect(screen.queryByRole('button', { name: 'Show next hint' })).toBeNull()
+    expect(document.activeElement).not.toBe(document.body)
+  })
+
+  it('keeps focus on the button when a hint can’t be loaded', async () => {
+    const user = userEvent.setup()
+    render(
+      <HintLadder
+        activityId={7}
+        loadHints={vi.fn<(id: number) => Promise<readonly Hint[]>>().mockResolvedValue([])}
+        requestHint={vi.fn<(id: number) => Promise<Hint>>().mockRejectedValue(new Error('down'))}
+      />,
+    )
+    const button = await screen.findByRole('button', { name: 'Show next hint' })
+    await user.click(button)
+    expect(
+      await screen.findByText('We could not load a hint. Please try again.'),
+    ).toBeInTheDocument()
+    expect(button).toHaveFocus()
   })
 })

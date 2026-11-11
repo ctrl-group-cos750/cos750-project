@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '../../components'
 import type { AttemptResult, ParsonsActivity } from './activities.types.ts'
+import { indentLabel, lineName } from './codeLines.ts'
 
 type ParsonsProblemProps = {
   activity: ParsonsActivity
@@ -19,12 +20,16 @@ type FocusTarget = { list: 'answer' | 'available'; id: number }
  * character width per leading space, so a line too long for a narrow screen wraps with a hanging
  * indent at its own level: the wrapped part never reads as a line at a shallower level, and the
  * page doesn't scroll sideways at 320 px (WCAG 1.4.10). Below 30rem each space is half a character
- * wide, which keeps every level distinct while leaving room for the code. The leading spaces are
- * not in the rendered text (a screen reader skips them anyway); `data-indent` holds the count.
+ * wide, which keeps every level distinct while leaving room for the code.
+ *
+ * A screen reader skips leading spaces, so the indentation is also given in words after the code,
+ * visually hidden ("(indent level 2)"), and a screen-reader user gets what a sighted student sees
+ * (#142 review). `data-indent` holds the number of spaces.
  */
 export function CodeLine({ text }: { text: string }) {
   const code = text.trimStart()
   const indent = text.length - code.length
+  const level = indentLabel(text)
   return (
     <code
       data-indent={indent}
@@ -32,6 +37,10 @@ export function CodeLine({ text }: { text: string }) {
       style={{ '--indent': indent } as React.CSSProperties}
     >
       {code}
+      {/* The space is a text node of its own: a screen reader keeps it, an edge space inside the
+          hidden span may be dropped. At the end of a line it is invisible. */}
+      {level && ' '}
+      {level && <span className="visually-hidden">({level})</span>}
     </code>
   )
 }
@@ -71,7 +80,10 @@ export function ParsonsProblem({ activity, result, submitting, onSubmit }: Parso
   const lines = new Map(activity.config.lines.map((line) => [line.id, line]))
   const disabled = submitting || result?.correct === true
   // How a line is announced after a move: its code, which is what the student sees (the id isn't).
-  const said = (lineId: number) => `“${lines.get(lineId)?.text.trim() ?? lineId}”`
+  const said = (lineId: number) => {
+    const line = lines.get(lineId)
+    return line ? lineName(line.text) : `line ${lineId}`
+  }
   const checkedParts = cleared ? undefined : result?.parts
 
   function move(lineId: number, destination: number, inAnswer: boolean) {
@@ -193,7 +205,7 @@ export function ParsonsProblem({ activity, result, submitting, onSubmit }: Parso
                   onClick={() => index > 0 && reorder(line.id, index - 1)}
                 >
                   <span aria-hidden="true">↑</span>
-                  <span className="visually-hidden">Move line {index + 1} up</span>
+                  <span className="visually-hidden">Move {lineName(line.text)} up</span>
                 </Button>
                 <Button
                   variant="secondary"
@@ -203,7 +215,7 @@ export function ParsonsProblem({ activity, result, submitting, onSubmit }: Parso
                   onClick={() => index < answerOrder.length - 1 && reorder(line.id, index + 1)}
                 >
                   <span aria-hidden="true">↓</span>
-                  <span className="visually-hidden">Move line {index + 1} down</span>
+                  <span className="visually-hidden">Move {lineName(line.text)} down</span>
                 </Button>
                 <Button
                   variant="ghost"
@@ -211,7 +223,7 @@ export function ParsonsProblem({ activity, result, submitting, onSubmit }: Parso
                   disabled={disabled}
                   onClick={() => move(line.id, available.length, true)}
                 >
-                  Remove
+                  Remove <span className="visually-hidden">{lineName(line.text)}</span>
                 </Button>
               </span>
               {part?.message && (
@@ -243,7 +255,7 @@ export function ParsonsProblem({ activity, result, submitting, onSubmit }: Parso
                     onDragStart={() => setDragged({ id: line.id, fromAnswer: false })}
                     onClick={() => move(line.id, answerOrder.length, false)}
                   >
-                    <span className="shrink-0">Add:</span>
+                    <span className="shrink-0">Add:</span>{' '}
                     <span className="min-w-0">
                       <CodeLine text={line.text} />
                     </span>

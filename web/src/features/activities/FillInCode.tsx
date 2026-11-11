@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button } from '../../components'
+import { Button, useScrollable } from '../../components'
 import type { AttemptResult, FillInActivity } from './activities.types.ts'
 
 type FillInCodeProps = {
@@ -45,6 +45,7 @@ export function FillInCode({ activity, result, submitting, onSubmit }: FillInCod
   const disabled = submitting || result?.correct === true
   const partsByBlank = new Map(result?.parts.map((part) => [part.ref, part]))
   const lineOccurrences = new Map<string, number>()
+  const { ref: codeRef, scrollable: codeScrolls } = useScrollable<HTMLElement>()
 
   function renderLine(line: string) {
     const pieces: React.ReactNode[] = []
@@ -89,13 +90,15 @@ export function FillInCode({ activity, result, submitting, onSubmit }: FillInCod
     >
       {/* The code keeps its indentation (whitespace-pre): in Python it is the program, and the
           student has to see what sits inside the loop (#140). A line wider than the screen
-          scrolls inside this region instead of wrapping or widening the page (WCAG 1.4.10); the
-          region is focusable and named so a keyboard user can scroll it too. */}
+          scrolls inside this box instead of wrapping or widening the page (WCAG 1.4.10). Only
+          while it overflows is it a named region and a tab stop, so a keyboard user can scroll
+          it; otherwise it adds nothing to the tab order. */}
       <section
+        ref={codeRef}
         className="min-w-0 overflow-x-auto rounded border bg-muted/40 p-3 font-mono text-sm leading-7"
-        aria-label="Python code with blanks"
+        aria-label={codeScrolls ? 'Python code with blanks' : undefined}
         // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scroll container must be reachable by keyboard (WCAG 2.1.1)
-        tabIndex={0}
+        tabIndex={codeScrolls ? 0 : undefined}
       >
         {activity.config.code.split('\n').map((line, index) => {
           const occurrence = lineOccurrences.get(line) ?? 0

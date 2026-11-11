@@ -6,7 +6,12 @@ from app.auth import CurrentUser
 from app.db import DbSession
 from app.models import Activity, Hint, User
 from app.schemas.activities import ActivityOut, AttemptIn, AttemptOut, HintOut
-from app.services.attempts import hint_level_seen, record_attempt, reveal_next_hint
+from app.services.attempts import (
+    answered_correctly,
+    hint_level_seen,
+    record_attempt,
+    reveal_next_hint,
+)
 from app.services.mastery import review_open, review_path_of
 from app.services.modules import activity_locked
 
@@ -15,6 +20,7 @@ router = APIRouter(prefix="/api/activities", tags=["activities"])
 NOT_FOUND = "This activity does not exist."
 BAD_SUBMISSION = "This submission is not in the expected shape."
 NO_MORE_HINTS = "You have seen every hint for this activity."
+SOLVED = "You have already answered this correctly, so no more hints are given."
 REVIEW_CLOSED = "This activity is on a review path, which opens when the mastery check marks its objective 'not yet'."
 MODULE_LOCKED = (
     "This activity is in a module that isn't open yet. Complete the module before it to unlock it."
@@ -42,11 +48,15 @@ def _activity_or_404(session: DbSession, activity_id: int, user: User) -> Activi
     return activity
 
 
-@router.get("/{activity_id}", response_model=ActivityOut)
-def get_activity(activity_id: int, session: DbSession, user: CurrentUser) -> Activity:
+@router.get("/{activity_id}")
+def get_activity(activity_id: int, session: DbSession, user: CurrentUser) -> ActivityOut:
     """The activity to render. `ActivityOut` has no `solution`, so the answer never reaches the
-    browser (FR-5.3, NFR-S2)."""
-    return _activity_or_404(session, activity_id, user)
+    browser (FR-5.3, NFR-S2). `solved` says whether this student has already answered it
+    correctly, so the page stops offering hints after a refresh too (#158)."""
+    activity = _activity_or_404(session, activity_id, user)
+    out = ActivityOut.model_validate(activity)
+    out.solved = answered_correctly(session, user.id, activity.id)
+    return out
 
 
 @router.post("/{activity_id}/attempts", status_code=status.HTTP_201_CREATED)
@@ -109,10 +119,15 @@ def get_revealed_hints(activity_id: int, user: CurrentUser, session: DbSession) 
 def reveal_hint(activity_id: int, user: CurrentUser, session: DbSession) -> HintOut:
     """Reveal this student's next hint level, one at a time, and record it (FR-4.4, FR-4.5).
 
-    No body. Each call returns the next level (1, then 2, …); once every level has been shown it
-    is 409. When `nextCountsAsSupport` is true, warn the student before calling again: a correct
-    answer after hint 3 or 4 counts as "met with support" (ID document §7.4)."""
+    No body. Each call returns the next level (1, then 2, …); once every level has been shown,
+    or once the student has answered correctly, it is 409. When `nextCountsAsSupport` is true,
+    warn the student before calling again: a correct answer after hint 3 or 4 counts as "met
+    with support" (ID document §7.4)."""
     activity = _activity_or_404(session, activity_id, user)
+    # A hint after a right answer helps with nothing, and would count in the pilot's hint use as
+    # help the student needed (#158).
+    if answered_correctly(session, user.id, activity.id):
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=SOLVED)
     revealed = reveal_next_hint(session, user.id, activity)
     if revealed is None:
         raise HTTPException(status.HTTP_409_CONFLICT, detail=NO_MORE_HINTS)

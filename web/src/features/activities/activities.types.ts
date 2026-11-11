@@ -30,6 +30,8 @@ export type ParsonsActivity = {
   kind: 'parsons'
   title: string
   visible: boolean
+  /** This student has already answered it correctly: no more hints are offered (#158). */
+  solved?: boolean
   config: { lines: readonly { id: number; text: string }[] }
 }
 
@@ -38,6 +40,8 @@ export type FillInActivity = {
   kind: 'fill_in'
   title: string
   visible: boolean
+  /** This student has already answered it correctly: no more hints are offered (#158). */
+  solved?: boolean
   config: { code: string; blanks: readonly number[]; options: readonly string[] }
 }
 
@@ -48,6 +52,8 @@ export type MultipleChoiceActivity = {
   kind: 'multiple_choice'
   title: string
   visible: boolean
+  /** This student has already answered it correctly: no more hints are offered (#158). */
+  solved?: boolean
   config: { prompt: string; options: readonly { id: string; label: string }[] }
 }
 
@@ -56,6 +62,8 @@ export type MatchingActivity = {
   kind: 'matching'
   title: string
   visible: boolean
+  /** This student has already answered it correctly: no more hints are offered (#158). */
+  solved?: boolean
   /** `right` may hold more choices than `left`, and one right item may fit several left items. */
   config: {
     prompt: string
@@ -77,6 +85,8 @@ export type FixTheBugActivity = {
   kind: 'fix_the_bug'
   title: string
   visible: boolean
+  /** This student has already answered it correctly: no more hints are offered (#158). */
+  solved?: boolean
   config: { prompt: string; lines: readonly CodeLine[]; corrections: readonly CodeLine[] }
 }
 
@@ -97,6 +107,8 @@ export type ChooseTestsActivity = {
   kind: 'choose_tests'
   title: string
   visible: boolean
+  /** This student has already answered it correctly: no more hints are offered (#158). */
+  solved?: boolean
   config: { prompt: string; code: string; tests: readonly TestCase[] }
 }
 
@@ -107,6 +119,8 @@ export type TraceActivity = {
   kind: 'trace'
   title: string
   visible: boolean
+  /** This student has already answered it correctly: no more hints are offered (#158). */
+  solved?: boolean
   config: {
     directed: boolean
     vertices: readonly string[]

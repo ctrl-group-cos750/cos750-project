@@ -410,7 +410,7 @@
       "title": "Neighbours in a different order",
       "module_id": 4,
       "purpose": "practice",
-      "objective_id": 5,
+      "objective_id": 6,
       "config": {
         "prompt": "An undirected graph has the edges A–B, A–D, B–C, C–E and D–E. A program stores each vertex's neighbours in this order: A: D, B. B: A, C. C: B, E. D: A, E. E: D, C. Its BFS is the module's code without the sorting, so it takes each list in the order stored. Starting at A, in what order does it visit the vertices?",
         "options": [
@@ -466,7 +466,7 @@
       "title": "Predict the queue",
       "module_id": 4,
       "purpose": "practice",
-      "objective_id": 5,
+      "objective_id": 6,
       "config": {
         "prompt": "An undirected graph has the edges K–L, K–M, K–N, L–M and N–P. Each vertex's neighbours are stored in this order: K: L, N, M. L: M, K. M: L, K. N: P, K. P: N. BFS takes each list in the order stored, starting at K. After the second vertex leaves the queue, what is in the queue, front first?",
         "options": [

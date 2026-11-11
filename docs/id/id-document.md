@@ -242,7 +242,7 @@ Merrill's first principles describe when learning is most effective [58, pp. 16â
 |---|---|---|---|
 | 1. Task-centred | Learn in the context of a real-world task. | One task runs through the course: finding the route with the fewest walkways across the campus. The same campus graph returns in modules 1, 3 and 4. | Each module is organised by topic (graphs, then code, then BFS), not as a series of harder whole tasks. |
 | 2. Activation | Recall relevant earlier knowledge. | The module 0 diagnostic and queue refreshers. One or two retrieval questions open each module from module 2. | Module 0 recalls queues but not the Python the code tasks use: dictionaries, sets and classes. |
-| 3. Demonstration | Watch the skill being done. | Worked examples in modules 1 to 4, and the BFS visualiser in watch mode. | The narrated videos are scripted but not yet recorded. Until they are, module 1's definitions and module 3's explanation of BFS are not shown at all, and module 3's worked example comes after the visualiser practice (#37; #149 adds a text fallback). |
+| 3. Demonstration | Watch the skill being done. | Worked examples in modules 1 to 4, and the BFS visualiser in watch mode. | The narrated videos are scripted but not yet recorded (#37). Until they are, their scripts are shown as text (#149), so module 1's definitions and module 3's explanation of BFS are read rather than watched. Module 3's worked trace table still comes after the visualiser practice. |
 | 4. Application | Practise the new skill, with feedback. | Activities with three-part feedback and the hint ladder in modules 1 to 4, and the mastery check. | Module 5 is empty, so objective 7 is practised only on its review path; objective 5 is practised by module 3's trace table. |
 | 5. Integration | Use the skill in one's own work: reflect, discuss, defend. | The per-objective report, and the COS212 lecture that follows. | Nothing in the application asks the student to explain, defend or reuse what they learnt. |
 
@@ -395,7 +395,7 @@ Kolb's experiential learning theory describes a four-stage cycle: concrete exper
 |---|---|---|
 | Concrete experience | The campus puzzle before any terms are taught (module 1). Predicting each BFS step in the visualiser (module 3). | After their retrieval questions, modules 2 and 4 open with a video or a worked example, so they start at abstract conceptualisation. |
 | Reflective observation | Feedback that gives the reason for a result. Stepping back and replaying BFS in the visualiser. A short "why" question after each worked example in modules 1 to 4 asks the student to explain a step [62] (#150). | No "why" question follows a level-4 hint yet. |
-| Abstract conceptualisation | Definitions, the three rules of BFS, and worked examples in modules 1 to 4. | In module 1, the definitions are only in the unrecorded video (#37, #149). |
+| Abstract conceptualisation | Definitions, the three rules of BFS, and worked examples in modules 1 to 4. | In module 1, the definitions are read as the video's script until the video is recorded (#37). |
 | Active experimentation | Practice on new graphs, ordering and completing BFS in module 4, and the closing task on a new directed graph. | Testing and debugging, the clearest experiment, is module 5, which is empty (#136). |
 
 Table: Kolb's learning cycle in the application's modules [50].

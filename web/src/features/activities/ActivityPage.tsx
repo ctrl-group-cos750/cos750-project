@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useParams } from 'react-router'
+import { retryUnlessRefused } from '../../api/retry.ts'
 import { Alert, Spinner } from '../../components'
 import { useRefreshRewards } from '../rewards/hooks.ts'
 import {
@@ -35,6 +36,7 @@ export function ActivityView({ activityId, heading, showTitle, onResult }: Activ
   const query = useQuery({
     queryKey: ['activities', activityId],
     queryFn: () => fetchActivity(activityId),
+    retry: retryUnlessRefused, // a locked or missing activity says so at once
   })
 
   if (query.isPending) return <Spinner label="Loading activity" />

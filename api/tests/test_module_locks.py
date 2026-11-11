@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Checkpoint, Module, ModuleProgress, Video
+from app.models import Activity, Checkpoint, Module, ModuleProgress, User, Video
 from app.seed import load
 
 STUDENT = {"email": "ada@example.com", "password": "Correct horse 1", "displayName": "Ada"}
@@ -124,3 +124,25 @@ def test_a_video_in_no_module_is_never_locked(client: TestClient, db: Session) -
     log_in(client)
     assert client.get(f"/api/videos/{video.id}").status_code == 200
     assert client.get(f"/api/activities/{question.id}").status_code == 200
+
+
+def test_staff_can_open_any_activity_or_video_as_a_student(client: TestClient, db: Session) -> None:
+    """The content editor's and the video editor's "Open as a student" must work on any item, so
+    the team can check content: staff go past module locks and closed review paths."""
+    load(db)
+    video, question = _video_with_checkpoint(db, segment_id=103)  # module 1's first video
+    user_id = log_in(client)
+    db.get_one(User, user_id).is_staff = True
+    db.commit()
+    review_item = db.scalars(
+        select(Activity).where(Activity.purpose == "review").order_by(Activity.id)
+    ).first()
+    assert review_item is not None
+
+    for url in (
+        f"/api/activities/{mastery_item(db).id}",
+        f"/api/activities/{review_item.id}",
+        f"/api/activities/{question.id}",
+        f"/api/videos/{video.id}",
+    ):
+        assert client.get(url).status_code == 200, url

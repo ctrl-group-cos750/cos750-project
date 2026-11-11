@@ -305,6 +305,44 @@ def test_an_answer_to_an_activity_the_seed_is_deleting_does_not_deadlock(
     assert db.scalar(select(func.count()).where(Attempt.user_id == user_id)) == 0
 
 
+def test_the_seed_waits_for_an_answer_already_being_recorded(committed: Session) -> None:
+    """The other order: the answer takes its locks and inserts its attempt first, then the seed's
+    retire_dropped_activities reaches that activity. The seed used to see no committed use,
+    delete it, wait, and then fail on the foreign key. Now it locks the activity first, waits
+    for the answer, sees the attempt and only hides the activity (#138)."""
+    from app.seed import read_fixtures, retire_dropped_activities
+
+    db = committed
+    user_id = student(db)
+    engine = db.get_bind()
+    assert isinstance(engine, Engine)
+    dropped = Activity(
+        id=9003,
+        kind="multiple_choice",
+        title="Dropped from the fixtures",
+        module_id=0,
+        visible=True,
+        config={"prompt": "Q", "options": [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}]},
+        solution={"correct": "a"},
+    )
+    db.add(dropped)
+    db.commit()
+    listed = {a.id for a in read_fixtures().activities}
+    with Session(engine) as answering:
+        record_attempt(answering, user_id, answering.get_one(Activity, 9003), {"selected": "a"})
+        answering.flush()
+        racer = Racer(engine, lambda s: retire_dropped_activities(s, listed))
+        racer.thread.join(timeout=WAIT)
+        assert racer.thread.is_alive(), "the seed should wait for the answer"
+        answering.commit()
+        racer.join()  # staging and 7da26f6: ForeignKeyViolation
+    assert 9003 in racer.result
+    db.expire_all()
+    kept = db.get_one(Activity, 9003)
+    assert (kept.visible, kept.module_id) == (False, None)
+    assert db.scalar(select(func.count()).where(Attempt.activity_id == 9003)) == 1
+
+
 def test_one_students_lock_never_holds_up_another(committed: Session) -> None:
     db = committed
     ada = student(db)

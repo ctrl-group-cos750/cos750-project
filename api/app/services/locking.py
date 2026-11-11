@@ -21,18 +21,19 @@ would for any request after the deletion, instead of failing later on a foreign 
 Lock order against the seed. An answer or hint first takes `FOR KEY SHARE` on its activity
 (`hold_activity`), then the student. On a deploy the seed's `retire_dropped_activities` deletes
 each dropped activity nobody has used (taking its row), and later `recompute_all` takes students.
-There are two orders in which they can meet, and only one is fixed here:
+There are two orders in which they can meet:
 
 - The seed deletes first. An answer to that activity used to hold the student while waiting for
   the activity, while the seed, holding the activity, waited for the student: a deadlock, and
   Postgres killed one. Now the answer waits holding nothing, and once the seed commits it finds
-  the activity gone (`ActivityGone`, 404). Tested in tests/test_concurrency.py.
-- The answer comes first. It holds the activity and inserts its attempt, not yet committed; the
-  seed's "used?" check can't see that attempt, so it deletes the activity, waits for the answer,
-  and then fails on the foreign key (ForeignKeyViolation), which fails that seed run. The deploy
-  runs it again on the next start; nothing a student did is lost. Closing this needs the seed to
-  lock each activity `FOR UPDATE` before its "used?" check, in app/seed/__init__.py, which #128
-  rewrites: a follow-up once #128 has merged.
+  the activity gone (`ActivityGone`, 404).
+- The answer comes first. It holds the activity and inserts its attempt, not yet committed. The
+  seed's "used?" check couldn't see that attempt, so it deleted the activity, waited for the
+  answer and then failed on the foreign key, failing that seed run. The seed now locks each
+  dropped activity `FOR UPDATE` before the check (`retire_dropped_activities`), so it waits for
+  the answer, sees its attempt, and only hides the activity.
+
+Both are tested deterministically in tests/test_concurrency.py.
 
 The seed's other writes to activities are plain updates, which `FOR KEY SHARE` doesn't wait for,
 so an ordinary deploy holds up no answers.

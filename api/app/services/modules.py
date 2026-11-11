@@ -22,7 +22,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.models import Activity, Attempt, Checkpoint, Module, ModuleProgress, Segment, Video
@@ -117,6 +117,59 @@ def _status(session: Session, user_id: int, module_id: int) -> ModuleStatus:
     if not any(module.id == module_id for module in modules):
         raise ModuleNotFound(module_id)
     return _statuses(modules, _progress(session, user_id), _segment_counts(session))[module_id]
+
+
+def _locked(session: Session, user_id: int, module_ids: set[int]) -> bool:
+    """True if there are modules here and every one is still locked for this student."""
+    if not module_ids:
+        return False
+    statuses = _statuses(_modules(session), _progress(session, user_id), _segment_counts(session))
+    return all(statuses.get(module_id, "locked") == "locked" for module_id in module_ids)
+
+
+def activity_locked(session: Session, user_id: int, activity: Activity) -> bool:
+    """Whether this student may not open the activity yet, because every module it belongs to
+    is still locked (FR-2.1). It belongs to its own module, to every module whose segment shows it
+    (or uses it as a skip check), and, for a video's checkpoint question, to the module whose
+    segment plays that video. So module 6's mastery items stay unseen until module 6 opens
+    (FR-7.1). An activity that belongs to no module (a review path's, which has its own rule, or a
+    checkpoint of a video that isn't in a module yet) is never locked here."""
+    homes: set[int] = set()
+    if activity.module_id is not None:
+        homes.add(activity.module_id)
+    homes.update(
+        m
+        for m in session.scalars(
+            select(Segment.module_id).where(
+                or_(
+                    Segment.activity_id == activity.id,
+                    Segment.skip_check_activity_id == activity.id,
+                ),
+                Segment.module_id.is_not(None),
+            )
+        )
+        if m is not None
+    )
+    homes.update(
+        m
+        for m in session.scalars(
+            select(Segment.module_id)
+            .join(Video, Video.segment_id == Segment.id)
+            .join(Checkpoint, Checkpoint.video_id == Video.id)
+            .where(Checkpoint.activity_id == activity.id, Segment.module_id.is_not(None))
+        )
+        if m is not None
+    )
+    return _locked(session, user_id, homes)
+
+
+def video_locked(session: Session, user_id: int, video: Video) -> bool:
+    """Whether the module whose segment plays this video is still locked for this student. A
+    video in no module yet (staff have just made it) is never locked."""
+    if video.segment_id is None:
+        return False
+    module_id = session.scalar(select(Segment.module_id).where(Segment.id == video.segment_id))
+    return module_id is not None and _locked(session, user_id, {module_id})
 
 
 def _summary(

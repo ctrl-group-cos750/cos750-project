@@ -625,11 +625,63 @@ def test_reaching_the_last_segment_completes_the_module_only_once_it_is_done(
         assert _move(client, position) == 200
     assert client.get("/api/modules/0").json()["status"] == "in_progress"
 
-    assert _move(client, 3) == 409  # "Finish module" before answering the last activity
-    _answer(client, 3, "b")
+    # "Finish module" before answering the last activity moves past nothing, so it isn't
+    # refused, but the module isn't complete either.
     assert _move(client, 3) == 200
+    assert client.get("/api/modules/0").json()["status"] == "in_progress"
+    _answer(client, 3, "b")
+    assert _move(client, 3) == 200  # "Finish module" once it is done completes the module
     statuses = {m["id"]: m["status"] for m in client.get("/api/modules").json()}
     assert statuses == {0: "complete", 1: "open"}
+
+
+def test_back_then_forward_again_onto_an_unanswered_last_segment_is_not_refused(
+    client: TestClient, db: Session
+) -> None:
+    """Reach the last segment, step back, then Next onto it again: saving a position already
+    reached moves past nothing, so the student isn't stuck (the bug in review of #130)."""
+    _make_gated_module(db)
+    _register_and_login(client, ALICE)
+    _answer(client, 1, "a")
+    _answer(client, 2, "a")
+    for position in (1, 2, 3):
+        assert _move(client, position) == 200
+
+    assert _move(client, 2) == 200  # Previous (the page doesn't save this, but it's harmless)
+    assert _move(client, 3) == 200  # Next, back onto the last segment
+    detail = client.get("/api/modules/0").json()
+    assert (detail["currentSegmentPosition"], detail["status"]) == (3, "in_progress")
+
+
+def test_an_activity_kind_with_no_student_ui_yet_does_not_block(
+    client: TestClient, db: Session
+) -> None:
+    """A trace activity can't be answered in the web yet, so it counts as done: a module that
+    ends on one can be finished without an attempt (KINDS_WITHOUT_STUDENT_UI)."""
+    _make_gated_module(db)
+    db.get_one(Activity, 3).kind = "trace"
+    db.commit()
+    _register_and_login(client, ALICE)
+    _answer(client, 1, "a")
+    _answer(client, 2, "a")
+
+    done = [s["done"] for s in client.get("/api/modules/0").json()["segments"]]
+    assert done == [True, True, True, True]
+    for position in (1, 2, 3, 3):
+        assert _move(client, position) == 200
+    assert client.get("/api/modules/0").json()["status"] == "complete"
+
+
+def test_a_supported_activity_kind_still_has_to_be_answered(
+    client: TestClient, db: Session
+) -> None:
+    """Only the kinds without a UI are let through: a multiple-choice activity still blocks."""
+    _make_gated_module(db)
+    db.get_one(Activity, 3).kind = "trace"  # the last one; the first stays multiple choice
+    db.commit()
+    _register_and_login(client, ALICE)
+    assert _move(client, 1) == 200
+    assert _move(client, 2) == 409
 
 
 def test_a_complete_module_can_be_stepped_through_freely(client: TestClient, db: Session) -> None:

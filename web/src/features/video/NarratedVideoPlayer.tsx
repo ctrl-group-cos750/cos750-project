@@ -20,12 +20,16 @@ type NarratedVideoPlayerProps = {
   /** Checkpoints this student passed before (from the API), so a returning student isn't stopped
    * at them again and can seek past them (FR-3.5). */
   initialPassedIds?: readonly number[]
+  /** The level of the "Checkpoint" and "Transcript" headings: h3 inside a module segment, whose
+   * own title is the h2. */
+  heading?: 'h2' | 'h3'
 }
 
 /** Plays a narrated video and stops at each unanswered checkpoint until it is answered correctly
  * (FR-3.3 to FR-3.5). Captions are on by default and the transcript is shown below (FR-3.2). */
 export function NarratedVideoPlayer(props: NarratedVideoPlayerProps) {
   const playerRef = useRef<HTMLVideoElement>(null)
+  const Heading = props.heading ?? 'h2'
   const [passedIds, setPassedIds] = useState<ReadonlySet<number>>(
     () => new Set(props.initialPassedIds),
   )
@@ -121,9 +125,9 @@ export function NarratedVideoPlayer(props: NarratedVideoPlayerProps) {
       )}
       {activeCheckpoint && activity && (
         <section className="grid gap-3" aria-labelledby="checkpoint-heading">
-          <h2 id="checkpoint-heading" className="text-xl font-semibold">
+          <Heading id="checkpoint-heading" className="text-xl font-semibold">
             Checkpoint
-          </h2>
+          </Heading>
           <CheckpointQuestion
             activity={activity}
             onAttempt={props.onAttempt}
@@ -136,9 +140,9 @@ export function NarratedVideoPlayer(props: NarratedVideoPlayerProps) {
         className="max-w-3xl rounded-lg border border-border bg-card p-6"
         aria-labelledby="transcript-heading"
       >
-        <h2 id="transcript-heading" className="mb-3 text-xl font-semibold">
+        <Heading id="transcript-heading" className="mb-3 text-xl font-semibold">
           Transcript
-        </h2>
+        </Heading>
         <p className="whitespace-pre-line text-muted-foreground">{props.video.transcript}</p>
       </section>
     </section>

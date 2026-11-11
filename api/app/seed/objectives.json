@@ -17,7 +17,7 @@
     {
       "id": 3,
       "bloom_level": "Apply",
-      "text": "Explain why graphs are useful by matching a real-world problem, such as a network of connected locations, to an appropriate graph representation.",
+      "text": "Map a real-world problem, such as a network of connected locations, to an appropriate graph representation, naming its vertices, edges and direction.",
       "criterion": "At least 3 of 4 situations modelled correctly.",
       "pass_fraction": 0.75
     },

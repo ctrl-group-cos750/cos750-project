@@ -13,7 +13,17 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, HintView, ObjectiveResult, Segment, User
+from app.models import (
+    Activity,
+    Attempt,
+    HintView,
+    Module,
+    ModuleProgress,
+    ObjectiveResult,
+    Segment,
+    User,
+)
+from app.schemas.activities import FixTheBugSolution, ParsonsSolution
 from app.schemas.graphs import GraphScenarioOut
 from app.seed import FixtureFile, ObjectiveFixture, check_references, load, read_fixtures
 from app.services import mastery, rewards
@@ -202,6 +212,13 @@ def log_in(client: TestClient) -> int:
     return int(client.get("/api/auth/me").json()["id"])
 
 
+def open_module_6(db: Session, user_id: int) -> None:
+    """Mark every module before module 6 complete, so its mastery items open (FR-2.1, #137)."""
+    for module in db.scalars(select(Module).where(Module.position < 6)):
+        db.add(ModuleProgress(user_id=user_id, module_id=module.id, status="complete"))
+    db.commit()
+
+
 def answer(client: TestClient, activity: int, body: dict[str, Any] = RIGHT) -> None:
     assert client.post(f"/api/activities/{activity}/attempts", json=body).status_code == 201
 
@@ -380,8 +397,10 @@ def correct_submission(activity: Activity) -> dict[str, Any]:
             return {"selected": solution["correct"]}
         case "matching":
             return {"pairs": solution["pairs"]}
-        case "parsons" | "fix_the_bug":
-            return {"order": solution["order"]}
+        case "parsons":
+            return {"order": ParsonsSolution.model_validate(solution).first_order()}
+        case "fix_the_bug":
+            return {"order": FixTheBugSolution.model_validate(solution).first_order()}
         case "fill_in":
             return {"answers": solution["answers"]}
         case "choose_tests":
@@ -404,15 +423,19 @@ def correct_submission(activity: Activity) -> dict[str, Any]:
 
 def test_module_6_has_mastery_items_for_every_objective() -> None:
     content = read_fixtures()
-    covered = {a.objective_id for a in content.activities if a.module_id == 6}
+    covered = {
+        a.objective_id for a in content.activities if a.module_id == 6 and a.purpose == "mastery"
+    }
     assert covered == {o.id for o in content.objectives}
     shown = {s.activity_id for m in content.modules if m.id == 6 for s in m.segments}
-    assert {a.id for a in content.activities if a.module_id == 6} <= shown
+    assert {
+        a.id for a in content.activities if a.module_id == 6 and a.purpose == "mastery"
+    } <= shown
 
 
 def test_the_committed_mastery_check_can_be_passed(client: TestClient, db: Session) -> None:
     load(db)
-    log_in(client)
+    open_module_6(db, log_in(client))
     items = db.scalars(
         select(Activity).where(Activity.module_id == 6, Activity.purpose == "mastery")
     ).all()
@@ -422,6 +445,55 @@ def test_the_committed_mastery_check_can_be_passed(client: TestClient, db: Sessi
     assert {o["state"] for o in report["objectives"]} == {"met_independently"}
     assert report["ready"] is True
     assert len(report["objectives"]) == 7
+
+
+# One accepted order of module 6's Parsons item that is not the worked example's: the starting
+# values reversed, and queue.append before visited.add.
+EQUIVALENT_BFS = [1, 2, 5, 4, 3, 6, 7, 8, 9, 10, 12, 11, 13]
+
+
+def answer_module_6(client: TestClient, db: Session, parsons_order: list[int]) -> Activity:
+    """Answer every module 6 mastery item right, except that the Parsons item gets
+    `parsons_order`. Returns the Parsons item."""
+    items = db.scalars(
+        select(Activity).where(Activity.module_id == 6, Activity.purpose == "mastery")
+    ).all()
+    parsons = next(i for i in items if i.kind == "parsons")
+    for item in items:
+        body = {"order": parsons_order} if item is parsons else correct_submission(item)
+        answer(client, item.id, {"submitted": body})
+    return parsons
+
+
+def test_objective_6_is_met_by_any_accepted_bfs_order(client: TestClient, db: Session) -> None:
+    """Objective 6 needs every part right (pass_fraction 1.0): an order that is correct but not
+    the worked example's must not decide it (FR-5.4, #145)."""
+    load(db)
+    open_module_6(db, log_in(client))
+    parsons = answer_module_6(client, db, EQUIVALENT_BFS)
+    assert parsons.objective_id == 6
+    stored = db.scalars(select(Attempt).where(Attempt.activity_id == parsons.id)).one()
+    assert stored.correct
+    assert stored.score == 1.0
+    assert len(stored.detail["parts"]) == 13  # one per line, as for the worked example's order
+    report = client.get("/api/me/report").json()
+    assert {o["state"] for o in report["objectives"]} == {"met_independently"}
+    assert report["ready"] is True
+
+
+def test_one_misplaced_line_in_objective_6_is_not_yet(client: TestClient, db: Session) -> None:
+    """One line out of place is one wrong part of 13, not every line after it: still "not yet"
+    on objective 6, which needs all of them, and nothing else changes."""
+    load(db)
+    open_module_6(db, log_in(client))
+    misplaced = [1, 2, 3, 4, 5, 6, 7, 8, 13, 9, 10, 11, 12]  # return order inside the loop's place
+    parsons = answer_module_6(client, db, misplaced)
+    stored = db.scalars(select(Attempt).where(Attempt.activity_id == parsons.id)).one()
+    assert [p["correct"] for p in stored.detail["parts"]].count(False) == 1
+    assert stored.score == pytest.approx(12 / 13)
+    got = states(client)
+    assert got[6] == "not_yet"
+    assert {s for o, s in got.items() if o != 6} == {"met_independently"}
 
 
 @pytest.mark.skipif(not os.environ.get("TEST_DATABASE_URL"), reason="needs Postgres row locks")
@@ -703,15 +775,16 @@ def test_hint_3_on_a_fresh_item_makes_it_met_with_support(
 
 
 def wrong_submission(activity: Activity) -> dict[str, Any]:
-    """An answer to any committed item that gets every part wrong."""
+    """An answer to any committed item that gets every part wrong. Never blank: the server
+    refuses a blank answer without recording it (#143)."""
     wrong: dict[str, dict[str, Any]] = {
         "multiple_choice": {"selected": "not-an-option"},
-        "matching": {"pairs": {}},
-        "parsons": {"order": []},
-        "fix_the_bug": {"order": []},
-        "fill_in": {"answers": {}},
-        "choose_tests": {"selected": []},
-        "trace": {"rows": []},
+        "matching": {"pairs": {"no-such-item": "no-such-match"}},
+        "parsons": {"order": [-1]},
+        "fix_the_bug": {"order": [-1]},
+        "fill_in": {"answers": {-1: "no-such-token"}},
+        "choose_tests": {"selected": ["no-such-test"]},
+        "trace": {"rows": [{"visitedVertex": "Z", "queue": [], "visited": [], "order": []}]},
     }
     return wrong[activity.kind]
 
@@ -734,7 +807,7 @@ def test_the_committed_review_paths_can_take_a_student_to_ready(
     client: TestClient, db: Session
 ) -> None:
     load(db)
-    log_in(client)
+    open_module_6(db, log_in(client))
     check = db.scalars(
         select(Activity).where(Activity.module_id == 6, Activity.purpose == "mastery")
     ).all()

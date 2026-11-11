@@ -89,7 +89,8 @@ export interface paths {
     /**
      * Get Activity
      * @description The activity to render. `ActivityOut` has no `solution`, so the answer never reaches the
-     *     browser (FR-5.3, NFR-S2).
+     *     browser (FR-5.3, NFR-S2). `solved` says whether this student has already answered it
+     *     correctly, so the page stops offering hints after a refresh too (#158).
      */
     get: operations['get_activity_api_activities__activity_id__get']
     put?: never
@@ -118,7 +119,8 @@ export interface paths {
      *     choice, `{"order": [...]}` for Parsons, `{"answers": {...}}` for fill-in, and
      *     `{"rows": [{"visitedVertex", "queue", "visited", "order"}, ...]}` for a trace table, one row
      *     per BFS step (graded against the engine, so a trace has no stored solution). A submission in the
-     *     wrong shape is 422. No student code is executed: `check_activity` compares the submission with
+     *     wrong shape, or one that answers nothing (no option, line, token, pair, test or row), is 422
+     *     and isn't recorded. No student code is executed: `check_activity` compares the submission with
      *     the solution, which stays in this process (NFR-S7).
      */
     post: operations['submit_attempt_api_activities__activity_id__attempts_post']
@@ -147,9 +149,10 @@ export interface paths {
      * Reveal Hint
      * @description Reveal this student's next hint level, one at a time, and record it (FR-4.4, FR-4.5).
      *
-     *     No body. Each call returns the next level (1, then 2, …); once every level has been shown it
-     *     is 409. When `nextCountsAsSupport` is true, warn the student before calling again: a correct
-     *     answer after hint 3 or 4 counts as "met with support" (ID document §7.4).
+     *     No body. Each call returns the next level (1, then 2, …); once every level has been shown,
+     *     or once the student has answered correctly, it is 409. When `nextCountsAsSupport` is true,
+     *     warn the student before calling again: a correct answer after hint 3 or 4 counts as "met
+     *     with support" (ID document §7.4).
      */
     post: operations['reveal_hint_api_activities__activity_id__hints_post']
     delete?: never
@@ -170,7 +173,8 @@ export interface paths {
     /**
      * Report Event
      * @description Log something only the browser sees, for the pilot's evaluation (FR-10.1). The server adds
-     *     who and when. 404 if the video, checkpoint or segment doesn't exist; 429 past 120 a minute.
+     *     who and when. 404 if the video, checkpoint or segment doesn't exist; 429 past 120 a minute. A
+     *     segment viewed in a module still locked for the student is accepted but not logged.
      */
     post: operations['report_event_api_events_post']
     delete?: never
@@ -438,15 +442,18 @@ export interface paths {
      * @description Record the student's current segment position and return the updated module.
      *
      *     The client calls this whenever the student advances to a new segment.
-     *     The furthest segment reached is kept, so stepping back changes nothing. Reaching the last
-     *     segment marks the module ``complete`` for good.
+     *     The furthest segment reached is kept, so stepping back changes nothing. A segment must be
+     *     done (its activity answered, or its video's checkpoints passed) before moving past it, and
+     *     saving the last segment again once it is done marks the module ``complete`` for good (saving
+     *     it while it isn't done changes nothing).
      *
      *     Returns the updated ``ModuleDetailOut`` so the frontend can re-render the
      *     module detail page with the new status in one round-trip (consistent with
      *     ``submit_attempt`` returning ``AttemptOut``).
      *
      *     Returns 404 if the module does not exist; 403 if it is locked; 409 if the position is more
-     *     than one segment past the furthest the student has reached.
+     *     than one segment past the furthest the student has reached, or past a segment they haven't
+     *     done yet.
      */
     post: operations['save_module_position_api_modules__module_id__position_post']
     delete?: never
@@ -661,7 +668,8 @@ export interface paths {
      *       result, as JSON.
      *     - `hints`: each hint shown.
      *     - `events`: the timeline (app/services/events.py): videos started and finished, checkpoints
-     *       reached, segments viewed, hints shown, results changing; `payload` as JSON.
+     *       reached, segments viewed, hints shown, results changing, modules completed; `payload` as JSON.
+     *       Segment views and module completions give time per segment and per module.
      *     - `objective_results`: each student's current result per objective, with the attempts it was
      *       decided from (`evidence`).
      */
@@ -691,6 +699,261 @@ export interface paths {
     get: operations['insights_api_staff_insights_get']
     put?: never
     post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/staff/content': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Content Overview
+     * @description Everything the editor lists: objectives, modules, review paths, activities (not the video
+     *     checkpoints' questions), graphs, and the videos a video segment can play.
+     */
+    get: operations['content_overview_api_staff_content_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/staff/content/export': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Export Content
+     * @description The content as fixture files (a zip laid out like api/app/seed), to commit to the
+     *     repository so a fresh database is seeded with what the portal holds now.
+     */
+    get: operations['export_content_api_staff_content_export_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/staff/content/objectives': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Create Objective
+     * @description Add the next objective (up to 8: each has a badge).
+     */
+    post: operations['create_objective_api_staff_content_objectives_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/staff/content/objectives/{objective_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    /**
+     * Update Objective
+     * @description Change an objective's wording or its mastery rule. Every student's result is worked out
+     *     again with the new rule.
+     */
+    put: operations['update_objective_api_staff_content_objectives__objective_id__put']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/staff/content/modules/{module_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Get Module */
+    get: operations['get_module_api_staff_content_modules__module_id__get']
+    /**
+     * Update Module
+     * @description Replace a module's details and its segments, in order. Keep each existing segment's `id`;
+     *     leave it out for a new one. A segment left out is removed.
+     */
+    put: operations['update_module_api_staff_content_modules__module_id__put']
+    post?: never
+    /**
+     * Delete Module
+     * @description Delete an empty module made in the portal that no student has started.
+     */
+    delete: operations['delete_module_api_staff_content_modules__module_id__delete']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/staff/content/modules': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Create Module
+     * @description Add a module after the last one.
+     */
+    post: operations['create_module_api_staff_content_modules_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/staff/content/review-paths/{objective_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Get Review Path */
+    get: operations['get_review_path_api_staff_content_review_paths__objective_id__get']
+    /**
+     * Update Review Path
+     * @description Replace the objective's review path: its segments, in order.
+     */
+    put: operations['update_review_path_api_staff_content_review_paths__objective_id__put']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/staff/content/activities/{activity_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Get Activity */
+    get: operations['get_activity_api_staff_content_activities__activity_id__get']
+    /**
+     * Update Activity
+     * @description Replace an activity and its hints. Earlier attempts keep the result they were given.
+     */
+    put: operations['update_activity_api_staff_content_activities__activity_id__put']
+    post?: never
+    /**
+     * Delete Activity
+     * @description Delete an activity no segment shows. One students have used, or one from the repository,
+     *     is taken out of use instead (`deleted: false`).
+     */
+    delete: operations['delete_activity_api_staff_content_activities__activity_id__delete']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/staff/content/activities': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Create Activity
+     * @description Add an activity. A segment shows it once a module or review path lists it.
+     */
+    post: operations['create_activity_api_staff_content_activities_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/staff/content/graphs/{graph_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Get Graph */
+    get: operations['get_graph_api_staff_content_graphs__graph_id__get']
+    /** Update Graph */
+    put: operations['update_graph_api_staff_content_graphs__graph_id__put']
+    post?: never
+    /**
+     * Delete Graph
+     * @description Delete a graph made in the portal.
+     */
+    delete: operations['delete_graph_api_staff_content_graphs__graph_id__delete']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/staff/content/graphs': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Create Graph */
+    post: operations['create_graph_api_staff_content_graphs_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/staff/content/{kind}/{item_id}/use-repository': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Use Repository Version
+     * @description Drop the portal's edit of this item and load the repository's version of it now.
+     */
+    post: operations['use_repository_version_api_staff_content__kind___item_id__use_repository_post']
     delete?: never
     options?: never
     head?: never
@@ -850,6 +1113,11 @@ export interface components {
       config: {
         [key: string]: unknown
       }
+      /**
+       * Solved
+       * @default false
+       */
+      solved: boolean
     }
     /**
      * AttemptIn
@@ -977,6 +1245,385 @@ export interface components {
       upgradedAt: string | null
       /** Seen */
       seen: boolean
+    }
+    /**
+     * EditorActivityIn
+     * @description `config` and `solution` have the kind's shape (app/schemas/activities.py), exactly as in a
+     *     fixture.
+     */
+    EditorActivityIn: {
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind:
+        | 'multiple_choice'
+        | 'matching'
+        | 'parsons'
+        | 'fill_in'
+        | 'trace'
+        | 'fix_the_bug'
+        | 'choose_tests'
+      /** Title */
+      title: string
+      /**
+       * Visible
+       * @default true
+       */
+      visible: boolean
+      /** Moduleid */
+      moduleId?: number | null
+      /** Objectiveid */
+      objectiveId?: number | null
+      /**
+       * Purpose
+       * @default practice
+       * @enum {string}
+       */
+      purpose: 'practice' | 'diagnostic' | 'retrieval' | 'mastery' | 'review' | 'bonus'
+      /** Config */
+      config: {
+        [key: string]: unknown
+      }
+      /** Solution */
+      solution: {
+        [key: string]: unknown
+      }
+      /** Hints */
+      hints?: components['schemas']['StaffHint'][]
+    }
+    /** EditorActivityOut */
+    EditorActivityOut: {
+      /** Edited */
+      edited: boolean
+      /** Inrepository */
+      inRepository: boolean
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind:
+        | 'multiple_choice'
+        | 'matching'
+        | 'parsons'
+        | 'fill_in'
+        | 'trace'
+        | 'fix_the_bug'
+        | 'choose_tests'
+      /** Title */
+      title: string
+      /**
+       * Visible
+       * @default true
+       */
+      visible: boolean
+      /** Moduleid */
+      moduleId?: number | null
+      /** Objectiveid */
+      objectiveId?: number | null
+      /**
+       * Purpose
+       * @default practice
+       * @enum {string}
+       */
+      purpose: 'practice' | 'diagnostic' | 'retrieval' | 'mastery' | 'review' | 'bonus'
+      /** Config */
+      config: {
+        [key: string]: unknown
+      }
+      /** Solution */
+      solution: {
+        [key: string]: unknown
+      }
+      /** Hints */
+      hints?: components['schemas']['StaffHint'][]
+      /** Id */
+      id: number
+      /** Inuse */
+      inUse: boolean
+      /** Shownin */
+      shownIn: string[]
+    }
+    /** EditorActivitySummary */
+    EditorActivitySummary: {
+      /** Edited */
+      edited: boolean
+      /** Inrepository */
+      inRepository: boolean
+      /** Id */
+      id: number
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind:
+        | 'multiple_choice'
+        | 'matching'
+        | 'parsons'
+        | 'fill_in'
+        | 'trace'
+        | 'fix_the_bug'
+        | 'choose_tests'
+      /** Title */
+      title: string
+      /** Moduleid */
+      moduleId: number | null
+      /** Objectiveid */
+      objectiveId: number | null
+      /**
+       * Purpose
+       * @enum {string}
+       */
+      purpose: 'practice' | 'diagnostic' | 'retrieval' | 'mastery' | 'review' | 'bonus'
+    }
+    /** EditorContentOverview */
+    EditorContentOverview: {
+      /** Objectives */
+      objectives: components['schemas']['EditorObjectiveOut'][]
+      /** Modules */
+      modules: components['schemas']['EditorModuleSummary'][]
+      /** Reviewpaths */
+      reviewPaths: components['schemas']['EditorReviewPathSummary'][]
+      /** Activities */
+      activities: components['schemas']['EditorActivitySummary'][]
+      /** Graphs */
+      graphs: components['schemas']['EditorGraphSummary'][]
+      /** Videos */
+      videos: components['schemas']['EditorVideoChoice'][]
+    }
+    /**
+     * EditorDeleteResult
+     * @description `deleted`: the row is gone. Otherwise it was only taken out of use (students' answers to
+     *     it are kept for the evaluation, FR-10).
+     */
+    EditorDeleteResult: {
+      /** Deleted */
+      deleted: boolean
+    }
+    /** EditorGraphIn */
+    EditorGraphIn: {
+      /** Name */
+      name: string
+      /**
+       * Directed
+       * @default false
+       */
+      directed: boolean
+      /** Vertices */
+      vertices: string[]
+      /** Edges */
+      edges?: components['schemas']['GraphEdge'][]
+      /** Startvertex */
+      startVertex: string
+    }
+    /** EditorGraphOut */
+    EditorGraphOut: {
+      /** Edited */
+      edited: boolean
+      /** Inrepository */
+      inRepository: boolean
+      /** Name */
+      name: string
+      /**
+       * Directed
+       * @default false
+       */
+      directed: boolean
+      /** Vertices */
+      vertices: string[]
+      /** Edges */
+      edges?: components['schemas']['GraphEdge'][]
+      /** Startvertex */
+      startVertex: string
+      /** Id */
+      id: number
+    }
+    /** EditorGraphSummary */
+    EditorGraphSummary: {
+      /** Edited */
+      edited: boolean
+      /** Inrepository */
+      inRepository: boolean
+      /** Id */
+      id: number
+      /** Name */
+      name: string
+    }
+    /** EditorModuleIn */
+    EditorModuleIn: {
+      /** Slug */
+      slug: string
+      /** Title */
+      title: string
+      /** Goals */
+      goals: string[]
+      /** Estimatedminutes */
+      estimatedMinutes: number
+      /** Segments */
+      segments?: components['schemas']['EditorSegmentIn'][]
+    }
+    /** EditorModuleOut */
+    EditorModuleOut: {
+      /** Edited */
+      edited: boolean
+      /** Inrepository */
+      inRepository: boolean
+      /** Id */
+      id: number
+      /** Slug */
+      slug: string
+      /** Title */
+      title: string
+      /** Goals */
+      goals: string[]
+      /** Estimatedminutes */
+      estimatedMinutes: number
+      /** Segments */
+      segments: components['schemas']['EditorSegmentOut'][]
+      /** Segmentsedited */
+      segmentsEdited: boolean
+    }
+    /** EditorModuleSummary */
+    EditorModuleSummary: {
+      /** Edited */
+      edited: boolean
+      /** Inrepository */
+      inRepository: boolean
+      /** Id */
+      id: number
+      /** Slug */
+      slug: string
+      /** Title */
+      title: string
+      /** Segmentcount */
+      segmentCount: number
+      /** Segmentsedited */
+      segmentsEdited: boolean
+    }
+    /** EditorObjectiveIn */
+    EditorObjectiveIn: {
+      /** Text */
+      text: string
+      /** Bloomlevel */
+      bloomLevel: string
+      /** Criterion */
+      criterion: string
+      /** Passfraction */
+      passFraction?: number | null
+      /** Maxwrong */
+      maxWrong?: number | null
+    }
+    /** EditorObjectiveOut */
+    EditorObjectiveOut: {
+      /** Edited */
+      edited: boolean
+      /** Inrepository */
+      inRepository: boolean
+      /** Text */
+      text: string
+      /** Bloomlevel */
+      bloomLevel: string
+      /** Criterion */
+      criterion: string
+      /** Passfraction */
+      passFraction?: number | null
+      /** Maxwrong */
+      maxWrong?: number | null
+      /** Id */
+      id: number
+    }
+    /** EditorReviewPathIn */
+    EditorReviewPathIn: {
+      /** Segments */
+      segments: components['schemas']['EditorSegmentIn'][]
+    }
+    /** EditorReviewPathOut */
+    EditorReviewPathOut: {
+      /** Objectiveid */
+      objectiveId: number
+      /** Segments */
+      segments: components['schemas']['EditorSegmentOut'][]
+      /** Edited */
+      edited: boolean
+      /** Inrepository */
+      inRepository: boolean
+    }
+    /** EditorReviewPathSummary */
+    EditorReviewPathSummary: {
+      /** Objectiveid */
+      objectiveId: number
+      /** Segmentcount */
+      segmentCount: number
+      /** Edited */
+      edited: boolean
+      /** Inrepository */
+      inRepository: boolean
+    }
+    /**
+     * EditorSegmentIn
+     * @description One step of a module or review path. Leave `id` out for a new one. A `video` segment may
+     *     name the video that plays it (`videoId`); the video is made on the Videos page.
+     */
+    EditorSegmentIn: {
+      /** Id */
+      id?: number | null
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: 'video' | 'text' | 'worked_example' | 'activity' | 'refresher'
+      /** Title */
+      title: string
+      /**
+       * Body
+       * @default
+       */
+      body: string
+      /** Activityid */
+      activityId?: number | null
+      /** Skipcheckactivityid */
+      skipCheckActivityId?: number | null
+      /** Refresherfor */
+      refresherFor?: string | null
+      /** Videoid */
+      videoId?: number | null
+    }
+    /** EditorSegmentOut */
+    EditorSegmentOut: {
+      /** Id */
+      id: number
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: 'video' | 'text' | 'worked_example' | 'activity' | 'refresher'
+      /** Title */
+      title: string
+      /**
+       * Body
+       * @default
+       */
+      body: string
+      /** Activityid */
+      activityId?: number | null
+      /** Skipcheckactivityid */
+      skipCheckActivityId?: number | null
+      /** Refresherfor */
+      refresherFor?: string | null
+      /** Videoid */
+      videoId?: number | null
+    }
+    /**
+     * EditorVideoChoice
+     * @description A video a `video` segment can play, and the segment that plays it now, if any.
+     */
+    EditorVideoChoice: {
+      /** Id */
+      id: number
+      /** Title */
+      title: string
+      /** Segmentid */
+      segmentId: number | null
     }
     /**
      * ErrorOut
@@ -1125,6 +1772,8 @@ export interface components {
       currentSegmentPosition: number
       /** Segments */
       segments: components['schemas']['SegmentOut'][]
+      /** Retrieval */
+      retrieval: components['schemas']['RetrievalActivityOut'][]
     }
     /**
      * ModuleOut
@@ -1231,6 +1880,22 @@ export interface components {
       password: string
     }
     /**
+     * RetrievalActivityOut
+     * @description A retrieval question the module opens with, before its segments (FR-2.4).
+     *
+     *     The page loads the question itself from ``GET /api/activities/{id}``, so it is shown like any
+     *     other activity, with feedback and hints. ``answered`` is true once the student has made an
+     *     attempt at it: the page resumes at the first one still unanswered.
+     */
+    RetrievalActivityOut: {
+      /** Id */
+      id: number
+      /** Title */
+      title: string
+      /** Answered */
+      answered: boolean
+    }
+    /**
      * ReviewPathOut
      * @description An objective's review path for the logged-in student (FR-7.5, ID document §7.6).
      */
@@ -1334,6 +1999,16 @@ export interface components {
       videoId?: number | null
       /** Activityid */
       activityId?: number | null
+      /**
+       * Done
+       * @default true
+       */
+      done: boolean
+      /**
+       * Attempted
+       * @default false
+       */
+      attempted: boolean
     }
     /**
      * StaffCheckpointIn
@@ -2684,6 +3359,785 @@ export interface operations {
         content: {
           'application/json': components['schemas']['Insights']
         }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  content_overview_api_staff_content_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['EditorContentOverview']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  export_content_api_staff_content_export_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/zip': unknown
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_objective_api_staff_content_objectives_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['EditorObjectiveIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['EditorObjectiveOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_objective_api_staff_content_objectives__objective_id__put: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        objective_id: number
+      }
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['EditorObjectiveIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['EditorObjectiveOut']
+        }
+      }
+      /** @description No such item. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  get_module_api_staff_content_modules__module_id__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        module_id: number
+      }
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['EditorModuleOut']
+        }
+      }
+      /** @description No such item. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_module_api_staff_content_modules__module_id__put: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        module_id: number
+      }
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['EditorModuleIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['EditorModuleOut']
+        }
+      }
+      /** @description No such item. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_module_api_staff_content_modules__module_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        module_id: number
+      }
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description No such item. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Not possible here; the message says why. */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_module_api_staff_content_modules_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['EditorModuleIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['EditorModuleOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  get_review_path_api_staff_content_review_paths__objective_id__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        objective_id: number
+      }
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['EditorReviewPathOut']
+        }
+      }
+      /** @description No such item. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_review_path_api_staff_content_review_paths__objective_id__put: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        objective_id: number
+      }
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['EditorReviewPathIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['EditorReviewPathOut']
+        }
+      }
+      /** @description No such item. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  get_activity_api_staff_content_activities__activity_id__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        activity_id: number
+      }
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['EditorActivityOut']
+        }
+      }
+      /** @description No such item. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Not possible here; the message says why. */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_activity_api_staff_content_activities__activity_id__put: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        activity_id: number
+      }
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['EditorActivityIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['EditorActivityOut']
+        }
+      }
+      /** @description No such item. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Not possible here; the message says why. */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_activity_api_staff_content_activities__activity_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        activity_id: number
+      }
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['EditorDeleteResult']
+        }
+      }
+      /** @description No such item. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Not possible here; the message says why. */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_activity_api_staff_content_activities_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['EditorActivityIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['EditorActivityOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  get_graph_api_staff_content_graphs__graph_id__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        graph_id: number
+      }
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['EditorGraphOut']
+        }
+      }
+      /** @description No such item. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_graph_api_staff_content_graphs__graph_id__put: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        graph_id: number
+      }
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['EditorGraphIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['EditorGraphOut']
+        }
+      }
+      /** @description No such item. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_graph_api_staff_content_graphs__graph_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        graph_id: number
+      }
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description No such item. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Not possible here; the message says why. */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_graph_api_staff_content_graphs_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['EditorGraphIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['EditorGraphOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  use_repository_version_api_staff_content__kind___item_id__use_repository_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        kind: 'objectives' | 'modules' | 'review-paths' | 'activities' | 'graphs'
+        item_id: number
+      }
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description No such item. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Not possible here; the message says why. */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
       /** @description Validation Error */
       422: {

@@ -139,14 +139,14 @@ export const glyphs: Record<AchievementGlyph, ReactElement> = {
       {star(20, 6, 2.6)}
     </>
   ),
-  // Hidden: a vertex outside the edge of the map.
-  'off-the-map': (
+  // Milestone: the first step along a path, its first vertex reached.
+  'first-module': (
     <>
-      <rect x="2.5" y="2.5" width="13" height="13" rx="1.5" strokeDasharray="2.2 2.2" />
-      <path d="M6.5 11.5l3-4.5M9.5 7l9.5 12" strokeWidth={1.5} />
-      {dot(6.5, 11.5)}
-      {dot(9.5, 7)}
-      <circle cx="19.5" cy="19.5" r="2.6" fill="currentColor" />
+      <path d="M5 18L12 6l7 12" strokeWidth={1.5} strokeDasharray="2.2 2.2" />
+      <path d="M5 18L8.5 12" strokeWidth={2.25} />
+      <circle cx="5" cy="18" r="2.8" fill="currentColor" />
+      {dot(12, 6, 2)}
+      {dot(19, 18, 2)}
     </>
   ),
 }

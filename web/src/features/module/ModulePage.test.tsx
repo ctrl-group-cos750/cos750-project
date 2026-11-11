@@ -1,7 +1,10 @@
-import { screen } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { Link, MemoryRouter, Route, Routes } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import { ada, fakeApi, renderApp } from '../../test/app.tsx'
+import { ModulePage } from './ModulePage.tsx'
 import type { ModuleDetail, ModuleSummary, Segment } from './module.types.ts'
 
 // ---------------------------------------------------------------------------
@@ -16,6 +19,7 @@ const textSegment: Segment = {
   body: '# What is a graph?\n\nA graph has **nodes** and edges.',
   videoId: null,
   activityId: null,
+  done: true,
 }
 
 const workedExampleSegment: Segment = {
@@ -26,6 +30,7 @@ const workedExampleSegment: Segment = {
   body: '## Example\n\nHere is a worked example paragraph.',
   videoId: null,
   activityId: null,
+  done: true,
 }
 
 const videoSegment: Segment = {
@@ -36,6 +41,7 @@ const videoSegment: Segment = {
   body: null,
   videoId: 42,
   activityId: null,
+  done: true,
 }
 
 const activitySegment: Segment = {
@@ -46,6 +52,7 @@ const activitySegment: Segment = {
   body: null,
   videoId: null,
   activityId: 7,
+  done: true,
 }
 
 const moduleSummary: ModuleSummary = {
@@ -66,6 +73,7 @@ const twoSegmentDetail: ModuleDetail = {
   segmentCount: 2,
   currentSegmentPosition: 0,
   segments: [textSegment, workedExampleSegment],
+  retrieval: [],
 }
 
 /** A full ModuleDetail with all four segment kinds. */
@@ -74,6 +82,7 @@ const allKindsDetail: ModuleDetail = {
   segmentCount: 4,
   currentSegmentPosition: 0,
   segments: [textSegment, videoSegment, activitySegment, workedExampleSegment],
+  retrieval: [],
 }
 
 // ---------------------------------------------------------------------------
@@ -81,13 +90,18 @@ const allKindsDetail: ModuleDetail = {
 // `positionResponse` defaults to the same detail object (idempotent position save).
 // ---------------------------------------------------------------------------
 
-function setupModuleApi(detail: ModuleDetail, positionResponse: ModuleDetail = detail) {
+function setupModuleApi(
+  detail: ModuleDetail,
+  positionResponse: ModuleDetail = detail,
+  extra: Record<string, () => Response> = {},
+) {
   return fakeApi({
     user: ada,
     overrides: {
       'GET /api/modules': () => Response.json([]),
       'GET /api/modules/:id': () => Response.json(detail),
       'POST /api/modules/:id/position': () => Response.json(positionResponse),
+      ...extra,
     },
   })
 }
@@ -112,6 +126,85 @@ describe('ModulePage — goals', () => {
     expect(await screen.findByText('By the end of this module you can:')).toBeInTheDocument()
     expect(screen.getByText('Recall how queues work.')).toBeInTheDocument()
     expect(screen.getByText('Use a queue in Python.')).toBeInTheDocument()
+  })
+})
+
+// A recall question is an ordinary activity: the page loads it like the activity page does.
+const recallActivity = {
+  id: 201,
+  kind: 'multiple_choice',
+  title: 'Recall graph storage',
+  visible: true,
+  config: {
+    prompt: 'What does an adjacency list store?',
+    options: [
+      { id: 'neighbors', label: 'Connected vertices' },
+      { id: 'visited', label: 'Visited count' },
+    ],
+  },
+}
+
+const recallAttempt = {
+  id: 1,
+  activityId: 201,
+  correct: true,
+  score: 1,
+  parts: [],
+  feedback: 'Correct: it stores connected vertices.',
+  hintLevel: 0,
+}
+
+function recallApi(detail: ModuleDetail) {
+  return fakeApi({
+    user: ada,
+    overrides: {
+      'GET /api/modules': () => Response.json([]),
+      'GET /api/modules/:id': () => Response.json(detail),
+      'POST /api/modules/:id/position': () => Response.json(detail),
+      'GET /api/activities/201': () => Response.json(recallActivity),
+      'GET /api/activities/201/hints': () => Response.json([]),
+      'POST /api/activities/201/attempts': () => Response.json(recallAttempt),
+    },
+  })
+}
+
+const recall = { id: 201, title: 'Recall graph storage', answered: false }
+
+describe('ModulePage — retrieval', () => {
+  it('asks the recall questions, with hints, before the first segment', async () => {
+    const api = recallApi({ ...twoSegmentDetail, retrieval: [recall] })
+    renderApp('/modules/1')
+
+    expect(await screen.findByText('What does an adjacency list store?')).toBeInTheDocument()
+    expect(screen.getByText('Quick recall · Question 1 of 1')).toBeInTheDocument()
+    // One h1, the module's; the question's title sits under it, like a segment's.
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Recall graph storage' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Introduction to graphs' })).toBeNull()
+    expect(await screen.findByRole('button', { name: 'Show next hint' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Start module' })).toBeDisabled()
+
+    await userEvent.click(screen.getByLabelText('Connected vertices'))
+    await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+
+    expect(await screen.findByText('Correct: it stores connected vertices.')).toBeInTheDocument()
+    expect(api.callsTo('POST /api/activities/201/attempts')).toHaveLength(1)
+    await userEvent.click(screen.getByRole('button', { name: 'Start module' }))
+    expect(
+      await screen.findByRole('heading', { name: 'Introduction to graphs' }),
+    ).toBeInTheDocument()
+  })
+
+  it('skips the recall questions already answered on an earlier visit', async () => {
+    recallApi({ ...twoSegmentDetail, retrieval: [{ ...recall, answered: true }] })
+    renderApp('/modules/1')
+
+    expect(
+      await screen.findByRole('heading', { name: 'Introduction to graphs' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('What does an adjacency list store?')).toBeNull()
   })
 })
 
@@ -260,6 +353,118 @@ describe('ModulePage — navigation and position saving', () => {
     ).toBeInTheDocument()
   })
 
+  it('opens a complete module at its first segment that is not done (#136 review)', async () => {
+    // A student who finished the module before its activity could be answered: the server keeps
+    // them on the last segment, but the page takes them to what is missing.
+    setupModuleApi({
+      ...allKindsDetail,
+      status: 'complete',
+      currentSegmentPosition: 3,
+      segments: [
+        textSegment,
+        videoSegment,
+        { ...activitySegment, done: false },
+        workedExampleSegment,
+      ],
+    })
+    renderApp('/modules/1')
+    expect(await screen.findByText('Segment 3 of 4')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Practice: BFS step by step' })).toBeInTheDocument()
+  })
+
+  it('opens a complete module with everything done where the student left it', async () => {
+    setupModuleApi({ ...allKindsDetail, status: 'complete', currentSegmentPosition: 3 })
+    renderApp('/modules/1')
+    expect(await screen.findByText('Segment 4 of 4')).toBeInTheDocument()
+  })
+
+  it('opens an in-progress module at a segment the student passed without doing it', async () => {
+    setupModuleApi({
+      ...allKindsDetail,
+      status: 'in_progress',
+      currentSegmentPosition: 3,
+      segments: [
+        textSegment,
+        videoSegment,
+        { ...activitySegment, done: false },
+        workedExampleSegment,
+      ],
+    })
+    renderApp('/modules/1')
+    expect(await screen.findByText('Segment 3 of 4')).toBeInTheDocument()
+  })
+
+  it('says why it opened at a skipped activity', async () => {
+    setupModuleApi({
+      ...allKindsDetail,
+      status: 'in_progress',
+      currentSegmentPosition: 3,
+      segments: [
+        textSegment,
+        videoSegment,
+        { ...activitySegment, done: false },
+        workedExampleSegment,
+      ],
+    })
+    renderApp('/modules/1')
+    expect(await screen.findByText(/You moved past this activity earlier/)).toBeInTheDocument()
+  })
+
+  it('never pulls a student back to an activity they answered wrong earlier (#165 review)', async () => {
+    // Answered under the old rule (any answer counted), so not done now, but tried: the module
+    // opens where the student left off.
+    setupModuleApi({
+      ...allKindsDetail,
+      status: 'in_progress',
+      currentSegmentPosition: 3,
+      segments: [
+        textSegment,
+        videoSegment,
+        { ...activitySegment, done: false, attempted: true },
+        workedExampleSegment,
+      ],
+    })
+    renderApp('/modules/1')
+    expect(await screen.findByText('Segment 4 of 4')).toBeInTheDocument()
+    expect(screen.queryByText(/You moved past this activity earlier/)).toBeNull()
+  })
+
+  it('asks for a right answer once an activity was answered wrong', async () => {
+    setupModuleApi({
+      ...allKindsDetail,
+      status: 'in_progress',
+      currentSegmentPosition: 2,
+      segments: [
+        textSegment,
+        videoSegment,
+        { ...activitySegment, done: false, attempted: true },
+        workedExampleSegment,
+      ],
+    })
+    renderApp('/modules/1')
+    const next = await screen.findByRole('button', { name: 'Next →' })
+    expect(next).toHaveAccessibleDescription(
+      'Get it right to continue. If you’re stuck, the hints can help.',
+    )
+  })
+
+  it('resumes an in-progress module on the segment the student is doing', async () => {
+    setupModuleApi({
+      ...allKindsDetail,
+      status: 'in_progress',
+      currentSegmentPosition: 2,
+      segments: [
+        textSegment,
+        videoSegment,
+        { ...activitySegment, done: false },
+        workedExampleSegment,
+      ],
+    })
+    renderApp('/modules/1')
+    expect(await screen.findByText('Segment 3 of 4')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Next →' })).toHaveAttribute('aria-disabled', 'true')
+  })
+
   it('clicking "Finish module" on the last segment saves the position and navigates to "/"', async () => {
     fakeApi({
       user: ada,
@@ -286,48 +491,443 @@ describe('ModulePage — navigation and position saving', () => {
 })
 
 // ---------------------------------------------------------------------------
-// (d) Video segment shows link to /videos/:videoId
+// (#136 review) A refused module, and one module opened after another
 // ---------------------------------------------------------------------------
 
-describe('ModulePage — video segment', () => {
-  it('shows a "Watch video" link pointing to the video page', async () => {
-    // Navigate to the video segment (position 1 in allKindsDetail)
-    const detailAtVideo: ModuleDetail = {
-      ...allKindsDetail,
-      currentSegmentPosition: 1,
-    }
-    setupModuleApi(detailAtVideo)
-    renderApp('/modules/1')
+describe('ModulePage — refused and switched', () => {
+  it('says at once that a locked module is not open, without retrying (403)', async () => {
+    const api = fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules/:id': () =>
+          Response.json(
+            {
+              detail:
+                'This module is not available yet. Complete the previous module to unlock it.',
+            },
+            { status: 403 },
+          ),
+      },
+    })
+    // Retries on, as in the app: the module query itself must not retry a refusal.
+    const queryClient = new QueryClient()
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/modules/6']}>
+          <Routes>
+            <Route path="/modules/:moduleId" element={<ModulePage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(
+      await screen.findByRole('heading', { name: 'This module isn’t open yet' }),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/Complete the previous module to unlock it/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Back to your modules' })).toHaveAttribute('href', '/')
+    expect(api.callsTo('GET /api/modules/6')).toHaveLength(1)
+  })
 
-    // Wait for segment to load
-    expect(await screen.findByRole('heading', { name: 'Watch: BFS in action' })).toBeInTheDocument()
+  it('does not retry any refusal, such as too many requests (429)', async () => {
+    const api = fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules/:id': () =>
+          Response.json({ detail: 'Too many requests. Wait a moment.' }, { status: 429 }),
+      },
+    })
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={['/modules/2']}>
+          <Routes>
+            <Route path="/modules/:moduleId" element={<ModulePage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(
+      await screen.findByRole('heading', { name: 'This module can’t be shown right now' }),
+    ).toBeInTheDocument()
+    expect(api.callsTo('GET /api/modules/2')).toHaveLength(1)
+  })
 
-    const link = screen.getByRole('link', { name: '▶ Watch video' })
-    expect(link).toBeInTheDocument()
-    expect(link).toHaveAttribute('href', '/videos/42')
+  it.each(['abc', '1.5', '-1', '1e3'])(
+    'says /modules/%s is no module, without asking the API (no endless re-render)',
+    async (param) => {
+      const api = fakeApi({ user: ada })
+      renderApp(`/modules/${param}`)
+      expect(await screen.findByRole('heading', { name: 'There’s no such module' })).toBeVisible()
+      expect(screen.getByRole('link', { name: 'Back to your modules' })).toHaveAttribute(
+        'href',
+        '/',
+      )
+      expect(api.calls.filter((c) => c.path.startsWith('/api/modules/'))).toHaveLength(0)
+    },
+  )
+
+  it('switches in place to an address that is no module, and back again', async () => {
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules': () => Response.json([]),
+        'GET /api/modules/:id': () => Response.json(twoSegmentDetail),
+      },
+    })
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <MemoryRouter initialEntries={['/modules/1']}>
+          <Link to="/modules/abc">Bad address</Link>
+          <Link to="/modules/1">Module one</Link>
+          <Routes>
+            <Route path="/modules/:moduleId" element={<ModulePage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(await screen.findByText('Segment 1 of 2')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('link', { name: 'Bad address' }))
+    expect(await screen.findByRole('heading', { name: 'There’s no such module' })).toBeVisible()
+    await userEvent.click(screen.getByRole('link', { name: 'Module one' }))
+    expect(await screen.findByText('Segment 1 of 2')).toBeInTheDocument()
+  })
+
+  it('says there is no such module on a 404', async () => {
+    fakeApi({ user: ada })
+    renderApp('/modules/99')
+    expect(await screen.findByRole('heading', { name: 'There’s no such module' })).toBeVisible()
+  })
+
+  it('starts a module afresh when another opens in place, not at the last one’s segment', async () => {
+    const second: ModuleDetail = { ...allKindsDetail, id: 2, number: 1, title: 'Second module' }
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules': () => Response.json([]),
+        'GET /api/modules/:id': (_body, params) =>
+          Response.json(
+            params.id === '2'
+              ? second
+              : { ...allKindsDetail, status: 'complete', currentSegmentPosition: 3 },
+          ),
+        'GET /api/videos/42': () => Response.json({ detail: 'Not needed.' }, { status: 404 }),
+      },
+    })
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/modules/1']}>
+          <Link to="/modules/2">Open the second module</Link>
+          <Routes>
+            <Route path="/modules/:moduleId" element={<ModulePage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(await screen.findByText('Segment 4 of 4')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: '← Previous' }))
+    expect(await screen.findByText('Segment 3 of 4')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('link', { name: 'Open the second module' }))
+    expect(await screen.findByRole('heading', { name: /Second module/ })).toBeInTheDocument()
+    expect(screen.getByText('Segment 1 of 4')).toBeInTheDocument()
   })
 })
 
 // ---------------------------------------------------------------------------
-// (e) Activity segment links to the activity page
+// (d) Video segment plays inside the module
+// ---------------------------------------------------------------------------
+
+describe('ModulePage — video segment', () => {
+  it('plays the video in the module, with the module navigation still there', async () => {
+    const detail = { ...allKindsDetail, currentSegmentPosition: 1 }
+    setupModuleApi(detail, detail, {
+      'GET /api/videos/42': () =>
+        Response.json({
+          id: 42,
+          title: 'BFS in action',
+          mediaPath: '/media/bfs.mp4',
+          captionsPath: '/media/bfs.vtt',
+          transcript: 'BFS visits the start vertex first.',
+          durationSeconds: 60,
+          checkpoints: [],
+        }),
+    })
+    renderApp('/modules/1')
+
+    expect(await screen.findByRole('heading', { name: 'Watch: BFS in action' })).toBeInTheDocument()
+    expect(await screen.findByText('BFS visits the start vertex first.')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: '▶ Watch video' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Next →' })).toBeEnabled()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// (e) Activity segment is answered inside the module
 // ---------------------------------------------------------------------------
 
 describe('ModulePage — activity segment', () => {
-  it('links to the activity page', async () => {
-    const detailAtActivity: ModuleDetail = {
+  it('keeps Next disabled until the activity is answered correctly, then moves on', async () => {
+    let answered = false
+    const detail = (): ModuleDetail => ({
       ...allKindsDetail,
       currentSegmentPosition: 2,
-    }
-    setupModuleApi(detailAtActivity)
+      status: 'in_progress',
+      segments: [
+        textSegment,
+        videoSegment,
+        { ...activitySegment, done: answered },
+        workedExampleSegment,
+      ],
+    })
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules': () => Response.json([]),
+        'GET /api/modules/:id': () => Response.json(detail()),
+        'POST /api/modules/:id/position': () => Response.json(detail()),
+        'GET /api/activities/7': () =>
+          Response.json({
+            id: 7,
+            kind: 'multiple_choice',
+            title: 'Which vertex is next?',
+            visible: true,
+            config: {
+              prompt: 'BFS has just visited A. Which vertex comes next?',
+              options: [
+                { id: 'b', label: 'B, the first neighbour queued' },
+                { id: 'd', label: 'D, the last neighbour queued' },
+              ],
+            },
+          }),
+        'GET /api/activities/7/hints': () => Response.json([]),
+        'POST /api/activities/7/attempts': () => {
+          answered = true
+          return Response.json({
+            id: 1,
+            activityId: 7,
+            correct: true,
+            score: 1,
+            parts: [],
+            feedback: 'Correct: B joined the queue first.',
+            hintLevel: 0,
+          })
+        },
+      },
+    })
     renderApp('/modules/1')
 
     expect(
-      await screen.findByRole('heading', { name: 'Practice: BFS step by step' }),
+      await screen.findByText('BFS has just visited A. Which vertex comes next?'),
     ).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Start the activity' })).toHaveAttribute(
-      'href',
-      '/activities/7',
+    // The segment's heading names the question; the activity's own title isn't repeated (#159).
+    expect(screen.queryByRole('heading', { name: 'Which vertex is next?' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Start the activity' })).toBeNull()
+    const next = screen.getByRole('button', { name: 'Next →' })
+    expect(next).toHaveAttribute('aria-disabled', 'true')
+    expect(next).toHaveAccessibleDescription('Answer the activity to continue.')
+
+    await userEvent.click(screen.getByLabelText('B, the first neighbour queued'))
+    await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(await screen.findByText('Correct: B joined the queue first.')).toBeInTheDocument()
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Next →' })).not.toHaveAttribute('aria-disabled'),
     )
+    expect(document.getElementById('segment-blocked')).toBeEmptyDOMElement()
+    await userEvent.click(screen.getByRole('button', { name: 'Next →' }))
+    expect(
+      await screen.findByRole('heading', { name: 'Worked example: adjacency list' }),
+    ).toBeInTheDocument()
+  })
+
+  it('stays on the segment it opened at when answering it makes another the first not done', async () => {
+    // A complete module with two segments left undone (#136): answering the first refetches the
+    // module, and the page must keep showing that answer's feedback, not jump to the second.
+    let answered = false
+    const detail = (): ModuleDetail => ({
+      ...allKindsDetail,
+      currentSegmentPosition: 3,
+      status: 'complete',
+      segments: [
+        textSegment,
+        videoSegment,
+        { ...activitySegment, done: answered },
+        { ...activitySegment, id: 14, position: 4, activityId: 8, title: 'Second', done: false },
+      ],
+    })
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules': () => Response.json([]),
+        'GET /api/modules/:id': () => Response.json(detail()),
+        'GET /api/activities/7': () =>
+          Response.json({
+            id: 7,
+            kind: 'multiple_choice',
+            title: 'Which vertex is next?',
+            visible: true,
+            config: {
+              prompt: 'Which?',
+              options: [
+                { id: 'b', label: 'B' },
+                { id: 'd', label: 'D' },
+              ],
+            },
+          }),
+        'GET /api/activities/7/hints': () => Response.json([]),
+        'POST /api/activities/7/attempts': () => {
+          answered = true
+          return Response.json({
+            id: 1,
+            activityId: 7,
+            correct: false,
+            score: 0,
+            parts: [],
+            feedback: 'Not quite: D joined the queue last.',
+            hintLevel: 0,
+          })
+        },
+      },
+    })
+    renderApp('/modules/1')
+    // The answer options, not the activity's own title: #161 hides that title inside a segment.
+    await screen.findByLabelText('D')
+    expect(screen.getByText('Segment 3 of 4')).toBeInTheDocument()
+    await userEvent.click(screen.getByLabelText('D'))
+    await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(await screen.findByText('Not quite: D joined the queue last.')).toBeInTheDocument()
+    // Give the refetch time to land, then check the page didn't move.
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(screen.getByText('Segment 3 of 4')).toBeInTheDocument()
+    expect(screen.getByText('Not quite: D joined the queue last.')).toBeInTheDocument()
+  })
+
+  it('asks for the video’s checkpoints, answered correctly, before moving on', async () => {
+    const detail: ModuleDetail = {
+      ...allKindsDetail,
+      currentSegmentPosition: 1,
+      status: 'in_progress',
+      segments: [
+        textSegment,
+        { ...videoSegment, done: false },
+        activitySegment,
+        workedExampleSegment,
+      ],
+    }
+    setupModuleApi(detail, detail, {
+      'GET /api/videos/42': () =>
+        Response.json({
+          id: 42,
+          title: 'BFS in action',
+          mediaPath: '/media/bfs.mp4',
+          captionsPath: '/media/bfs.vtt',
+          transcript: 'BFS visits the start vertex first.',
+          durationSeconds: 60,
+          checkpoints: [],
+        }),
+    })
+    renderApp('/modules/1')
+
+    expect(
+      await screen.findByText(
+        'Answer each of the video’s checkpoint questions correctly to continue.',
+      ),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Next →' })).toHaveAttribute('aria-disabled', 'true')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// (f) Blocked Next: accessible, and only at the furthest segment reached (FR-2.7)
+// ---------------------------------------------------------------------------
+
+describe('ModulePage — blocked Next', () => {
+  const blockedAt = (currentSegmentPosition: number): ModuleDetail => ({
+    ...allKindsDetail,
+    currentSegmentPosition,
+    status: 'in_progress',
+    segments: [
+      textSegment,
+      videoSegment,
+      { ...activitySegment, done: false },
+      workedExampleSegment,
+    ],
+  })
+
+  it('stays focusable, reads its reason, and ignores a click', async () => {
+    const api = setupModuleApi(blockedAt(2), blockedAt(2), {
+      'GET /api/activities/7': () => Response.json({ detail: 'Not needed here.' }, { status: 404 }),
+    })
+    renderApp('/modules/1')
+
+    const next = await screen.findByRole('button', { name: 'Next →' })
+    expect(next).not.toBeDisabled()
+    expect(next).toHaveAttribute('aria-disabled', 'true')
+    next.focus()
+    expect(next).toHaveFocus()
+    expect(next).toHaveAccessibleDescription('Answer the activity to continue.')
+
+    await userEvent.click(next)
+    expect(api.callsTo('POST /api/modules/1/position')).toHaveLength(0)
+    expect(screen.getByRole('heading', { name: activitySegment.title })).toBeInTheDocument()
+  })
+
+  it('keeps the reason in a status region that is there even when nothing is blocked', async () => {
+    setupModuleApi(twoSegmentDetail)
+    renderApp('/modules/1')
+
+    await screen.findByRole('button', { name: 'Next →' })
+    // <output> is a polite status region: announced when its text changes.
+    const status = document.getElementById('segment-blocked')
+    expect(screen.getAllByRole('status')).toContain(status)
+    expect(status).toBeEmptyDOMElement()
+  })
+
+  it('doesn’t block stepping forward over a segment before the furthest reached', async () => {
+    // Progress made before FR-2.7, or before staff changed the segment: it was passed already.
+    const api = setupModuleApi(blockedAt(3), blockedAt(3), {
+      'GET /api/activities/7': () => Response.json({ detail: 'Not needed here.' }, { status: 404 }),
+    })
+    renderApp('/modules/1')
+
+    // The page opens on the segment that was passed without being done (#136 review) ...
+    expect(await screen.findByText('Segment 3 of 4')).toBeInTheDocument()
+    const next = await screen.findByRole('button', { name: 'Next →' })
+    // ... and doesn't block moving on from it.
+    expect(next).not.toHaveAttribute('aria-disabled')
+
+    await userEvent.click(next)
+    expect(
+      await screen.findByRole('heading', { name: 'Worked example: adjacency list' }),
+    ).toBeInTheDocument()
+    expect(api.callsTo('POST /api/modules/1/position')).toHaveLength(0)
+  })
+
+  it('goes back and forward again on an unanswered last segment without saving', async () => {
+    // The bug in review of #130: Next re-saved the last segment, which the server refused.
+    const detail: ModuleDetail = {
+      ...twoSegmentDetail,
+      currentSegmentPosition: 1,
+      status: 'in_progress',
+      segments: [textSegment, { ...activitySegment, position: 1, done: false }],
+    }
+    const api = setupModuleApi(detail, detail, {
+      'GET /api/activities/7': () => Response.json({ detail: 'Not needed here.' }, { status: 404 }),
+    })
+    renderApp('/modules/1')
+
+    expect(await screen.findByRole('button', { name: 'Finish module' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    )
+    await userEvent.click(screen.getByRole('button', { name: '← Previous' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Next →' }))
+
+    expect(await screen.findByRole('button', { name: 'Finish module' })).toBeInTheDocument()
+    expect(screen.queryByText('Could not save progress')).toBeNull()
+    expect(api.callsTo('POST /api/modules/1/position')).toHaveLength(0)
   })
 })
 
@@ -378,10 +978,50 @@ describe('ModulePage — loading and error states', () => {
       ...moduleSummary,
       segments: [],
       segmentCount: 0,
+      retrieval: [],
     }
     setupModuleApi(emptyDetail)
     renderApp('/modules/1')
 
     expect(await screen.findByText('This module has no segments yet.')).toBeInTheDocument()
+  })
+
+  it('explains when retrieval is complete but lesson segments are still placeholders', async () => {
+    const api = recallApi({
+      ...moduleSummary,
+      segmentCount: 0,
+      segments: [],
+      retrieval: [recall],
+    })
+    renderApp('/modules/1')
+
+    await userEvent.click(await screen.findByLabelText('Connected vertices'))
+    await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    await screen.findByText('Correct: it stores connected vertices.')
+    await userEvent.click(screen.getByRole('button', { name: 'Start module' }))
+
+    expect(
+      await screen.findByText(
+        'You’ve answered the retrieval questions. Lesson content for this module has not been added yet.',
+      ),
+    ).toBeInTheDocument()
+    expect(api.callsTo('POST /api/activities/201/attempts')).toHaveLength(1)
+  })
+})
+
+describe('ModulePage — events', () => {
+  it('reports each segment it shows, for the pilot timeline', async () => {
+    const api = setupModuleApi(twoSegmentDetail, twoSegmentDetail, {
+      'POST /api/events': () => new Response(null, { status: 204 }),
+    })
+    renderApp('/modules/1')
+
+    expect(await screen.findByRole('heading', { name: 'Introduction to graphs' })).toBeVisible()
+    await waitFor(() =>
+      expect(api.callsTo('POST /api/events').map((c) => c.body)).toContainEqual({
+        type: 'segment_viewed',
+        targetId: textSegment.id,
+      }),
+    )
   })
 })

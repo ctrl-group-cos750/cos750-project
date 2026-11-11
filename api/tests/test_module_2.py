@@ -105,7 +105,10 @@ def run(calls: str) -> dict[str, list[str]]:
 def test_every_activity_is_shown_once_and_every_objective_has_one() -> None:
     shown = [s.activity_id for s in MODULE.segments if s.activity_id is not None]
     skip_checks = [s.skip_check_activity_id for s in MODULE.segments if s.skip_check_activity_id]
-    assert sorted(shown + skip_checks) == sorted(a.id for a in ACTIVITIES)
+    # The recall questions are asked before the segments (FR-2.4), not in one.
+    recall = [a.id for a in ACTIVITIES if a.purpose == "retrieval"]
+    assert recall == [201, 202]
+    assert sorted(shown + skip_checks + recall) == sorted(a.id for a in ACTIVITIES)
     assert {a.objective_id for a in ACTIVITIES} == {None, 2, 6}
 
 
@@ -214,3 +217,10 @@ def test_the_closing_task_answer() -> None:
     assert printed == 'print(g.adjacency["D"])'
     adjacency = run("\n".join(calls))
     assert json.loads(chosen_label(208)) == adjacency["D"]
+
+
+def test_the_add_edge_feedback_only_names_the_items_own_vertices() -> None:
+    """207's feedback used to talk about a-c and D to G, which the item never mentions (#147)."""
+    for messages in activity(207).solution["feedback"].values():
+        for text in messages.values():
+            assert not EDGE.search(text), text  # its vertices are a and b, never capitals

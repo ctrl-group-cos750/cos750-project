@@ -11,8 +11,8 @@ What the rules follow (research: the ID document §7.2 and the #32 research note
   clicking through hints or guessing.
 
 The activity routes award activity points through `on_attempt`. The other `on_*` functions are
-for the features that own those events: objective results (#22), the review path (#23), modules
-and bonus quests (#15, #31) and the hidden badge's exploration action. Each adds to the session
+for the features that own those events: objective results (#22), the review path (#23), a
+completed module (app/services/modules.py, #141) and bonus quests (#31). Each adds to the session
 without committing, like the rest of the services, and returns what was newly earned.
 """
 
@@ -52,7 +52,7 @@ CAME_BACK_STRONGER = "came-back-stronger"
 SOLO_RUN = "solo-run"
 QUEST = "quest"
 ALL_QUESTS = "all-quests"
-OFF_THE_MAP = "off-the-map"
+FIRST_MODULE = "first-module"
 BADGES = frozenset(
     {
         *OBJECTIVE_BADGES.values(),
@@ -61,7 +61,7 @@ BADGES = frozenset(
         SOLO_RUN,
         QUEST,
         ALL_QUESTS,
-        OFF_THE_MAP,
+        FIRST_MODULE,
     }
 )
 
@@ -132,7 +132,11 @@ def on_attempt(session: Session, attempt: Attempt) -> Earned:
 
 
 def on_module_completed(session: Session, user_id: int, module_id: int) -> Earned:
-    return _add_points(session, user_id, "module_completed", f"module:{module_id}")
+    """A module completed (FR-9.1): its points once, and the First Module badge with the first
+    (FR-9.3). Completing it again, after rereading, earns nothing more."""
+    return _add_points(session, user_id, "module_completed", f"module:{module_id}") + _award(
+        session, user_id, FIRST_MODULE
+    )
 
 
 def on_objective_result(
@@ -197,11 +201,6 @@ def on_bonus_quest(
     if all_quests_done:
         earned += _award(session, user_id, ALL_QUESTS)
     return earned
-
-
-def on_exploration(session: Session, user_id: int) -> Earned:
-    """The hidden badge's action, which the ID team chooses (it should be something optional)."""
-    return _award(session, user_id, OFF_THE_MAP)
 
 
 def total_points(session: Session, user_id: int) -> int:

@@ -14,7 +14,16 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
 from app.db import Base
-from app.models import Activity, Attempt, HintView, ModuleProgress, Segment, User
+from app.models import (
+    Activity,
+    Attempt,
+    Checkpoint,
+    HintView,
+    ModuleProgress,
+    Segment,
+    User,
+    Video,
+)
 from app.schemas.activities import ActivityKind
 from app.seed import FIXTURES, load
 from app.seed.demo_accounts import (
@@ -80,6 +89,26 @@ def test_each_committed_account_reaches_its_stage(db: Session) -> None:
     assert report(db, "ready@demo.example.com") == (True, [])
 
 
+def test_demo_progress_records_retrieval_attempts_before_advancing(db: Session) -> None:
+    load(db)
+    load_demo_accounts(db, PASSWORD)
+    user = db.scalars(select(User).where(User.email == "mid@demo.example.com")).one()
+    progressed_modules = {entry.module for entry in read_demo_accounts()[1].progress}
+    retrieval_ids = set(
+        db.scalars(
+            select(Activity.id).where(
+                Activity.purpose == "retrieval", Activity.module_id.in_(progressed_modules)
+            )
+        ).all()
+    )
+    attempts = db.scalars(
+        select(Attempt).where(Attempt.user_id == user.id, Attempt.activity_id.in_(retrieval_ids))
+    ).all()
+    assert retrieval_ids
+    assert {attempt.activity_id for attempt in attempts} == retrieval_ids
+    assert all(attempt.correct for attempt in attempts)
+
+
 def test_the_not_yet_account_can_open_its_review_path_and_the_ready_one_cannot(
     db: Session, client: TestClient
 ) -> None:
@@ -141,6 +170,7 @@ def test_the_accounts_survive_content_that_changes_its_ids(tmp_path: Path) -> No
         load_demo_accounts(session, PASSWORD)
         assert report(session, "not-yet@demo.example.com") == (False, [6])
         assert report(session, "ready@demo.example.com") == (True, [])
+    fresh.dispose()
 
 
 # --- Module progress (#121) ---------------------------------------------------------------------
@@ -223,6 +253,7 @@ def test_once_every_module_has_segments_each_map_matches_its_stage(tmp_path: Pat
             )
         ).one()
         assert module_3.current_segment_position == 3  # the fourth segment, 0-based
+    fresh.dispose()
 
 
 def test_the_mid_account_can_open_module_3_through_the_api(
@@ -391,7 +422,9 @@ def test_a_demo_account_problem_never_stops_the_seed(tmp_path: Path) -> None:
     # The API only starts once `python -m app.seed` succeeds (Dockerfile), so a demo problem, here
     # a weak DEMO_PASSWORD, must be reported without failing it.
     url = f"sqlite:///{tmp_path / 'seed.db'}"
-    Base.metadata.create_all(create_engine(url))
+    engine = create_engine(url)
+    Base.metadata.create_all(engine)
+    engine.dispose()
     env = {**os.environ, "DATABASE_URL": url, "DEMO_PASSWORD": "weak"}
     run = subprocess.run(
         [sys.executable, "-m", "app.seed"],
@@ -419,3 +452,42 @@ def test_progress_into_a_module_still_locked_stops_there_and_says_so(
         "before it isn't complete"
     ]
     assert statuses(db, "mid@demo.example.com")[3] == "locked"
+
+
+def test_the_walk_passes_a_video_s_checkpoints_before_moving_past_it(
+    tmp_path: Path, db: Session
+) -> None:
+    """A segment must be done before moving past it (FR-2.7): for a video, every checkpoint."""
+    load(db)
+    question = Activity(
+        id=99_001,
+        kind="multiple_choice",
+        title="Checkpoint",
+        config={
+            "prompt": "Which?",
+            "options": [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}],
+        },
+        solution={"correct": "a", "feedback": {}},
+    )
+    video = Video(
+        segment_id=103,  # module 1's first video
+        title="Graphs",
+        media_path="/media/v.mp4",
+        captions_path="/media/v.vtt",
+        transcript="Words.",
+        duration_seconds=60,
+    )
+    db.add_all([question, video])
+    db.flush()
+    db.add(Checkpoint(video_id=video.id, at_seconds=5, activity_id=question.id))
+    db.commit()
+
+    accounts = write(tmp_path, [account(progress=[{"module": 0}, {"module": 1}])])
+    load_demo_accounts(db, PASSWORD, accounts)
+
+    assert statuses(db, "mid@demo.example.com")[1] == "complete"
+    mid = db.scalars(select(User).where(User.email == "mid@demo.example.com")).one()
+    passed = db.scalars(
+        select(Attempt.correct).where(Attempt.user_id == mid.id, Attempt.activity_id == 99_001)
+    ).all()
+    assert passed == [True]

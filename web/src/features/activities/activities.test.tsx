@@ -190,6 +190,20 @@ describe('code activities', () => {
     expect(await screen.findByText('Third hint.')).toBeInTheDocument()
   })
 
+  it('keeps the hints shown but offers no more once the answer is right', async () => {
+    const loadHints = vi
+      .fn<(activityId: number) => Promise<readonly Hint[]>>()
+      .mockResolvedValue([
+        { level: 1, body: 'First recorded hint.', hasMore: true, nextCountsAsSupport: false },
+      ])
+    const requestHint = vi.fn<(activityId: number) => Promise<Hint>>()
+
+    render(<HintLadder activityId={7} solved loadHints={loadHints} requestHint={requestHint} />)
+
+    expect(await screen.findByText('First recorded hint.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Show next hint' })).not.toBeInTheDocument()
+  })
+
   it('does not offer hints when recorded hints cannot be loaded', async () => {
     const loadHints = vi
       .fn<(activityId: number) => Promise<readonly Hint[]>>()
@@ -253,9 +267,10 @@ describe('code activities', () => {
   })
 
   it('hides the hint ladder and feedback panel when activity kind is not supported', () => {
+    // A kind the API might add before its screen exists (KINDS_WITHOUT_STUDENT_UI).
     const unsupported = {
       id: 99,
-      kind: 'trace' as unknown as CodeActivity['kind'],
+      kind: 'label_vertices' as unknown as CodeActivity['kind'],
       title: 'Unsupported kind',
       visible: true,
       config: {} as unknown as CodeActivity['config'],
@@ -275,5 +290,58 @@ describe('code activities', () => {
     expect(screen.getByText('This activity kind is not available yet.')).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Hints' })).not.toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Submission results' })).not.toBeInTheDocument()
+  })
+})
+
+describe('hints once an activity is solved (#158)', () => {
+  const solved = {
+    id: 31,
+    kind: 'multiple_choice',
+    title: 'Already answered',
+    visible: true,
+    solved: true,
+    config: {
+      prompt: 'Which leaves the queue first?',
+      options: [
+        { id: 'a', label: 'The first to join' },
+        { id: 'b', label: 'The last to join' },
+      ],
+    },
+  }
+
+  it('offers no hints for an activity the student already answered correctly, after a refresh too', async () => {
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/activities/31': () => Response.json(solved),
+        'GET /api/activities/31/hints': () =>
+          Response.json([
+            { level: 1, body: 'First recorded hint.', hasMore: true, nextCountsAsSupport: false },
+          ]),
+      },
+    })
+    renderApp('/activities/31')
+
+    expect(await screen.findByText('First recorded hint.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Show next hint' })).not.toBeInTheDocument()
+  })
+
+  it('takes the support warning away once the answer is right', async () => {
+    const user = userEvent.setup()
+    const loadHints = vi
+      .fn<(activityId: number) => Promise<readonly Hint[]>>()
+      .mockResolvedValue([
+        { level: 2, body: 'Second recorded hint.', hasMore: true, nextCountsAsSupport: true },
+      ])
+    const requestHint = vi.fn<(activityId: number) => Promise<Hint>>()
+    const { rerender } = render(
+      <HintLadder activityId={7} loadHints={loadHints} requestHint={requestHint} />,
+    )
+    await user.click(await screen.findByRole('button', { name: 'Show next hint' }))
+    expect(screen.getByText(/The next hint gives a lot away/)).toBeInTheDocument()
+
+    rerender(<HintLadder activityId={7} solved loadHints={loadHints} requestHint={requestHint} />)
+    expect(screen.queryByText(/The next hint gives a lot away/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Show next hint' })).not.toBeInTheDocument()
   })
 })

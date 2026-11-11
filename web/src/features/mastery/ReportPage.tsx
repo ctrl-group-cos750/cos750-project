@@ -1,9 +1,14 @@
+import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { Alert, Card, MasteryStatus, Spinner, Tag, type Mastery } from '../../components'
+import { fetchModules } from '../module/module.api.ts'
 import { useReport } from './hooks.ts'
 import type { ObjectiveReport, ObjectiveState } from './mastery.api.ts'
 import styles from './ReportPage.module.css'
+
+// The mastery check (api/app/services/mastery.py MASTERY_MODULE); the report's wording names it.
+const MASTERY_MODULE = 6
 
 const asMastery: Partial<Record<ObjectiveState, Mastery>> = {
   met_independently: 'independent',
@@ -31,7 +36,7 @@ function nextStep(o: ObjectiveReport): string {
     case 'not_attempted':
       if (o.total === 0) return 'There are no questions on this objective yet.'
       if (o.answered > 0) return `${o.answered} of ${o.total} questions answered in module 6.`
-      return 'Answer its questions in module 6, the mastery check.'
+      return 'Not answered yet: its questions are in module 6, the mastery check.'
   }
 }
 
@@ -64,11 +69,39 @@ function Result({ state }: { state: ObjectiveState }) {
   return mastery ? <MasteryStatus mastery={mastery} /> : <Tag icon="–">Not attempted</Tag>
 }
 
-function summary(objectives: ObjectiveReport[], ready: boolean): string {
+const countObjectives = (n: number) => `${n} objective${n === 1 ? '' : 's'}`
+
+/** Ready, or what stands in the way: every objective still "not yet" (to review) and every one
+ * not attempted (still to answer in module 6), so neither hides the other (#136 review). */
+function summary(objectives: ObjectiveReport[], ready: boolean, checkOpen: boolean): string {
   if (ready) return 'Ready for the lecture'
   const notYet = objectives.filter((o) => o.state === 'not_yet').length
-  if (notYet > 0) return `Not ready yet: ${notYet} objective${notYet === 1 ? '' : 's'} to review`
-  return 'Not ready yet: finish the mastery check'
+  const toAnswer = objectives.filter((o) => o.state === 'not_attempted' && o.total > 0).length
+  const left = [
+    notYet > 0 ? `${countObjectives(notYet)} to review` : '',
+    toAnswer > 0
+      ? `${countObjectives(toAnswer)} to answer in module 6${checkOpen ? '' : ', once you reach it'}`
+      : '',
+  ].filter(Boolean)
+  return left.length > 0
+    ? `Not ready yet: ${left.join(' and ')}`
+    : 'Not ready yet: finish the mastery check'
+}
+
+/** The way into module 6 for an objective whose mastery questions aren't all answered, shown only
+ * once module 6 is open to the student (a locked module would only refuse them). The module page
+ * opens at the first segment the student passed without doing, so this lands on them. */
+function MasteryCheckLink({ o, moduleId }: { o: ObjectiveReport; moduleId: number | null }) {
+  if (moduleId === null || o.state !== 'not_attempted' || o.total === 0) return null
+  return (
+    <Link
+      to={`/modules/${moduleId}`}
+      className={buttonVariants({ variant: 'secondary', size: 'sm' })}
+    >
+      {o.answered > 0 ? 'Finish its questions in module 6' : 'Answer its questions in module 6'}
+      <span className="sr-only">: objective {o.id}</span>
+    </Link>
+  )
 }
 
 /**
@@ -78,6 +111,10 @@ function summary(objectives: ObjectiveReport[], ready: boolean): string {
  */
 export function ReportPage() {
   const report = useReport()
+  // Whether the mastery check is open to this student, from the module list the map already uses.
+  const modules = useQuery({ queryKey: ['modules'], queryFn: fetchModules })
+  const check = modules.data?.find((m) => m.number === MASTERY_MODULE)
+  const checkId = check && check.status !== 'locked' ? check.id : null
 
   if (report.isPending) return <Spinner label="Loading your report" />
   if (report.isError) return <Alert tone="danger">{report.error.message}</Alert>
@@ -88,7 +125,7 @@ export function ReportPage() {
       <div className={styles.heading}>
         <h1>Your mastery report</h1>
         <p className={styles.summary} data-ready={ready}>
-          {summary(objectives, ready)}
+          {summary(objectives, ready, modules.isPending || checkId !== null)}
         </p>
       </div>
 
@@ -102,6 +139,7 @@ export function ReportPage() {
                 <p className={styles.next}>{nextStep(o)}</p>
                 <p className={styles.criterion}>To meet it: {o.criterion}</p>
                 <ReviewLink o={o} />
+                <MasteryCheckLink o={o} moduleId={checkId} />
               </div>
               <Result state={o.state} />
             </li>

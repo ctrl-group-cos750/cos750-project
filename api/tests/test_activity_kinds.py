@@ -24,6 +24,7 @@ from app.services.checking import (
     WRONG_FIX,
     WRONG_MATCH,
     check_activity,
+    is_blank,
 )
 from app.services.content import validate_activity
 
@@ -137,6 +138,22 @@ def test_matching_all_right() -> None:
     assert (result.correct, result.score, result.feedback) == (True, 1.0, "All correct.")
 
 
+def test_a_right_answer_gets_the_content_s_explanation() -> None:
+    """A right answer says why it is right when the content explains it (FR-4.2); a wrong one
+    keeps its own feedback."""
+    solution = {**MATCHING_SOLUTION, "explanation": "Each vertex pairs with its own neighbours."}
+    right = grade("matching", MATCHING_CONFIG, solution, pairs=MATCHING_SOLUTION["pairs"])
+    assert (right.correct, right.feedback) == (True, "Each vertex pairs with its own neighbours.")
+    wrong = grade("matching", MATCHING_CONFIG, solution, pairs={})
+    assert not wrong.correct
+    assert wrong.feedback != solution["explanation"]
+
+
+def test_an_empty_explanation_is_refused() -> None:
+    with pytest.raises(ValueError, match="explanation"):
+        validate_activity("matching", MATCHING_CONFIG, {**MATCHING_SOLUTION, "explanation": ""})
+
+
 def test_matching_marks_each_pair_with_the_reason() -> None:
     result = grade(
         "matching",
@@ -196,10 +213,15 @@ def test_fix_the_bug_a_needless_correction_and_a_moved_line() -> None:
     order = [1, 20, 3, 21, 23, 7, 8, 22, 9, 10]  # position 4 should be line 6, left as it was
     parts = grade("fix_the_bug", FIX_CONFIG, FIX_SOLUTION, order=order).parts
     assert parts[4].message == FIX_NOT_NEEDED
+    # Two lines swapped: moving either one fixes it, so one of them is marked (#145).
     moved = [1, 20, 3, 21, 7, 6, 8, 22, 9, 10]
-    assert grade("fix_the_bug", FIX_CONFIG, FIX_SOLUTION, order=moved).parts[4].message == (
-        OUT_OF_PLACE
-    )
+    wrong = [
+        p
+        for p in grade("fix_the_bug", FIX_CONFIG, FIX_SOLUTION, order=moved).parts
+        if not p.correct
+    ]
+    assert [p.ref for p in wrong] in ([4], [5])
+    assert wrong[0].message == OUT_OF_PLACE
 
 
 def test_fix_the_bug_a_short_or_long_answer_fails_the_positions_it_affects() -> None:
@@ -262,14 +284,22 @@ FILL_SOLUTION: dict[str, Any] = {
 }
 
 
+# A Parsons problem with a group (2 and 3 in either order), an alternative that moves 1 to the end,
+# and a distractor (20).
+PARSONS_CONFIG: dict[str, Any] = {
+    "lines": [{"id": i, "text": f"line {i}"} for i in (1, 2, 3, 20)],
+}
+PARSONS_SOLUTION: dict[str, Any] = {"order": [1, [2, 3]], "alternatives": [[[2, 3], 1]]}
+
+
 def test_the_examples_are_valid_content() -> None:
     validate_activity("matching", MATCHING_CONFIG, MATCHING_SOLUTION)
     validate_activity("fix_the_bug", FIX_CONFIG, FIX_SOLUTION)
     validate_activity("choose_tests", TESTS_CONFIG, TESTS_SOLUTION)
     validate_activity("fill_in", FILL_CONFIG, FILL_SOLUTION)
     validate_activity("fill_in", FILL_CONFIG, {"answers": FILL_SOLUTION["answers"]})  # no feedback
-    # Parsons has no extra rules: its shape is the whole check.
     validate_activity("parsons", {"lines": [{"id": 1, "text": "x"}]}, {"order": [1]})
+    validate_activity("parsons", PARSONS_CONFIG, PARSONS_SOLUTION)  # groups and an alternative
 
 
 @pytest.mark.parametrize(
@@ -335,6 +365,96 @@ def test_the_examples_are_valid_content() -> None:
             "the correct token",
         ),
         ("essay", {}, {}, "unknown activity kind"),
+        ("parsons", PARSONS_CONFIG, {"order": [1, 2, 99]}, "the order uses unknown line ids .99."),
+        ("parsons", PARSONS_CONFIG, {"order": [1, [2, 3], 3]}, "the order uses a line twice"),
+        ("parsons", PARSONS_CONFIG, {"order": [1, [2, 3], []]}, "at least two ids, not .]"),
+        ("parsons", PARSONS_CONFIG, {"order": [1, [2], 3]}, "at least two ids, not .2."),
+        ("parsons", PARSONS_CONFIG, {"order": [1, [2, "x"]]}, "'x' in the group .2, 'x'. is not"),
+        ("parsons", PARSONS_CONFIG, {"order": [1, [[2, 3]]]}, "not another group"),
+        (
+            "parsons",
+            PARSONS_CONFIG,
+            {"order": [1, [2, 3]], "alternatives": [[1, [2, 3]]]},
+            "alternative 1 is the order itself",
+        ),
+        ("parsons", PARSONS_CONFIG, {"order": 5}, "order must be a list of line ids"),
+        ("parsons", PARSONS_CONFIG, {"order": [1, True, 3]}, "True is not a line id"),
+        ("parsons", PARSONS_CONFIG, {"order": [1, "2", 3]}, "'2' is not a line id"),
+        (
+            "parsons",
+            PARSONS_CONFIG,
+            {"order": [1, 2, 3], "alternatives": [[1, 2.5]]},
+            "alternative 1: 2.5",
+        ),
+        (
+            "parsons",
+            PARSONS_CONFIG,
+            {"order": [1, 2, 3], "alternatives": {"a": 1}},
+            "list of orders",
+        ),
+        ("parsons", PARSONS_CONFIG, {"order": []}, "at least 1 item"),
+        ("parsons", PARSONS_CONFIG, {"order": [1, 2], "also": [[2, 1]]}, "Extra inputs"),
+        (
+            "parsons",
+            {"lines": [*PARSONS_CONFIG["lines"], {"id": 1, "text": "again"}]},
+            {"order": [1, 2, 3]},
+            "two lines share an id",
+        ),
+        (
+            "parsons",
+            PARSONS_CONFIG,
+            {"order": [1, 2, 3], "alternatives": [[1, 3]]},
+            "alternative 1 must use the same lines",
+        ),
+        (
+            "parsons",
+            PARSONS_CONFIG,
+            {"order": [1, 2, 3], "alternatives": [[1, 3, 9]]},
+            "alternative 1 uses unknown line ids .9.",
+        ),
+        (
+            "parsons",
+            PARSONS_CONFIG,
+            {"order": [1, 2, 3], "alternatives": [[1, 3, 2], [1, 3, 2, 3]]},
+            "alternative 2 uses a line twice",
+        ),
+        (
+            "parsons",
+            PARSONS_CONFIG,
+            {"order": [1, [2, 3]], "alternatives": [[1, [3, 2]]]},
+            "alternative 1 accepts nothing that the order doesn't already",
+        ),
+        (
+            "parsons",
+            PARSONS_CONFIG,
+            {"order": [1, [2, 3]], "alternatives": [[1, 3, 2]]},  # an expansion of the order
+            "alternative 1 accepts nothing that the order",
+        ),
+        (
+            "parsons",
+            PARSONS_CONFIG,
+            {"order": [1, 2, 3], "alternatives": [[[2, 3], 1], [3, 2, 1]]},
+            "alternative 2 accepts nothing that alternative 1",
+        ),
+        ("fix_the_bug", FIX_CONFIG, {"order": [[1, 2], 3, 4, 5, 6, 7, 8, 9, 10]}, "nothing to fix"),
+        (
+            "fix_the_bug",
+            FIX_CONFIG,
+            {**FIX_SOLUTION, "alternatives": [[1, 20, 3, 21, 6, 7, 8, 22]]},
+            "alternative 1 must use the same lines",
+        ),
+        (
+            "parsons",
+            PARSONS_CONFIG,
+            {"order": [1, 2, 3], "alternatives": [[1, 2, 3, 20]]},
+            "the same lines as the order",
+        ),
+        (
+            "parsons",
+            PARSONS_CONFIG,
+            {"order": [1, 2, 3], "alternatives": [[1, 2, 3]] * 21},
+            "at most 20 items",
+        ),
         ("fix_the_bug", FIX_CONFIG, {"order": [1, 99]}, "unknown line ids"),
         ("fix_the_bug", FIX_CONFIG, {"order": [1, 20, 20]}, "a line twice"),
         (
@@ -436,3 +556,112 @@ def test_each_kind_through_the_api(
     assert passed.json()["correct"] is True
     # A submission in the wrong shape is refused, not crashed on.
     assert client.post(url, json={"submitted": {"nonsense": 1}}).status_code == 422
+
+
+# --- Fix the bug: every correct order (FR-5.5, #145) ---------------------------------------------
+
+# The fixed program's lines 3 and 6, and the correction 22 and line 9, may swap.
+GROUPED_FIX: dict[str, Any] = {**FIX_SOLUTION, "order": [1, 20, [3, 21], 6, 7, 8, [22, 9], 10]}
+
+
+def test_fix_the_bug_groups_accept_every_listed_order() -> None:
+    validate_activity("fix_the_bug", FIX_CONFIG, GROUPED_FIX)
+    for order in (
+        [1, 20, 3, 21, 6, 7, 8, 22, 9, 10],
+        [1, 20, 21, 3, 6, 7, 8, 9, 22, 10],
+    ):
+        result = grade("fix_the_bug", FIX_CONFIG, GROUPED_FIX, order=order)
+        assert result.correct, order
+        assert result.feedback == "All correct."
+
+
+def test_fix_the_bug_marks_the_wrong_correction_against_its_own_place() -> None:
+    # The swap inside the group is fine; the stack-style correction 23 in 21's place is not.
+    result = grade("fix_the_bug", FIX_CONFIG, GROUPED_FIX, order=[1, 20, 23, 3, 6, 7, 8, 9, 22, 10])
+    wrong = [p for p in result.parts if not p.correct]
+    assert [(p.ref, p.message) for p in wrong] == [(2, WRONG_FIX)]
+
+
+def test_fix_the_bug_a_bug_left_in_gets_the_contents_reason() -> None:
+    result = grade("fix_the_bug", FIX_CONFIG, GROUPED_FIX, order=[1, 20, 3, 4, 6, 7, 8, 22, 9, 10])
+    assert [p.message for p in result.parts if not p.correct] == [FIX_SOLUTION["feedback"][4]]
+
+
+def test_fix_the_bug_a_removed_line_is_named_in_the_summary() -> None:
+    result = grade("fix_the_bug", FIX_CONFIG, GROUPED_FIX, order=[1, 20, 3, 21, 6, 7, 8, 22, 10])
+    assert not result.correct
+    assert result.feedback == (
+        "9 of 10 correct. 1 line is missing: put it back, or add its correction."
+    )
+
+
+def test_the_reviewers_objective_7_case_is_correct() -> None:
+    # 621 with visited.add(n) and queue.append(n) swapped: was "11 of 13" (#145 review).
+    item = next(a for a in read_fixtures().activities if a.id == 621)
+    result = check_activity(
+        "fix_the_bug",
+        item.config,
+        item.solution,
+        {"order": [1, 2, 20, 4, 5, 6, 7, 9, 10, 11, 12, 21, 13]},
+    )
+    assert result.correct
+
+
+def test_a_solution_stored_with_string_ids_still_grades() -> None:
+    """Strict ids are a content rule (validate_activity); grading parses a stored solution
+    laxly, so a "3" stored by an older seed or an edit still grades (#145 review)."""
+    config = {"lines": [{"id": i, "text": f"line {i}"} for i in (1, 2, 3)]}
+    stored = {"order": [1, ["2", "3"]]}
+    assert check_activity("parsons", config, stored, {"order": [1, 3, 2]}).correct
+    assert not check_activity("parsons", config, stored, {"order": [3, 2, 1]}).correct
+    fix = {**FIX_SOLUTION, "order": [str(i) for i in FIX_SOLUTION["order"]]}
+    assert check_activity("fix_the_bug", FIX_CONFIG, fix, {"order": FIX_RIGHT}).correct
+    with pytest.raises(ValueError, match="'2' in the group"):
+        validate_activity("parsons", config, stored)
+
+
+def test_no_mastery_item_explains_its_answer_yet() -> None:
+    """The mastery check shows feedback at once, so one item's explanation would be on screen
+    before the next item is answered, and could answer it (603 → 604, 610 → 611 to 613; #167
+    review). Mastery items get explanations once #144 decides when the check shows feedback."""
+    explained = [
+        a.id
+        for a in read_fixtures().activities
+        if a.purpose == "mastery" and (a.solution or {}).get("explanation")
+    ]
+    assert explained == []
+
+
+def test_choose_tests_text_never_names_a_test_by_its_stored_id() -> None:
+    """The screen numbers the test cases ("Test 1: start at A") because an id such as
+    `two-islands` names what the student has to spot. Hints, feedback and explanations must use the
+    numbers too (#167 review)."""
+    for a in read_fixtures().activities:
+        if a.kind != "choose_tests":
+            continue
+        ids = [t["id"] for t in a.config["tests"] if "-" in t["id"]]  # the telling ones
+        texts = [h.body for h in a.hints]
+        texts += list((a.solution or {}).get("feedback", {}).values())
+        texts.append((a.solution or {}).get("explanation") or "")
+        for text in texts:
+            assert not [i for i in ids if i in text], (a.id, text)
+
+
+@pytest.mark.parametrize(
+    ("kind", "submission"),
+    [
+        ("choose_tests", {"selected": [""]}),
+        ("choose_tests", {"selected": [" ", ""]}),
+        ("trace", {"rows": [{"visitedVertex": "", "queue": [], "visited": [], "order": []}]}),
+        ("matching", {"pairs": {"a": ""}}),
+        ("multiple_choice", {"selected": "  "}),
+    ],
+)
+def test_answers_that_choose_nothing_are_blank(kind: str, submission: dict[str, Any]) -> None:
+    """These answer nothing, so they are refused rather than recorded (#143, #165 review)."""
+    assert is_blank(kind, submission)
+
+
+def test_a_partly_filled_trace_is_not_blank() -> None:
+    row = {"visitedVertex": "A", "queue": [], "visited": [], "order": []}
+    assert not is_blank("trace", {"rows": [row]})

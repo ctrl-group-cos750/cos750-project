@@ -67,6 +67,26 @@ class SegmentOut(ApiModel):
     video_id: int | None = None
     # Populated only for activity segments.
     activity_id: int | None = None
+    # The student has done it, so they can move past it (FR-2.7): an activity answered at least
+    # once, or every checkpoint of a video passed. Always true for every other kind.
+    done: bool = True
+    # The student has answered this segment's activity at least once, right or wrong. The page
+    # opens a module at an activity the student passed *without* trying (one that had no screen
+    # yet), never at one they tried and got wrong under an earlier rule (#165 review).
+    attempted: bool = False
+
+
+class RetrievalActivityOut(ApiModel):
+    """A retrieval question the module opens with, before its segments (FR-2.4).
+
+    The page loads the question itself from ``GET /api/activities/{id}``, so it is shown like any
+    other activity, with feedback and hints. ``answered`` is true once the student has made an
+    attempt at it: the page resumes at the first one still unanswered.
+    """
+
+    id: int
+    title: str
+    answered: bool
 
 
 class ModuleDetailOut(ModuleOut):
@@ -77,6 +97,8 @@ class ModuleDetailOut(ModuleOut):
     """
 
     segments: list[SegmentOut]
+    # The retrieval questions, answered before the segments (FR-2.4). Not segments themselves.
+    retrieval: list[RetrievalActivityOut]
 
 
 class PositionIn(ApiModel):

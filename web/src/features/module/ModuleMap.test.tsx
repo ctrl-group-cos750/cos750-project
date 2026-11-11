@@ -283,8 +283,7 @@ describe('ModuleMap — duration and progress', () => {
     renderApp('/')
 
     await screen.findByText('A graph in Python')
-    // ProgressBar with showCount renders "2 / 4" style text or similar — just verify it's present
-    expect(screen.getByRole('progressbar')).toBeInTheDocument()
+    expect(screen.getByRole('progressbar', { name: 'Module 2 progress' })).toBeInTheDocument()
   })
 
   it('does not show a progress bar for an open module', async () => {
@@ -293,5 +292,49 @@ describe('ModuleMap — duration and progress', () => {
 
     await screen.findByText('Warm-up and queue refresher')
     expect(screen.queryByRole('progressbar')).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Course progress in minutes
+// ---------------------------------------------------------------------------
+
+describe('ModuleMap — minutes', () => {
+  const emptyModule: ModuleSummary = {
+    ...lockedModule,
+    id: 5,
+    number: 4,
+    title: 'Build BFS',
+    estimatedMinutes: 15,
+    segmentCount: 0,
+  }
+
+  it('shows the total, leaving out modules with no content yet, before anything is done', async () => {
+    moduleListApi([openModule, lockedModule, emptyModule])
+    renderApp('/')
+
+    expect(await screen.findByText('About 17 minutes in total')).toBeInTheDocument()
+    expect(screen.queryByRole('progressbar', { name: 'Course progress in minutes' })).toBeNull()
+  })
+
+  it('shows the minutes done and left', async () => {
+    // Module 3 complete (12) and module 2 halfway (2 of 4 segments of 10): 17 of 39.
+    moduleListApi([openModule, lockedModule, inProgressModule, completeModule, emptyModule])
+    renderApp('/')
+
+    expect(
+      await screen.findByText('About 17 of 39 minutes done · about 22 left'),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('progressbar', { name: 'Course progress in minutes' })).toHaveAttribute(
+      'value',
+      '17',
+    )
+  })
+
+  it('says when everything with content is done', async () => {
+    moduleListApi([completeModule, emptyModule])
+    renderApp('/')
+
+    expect(await screen.findByText('All 12 minutes done')).toBeInTheDocument()
   })
 })

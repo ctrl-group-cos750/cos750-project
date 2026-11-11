@@ -6,43 +6,63 @@
       "title": "Warm-up and queue refresher",
       "estimated_minutes": 5,
       "goals": [
-        "Add to the back of a queue and take from the front.",
-        "Read basic Python: lists, dictionaries and loops."
+        "Add to the back of a queue and take from the front (first in, first out).",
+        "Read basic Python: a list by its index and a simple loop."
       ],
       "segments": [
         {
           "id": 1,
           "kind": "text",
-          "title": "Placeholder: welcome",
-          "body": "Placeholder until the module 0 content (#26) lands.\n\nThis short quiz checks what you remember about queues and Python. You only see the refreshers you need."
+          "title": "Before we start",
+          "body": "How does a social network find your friends of friends without checking every account it has? It starts from you and spreads out one ring of friends at a time. That search is **breadth-first search** (BFS), and by the end of this course you will have written it yourself.\n\nBFS explores a graph **one ring at a time**, and to do that it keeps a **queue** of places still to visit. The code we will write and read uses Python **lists** and a **loop**.\n\nThis short warm-up checks what you already remember. Each question is followed by a short refresher on the same idea: if you got the question wrong or weren't sure, read it before you move on. Nothing here is marked."
         },
         {
           "id": 2,
           "kind": "activity",
-          "title": "Placeholder: queue question",
+          "title": "Diagnostic: which item leaves the queue?",
           "activity_id": 1
         },
         {
           "id": 3,
-          "kind": "activity",
-          "title": "Placeholder: Python question",
-          "activity_id": 2
+          "kind": "refresher",
+          "title": "Refresher: how a queue works",
+          "refresher_for": "queues",
+          "skip_check_activity_id": 1,
+          "body": "A **queue** is **first in, first out** (FIFO): you add to the **back** and take from the **front**, like a line at a till. The person who joined first is served first.\n\nIn Python a queue is a `collections.deque`:\n\n```python\nfrom collections import deque\nq = deque()\nq.append(\"A\")     # add A to the back\nq.append(\"B\")     # add B to the back; queue is now A, B\nfirst = q.popleft()  # take from the front -> \"A\"\n```\n\n`append` puts an item at the back, and `popleft` takes the item at the front. BFS uses exactly this: it adds the neighbours it finds to the back, and always visits the one at the front next."
         },
         {
           "id": 4,
-          "kind": "refresher",
-          "title": "Placeholder: queue refresher",
-          "refresher_for": "queues",
-          "skip_check_activity_id": 1,
-          "body": "A **queue** is first in, first out: you add to the back and take from the front, like a line at a till.\n\nIn Python, `collections.deque` is a queue: `append` adds to the back and `popleft` takes from the front."
+          "kind": "activity",
+          "title": "Diagnostic: reading a list",
+          "activity_id": 2
         },
         {
           "id": 5,
           "kind": "refresher",
-          "title": "Placeholder: Python refresher",
+          "title": "Refresher: lists and indexing",
           "refresher_for": "python-basics",
           "skip_check_activity_id": 2,
-          "body": "A **dictionary** maps keys to values: `graph = {\"A\": [\"B\", \"C\"]}` stores the neighbours of `A` under the key `\"A\"`, and `graph[\"A\"]` reads them back."
+          "body": "A **list** holds items in order, and you read one by its **index**, counting from 0:\n\n```python\nneighbours = [\"B\", \"C\", \"D\"]\nneighbours[0]   # -> \"B\", the first item\nneighbours[1]   # -> \"C\", the second item\n```\n\nThe first item is at index `0`, not `1`. Later we store each vertex's neighbours as a list like this, so reading a list by its index is how we look at who a vertex connects to."
+        },
+        {
+          "id": 6,
+          "kind": "activity",
+          "title": "Diagnostic: reading a loop",
+          "activity_id": 3
+        },
+        {
+          "id": 7,
+          "kind": "refresher",
+          "title": "Refresher: a for-loop over a list",
+          "refresher_for": "loops",
+          "skip_check_activity_id": 3,
+          "body": "A **for-loop** runs its body once for each item in a list, giving the item a name each time:\n\n```python\nfor item in [\"B\", \"C\", \"D\"]:\n    print(item)\n```\n\nThis prints `B`, then `C`, then `D`: the loop variable `item` is `\"B\"` on the first pass, `\"C\"` on the second and `\"D\"` on the third. Later BFS loops over a vertex's neighbours this same way, taking one neighbour at a time."
+        },
+        {
+          "id": 8,
+          "kind": "text",
+          "title": "You're ready",
+          "body": "That's everything the warm-up checks: a **queue** (first in, first out), reading a **list** by its index, and a **loop** over a list. The next module shows what a graph actually is and builds on exactly these ideas."
         }
       ]
     }
@@ -51,64 +71,89 @@
     {
       "id": 1,
       "kind": "multiple_choice",
-      "title": "Placeholder: which item leaves the queue?",
+      "title": "Which item leaves the queue first?",
       "module_id": 0,
       "purpose": "diagnostic",
       "config": {
-        "prompt": "The queue holds 3, 7, 2 (front first). Which item leaves first?",
+        "prompt": "Three people join an empty queue: Ama joins, then Ben, then Cebo. Who is served first?",
         "options": [
-          {
-            "id": "a",
-            "label": "3"
-          },
-          {
-            "id": "b",
-            "label": "2"
-          },
-          {
-            "id": "c",
-            "label": "7"
-          }
+          { "id": "b", "label": "Cebo" },
+          { "id": "a", "label": "Ama" },
+          { "id": "c", "label": "Ben" }
         ]
       },
       "solution": {
+        "explanation": "A queue is first in, first out. Ama joined first, so she is at the front and is served first.",
         "correct": "a",
         "feedback": {
-          "b": "2 joined last, so it leaves last: a queue is first in, first out.",
-          "c": "7 is in the middle. The front item leaves first."
+          "b": "Cebo joined last, so Cebo is served last. A queue is first in, first out.",
+          "c": "Ben is in the middle. In a queue the person who joined first is at the front, and is served first."
         }
-      }
+      },
+      "hints": [
+        { "level": 1, "body": "A queue works like a real line of people. Who gets served first in a line?" },
+        { "level": 2, "body": "A queue is first in, first out: the item that was added first comes out first." },
+        { "level": 3, "body": "Picture the line: who has been waiting the longest?" },
+        { "level": 4, "body": "Answer: Ama. She joined first, so she is at the front and is served first." }
+      ]
     },
     {
       "id": 2,
       "kind": "multiple_choice",
-      "title": "Placeholder: reading a dictionary",
+      "title": "Reading a list by its index",
       "module_id": 0,
       "purpose": "diagnostic",
       "config": {
-        "prompt": "After `graph = {\"A\": [\"B\", \"C\"]}`, what is `graph[\"A\"]`?",
+        "prompt": "The list items is [\"B\", \"C\", \"D\"]. What is items[1]?",
         "options": [
-          {
-            "id": "a",
-            "label": "[\"B\", \"C\"]"
-          },
-          {
-            "id": "b",
-            "label": "\"A\""
-          },
-          {
-            "id": "c",
-            "label": "An error"
-          }
+          { "id": "b", "label": "\"B\"" },
+          { "id": "c", "label": "[\"B\", \"C\"]" },
+          { "id": "a", "label": "\"C\"" }
         ]
       },
       "solution": {
+        "explanation": "Python counts list positions from 0. items[0] is \"B\", so items[1] is the second item, \"C\".",
         "correct": "a",
         "feedback": {
-          "b": "`graph[\"A\"]` reads the value stored under the key \"A\", not the key itself.",
-          "c": "\"A\" is a key in the dictionary, so reading it works."
+          "b": "\"B\" is items[0]: a list is indexed from 0, so index 1 is the second item.",
+          "c": "items[1] reads a single item at that index, not a slice of the list."
         }
-      }
+      },
+      "hints": [
+        { "level": 1, "body": "A list is indexed from 0, not 1." },
+        { "level": 2, "body": "items[0] is the first item, so items[1] is the second." },
+        { "level": 3, "body": "The list is [\"B\", \"C\", \"D\"]; count B as 0, C as 1." },
+        { "level": 4, "body": "Answer: \"C\". Index 1 is the second item in the list." }
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "multiple_choice",
+      "title": "Reading a loop",
+      "module_id": 0,
+      "purpose": "diagnostic",
+      "config": {
+        "prompt": "What does this loop print? It is written on one line: for x in [\"B\", \"C\", \"D\"]: print(x)",
+        "options": [
+          { "id": "a", "label": "B then C then D, one per line" },
+          { "id": "b", "label": "The letter x, printed three times" },
+          { "id": "c", "label": "[\"B\", \"C\", \"D\"] on one line" }
+        ]
+      },
+      "solution": {
+        "explanation": "The loop takes each item in turn and prints it, so you get B, then C, then D, one per line.",
+        "correct": "a",
+        "feedback": {
+          "b": "x is the loop variable: each time round it holds the next item, so it prints the items, not the letter x.",
+          "c": "The loop runs its body once per item and prints each one on its own line, not the whole list at once."
+        }
+      },
+      "hints": [
+        { "level": 1, "body": "A for-loop runs its body once for each item in the list." },
+        { "level": 2, "body": "Each time round the loop, x is set to the next item in the list." },
+        { "level": 3, "body": "So the body print(x) runs three times, with x being \"B\", then \"C\", then \"D\"." },
+        { "level": 4, "body": "Answer: it prints B, then C, then D, each on its own line." }
+      ]
     }
   ]
 }

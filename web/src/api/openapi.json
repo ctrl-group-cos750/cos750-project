@@ -186,7 +186,7 @@
           "activities"
         ],
         "summary": "Get Activity",
-        "description": "The activity to render. `ActivityOut` has no `solution`, so the answer never reaches the\nbrowser (FR-5.3, NFR-S2).",
+        "description": "The activity to render. `ActivityOut` has no `solution`, so the answer never reaches the\nbrowser (FR-5.3, NFR-S2). `solved` says whether this student has already answered it\ncorrectly, so the page stops offering hints after a refresh too (#158).",
         "operationId": "get_activity_api_activities__activity_id__get",
         "parameters": [
           {
@@ -245,7 +245,7 @@
           "activities"
         ],
         "summary": "Submit Attempt",
-        "description": "Grade a submission by comparison with the stored solution and record the attempt (FR-4.2,\nFR-4.5, FR-5.3).\n\nSend `{\"submitted\": {...}}` in the kind's shape: `{\"selected\": \"<option id>\"}` for multiple\nchoice, `{\"order\": [...]}` for Parsons, `{\"answers\": {...}}` for fill-in, and\n`{\"rows\": [{\"visitedVertex\", \"queue\", \"visited\", \"order\"}, ...]}` for a trace table, one row\nper BFS step (graded against the engine, so a trace has no stored solution). A submission in the\nwrong shape is 422. No student code is executed: `check_activity` compares the submission with\nthe solution, which stays in this process (NFR-S7).",
+        "description": "Grade a submission by comparison with the stored solution and record the attempt (FR-4.2,\nFR-4.5, FR-5.3).\n\nSend `{\"submitted\": {...}}` in the kind's shape: `{\"selected\": \"<option id>\"}` for multiple\nchoice, `{\"order\": [...]}` for Parsons, `{\"answers\": {...}}` for fill-in, and\n`{\"rows\": [{\"visitedVertex\", \"queue\", \"visited\", \"order\"}, ...]}` for a trace table, one row\nper BFS step (graded against the engine, so a trace has no stored solution). A submission in the\nwrong shape, or one that answers nothing (no option, line, token, pair, test or row), is 422\nand isn't recorded. No student code is executed: `check_activity` compares the submission with\nthe solution, which stays in this process (NFR-S7).",
         "operationId": "submit_attempt_api_activities__activity_id__attempts_post",
         "parameters": [
           {
@@ -375,7 +375,7 @@
           "activities"
         ],
         "summary": "Reveal Hint",
-        "description": "Reveal this student's next hint level, one at a time, and record it (FR-4.4, FR-4.5).\n\nNo body. Each call returns the next level (1, then 2, …); once every level has been shown it\nis 409. When `nextCountsAsSupport` is true, warn the student before calling again: a correct\nanswer after hint 3 or 4 counts as \"met with support\" (ID document §7.4).",
+        "description": "Reveal this student's next hint level, one at a time, and record it (FR-4.4, FR-4.5).\n\nNo body. Each call returns the next level (1, then 2, …); once every level has been shown,\nor once the student has answered correctly, it is 409. When `nextCountsAsSupport` is true,\nwarn the student before calling again: a correct answer after hint 3 or 4 counts as \"met\nwith support\" (ID document §7.4).",
         "operationId": "reveal_hint_api_activities__activity_id__hints_post",
         "parameters": [
           {
@@ -434,7 +434,7 @@
           "events"
         ],
         "summary": "Report Event",
-        "description": "Log something only the browser sees, for the pilot's evaluation (FR-10.1). The server adds\nwho and when. 404 if the video, checkpoint or segment doesn't exist; 429 past 120 a minute.",
+        "description": "Log something only the browser sees, for the pilot's evaluation (FR-10.1). The server adds\nwho and when. 404 if the video, checkpoint or segment doesn't exist; 429 past 120 a minute. A\nsegment viewed in a module still locked for the student is accepted but not logged.",
         "operationId": "report_event_api_events_post",
         "parameters": [
           {
@@ -1120,7 +1120,7 @@
           "modules"
         ],
         "summary": "Save Module Position",
-        "description": "Record the student's current segment position and return the updated module.\n\nThe client calls this whenever the student advances to a new segment.\nThe furthest segment reached is kept, so stepping back changes nothing. Reaching the last\nsegment marks the module ``complete`` for good.\n\nReturns the updated ``ModuleDetailOut`` so the frontend can re-render the\nmodule detail page with the new status in one round-trip (consistent with\n``submit_attempt`` returning ``AttemptOut``).\n\nReturns 404 if the module does not exist; 403 if it is locked; 409 if the position is more\nthan one segment past the furthest the student has reached.",
+        "description": "Record the student's current segment position and return the updated module.\n\nThe client calls this whenever the student advances to a new segment.\nThe furthest segment reached is kept, so stepping back changes nothing. A segment must be\ndone (its activity answered, or its video's checkpoints passed) before moving past it, and\nsaving the last segment again once it is done marks the module ``complete`` for good (saving\nit while it isn't done changes nothing).\n\nReturns the updated ``ModuleDetailOut`` so the frontend can re-render the\nmodule detail page with the new status in one round-trip (consistent with\n``submit_attempt`` returning ``AttemptOut``).\n\nReturns 404 if the module does not exist; 403 if it is locked; 409 if the position is more\nthan one segment past the furthest the student has reached, or past a segment they haven't\ndone yet.",
         "operationId": "save_module_position_api_modules__module_id__position_post",
         "parameters": [
           {
@@ -1876,7 +1876,7 @@
           "staff"
         ],
         "summary": "Export Csv",
-        "description": "Download one table as CSV for every real student (FR-10.2), oldest first:\n\n- `attempts`: each answer; `submitted` and `detail` are what was answered and the per-part\n  result, as JSON.\n- `hints`: each hint shown.\n- `events`: the timeline (app/services/events.py): videos started and finished, checkpoints\n  reached, segments viewed, hints shown, results changing; `payload` as JSON.\n- `objective_results`: each student's current result per objective, with the attempts it was\n  decided from (`evidence`).",
+        "description": "Download one table as CSV for every real student (FR-10.2), oldest first:\n\n- `attempts`: each answer; `submitted` and `detail` are what was answered and the per-part\n  result, as JSON.\n- `hints`: each hint shown.\n- `events`: the timeline (app/services/events.py): videos started and finished, checkpoints\n  reached, segments viewed, hints shown, results changing, modules completed; `payload` as JSON.\n  Segment views and module completions give time per segment and per module.\n- `objective_results`: each student's current result per objective, with the attempts it was\n  decided from (`evidence`).",
         "operationId": "export_csv_api_staff_export__table__csv_get",
         "parameters": [
           {
@@ -1964,6 +1964,1191 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/content": {
+      "get": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Content Overview",
+        "description": "Everything the editor lists: objectives, modules, review paths, activities (not the video\ncheckpoints' questions), graphs, and the videos a video segment can play.",
+        "operationId": "content_overview_api_staff_content_get",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorContentOverview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/content/export": {
+      "get": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Export Content",
+        "description": "The content as fixture files (a zip laid out like api/app/seed), to commit to the\nrepository so a fresh database is seeded with what the portal holds now.",
+        "operationId": "export_content_api_staff_content_export_get",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/zip": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/content/objectives": {
+      "post": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Create Objective",
+        "description": "Add the next objective (up to 8: each has a badge).",
+        "operationId": "create_objective_api_staff_content_objectives_post",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditorObjectiveIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorObjectiveOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/content/objectives/{objective_id}": {
+      "put": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Update Objective",
+        "description": "Change an objective's wording or its mastery rule. Every student's result is worked out\nagain with the new rule.",
+        "operationId": "update_objective_api_staff_content_objectives__objective_id__put",
+        "parameters": [
+          {
+            "name": "objective_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Objective Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditorObjectiveIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorObjectiveOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/content/modules/{module_id}": {
+      "get": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Get Module",
+        "operationId": "get_module_api_staff_content_modules__module_id__get",
+        "parameters": [
+          {
+            "name": "module_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Module Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorModuleOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Update Module",
+        "description": "Replace a module's details and its segments, in order. Keep each existing segment's `id`;\nleave it out for a new one. A segment left out is removed.",
+        "operationId": "update_module_api_staff_content_modules__module_id__put",
+        "parameters": [
+          {
+            "name": "module_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Module Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditorModuleIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorModuleOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Delete Module",
+        "description": "Delete an empty module made in the portal that no student has started.",
+        "operationId": "delete_module_api_staff_content_modules__module_id__delete",
+        "parameters": [
+          {
+            "name": "module_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Module Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "409": {
+            "description": "Not possible here; the message says why."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/content/modules": {
+      "post": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Create Module",
+        "description": "Add a module after the last one.",
+        "operationId": "create_module_api_staff_content_modules_post",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditorModuleIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorModuleOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/content/review-paths/{objective_id}": {
+      "get": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Get Review Path",
+        "operationId": "get_review_path_api_staff_content_review_paths__objective_id__get",
+        "parameters": [
+          {
+            "name": "objective_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Objective Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorReviewPathOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Update Review Path",
+        "description": "Replace the objective's review path: its segments, in order.",
+        "operationId": "update_review_path_api_staff_content_review_paths__objective_id__put",
+        "parameters": [
+          {
+            "name": "objective_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Objective Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditorReviewPathIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorReviewPathOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/content/activities/{activity_id}": {
+      "get": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Get Activity",
+        "operationId": "get_activity_api_staff_content_activities__activity_id__get",
+        "parameters": [
+          {
+            "name": "activity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Activity Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorActivityOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "409": {
+            "description": "Not possible here; the message says why."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Update Activity",
+        "description": "Replace an activity and its hints. Earlier attempts keep the result they were given.",
+        "operationId": "update_activity_api_staff_content_activities__activity_id__put",
+        "parameters": [
+          {
+            "name": "activity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Activity Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditorActivityIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorActivityOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "409": {
+            "description": "Not possible here; the message says why."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Delete Activity",
+        "description": "Delete an activity no segment shows. One students have used, or one from the repository,\nis taken out of use instead (`deleted: false`).",
+        "operationId": "delete_activity_api_staff_content_activities__activity_id__delete",
+        "parameters": [
+          {
+            "name": "activity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Activity Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorDeleteResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "409": {
+            "description": "Not possible here; the message says why."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/content/activities": {
+      "post": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Create Activity",
+        "description": "Add an activity. A segment shows it once a module or review path lists it.",
+        "operationId": "create_activity_api_staff_content_activities_post",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditorActivityIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorActivityOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/content/graphs/{graph_id}": {
+      "get": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Get Graph",
+        "operationId": "get_graph_api_staff_content_graphs__graph_id__get",
+        "parameters": [
+          {
+            "name": "graph_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Graph Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorGraphOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Update Graph",
+        "operationId": "update_graph_api_staff_content_graphs__graph_id__put",
+        "parameters": [
+          {
+            "name": "graph_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Graph Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditorGraphIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorGraphOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Delete Graph",
+        "description": "Delete a graph made in the portal.",
+        "operationId": "delete_graph_api_staff_content_graphs__graph_id__delete",
+        "parameters": [
+          {
+            "name": "graph_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Graph Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "409": {
+            "description": "Not possible here; the message says why."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/content/graphs": {
+      "post": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Create Graph",
+        "operationId": "create_graph_api_staff_content_graphs_post",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditorGraphIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorGraphOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/content/{kind}/{item_id}/use-repository": {
+      "post": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Use Repository Version",
+        "description": "Drop the portal's edit of this item and load the repository's version of it now.",
+        "operationId": "use_repository_version_api_staff_content__kind___item_id__use_repository_post",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "objectives",
+                "modules",
+                "review-paths",
+                "activities",
+                "graphs"
+              ],
+              "type": "string",
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Item Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "409": {
+            "description": "Not possible here; the message says why."
           },
           "422": {
             "description": "Validation Error",
@@ -2297,6 +3482,11 @@
             "additionalProperties": true,
             "type": "object",
             "title": "Config"
+          },
+          "solved": {
+            "type": "boolean",
+            "title": "Solved",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -2633,6 +3823,1012 @@
         "title": "EarnedBadgeOut",
         "description": "A badge the student holds. `badge` is a catalogue id (web/src/components/achievements.ts);\n`ref` tells repeatable badges apart (the bonus quest's id), \"\" otherwise. `seen` is false until\nthe app has announced it; an upgrade from bronze to gold makes it unseen again."
       },
+      "EditorActivityIn": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "multiple_choice",
+              "matching",
+              "parsons",
+              "fill_in",
+              "trace",
+              "fix_the_bug",
+              "choose_tests"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "visible": {
+            "type": "boolean",
+            "title": "Visible",
+            "default": true
+          },
+          "moduleId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moduleid"
+          },
+          "objectiveId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objectiveid"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "practice",
+              "diagnostic",
+              "retrieval",
+              "mastery",
+              "review",
+              "bonus"
+            ],
+            "title": "Purpose",
+            "default": "practice"
+          },
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config"
+          },
+          "solution": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Solution"
+          },
+          "hints": {
+            "items": {
+              "$ref": "#/components/schemas/StaffHint"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "title": "Hints"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "title",
+          "config",
+          "solution"
+        ],
+        "title": "EditorActivityIn",
+        "description": "`config` and `solution` have the kind's shape (app/schemas/activities.py), exactly as in a\nfixture."
+      },
+      "EditorActivityOut": {
+        "properties": {
+          "edited": {
+            "type": "boolean",
+            "title": "Edited"
+          },
+          "inRepository": {
+            "type": "boolean",
+            "title": "Inrepository"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "multiple_choice",
+              "matching",
+              "parsons",
+              "fill_in",
+              "trace",
+              "fix_the_bug",
+              "choose_tests"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "visible": {
+            "type": "boolean",
+            "title": "Visible",
+            "default": true
+          },
+          "moduleId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moduleid"
+          },
+          "objectiveId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objectiveid"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "practice",
+              "diagnostic",
+              "retrieval",
+              "mastery",
+              "review",
+              "bonus"
+            ],
+            "title": "Purpose",
+            "default": "practice"
+          },
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config"
+          },
+          "solution": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Solution"
+          },
+          "hints": {
+            "items": {
+              "$ref": "#/components/schemas/StaffHint"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "title": "Hints"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "inUse": {
+            "type": "boolean",
+            "title": "Inuse"
+          },
+          "shownIn": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Shownin"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "edited",
+          "inRepository",
+          "kind",
+          "title",
+          "config",
+          "solution",
+          "id",
+          "inUse",
+          "shownIn"
+        ],
+        "title": "EditorActivityOut"
+      },
+      "EditorActivitySummary": {
+        "properties": {
+          "edited": {
+            "type": "boolean",
+            "title": "Edited"
+          },
+          "inRepository": {
+            "type": "boolean",
+            "title": "Inrepository"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "multiple_choice",
+              "matching",
+              "parsons",
+              "fill_in",
+              "trace",
+              "fix_the_bug",
+              "choose_tests"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "moduleId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moduleid"
+          },
+          "objectiveId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objectiveid"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "practice",
+              "diagnostic",
+              "retrieval",
+              "mastery",
+              "review",
+              "bonus"
+            ],
+            "title": "Purpose"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "edited",
+          "inRepository",
+          "id",
+          "kind",
+          "title",
+          "moduleId",
+          "objectiveId",
+          "purpose"
+        ],
+        "title": "EditorActivitySummary"
+      },
+      "EditorContentOverview": {
+        "properties": {
+          "objectives": {
+            "items": {
+              "$ref": "#/components/schemas/EditorObjectiveOut"
+            },
+            "type": "array",
+            "title": "Objectives"
+          },
+          "modules": {
+            "items": {
+              "$ref": "#/components/schemas/EditorModuleSummary"
+            },
+            "type": "array",
+            "title": "Modules"
+          },
+          "reviewPaths": {
+            "items": {
+              "$ref": "#/components/schemas/EditorReviewPathSummary"
+            },
+            "type": "array",
+            "title": "Reviewpaths"
+          },
+          "activities": {
+            "items": {
+              "$ref": "#/components/schemas/EditorActivitySummary"
+            },
+            "type": "array",
+            "title": "Activities"
+          },
+          "graphs": {
+            "items": {
+              "$ref": "#/components/schemas/EditorGraphSummary"
+            },
+            "type": "array",
+            "title": "Graphs"
+          },
+          "videos": {
+            "items": {
+              "$ref": "#/components/schemas/EditorVideoChoice"
+            },
+            "type": "array",
+            "title": "Videos"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "objectives",
+          "modules",
+          "reviewPaths",
+          "activities",
+          "graphs",
+          "videos"
+        ],
+        "title": "EditorContentOverview"
+      },
+      "EditorDeleteResult": {
+        "properties": {
+          "deleted": {
+            "type": "boolean",
+            "title": "Deleted"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "deleted"
+        ],
+        "title": "EditorDeleteResult",
+        "description": "`deleted`: the row is gone. Otherwise it was only taken out of use (students' answers to\nit are kept for the evaluation, FR-10)."
+      },
+      "EditorGraphIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "directed": {
+            "type": "boolean",
+            "title": "Directed",
+            "default": false
+          },
+          "vertices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Vertices"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/GraphEdge"
+            },
+            "type": "array",
+            "title": "Edges"
+          },
+          "startVertex": {
+            "type": "string",
+            "title": "Startvertex"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "vertices",
+          "startVertex"
+        ],
+        "title": "EditorGraphIn"
+      },
+      "EditorGraphOut": {
+        "properties": {
+          "edited": {
+            "type": "boolean",
+            "title": "Edited"
+          },
+          "inRepository": {
+            "type": "boolean",
+            "title": "Inrepository"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "directed": {
+            "type": "boolean",
+            "title": "Directed",
+            "default": false
+          },
+          "vertices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Vertices"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/GraphEdge"
+            },
+            "type": "array",
+            "title": "Edges"
+          },
+          "startVertex": {
+            "type": "string",
+            "title": "Startvertex"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "edited",
+          "inRepository",
+          "name",
+          "vertices",
+          "startVertex",
+          "id"
+        ],
+        "title": "EditorGraphOut"
+      },
+      "EditorGraphSummary": {
+        "properties": {
+          "edited": {
+            "type": "boolean",
+            "title": "Edited"
+          },
+          "inRepository": {
+            "type": "boolean",
+            "title": "Inrepository"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "edited",
+          "inRepository",
+          "id",
+          "name"
+        ],
+        "title": "EditorGraphSummary"
+      },
+      "EditorModuleIn": {
+        "properties": {
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "goals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Goals"
+          },
+          "estimatedMinutes": {
+            "type": "integer",
+            "title": "Estimatedminutes"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/EditorSegmentIn"
+            },
+            "type": "array",
+            "title": "Segments"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "slug",
+          "title",
+          "goals",
+          "estimatedMinutes"
+        ],
+        "title": "EditorModuleIn"
+      },
+      "EditorModuleOut": {
+        "properties": {
+          "edited": {
+            "type": "boolean",
+            "title": "Edited"
+          },
+          "inRepository": {
+            "type": "boolean",
+            "title": "Inrepository"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "goals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Goals"
+          },
+          "estimatedMinutes": {
+            "type": "integer",
+            "title": "Estimatedminutes"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/EditorSegmentOut"
+            },
+            "type": "array",
+            "title": "Segments"
+          },
+          "segmentsEdited": {
+            "type": "boolean",
+            "title": "Segmentsedited"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "edited",
+          "inRepository",
+          "id",
+          "slug",
+          "title",
+          "goals",
+          "estimatedMinutes",
+          "segments",
+          "segmentsEdited"
+        ],
+        "title": "EditorModuleOut"
+      },
+      "EditorModuleSummary": {
+        "properties": {
+          "edited": {
+            "type": "boolean",
+            "title": "Edited"
+          },
+          "inRepository": {
+            "type": "boolean",
+            "title": "Inrepository"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "segmentCount": {
+            "type": "integer",
+            "title": "Segmentcount"
+          },
+          "segmentsEdited": {
+            "type": "boolean",
+            "title": "Segmentsedited"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "edited",
+          "inRepository",
+          "id",
+          "slug",
+          "title",
+          "segmentCount",
+          "segmentsEdited"
+        ],
+        "title": "EditorModuleSummary"
+      },
+      "EditorObjectiveIn": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "bloomLevel": {
+            "type": "string",
+            "title": "Bloomlevel"
+          },
+          "criterion": {
+            "type": "string",
+            "title": "Criterion"
+          },
+          "passFraction": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Passfraction"
+          },
+          "maxWrong": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maxwrong"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text",
+          "bloomLevel",
+          "criterion"
+        ],
+        "title": "EditorObjectiveIn"
+      },
+      "EditorObjectiveOut": {
+        "properties": {
+          "edited": {
+            "type": "boolean",
+            "title": "Edited"
+          },
+          "inRepository": {
+            "type": "boolean",
+            "title": "Inrepository"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "bloomLevel": {
+            "type": "string",
+            "title": "Bloomlevel"
+          },
+          "criterion": {
+            "type": "string",
+            "title": "Criterion"
+          },
+          "passFraction": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Passfraction"
+          },
+          "maxWrong": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maxwrong"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "edited",
+          "inRepository",
+          "text",
+          "bloomLevel",
+          "criterion",
+          "id"
+        ],
+        "title": "EditorObjectiveOut"
+      },
+      "EditorReviewPathIn": {
+        "properties": {
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/EditorSegmentIn"
+            },
+            "type": "array",
+            "title": "Segments"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "segments"
+        ],
+        "title": "EditorReviewPathIn"
+      },
+      "EditorReviewPathOut": {
+        "properties": {
+          "objectiveId": {
+            "type": "integer",
+            "title": "Objectiveid"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/EditorSegmentOut"
+            },
+            "type": "array",
+            "title": "Segments"
+          },
+          "edited": {
+            "type": "boolean",
+            "title": "Edited"
+          },
+          "inRepository": {
+            "type": "boolean",
+            "title": "Inrepository"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "objectiveId",
+          "segments",
+          "edited",
+          "inRepository"
+        ],
+        "title": "EditorReviewPathOut"
+      },
+      "EditorReviewPathSummary": {
+        "properties": {
+          "objectiveId": {
+            "type": "integer",
+            "title": "Objectiveid"
+          },
+          "segmentCount": {
+            "type": "integer",
+            "title": "Segmentcount"
+          },
+          "edited": {
+            "type": "boolean",
+            "title": "Edited"
+          },
+          "inRepository": {
+            "type": "boolean",
+            "title": "Inrepository"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "objectiveId",
+          "segmentCount",
+          "edited",
+          "inRepository"
+        ],
+        "title": "EditorReviewPathSummary"
+      },
+      "EditorSegmentIn": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "video",
+              "text",
+              "worked_example",
+              "activity",
+              "refresher"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body",
+            "default": ""
+          },
+          "activityId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activityid"
+          },
+          "skipCheckActivityId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skipcheckactivityid"
+          },
+          "refresherFor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refresherfor"
+          },
+          "videoId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Videoid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "title"
+        ],
+        "title": "EditorSegmentIn",
+        "description": "One step of a module or review path. Leave `id` out for a new one. A `video` segment may\nname the video that plays it (`videoId`); the video is made on the Videos page."
+      },
+      "EditorSegmentOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "video",
+              "text",
+              "worked_example",
+              "activity",
+              "refresher"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body",
+            "default": ""
+          },
+          "activityId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activityid"
+          },
+          "skipCheckActivityId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skipcheckactivityid"
+          },
+          "refresherFor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refresherfor"
+          },
+          "videoId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Videoid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "title"
+        ],
+        "title": "EditorSegmentOut"
+      },
+      "EditorVideoChoice": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "segmentId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segmentid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "segmentId"
+        ],
+        "title": "EditorVideoChoice",
+        "description": "A video a `video` segment can play, and the segment that plays it now, if any."
+      },
       "ErrorOut": {
         "properties": {
           "detail": {
@@ -2941,6 +5137,13 @@
             },
             "type": "array",
             "title": "Segments"
+          },
+          "retrieval": {
+            "items": {
+              "$ref": "#/components/schemas/RetrievalActivityOut"
+            },
+            "type": "array",
+            "title": "Retrieval"
           }
         },
         "additionalProperties": false,
@@ -2955,7 +5158,8 @@
           "status",
           "segmentCount",
           "currentSegmentPosition",
-          "segments"
+          "segments",
+          "retrieval"
         ],
         "title": "ModuleDetailOut",
         "description": "A module with its full ordered segment list.\n\nReturned by ``GET /api/modules/{moduleId}``.  Extends ``ModuleOut`` so the\nfrontend can use the same type for map cards and detail views."
@@ -3176,6 +5380,31 @@
           "password"
         ],
         "title": "RegisterIn"
+      },
+      "RetrievalActivityOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "answered": {
+            "type": "boolean",
+            "title": "Answered"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "answered"
+        ],
+        "title": "RetrievalActivityOut",
+        "description": "A retrieval question the module opens with, before its segments (FR-2.4).\n\nThe page loads the question itself from ``GET /api/activities/{id}``, so it is shown like any\nother activity, with feedback and hints. ``answered`` is true once the student has made an\nattempt at it: the page resumes at the first one still unanswered."
       },
       "ReviewPathOut": {
         "properties": {
@@ -3414,6 +5643,16 @@
               }
             ],
             "title": "Activityid"
+          },
+          "done": {
+            "type": "boolean",
+            "title": "Done",
+            "default": true
+          },
+          "attempted": {
+            "type": "boolean",
+            "title": "Attempted",
+            "default": false
           }
         },
         "additionalProperties": false,

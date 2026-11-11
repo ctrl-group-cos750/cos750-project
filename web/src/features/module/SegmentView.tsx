@@ -1,13 +1,22 @@
-import { Link } from 'react-router'
+import { useEffect } from 'react'
+import { reportEvent } from '../../api/events.ts'
 import { Alert, Markdown } from '../../components'
+import { ActivityView } from '../activities/ActivityPage.tsx'
+import { VideoView } from '../video/VideoPage.tsx'
 import type { Segment } from './module.types.ts'
 
 export type SegmentViewProps = {
   segment: Segment
+  /** Called after each answer in the segment, so the module can check whether it is done. */
+  onAnswered?: () => void
 }
 
-/** Dispatches on segment.kind and renders the appropriate view. */
-export function SegmentView({ segment }: SegmentViewProps) {
+/** Dispatches on segment.kind and renders the appropriate view. Videos and activities are shown
+ * here, inside the module, so its Previous and Next buttons stay on screen. */
+export function SegmentView({ segment, onAnswered }: SegmentViewProps) {
+  // The pilot's timeline of what each student saw (FR-10.1, #141): one event per segment shown.
+  useEffect(() => reportEvent('segment_viewed', segment.id), [segment.id])
+
   switch (segment.kind) {
     case 'text':
     case 'worked_example':
@@ -28,12 +37,7 @@ export function SegmentView({ segment }: SegmentViewProps) {
         <section aria-label={segment.title} className="grid gap-4">
           <h2 className="text-xl font-semibold">{segment.title}</h2>
           {segment.videoId !== null ? (
-            <Link
-              to={`/videos/${segment.videoId}`}
-              className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-3 font-medium hover:bg-accent"
-            >
-              ▶ Watch video
-            </Link>
+            <VideoView videoId={segment.videoId} heading="h3" onResult={onAnswered} />
           ) : (
             <Alert tone="warning">Video not available.</Alert>
           )}
@@ -45,12 +49,7 @@ export function SegmentView({ segment }: SegmentViewProps) {
         <section aria-label={segment.title} className="grid gap-4">
           <h2 className="text-xl font-semibold">{segment.title}</h2>
           {segment.activityId !== null ? (
-            <Link
-              to={`/activities/${segment.activityId}`}
-              className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-3 font-medium hover:bg-accent"
-            >
-              Start the activity
-            </Link>
+            <ActivityView activityId={segment.activityId} showTitle={false} onResult={onAnswered} />
           ) : (
             <Alert tone="warning">Activity not available.</Alert>
           )}

@@ -37,9 +37,10 @@ from app.schemas.modules import (
 # Activity kinds the web can't show a student yet: it says "This activity kind is not available
 # yet" instead (SUPPORTED in web/src/features/activities/ActivityRenderer.tsx is the mirror of
 # this set). A student can't answer them, so FR-2.7 counts them as done rather than locking the
-# student out of the rest of the module.
-# TODO: remove a kind from this set as soon as its student UI exists.
-KINDS_WITHOUT_STUDENT_UI: frozenset[str] = frozenset({"trace", "fix_the_bug", "choose_tests"})
+# student out of the rest of the module. Empty since trace, fix_the_bug and choose_tests got their
+# screens (#136); kept so a kind added to the API before its screen can't strand a student.
+# Remove a kind from this set in the same change that adds it to SUPPORTED.
+KINDS_WITHOUT_STUDENT_UI: frozenset[str] = frozenset()
 
 
 class ModuleNotFound(ValueError):

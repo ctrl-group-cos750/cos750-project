@@ -42,6 +42,46 @@ describe('Button', () => {
     expect(onClick).not.toHaveBeenCalled()
   })
 
+  it('keeps focus while loading when asked to: busy, aria-disabled, and presses ignored', async () => {
+    const user = userEvent.setup()
+    const onClick = vi.fn<() => void>()
+    const onSubmit = vi.fn<(event: React.FormEvent) => void>((event) => event.preventDefault())
+    render(
+      <form onSubmit={onSubmit}>
+        <input aria-label="Answer" />
+        <Button type="submit" loading keepFocusWhileLoading onClick={onClick}>
+          Check answer
+        </Button>
+      </form>,
+    )
+    const button = screen.getByRole('button', { name: 'Check answer' })
+    expect(button).toBeEnabled() // so it can keep focus
+    expect(button).toHaveAttribute('aria-disabled', 'true')
+    expect(button).toHaveAttribute('aria-busy', 'true')
+    button.focus()
+    await user.keyboard('{Enter}')
+    await user.keyboard(' ')
+    await user.click(button)
+    // Enter in a field submits a form by clicking its submit button: blocked too.
+    await user.type(screen.getByRole('textbox', { name: 'Answer' }), 'x{Enter}')
+    expect(onClick).not.toHaveBeenCalled()
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it('works as normal once loading ends, with keepFocusWhileLoading set', async () => {
+    const onClick = vi.fn<() => void>()
+    render(
+      <Button keepFocusWhileLoading onClick={onClick}>
+        Save
+      </Button>,
+    )
+    const button = screen.getByRole('button', { name: 'Save' })
+    expect(button).not.toHaveAttribute('aria-disabled')
+    expect(button).not.toHaveAttribute('aria-busy')
+    await userEvent.click(button)
+    expect(onClick).toHaveBeenCalledOnce()
+  })
+
   it('can submit a form when asked to', () => {
     render(<Button type="submit">Log in</Button>)
     expect(screen.getByRole('button', { name: 'Log in' })).toHaveAttribute('type', 'submit')

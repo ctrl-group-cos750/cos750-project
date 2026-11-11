@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { Alert, Button, ProgressBar, Spinner } from '../../components'
 import { ActivityView } from '../activities/ActivityPage.tsx'
@@ -43,6 +43,19 @@ export function ModulePage() {
   // one they haven't answered yet (FR-2.4).
   const [retrievalIndex, setRetrievalIndex] = useState<number | null>(null)
   const [retrievalChecked, setRetrievalChecked] = useState(false)
+  // Set by Previous, Next, "Next question" and "Start module": after the new content renders,
+  // focus moves to its heading (WCAG 2.4.3 Focus Order, #142). The button that was pressed may be
+  // gone or disabled, which would drop focus on the page, and a screen reader then reads where
+  // the student now is. Never set on first load, so opening a module doesn't move focus.
+  const moveFocus = useRef(false)
+  const contentRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    if (!moveFocus.current) return
+    const heading = contentRef.current?.querySelector<HTMLElement>('[data-focus-heading]')
+    if (!heading) return // still loading the new content: try again after the next render
+    moveFocus.current = false
+    heading.focus()
+  })
 
   // Saves how far the student has got. The server keeps the furthest segment reached, so only
   // moving forward is saved; stepping back just changes what's on screen.
@@ -104,12 +117,16 @@ export function ModulePage() {
     const item = retrieval[recallIndex]
     const next = retrieval.findIndex((other, index) => index > recallIndex && !other.answered)
     return (
-      <section className="grid max-w-3xl gap-6" aria-label={`Module ${module.number} retrieval`}>
+      <section
+        ref={contentRef}
+        className="grid max-w-3xl gap-6"
+        aria-label={`Module ${module.number} retrieval`}
+      >
         <div className="grid gap-2">
           <h1 className="text-2xl font-bold">
             Module {module.number} · {module.title}
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground" tabIndex={-1} data-focus-heading>
             Quick recall · Question {recallIndex + 1} of {retrieval.length}
           </p>
         </div>
@@ -123,6 +140,7 @@ export function ModulePage() {
           <Button
             disabled={!retrievalChecked && !item.answered}
             onClick={() => {
+              moveFocus.current = true
               setRetrievalChecked(false)
               setRetrievalIndex(next === -1 ? retrieval.length : next)
               if (next === -1) void queryClient.invalidateQueries({ queryKey: ['module', id] })
@@ -136,9 +154,11 @@ export function ModulePage() {
   }
 
   if (segments.length === 0) {
+    // After "Start module" on a module with only recall questions (module 5 today), focus goes to
+    // this heading, so it isn't dropped on the page.
     return (
-      <section className="grid gap-6">
-        <h1 className="text-2xl font-bold">
+      <section ref={contentRef} className="grid gap-6">
+        <h1 className="text-2xl font-bold" tabIndex={-1} data-focus-heading>
           Module {module.number} · {module.title}
         </h1>
         <Alert tone="info">
@@ -193,6 +213,8 @@ export function ModulePage() {
   const showSkippedNote = skipped && currentIndex === firstSkipped && !segment?.done
 
   function handlePrevious() {
+    if (mutation.isPending) return // aria-disabled while Next saves: the press does nothing
+    moveFocus.current = true
     setSegmentIndex(Math.max(0, currentIndex - 1))
   }
 
@@ -202,10 +224,16 @@ export function ModulePage() {
     if (blocked) return // the button stays focusable (aria-disabled), so the click is ignored here
     const next = currentIndex + 1
     if (next <= module.currentSegmentPosition) {
+      moveFocus.current = true
       setSegmentIndex(next)
       return
     }
-    mutation.mutate(segments[next].position, { onSuccess: () => setSegmentIndex(next) })
+    mutation.mutate(segments[next].position, {
+      onSuccess: () => {
+        moveFocus.current = true
+        setSegmentIndex(next)
+      },
+    })
   }
 
   // Saving the last segment again once it is done is what completes the module (the server
@@ -218,7 +246,8 @@ export function ModulePage() {
 
   return (
     <section
-      className="grid max-w-3xl gap-6"
+      ref={contentRef}
+      className="grid min-w-0 max-w-3xl gap-6"
       aria-label={`Module ${module.number}: ${module.title}`}
     >
       {/* Header */}
@@ -270,7 +299,8 @@ export function ModulePage() {
 
       {/* Save error */}
       {mutation.isError && (
-        <Alert tone="warning" title="Could not save progress">
+        // Danger, so it is announced at once (role="alert") while focus stays on Next.
+        <Alert tone="danger" title="Could not save progress">
           {mutation.error.message}
         </Alert>
       )}
@@ -286,7 +316,9 @@ export function ModulePage() {
           <Button
             variant="secondary"
             onClick={handlePrevious}
-            disabled={isFirst || mutation.isPending}
+            // Not disabled while Next saves, so focus is never dropped on the page (2.4.3).
+            disabled={isFirst}
+            aria-disabled={mutation.isPending || undefined}
           >
             ← Previous
           </Button>
@@ -294,11 +326,13 @@ export function ModulePage() {
             variant={isLast ? 'primary' : 'secondary'}
             onClick={isLast ? handleFinish : handleNext}
             // aria-disabled rather than disabled while blocked: a disabled button can't be
-            // focused, so its reason would never be read. The handlers ignore the click.
-            disabled={mutation.isPending}
+            // focused, so its reason would never be read. The handlers ignore the click. While
+            // the position saves it stays focusable too (keepFocusWhileLoading), so a failed save
+            // leaves focus here with the error announced.
             aria-disabled={blocked || undefined}
             aria-describedby={blocked ? 'segment-blocked' : undefined}
             loading={mutation.isPending}
+            keepFocusWhileLoading
           >
             {isLast ? 'Finish module' : 'Next →'}
           </Button>

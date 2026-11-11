@@ -70,6 +70,13 @@ describe.each(themes)('$name theme contrast', ({ selector, tokens }) => {
     }
   })
 
+  // #142: the neutral Tag ("Not attempted" on the report) is muted text on --muted; it was 4.34:1.
+  it('muted (secondary) text reaches 4.5:1 on every surface and on the accent tint', () => {
+    for (const surface of [...surfaces(), g('--accent')]) {
+      expect(ratio(g('--muted-foreground'), surface), `on ${surface}`).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+
   it('success and warning text reach 4.5:1 on every surface and on their own 15% tint', () => {
     for (const name of ['--success', '--warning']) {
       for (const surface of surfaces()) {

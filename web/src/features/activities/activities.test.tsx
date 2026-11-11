@@ -272,9 +272,10 @@ describe('code activities', () => {
   })
 
   it('hides the hint ladder and feedback panel when activity kind is not supported', () => {
+    // A kind the API might add before its screen exists (KINDS_WITHOUT_STUDENT_UI).
     const unsupported = {
       id: 99,
-      kind: 'trace' as unknown as CodeActivity['kind'],
+      kind: 'label_vertices' as unknown as CodeActivity['kind'],
       title: 'Unsupported kind',
       visible: true,
       config: {} as unknown as CodeActivity['config'],

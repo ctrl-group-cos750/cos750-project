@@ -549,7 +549,9 @@ def test_two_first_answers_at_once_both_record(course: Path, db: Session) -> Non
     assert errors == []
     db.expire_all()
     rows = db.scalars(select(ObjectiveResult).where(ObjectiveResult.user_id == student.id)).all()
-    assert {r.objective_id: r.state for r in rows} == {1: "not_attempted", 2: "met_independently"}
+    # Both stored; nothing is marked until the whole check is answered (#144).
+    assert {r.objective_id: r.state for r in rows} == {1: "not_attempted", 2: "not_attempted"}
+    assert {len(r.evidence) for r in rows} == {1}
 
 
 # --- The review path (FR-7.5, ID document §7.6) --------------------------------------------------

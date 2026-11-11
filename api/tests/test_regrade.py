@@ -150,6 +150,49 @@ def test_a_second_run_changes_nothing(db: Session) -> None:
     assert rewards_held(db, one) == held
 
 
+def test_an_attempt_on_an_activity_staff_edited_is_left_alone_and_listed(db: Session) -> None:
+    """After #128 an edited activity may ask a different question than the stored answer
+    answered: the re-grade skips it and names it, and changes nothing else for it."""
+    from datetime import UTC, datetime
+
+    load(db)
+    one = student(db, 1)
+    attempt = take_module_6(db, one, EQUIVALENT)
+    activity = db.get_one(Activity, attempt.activity_id)
+    activity.edited_at = datetime.now(UTC)
+    db.commit()
+    stored = (attempt.correct, attempt.score, attempt.detail)
+    report = regrade.regrade(db)
+    db.commit()
+    db.refresh(attempt)
+    assert report.edited == [attempt.id]
+    assert attempt.id not in [c[0] for c in report.changed]
+    assert (attempt.correct, attempt.score, attempt.detail) == stored
+    assert "edited by staff (skipped): 1" in report.lines()[0]
+    assert f"edited by staff: attempts [{attempt.id}]" in report.lines()
+
+
+def test_a_student_deleted_before_their_turn_is_passed_over(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.services.locking import StudentGone, lock_student
+
+    load(db)
+    one, two = student(db, 1), student(db, 2)
+    take_module_6(db, one, EQUIVALENT)
+    take_module_6(db, two, EQUIVALENT)
+    db.commit()
+
+    def lock_gone_for_one(session: Session, user_id: int) -> None:
+        if user_id == one:
+            raise StudentGone(user_id)
+        lock_student(session, user_id)
+
+    monkeypatch.setattr("app.regrade.lock_student", lock_gone_for_one)
+    report = regrade.regrade(db, "commit")
+    assert {c[1] for c in report.changed} == {two}
+
+
 def test_a_correct_attempt_is_never_lowered_and_rewards_stay(db: Session) -> None:
     """An attempt stored as correct that today's content would mark wrong (say, a solution
     edited since) is kept as it was, and so is everything it earned."""

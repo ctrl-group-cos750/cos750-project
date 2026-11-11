@@ -8,11 +8,16 @@ re-runs `check_activity` on each attempt's stored `submitted` and, where the res
 updates `correct`, `score` and `detail`, then recomputes the results of each student it changed
 (`mastery.recompute`).
 
-- **One student at a time, locked.** Students are taken in id order. Each is locked
-  (`SELECT … FOR UPDATE` on their user row, the lock `mastery.recompute` takes) before any of their
-  rows is read or written, so a student answering at the same moment waits for the re-grade of
-  their attempts, or the re-grade waits for them, and neither deadlocks. With `--apply` each
-  student is committed on their own, so a lock is held only briefly.
+- **One student at a time, locked.** Students are taken in id order. Each is locked with the
+  student write lock every answer, hint and position save takes (`lock_student`,
+  app/services/locking.py: `FOR NO KEY UPDATE` on their user row) before any of their rows is read
+  or written, so a student answering at the same moment waits for the re-grade of their attempts,
+  or the re-grade waits for them, and neither deadlocks. A student deleted since the list was read
+  is passed over. With `--apply` each student is committed on their own, so a lock is held only
+  briefly.
+- **Activities staff have edited are skipped.** An attempt on an activity with `edited_at` set
+  (changed in the staff content editor, #128) may answer a different question than the one now
+  stored, so it is left as it is and listed as "edited by staff".
 - **Dry run by default.** Each student's changes are made, reported and rolled back, so the counts
   are real. `--apply` commits them. Run the dry run first and read the counts.
 - **Never lowers.** An attempt stored as correct that would now be wrong (its content was edited
@@ -35,9 +40,10 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, ObjectiveResult, User
+from app.models import Activity, Attempt, ObjectiveResult
 from app.services import mastery, rewards
 from app.services.checking import check_activity
+from app.services.locking import StudentGone, lock_student
 
 KINDS = ("parsons", "fix_the_bug")
 
@@ -50,6 +56,7 @@ class Report:
     """(attempt, user, activity, now correct) for each attempt updated."""
     kept: list[int] = field(default_factory=list)  # stored correct, would now be wrong: left as is
     unreadable: list[int] = field(default_factory=list)  # stored in a shape the checker refuses
+    edited: list[int] = field(default_factory=list)  # activity edited by staff (#128): skipped
     results: list[tuple[int, int, str, str]] = field(default_factory=list)
     """(user, objective, before, after) for each objective result that changed."""
 
@@ -58,7 +65,8 @@ class Report:
         out = [
             f"attempts re-graded: {len(self.changed)}, "
             f"now correct: {sum(1 for c in self.changed if c[3])}, "
-            f"kept (would be lowered): {len(self.kept)}, unreadable: {len(self.unreadable)}"
+            f"kept (would be lowered): {len(self.kept)}, unreadable: {len(self.unreadable)}, "
+            f"edited by staff (skipped): {len(self.edited)}"
         ]
         by_activity: Counter[int] = Counter(c[2] for c in self.changed)
         now_right: Counter[int] = Counter(c[2] for c in self.changed if c[3])
@@ -79,12 +87,9 @@ class Report:
             out.append(f"kept: attempts {self.kept}")
         if self.unreadable:
             out.append(f"unreadable: attempts {self.unreadable}")
+        if self.edited:
+            out.append(f"edited by staff: attempts {self.edited}")
         return out
-
-
-def _lock(session: Session, user_id: int) -> None:
-    """The per-student lock attempts and mastery take (app/services/mastery.py `recompute`)."""
-    session.execute(select(User.id).where(User.id == user_id).with_for_update())
 
 
 def _states(session: Session, user_id: int) -> dict[int, str]:
@@ -93,8 +98,9 @@ def _states(session: Session, user_id: int) -> dict[int, str]:
 
 
 def _regrade_student(session: Session, user_id: int, report: Report) -> None:
-    """Re-grade one student's attempts and recompute their results, under their lock."""
-    _lock(session, user_id)
+    """Re-grade one student's attempts and recompute their results, under their lock (the one
+    answers take, app/services/locking.py). Raises `StudentGone` if they were deleted."""
+    lock_student(session, user_id)
     rows = session.execute(
         select(Attempt, Activity)
         .join(Activity, Activity.id == Attempt.activity_id)
@@ -104,6 +110,9 @@ def _regrade_student(session: Session, user_id: int, report: Report) -> None:
     changed = False
     before: dict[int, str] = {}
     for attempt, activity in rows:
+        if activity.edited_at is not None:  # staff changed it: the stored answer may not fit
+            report.edited.append(attempt.id)
+            continue
         try:
             result = check_activity(
                 activity.kind, activity.config, activity.solution, attempt.submitted
@@ -154,7 +163,11 @@ def regrade(session: Session, after_each: Literal["commit", "rollback"] | None =
         .order_by(Attempt.user_id)
     ).all()
     for user_id in users:
-        _regrade_student(session, user_id, report)
+        try:
+            _regrade_student(session, user_id, report)
+        except StudentGone:  # deleted since the list was read: nothing left to re-grade
+            session.rollback()
+            continue
         if after_each == "commit":
             session.commit()
         elif after_each == "rollback":

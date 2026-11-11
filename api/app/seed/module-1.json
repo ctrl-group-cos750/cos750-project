@@ -27,7 +27,7 @@
           "id": 103,
           "kind": "video",
           "title": "From a map to a graph",
-          "body": "Staff attach the narrated video to this segment in the video editor, with its checkpoint questions: see `docs/id/module-1/narration-script.md`."
+          "body": "You just found that the Green (G) is three walkways from the Admin block (A). To work that out, you ignored almost everything about the campus: the trees, the parking, how big each building is. You only looked at two things: the buildings, and which ones are joined by a walkway.\n\nThat simpler picture has a name: a **graph**. Each building is a **vertex**. Each walkway is an **edge**. An edge joins two vertices.\n\nTwo vertices joined by an edge are **neighbours**. The Engineering building, E, has three neighbours: A, D and F. The Dining hall, D, has just one: E.\n\nLet's count. Seven buildings, so seven vertices. Seven walkways, so seven edges. Each walkway counts once, even though it touches two buildings.\n\nA graph is a **data structure**. That means it's a way of organising data so a program can use it, just like the queue you met in COS110.\n\nAn **algorithm** is a list of steps that solves a problem. A data structure holds the information; an algorithm works with it.\n\nOne common job is to visit every vertex by following edges, like a tour guide walking to every building on campus. This is called a **graph traversal**. In module 3 you'll learn BFS, an algorithm for doing it.\n\nSo: a graph is a data structure made of vertices and edges. A traversal is an algorithm that visits them. Next, you'll practise reading graphs and build the campus graph yourself."
         },
         {
           "id": 104,
@@ -58,7 +58,7 @@
           "id": 108,
           "kind": "video",
           "title": "One-way or two-way?",
-          "body": "Staff attach the narrated video to this segment in the video editor, with its checkpoint questions: see `docs/id/module-1/narration-script.md`."
+          "body": "Every walkway on campus can be walked both ways. When the edges of a graph work in both directions, we draw them as plain lines and call the graph **undirected**.\n\nThe campus shuttle is different. It drives one loop, in one direction only: from the Admin block (A) to the Dining hall (D), then to the Green (G), then back to the Admin block.\n\n```\nA → D → G → A\n```\n\nTo show that, each edge gets an arrow. An edge with an arrow can only be followed the way it points. A graph with arrows is called **directed**. The shuttle graph has 3 vertices, A, D and G, and 3 edges: A → D, D → G and G → A.\n\nSo from the Dining hall, the shuttle can only take you to the Green.\n\nCan you ride the shuttle directly from the Dining hall to the Admin block? No. The edge between them points from A to D. To get back to the Admin block, you ride D → G → A.\n\nOne last trap. If two people follow each other online, there are two arrows: one each way. The graph is still directed, because each follow is its own one-way edge.\n\nPlain lines: undirected. Arrows: directed. Next, you'll classify some graphs yourself."
         },
         {
           "id": 109,

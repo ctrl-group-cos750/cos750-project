@@ -4,8 +4,9 @@ end-to-end tests can show any stage without working through 75 minutes of conten
 Each account is in demo/accounts.json: who it is, the steps that put it at its stage, and what that
 stage must look like. A step names questions by where they are, never by id: "answer module 6's
 mastery items right, except objective 6's". The seed finds those questions in the order a student
-meets them, builds a right or wrong answer from each one's stored solution, and submits it through
-the same code a student's answers go through (app/services/attempts.py). So new or replaced content
+meets them, builds a right or wrong answer from each one's stored solution (a wrong one only from what the
+question offers, as a student's would be: never an empty answer, which the API refuses), and
+submits it through the same code a student's answers go through (app/services/attempts.py). So new or replaced content
 never breaks an account, and every result is the one the real mastery rules work out.
 
 `progress` says how far the account got through each module. The seed walks it through the module
@@ -44,10 +45,13 @@ from app.models import Activity, Attempt, Checkpoint, Module, Segment, User, Vid
 from app.models.user import DEMO_EMAIL_DOMAIN
 from app.passwords import password_problem
 from app.schemas.activities import (
+    ChooseTestsConfig,
     ChooseTestsSolution,
+    FillInConfig,
     FillInSolution,
     FixTheBugConfig,
     FixTheBugSolution,
+    MatchingConfig,
     MatchingSolution,
     MultipleChoiceConfig,
     MultipleChoiceSolution,
@@ -336,9 +340,56 @@ def _trace_rows(activity: Activity) -> dict[str, Any]:
     }
 
 
-# For each kind: how to build a right answer, and a wrong one. A wrong answer is the mistake a
-# student would make where there is an obvious one (a wrong option, leaving the bug in), and an
-# empty answer otherwise.
+def _wrong_pairs(activity: Activity) -> dict[str, Any]:
+    """Every left item matched with a right item other than its own."""
+    config = MatchingConfig.model_validate(activity.config)
+    pairs = MatchingSolution.model_validate(activity.solution).pairs
+    rights = [r.id for r in config.right]
+    return {
+        "pairs": {
+            left.id: next((r for r in rights if r != pairs.get(left.id)), rights[0])
+            for left in config.left
+        }
+    }
+
+
+def _rotated_lines(activity: Activity) -> dict[str, Any]:
+    """The solution's lines, each moved one place on: every line out of place."""
+    order = list(ParsonsSolution.model_validate(activity.solution).order)
+    return {"order": order[1:] + order[:1]}
+
+
+def _wrong_tokens(activity: Activity) -> dict[str, Any]:
+    """For every blank, a token it offers other than the right one."""
+    config = FillInConfig.model_validate(activity.config)
+    answers = FillInSolution.model_validate(activity.solution).answers
+    return {
+        "answers": {
+            blank: next(o for o in config.options if o != answers.get(blank))
+            for blank in config.blanks
+        }
+    }
+
+
+def _harmless_tests(activity: Activity) -> dict[str, Any]:
+    """The test cases that don't expose the bug (the seed refuses a set where every one does)."""
+    exposing = set(ChooseTestsSolution.model_validate(activity.solution).exposing)
+    tests = ChooseTestsConfig.model_validate(activity.config).tests
+    return {"selected": [t.id for t in tests if t.id not in exposing]}
+
+
+def _wrong_first_step(activity: Activity) -> dict[str, Any]:
+    """One row that visits a vertex other than the start first."""
+    config = TraceConfig.model_validate(activity.config)
+    other = next(v for v in config.vertices if v != config.start_vertex)
+    return {"rows": [{"visitedVertex": other, "queue": [], "visited": [other], "order": [other]}]}
+
+
+# For each kind: how to build a right answer, and a wrong one. A wrong answer is one a student
+# could send through the screens, made only of what the activity offers: the activity routes
+# refuse an empty answer, or one naming anything else, with 422 (app/services/submissions.py), so
+# every stage's results come from answers a real student could have given. It is the obvious
+# mistake where there is one (a wrong option, leaving the bug in), and every part wrong otherwise.
 Build = Callable[[Activity], dict[str, Any]]
 _BUILDERS: dict[str, tuple[Build, Build]] = {
     "multiple_choice": (
@@ -347,15 +398,15 @@ _BUILDERS: dict[str, tuple[Build, Build]] = {
     ),
     "matching": (
         lambda a: {"pairs": MatchingSolution.model_validate(a.solution).pairs},
-        lambda a: {"pairs": {}},
+        _wrong_pairs,
     ),
     "parsons": (
         lambda a: {"order": ParsonsSolution.model_validate(a.solution).order},
-        lambda a: {"order": []},
+        _rotated_lines,
     ),
     "fill_in": (
         lambda a: {"answers": FillInSolution.model_validate(a.solution).answers},
-        lambda a: {"answers": {}},
+        _wrong_tokens,
     ),
     "fix_the_bug": (
         lambda a: {"order": FixTheBugSolution.model_validate(a.solution).order},
@@ -363,7 +414,7 @@ _BUILDERS: dict[str, tuple[Build, Build]] = {
     ),
     "choose_tests": (
         lambda a: {"selected": ChooseTestsSolution.model_validate(a.solution).exposing},
-        lambda a: {"selected": []},
+        _harmless_tests,
     ),
-    "trace": (_trace_rows, lambda a: {"rows": []}),
+    "trace": (_trace_rows, _wrong_first_step),
 }

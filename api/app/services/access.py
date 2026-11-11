@@ -6,8 +6,8 @@ Every place an activity can appear is one of its *homes*:
 
 - **a module**: its own `module_id` (practice, retrieval, module 0's diagnostic, module 6's
   mastery items), a module segment that shows it, or a module segment that uses it as a skip
-  check, if it is that module's or no module's and not a mastery item. Open when the
-  module is not locked for this student (`modules._statuses`, the same rule as the module map).
+  check, if it is that module's or no module's, not a mastery item and on no review path. Open
+  when the module is not locked for this student (`modules._statuses`, the module map's rule).
 - **a review path**: a segment of an objective's review path. Open once module 6 has marked that
   objective "not yet" (`mastery.review_open`), so its fresh items stay unseen until then.
 - **a video**: the question at one of the video's checkpoints. Open when the video is (below).
@@ -50,8 +50,9 @@ def activity_homes(session: Session, activity: Activity) -> Homes:
     """Every module, review path and video this activity appears in.
 
     A segment's skip check (FR-8.2) is a home only for an activity that belongs to that module
-    or to none, and never for a mastery item: a segment naming another module's item, or a
-    module 6 item, as its skip check must not open it early."""
+    or to none, and never for a mastery item or an item on a review path: a segment naming
+    another module's item, a module 6 item or a review path's item as its skip check must not
+    open it early."""
     shown = session.execute(
         select(Segment.module_id, Segment.review_objective_id).where(
             Segment.activity_id == activity.id
@@ -61,7 +62,8 @@ def activity_homes(session: Session, activity: Activity) -> Homes:
         select(Segment.module_id).where(Segment.skip_check_activity_id == activity.id)
     ).all()
     modules = {m for m, _ in shown if m is not None}
-    if activity.purpose != "mastery":
+    review_paths = frozenset(o for _, o in shown if o is not None)
+    if activity.purpose != "mastery" and not review_paths:
         modules |= {m for m in checks if m is not None and activity.module_id in (None, m)}
     if activity.module_id is not None:
         modules.add(activity.module_id)
@@ -70,7 +72,7 @@ def activity_homes(session: Session, activity: Activity) -> Homes:
     )
     return Homes(
         modules=frozenset(modules),
-        review_paths=frozenset(o for _, o in shown if o is not None),
+        review_paths=review_paths,
         videos=videos,
     )
 

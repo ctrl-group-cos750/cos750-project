@@ -32,7 +32,8 @@ def record_attempt(
     session: Session, user_id: int, activity: Activity, submitted: dict[str, Any]
 ) -> tuple[Attempt, CheckResult]:
     """Grade `submitted` by comparison with the stored solution and add the attempt, any points it
-    earns and, for a mastery item, the student's objective results to the session (not committed). Raises pydantic's ValidationError if `submitted` is not in the kind's shape.
+    earns and, for a mastery item, the student's objective results to the session (not
+    committed). Raises pydantic's ValidationError if `submitted` is not in the kind's shape.
 
     Holds the student's write lock (app/services/locking.py) from before the attempt is inserted
     until the caller commits, so two answers sent at once are graded and recorded one after the

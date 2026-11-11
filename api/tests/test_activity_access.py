@@ -218,6 +218,19 @@ def test_a_skip_check_never_opens_another_modules_item(
     all_refused(client, db, 401, 403, MODULE_LOCKED)
 
 
+def test_a_skip_check_never_opens_a_review_path_item(
+    client: TestClient, committed: Session
+) -> None:
+    """1101 is objective 1's review practice (no module): a module 0 segment naming it as a skip
+    check must not open it before the path opens."""
+    db = committed
+    item = review_items(db, 1)[0]
+    assert db.get_one(Activity, item).module_id is None
+    skip_check(db, 0, item)
+    register(client)
+    all_refused(client, db, item, 403, REVIEW_CLOSED)
+
+
 def test_a_skip_check_of_no_module_opens_with_the_module_that_names_it(
     client: TestClient, committed: Session
 ) -> None:

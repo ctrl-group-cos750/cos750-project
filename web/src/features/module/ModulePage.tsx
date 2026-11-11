@@ -99,9 +99,11 @@ export function ModulePage() {
   }
 
   if (segments.length === 0) {
+    // After "Start module" on a module with only recall questions (module 5 today), focus goes to
+    // this heading, so it isn't dropped on the page.
     return (
-      <section className="grid gap-6">
-        <h1 className="text-2xl font-bold">
+      <section ref={contentRef} className="grid gap-6">
+        <h1 className="text-2xl font-bold" tabIndex={-1} data-focus-heading>
           Module {module.number} · {module.title}
         </h1>
         <Alert tone="info">

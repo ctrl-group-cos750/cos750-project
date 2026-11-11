@@ -762,6 +762,19 @@ describe('ModulePage — focus after navigation', () => {
     await waitFor(() => expect(heading).toHaveFocus())
   })
 
+  it('moves focus to the module heading when "Start module" leads to no segments (module 5)', async () => {
+    recallApi({ ...moduleSummary, segmentCount: 0, segments: [], retrieval: [recall] })
+    renderApp('/modules/1')
+
+    await userEvent.click(await screen.findByLabelText('Connected vertices'))
+    await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Start module' }))
+
+    const heading = await screen.findByRole('heading', { level: 1, name: /Module 0/ })
+    await waitFor(() => expect(heading).toHaveFocus())
+    expect(document.activeElement).not.toBe(document.body)
+  })
+
   it('moves focus to the new question after "Next question"', async () => {
     recallApi({
       ...twoSegmentDetail,

@@ -31,6 +31,9 @@ from app.seed import FIXTURES, PORTAL_IDS_FROM, load, read_fixtures
 STAFF = {"email": "staff@example.com", "password": "Correct horse 1", "displayName": "Staff"}
 STUDENT = {"email": "ada@example.com", "password": "Correct horse 1", "displayName": "Ada"}
 BASE = "/api/staff/content"
+# The activity the tests edit: a practice question that module 3 shows in a segment. Not one of the
+# module's retrieval questions, which #125 moves out of the segments.
+EDITED = 316
 
 
 def log_in(client: TestClient, db: Session, who: dict[str, str], staff: bool) -> None:
@@ -72,7 +75,7 @@ def test_only_staff_can_use_the_content_editor(client: TestClient, db: Session) 
     assert client.get(BASE).status_code == 401
     log_in(client, db, STUDENT, staff=False)
     assert client.get(BASE).status_code == 403
-    assert client.put(f"{BASE}/activities/311", json={}).status_code in (403, 422)
+    assert client.put(f"{BASE}/activities/{EDITED}", json={}).status_code in (403, 422)
 
 
 def test_the_overview_lists_the_seeded_content_as_from_the_repository(staff: TestClient) -> None:
@@ -87,21 +90,21 @@ def test_the_overview_lists_the_seeded_content_as_from_the_repository(staff: Tes
 
 
 def test_an_edited_activity_survives_the_next_seed(staff: TestClient, db: Session) -> None:
-    body = activity_body(staff, 311)
+    body = activity_body(staff, EDITED)
     body["title"] = "Edited in the portal"
     body["hints"] = [{"level": 1, "body": "A new first hint"}]
-    saved = staff.put(f"{BASE}/activities/311", json=body)
+    saved = staff.put(f"{BASE}/activities/{EDITED}", json=body)
     assert saved.status_code == 200, saved.text
     assert saved.json()["edited"] is True
 
     kept: list[str] = []
     load(db, kept=kept)  # the next deploy
     db.expire_all()
-    assert db.get_one(Activity, 311).title == "Edited in the portal"
-    assert [h.body for h in db.scalars(select(Hint).where(Hint.activity_id == 311))] == [
+    assert db.get_one(Activity, EDITED).title == "Edited in the portal"
+    assert [h.body for h in db.scalars(select(Hint).where(Hint.activity_id == EDITED))] == [
         "A new first hint"
     ]
-    assert "activities 311" in kept
+    assert f"activities {EDITED}" in kept
     # Everything nobody edited is still the repository's.
     assert db.get_one(Activity, 312).title == next(
         a.title for a in read_fixtures().activities if a.id == 312
@@ -109,27 +112,27 @@ def test_an_edited_activity_survives_the_next_seed(staff: TestClient, db: Sessio
 
 
 def test_an_invalid_activity_is_refused_and_nothing_changes(staff: TestClient, db: Session) -> None:
-    body = activity_body(staff, 311)
+    body = activity_body(staff, EDITED)
     before = body["title"]
     body["title"] = "Should not stick"
     body["solution"] = {"correct": "no-such-option"}
-    refused = staff.put(f"{BASE}/activities/311", json=body)
+    refused = staff.put(f"{BASE}/activities/{EDITED}", json=body)
     assert refused.status_code == 422
     db.expire_all()
-    assert db.get_one(Activity, 311).title == before
-    assert db.get_one(Activity, 311).edited_at is None
+    assert db.get_one(Activity, EDITED).title == before
+    assert db.get_one(Activity, EDITED).edited_at is None
 
 
 def test_an_edit_that_breaks_a_cross_check_is_refused(staff: TestClient, db: Session) -> None:
     """A mastery item outside module 6 and the review paths: each item passes on its own, but
     the content as a whole does not, exactly as CI would refuse the same fixture."""
-    body = activity_body(staff, 311)
+    body = activity_body(staff, EDITED)
     body["purpose"] = "mastery"
-    refused = staff.put(f"{BASE}/activities/311", json=body)
+    refused = staff.put(f"{BASE}/activities/{EDITED}", json=body)
     assert refused.status_code == 422
     assert "mastery item belongs in module 6" in refused.json()["detail"]
     db.expire_all()
-    assert db.get_one(Activity, 311).purpose == "retrieval"
+    assert db.get_one(Activity, EDITED).purpose == "practice"
 
 
 def test_a_module_s_segments_can_be_reordered_added_and_removed(
@@ -202,7 +205,7 @@ def test_a_video_segment_chooses_its_video(staff: TestClient, db: Session) -> No
 def test_a_new_activity_gets_a_portal_id_and_an_unused_one_can_be_deleted(
     staff: TestClient, db: Session
 ) -> None:
-    body = activity_body(staff, 311)
+    body = activity_body(staff, EDITED)
     body["title"] = "A new question"
     made = staff.post(f"{BASE}/activities", json=body)
     assert made.status_code == 201, made.text
@@ -220,18 +223,18 @@ def test_a_new_activity_gets_a_portal_id_and_an_unused_one_can_be_deleted(
 def test_deleting_a_repository_activity_only_takes_it_out_of_use(
     staff: TestClient, db: Session
 ) -> None:
-    # 311 is shown by a segment: take it out of the module first.
-    refused = staff.delete(f"{BASE}/activities/311")
+    # It is shown by a segment: take it out of the module first.
+    refused = staff.delete(f"{BASE}/activities/{EDITED}")
     assert refused.status_code == 409
     body = module_body(staff, 3)
-    body["segments"] = [s for s in body["segments"] if s.get("activityId") != 311]
+    body["segments"] = [s for s in body["segments"] if s.get("activityId") != EDITED]
     assert staff.put(f"{BASE}/modules/3", json=body).status_code == 200
 
-    deleted = staff.delete(f"{BASE}/activities/311")
+    deleted = staff.delete(f"{BASE}/activities/{EDITED}")
     assert deleted.json() == {"deleted": False}
     load(db)  # the next deploy does not bring it back into module 3
     db.expire_all()
-    retired = db.get_one(Activity, 311)
+    retired = db.get_one(Activity, EDITED)
     assert retired.module_id is None
     assert retired.visible is False
 
@@ -252,19 +255,19 @@ def test_a_checkpoint_question_is_edited_in_the_video_editor(
 
 
 def test_use_the_repository_version_brings_the_fixture_back(staff: TestClient, db: Session) -> None:
-    body = activity_body(staff, 311)
+    body = activity_body(staff, EDITED)
     original = body["title"]
     body["title"] = "Edited"
-    assert staff.put(f"{BASE}/activities/311", json=body).status_code == 200
-    back = staff.post(f"{BASE}/activities/311/use-repository")
+    assert staff.put(f"{BASE}/activities/{EDITED}", json=body).status_code == 200
+    back = staff.post(f"{BASE}/activities/{EDITED}/use-repository")
     assert back.status_code == 204, back.text
     db.expire_all()
-    assert db.get_one(Activity, 311).title == original
-    assert db.get_one(Activity, 311).edited_at is None
+    assert db.get_one(Activity, EDITED).title == original
+    assert db.get_one(Activity, EDITED).edited_at is None
 
 
 def test_use_the_repository_version_needs_one_in_the_repository(staff: TestClient) -> None:
-    made = staff.post(f"{BASE}/activities", json=activity_body(staff, 311)).json()
+    made = staff.post(f"{BASE}/activities", json=activity_body(staff, EDITED)).json()
     refused = staff.post(f"{BASE}/activities/{made['id']}/use-repository")
     assert refused.status_code == 409
 
@@ -321,9 +324,9 @@ def test_a_module_made_in_the_portal_can_be_deleted_while_empty(staff: TestClien
 def test_the_export_is_valid_fixtures_holding_the_portal_s_edits(
     staff: TestClient, tmp_path: Path, db: Session
 ) -> None:
-    body = activity_body(staff, 311)
+    body = activity_body(staff, EDITED)
     body["title"] = "Edited for the export"
-    assert staff.put(f"{BASE}/activities/311", json=body).status_code == 200
+    assert staff.put(f"{BASE}/activities/{EDITED}", json=body).status_code == 200
     db.add(User(email="x@example.com", display_name="X", password_hash="x"))  # noqa: S106
     db.commit()
 
@@ -333,7 +336,7 @@ def test_the_export_is_valid_fixtures_holding_the_portal_s_edits(
     with zipfile.ZipFile(io.BytesIO(got.content)) as archive:
         archive.extractall(tmp_path)
     exported = read_fixtures(tmp_path)  # what CI would run on the committed files
-    assert next(a for a in exported.activities if a.id == 311).title == "Edited for the export"
+    assert next(a for a in exported.activities if a.id == EDITED).title == "Edited for the export"
     repo = read_fixtures()
     assert {a.id for a in exported.activities} == {a.id for a in repo.activities}
     assert len(exported.modules) == len(repo.modules)
@@ -345,15 +348,17 @@ def test_editing_a_mastery_item_keeps_earlier_attempts(staff: TestClient, db: Se
     db.add(student)
     db.flush()
     db.add(
-        Attempt(user_id=student.id, activity_id=311, submitted={}, correct=True, score=1, detail={})
+        Attempt(
+            user_id=student.id, activity_id=EDITED, submitted={}, correct=True, score=1, detail={}
+        )
     )
     db.commit()
-    body = activity_body(staff, 311)
-    assert staff.get(f"{BASE}/activities/311").json()["inUse"] is True
+    body = activity_body(staff, EDITED)
+    assert staff.get(f"{BASE}/activities/{EDITED}").json()["inUse"] is True
     body["title"] = "Changed after an attempt"
-    assert staff.put(f"{BASE}/activities/311", json=body).status_code == 200
+    assert staff.put(f"{BASE}/activities/{EDITED}", json=body).status_code == 200
     assert len(db.scalars(select(Attempt)).all()) == 1
-    assert db.scalars(select(Segment).where(Segment.activity_id == 311)).first() is not None
+    assert db.scalars(select(Segment).where(Segment.activity_id == EDITED)).first() is not None
 
 
 def copy_fixtures(to: Path) -> Path:
@@ -374,9 +379,9 @@ def test_a_committed_export_hands_the_edits_back_to_the_repository(
 ) -> None:
     """Export, commit, deploy: the fixtures now say what the portal says, so the items are no
     longer marked edited, and a later change in the repository reaches the database again."""
-    body = activity_body(staff, 311)
+    body = activity_body(staff, EDITED)
     body["title"] = "Edited, then exported"
-    assert staff.put(f"{BASE}/activities/311", json=body).status_code == 200
+    assert staff.put(f"{BASE}/activities/{EDITED}", json=body).status_code == 200
     module = module_body(staff, 3)
     module["segments"].reverse()
     assert staff.put(f"{BASE}/modules/3", json=module).status_code == 200
@@ -390,37 +395,41 @@ def test_a_committed_export_hands_the_edits_back_to_the_repository(
     caught_up: list[str] = []
     load(db, folder=tmp_path, kept=kept, caught_up=caught_up)  # the deploy of that commit
     assert kept == []
-    assert {"activities 311", "segments of module 3", "segments of review path 1"} <= set(caught_up)
+    assert {f"activities {EDITED}", "segments of module 3", "segments of review path 1"} <= set(
+        caught_up
+    )
     db.expire_all()
-    assert db.get_one(Activity, 311).edited_at is None
+    assert db.get_one(Activity, EDITED).edited_at is None
     assert db.get_one(Module, 3).segments_edited_at is None
     assert db.get_one(Objective, 1).segments_edited_at is None
-    assert db.get_one(Activity, 311).title == "Edited, then exported"
+    assert db.get_one(Activity, EDITED).title == "Edited, then exported"
 
     def retitle(data: dict[str, Any]) -> None:
-        next(a for a in data["activities"] if a["id"] == 311)["title"] = "Changed in the repository"
+        next(a for a in data["activities"] if a["id"] == EDITED)["title"] = (
+            "Changed in the repository"
+        )
 
     edit_json(tmp_path / "module-3.json", retitle)
     load(db, folder=tmp_path)  # a later commit
     db.expire_all()
-    assert db.get_one(Activity, 311).title == "Changed in the repository"
+    assert db.get_one(Activity, EDITED).title == "Changed in the repository"
 
 
 def test_an_edit_the_repository_differs_from_stays_edited(staff: TestClient, db: Session) -> None:
-    body = activity_body(staff, 311)
+    body = activity_body(staff, EDITED)
     body["title"] = "Only in the portal"
-    assert staff.put(f"{BASE}/activities/311", json=body).status_code == 200
+    assert staff.put(f"{BASE}/activities/{EDITED}", json=body).status_code == 200
     caught_up: list[str] = []
     load(db, caught_up=caught_up)
     assert caught_up == []
     db.expire_all()
-    assert db.get_one(Activity, 311).edited_at is not None
+    assert db.get_one(Activity, EDITED).edited_at is not None
 
 
 def test_the_seed_reports_content_that_only_breaks_with_a_staff_edit(
     staff: TestClient, tmp_path: Path, db: Session
 ) -> None:
-    """Staff have edited module 3's segments, then the repository moves activity 316 to module 2.
+    """Staff have edited module 3's segments, then the repository moves activity 313 to module 2.
     Each is fine on its own; together, the kept module 3 still shows an activity module 2 now
     shows. The seed loads anyway and reports it, rather than stopping the API, so staff can fix
     it in the portal."""
@@ -430,22 +439,22 @@ def test_the_seed_reports_content_that_only_breaks_with_a_staff_edit(
 
     folder = copy_fixtures(tmp_path)
 
-    def take_316(data: dict[str, Any]) -> None:
+    def take_313(data: dict[str, Any]) -> None:
         data["modules"][0]["segments"] = [
-            s for s in data["modules"][0]["segments"] if s.get("activity_id") != 316
+            s for s in data["modules"][0]["segments"] if s.get("activity_id") != 313
         ]
-        moved.append(next(a for a in data["activities"] if a["id"] == 316))
-        data["activities"] = [a for a in data["activities"] if a["id"] != 316]
+        moved.append(next(a for a in data["activities"] if a["id"] == 313))
+        data["activities"] = [a for a in data["activities"] if a["id"] != 313]
 
-    def give_316(data: dict[str, Any]) -> None:
+    def give_313(data: dict[str, Any]) -> None:
         data["activities"].append(moved[0] | {"module_id": 2})
         data["modules"][0]["segments"].append(
-            {"id": 299, "kind": "activity", "title": "Moved here", "activity_id": 316}
+            {"id": 299, "kind": "activity", "title": "Moved here", "activity_id": 313}
         )
 
     moved: list[dict[str, Any]] = []
-    edit_json(folder / "module-3.json", take_316)
-    edit_json(folder / "module-2.json", give_316)
+    edit_json(folder / "module-3.json", take_313)
+    edit_json(folder / "module-2.json", give_313)
     read_fixtures(folder)  # the repository on its own passes CI
 
     kept: list[str] = []
@@ -453,11 +462,11 @@ def test_the_seed_reports_content_that_only_breaks_with_a_staff_edit(
     load(db, folder=folder, kept=kept, problems=problems)
     assert "segments of module 3" in kept
     assert len(problems) == 1
-    assert "activity 316" in problems[0]
+    assert "activity 313" in problems[0]
     # Without the seed's warning, this is where staff would first find out.
-    refused = staff.put(f"{BASE}/activities/311", json=activity_body(staff, 311))
+    refused = staff.put(f"{BASE}/activities/{EDITED}", json=activity_body(staff, EDITED))
     assert refused.status_code == 422
-    assert "activity 316" in refused.json()["detail"]
+    assert "activity 313" in refused.json()["detail"]
 
 
 def test_the_seed_reports_no_problem_for_the_repository_s_content(db: Session) -> None:

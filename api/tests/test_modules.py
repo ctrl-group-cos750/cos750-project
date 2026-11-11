@@ -802,7 +802,13 @@ def test_every_activity_kind_now_has_a_student_screen() -> None:
 @pytest.mark.parametrize(
     ("kind", "config", "solution", "wrong"),
     [
-        ("trace", TRACE_CONFIG, {}, {"rows": []}),
+        # A real but wrong trace (B can't leave first): fix/api-integrity refuses an empty one.
+        (
+            "trace",
+            TRACE_CONFIG,
+            {},
+            {"rows": [{"visitedVertex": "B", "queue": [], "visited": ["B"], "order": ["B"]}]},
+        ),
         (
             "fix_the_bug",
             {

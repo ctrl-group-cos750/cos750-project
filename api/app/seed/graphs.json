@@ -1,0 +1,63 @@
+{
+  "graphs": [
+    {
+      "id": 1,
+      "name": "Six towns (undirected)",
+      "directed": false,
+      "vertices": ["A", "B", "C", "D", "E", "F"],
+      "edges": [
+        { "source": "A", "target": "C" },
+        { "source": "A", "target": "B" },
+        { "source": "B", "target": "D" },
+        { "source": "C", "target": "D" },
+        { "source": "C", "target": "E" },
+        { "source": "D", "target": "F" },
+        { "source": "E", "target": "F" }
+      ],
+      "start_vertex": "A"
+    },
+    {
+      "id": 2,
+      "name": "One-way streets (directed)",
+      "directed": true,
+      "vertices": ["A", "B", "C", "D", "E"],
+      "edges": [
+        { "source": "A", "target": "B" },
+        { "source": "A", "target": "D" },
+        { "source": "B", "target": "C" },
+        { "source": "D", "target": "C" },
+        { "source": "C", "target": "E" },
+        { "source": "E", "target": "A" }
+      ],
+      "start_vertex": "A"
+    },
+    {
+      "id": 3,
+      "name": "Two islands (disconnected)",
+      "directed": false,
+      "vertices": ["A", "B", "C", "D", "E"],
+      "edges": [
+        { "source": "A", "target": "B" },
+        { "source": "A", "target": "C" },
+        { "source": "D", "target": "E" }
+      ],
+      "start_vertex": "A"
+    },
+    {
+      "id": 4,
+      "name": "The campus graph",
+      "directed": false,
+      "vertices": ["A", "B", "C", "D", "E", "F", "G"],
+      "edges": [
+        { "source": "A", "target": "C" },
+        { "source": "A", "target": "E" },
+        { "source": "B", "target": "C" },
+        { "source": "B", "target": "G" },
+        { "source": "C", "target": "F" },
+        { "source": "D", "target": "E" },
+        { "source": "E", "target": "F" }
+      ],
+      "start_vertex": "A"
+    }
+  ]
+}

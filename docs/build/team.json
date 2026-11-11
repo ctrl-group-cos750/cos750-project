@@ -1,0 +1,38 @@
+{
+  "group": "Control Group",
+  "product": "Ctrl Academy",
+  "tagline": "A pre-lecture app for COS212: graphs and breadth-first search",
+  "module": "COS750 Educational Software Development",
+  "institution": "Department of Computer Science, University of Pretoria",
+  "members": [
+    {
+      "name": "Matthew Els",
+      "studentNumber": "u21715191"
+    },
+    {
+      "name": "Jacobus Hoogenboezem",
+      "studentNumber": "u19100516"
+    },
+    {
+      "name": "Mohtashim Hussain",
+      "studentNumber": "u26775582"
+    },
+    {
+      "name": "Ayanda Juqu",
+      "studentNumber": "u21589021"
+    },
+    {
+      "name": "Simphiwe Nhlapo",
+      "studentNumber": "u26827965"
+    },
+    {
+      "name": "Reece Schmidt",
+      "studentNumber": "u19130539"
+    },
+    {
+      "name": "Joshua Wereley",
+      "studentNumber": "u21506915"
+    }
+  ],
+  "groupSize": 7
+}

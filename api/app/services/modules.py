@@ -1,0 +1,498 @@
+"""The module map and each student's progress through the modules (SE document §9, FR-2).
+
+The modules and their segments are content (app/models/content.py, loaded from the fixtures);
+`ModuleProgress` is the student's part. Functions take a session and the student's id, flush
+and never commit: the router commits.
+
+Unlocking (FR-2.1): the first module (by `position`) is always open. Any other module opens when
+the one before it is complete, and stays as it is once the student has started it. A module with
+no segments yet is passed over, so missing content never locks the rest of the course.
+
+Progress (FR-2.5, FR-2.6): the student moves through a module one segment at a time. The
+furthest segment reached is kept, so stepping back to reread never loses progress. A student moves
+past a segment only once it is done (FR-2.7): a practice activity once they have answered it
+correctly, or after its last hint; a mastery or diagnostic item once they have answered it at all,
+since only the first answer counts there; and a video segment once they have passed every one of
+the video's checkpoints. Every other kind is done when shown. An activity whose kind has no
+student UI yet (`KINDS_WITHOUT_STUDENT_UI`) counts as done, so it can't strand a student. The
+module is complete, for good, once its last segment is done.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+from datetime import UTC, datetime
+
+from sqlalchemy import func, or_, select
+from sqlalchemy.orm import Session
+
+from app.models import Activity, Attempt, Checkpoint, Hint, Module, ModuleProgress, Segment, Video
+from app.schemas.modules import (
+    ModuleDetailOut,
+    ModuleOut,
+    ModuleStatus,
+    RetrievalActivityOut,
+    SegmentOut,
+)
+from app.services import rewards
+from app.services.events import log_event
+from app.services.locks import lock_student
+
+# Activity kinds the web can't show a student yet: it says "This activity kind is not available
+# yet" instead (SUPPORTED in web/src/features/activities/ActivityRenderer.tsx is the mirror of
+# this set). A student can't answer them, so FR-2.7 counts them as done rather than locking the
+# student out of the rest of the module. Empty since trace, fix_the_bug and choose_tests got their
+# screens (#136); kept so a kind added to the API before its screen can't strand a student.
+# Remove a kind from this set in the same change that adds it to SUPPORTED.
+KINDS_WITHOUT_STUDENT_UI: frozenset[str] = frozenset()
+
+# Purposes where one real answer is enough to move on (FR-2.7): the mastery check, where only the
+# first answer counts (FR-7.1), and module 0's diagnostic, which finds gaps rather than gating.
+ONE_ANSWER_PURPOSES: frozenset[str] = frozenset({"mastery", "diagnostic"})
+
+
+class ModuleNotFound(ValueError):
+    """No module has this id."""
+
+
+class ModuleLocked(ValueError):
+    """The module before this one isn't complete yet."""
+
+
+class PositionTooFar(ValueError):
+    """The position is more than one segment past the furthest the student has reached."""
+
+
+class RetrievalIncomplete(ValueError):
+    """The student has not answered every retrieval item before starting the module."""
+
+
+class SegmentNotDone(ValueError):
+    """The student tried to move past a segment they haven't done yet."""
+
+
+def _modules(session: Session) -> Sequence[Module]:
+    return session.scalars(select(Module).order_by(Module.position)).all()
+
+
+def _progress(session: Session, user_id: int) -> dict[int, ModuleProgress]:
+    rows = session.scalars(select(ModuleProgress).where(ModuleProgress.user_id == user_id))
+    return {row.module_id: row for row in rows}
+
+
+def _segments(session: Session, module_id: int) -> Sequence[Segment]:
+    return session.scalars(
+        select(Segment).where(Segment.module_id == module_id).order_by(Segment.position)
+    ).all()
+
+
+def _segment_counts(session: Session) -> dict[int, int]:
+    counts: dict[int, int] = {}
+    for module_id in session.scalars(
+        select(Segment.module_id).where(Segment.module_id.isnot(None))
+    ):
+        if module_id is not None:
+            counts[module_id] = counts.get(module_id, 0) + 1
+    return counts
+
+
+def _statuses(
+    modules: Sequence[Module], progress: dict[int, ModuleProgress], counts: dict[int, int]
+) -> dict[int, ModuleStatus]:
+    """Each module's status for one student, in map order (FR-2.1).
+
+    A module with no segments yet (its content hasn't been written) can't be completed, so it
+    doesn't hold back the modules after it: it opens when they would, and unlocking passes over
+    it. Once it has content it counts like any other.
+    """
+    statuses: dict[int, ModuleStatus] = {}
+    previous_complete = True  # nothing comes before the first module
+    for module in modules:
+        row = progress.get(module.id)
+        if row is not None and row.status == "complete":
+            status: ModuleStatus = "complete"
+        elif row is not None:
+            status = "in_progress"
+        else:
+            status = "open" if previous_complete else "locked"
+        statuses[module.id] = status
+        if counts.get(module.id, 0) > 0:
+            previous_complete = status == "complete"
+    return statuses
+
+
+def _status(session: Session, user_id: int, module_id: int) -> ModuleStatus:
+    modules = _modules(session)
+    if not any(module.id == module_id for module in modules):
+        raise ModuleNotFound(module_id)
+    return _statuses(modules, _progress(session, user_id), _segment_counts(session))[module_id]
+
+
+def _locked(session: Session, user_id: int, module_ids: set[int]) -> bool:
+    """True if there are modules here and every one is still locked for this student."""
+    if not module_ids:
+        return False
+    statuses = _statuses(_modules(session), _progress(session, user_id), _segment_counts(session))
+    return all(statuses.get(module_id, "locked") == "locked" for module_id in module_ids)
+
+
+def activity_locked(session: Session, user_id: int, activity: Activity) -> bool:
+    """Whether this student may not open the activity yet, because every module it belongs to
+    is still locked (FR-2.1). It belongs to its own module, to every module whose segment shows it
+    (or uses it as a skip check), and, for a video's checkpoint question, to the module whose
+    segment plays that video. So module 6's mastery items stay unseen until module 6 opens
+    (FR-7.1). An activity that belongs to no module (a review path's, which has its own rule, or a
+    checkpoint of a video that isn't in a module yet) is never locked here."""
+    homes: set[int] = set()
+    if activity.module_id is not None:
+        homes.add(activity.module_id)
+    homes.update(
+        m
+        for m in session.scalars(
+            select(Segment.module_id).where(
+                or_(
+                    Segment.activity_id == activity.id,
+                    Segment.skip_check_activity_id == activity.id,
+                ),
+                Segment.module_id.is_not(None),
+            )
+        )
+        if m is not None
+    )
+    homes.update(
+        m
+        for m in session.scalars(
+            select(Segment.module_id)
+            .join(Video, Video.segment_id == Segment.id)
+            .join(Checkpoint, Checkpoint.video_id == Video.id)
+            .where(Checkpoint.activity_id == activity.id, Segment.module_id.is_not(None))
+        )
+        if m is not None
+    )
+    return _locked(session, user_id, homes)
+
+
+def segment_locked(session: Session, user_id: int, segment_id: int) -> bool:
+    """Whether this segment is in a module still locked for this student."""
+    module_id = session.scalar(select(Segment.module_id).where(Segment.id == segment_id))
+    return module_id is not None and _locked(session, user_id, {module_id})
+
+
+def video_locked(session: Session, user_id: int, video: Video) -> bool:
+    """Whether the module whose segment plays this video is still locked for this student. A
+    video in no module yet (staff have just made it) is never locked."""
+    if video.segment_id is None:
+        return False
+    module_id = session.scalar(select(Segment.module_id).where(Segment.id == video.segment_id))
+    return module_id is not None and _locked(session, user_id, {module_id})
+
+
+def _summary(
+    module: Module, status: ModuleStatus, segment_count: int, row: ModuleProgress | None
+) -> ModuleOut:
+    return ModuleOut(
+        id=module.id,
+        number=module.id,
+        slug=module.slug,
+        title=module.title,
+        goals=module.goals,
+        estimated_minutes=module.estimated_minutes,
+        status=status,
+        segment_count=segment_count,
+        current_segment_position=row.current_segment_position if row else 0,
+    )
+
+
+def get_modules_for_user(session: Session, user_id: int) -> list[ModuleOut]:
+    """Every module in map order, with this student's status and progress."""
+    modules = _modules(session)
+    progress = _progress(session, user_id)
+    counts = _segment_counts(session)
+    statuses = _statuses(modules, progress, counts)
+    return [
+        _summary(module, statuses[module.id], counts.get(module.id, 0), progress.get(module.id))
+        for module in modules
+    ]
+
+
+def _videos(session: Session, segments: Sequence[Segment]) -> dict[int, int]:
+    """Each video segment's video, by segment id. A video points at the segment that plays it
+    (Video.segment_id): videos are made in the app."""
+    return {
+        video.segment_id: video.id
+        for video in session.scalars(
+            select(Video).where(Video.segment_id.in_([segment.id for segment in segments]))
+        )
+        if video.segment_id is not None
+    }
+
+
+def done_segments(session: Session, user_id: int, segments: Sequence[Segment]) -> set[int]:
+    """The ids of the segments this student has done (FR-2.7).
+
+    A practice activity is done once they have answered it correctly, or answered it after its
+    last hint was shown (#143): the last hint gives the answer away, so a student who needed it can
+    still move on. A mastery or diagnostic item (`ONE_ANSWER_PURPOSES`) is done once answered at
+    all: only the first answer counts towards the report (FR-7.1) and the diagnostic finds gaps
+    rather than gating, so asking for a right answer there would add steps that change nothing.
+    A video segment is done once they have passed every checkpoint in its video. A segment with
+    nothing to do (any other kind, or no activity or video yet) is always done, and so is an
+    activity, or a checkpoint, whose kind has no student UI yet (`KINDS_WITHOUT_STUDENT_UI`)."""
+    videos = _videos(session, segments)
+    checkpoints: dict[int, set[int]] = {}
+    for video_id, activity_id in session.execute(
+        select(Checkpoint.video_id, Checkpoint.activity_id).where(
+            Checkpoint.video_id.in_(videos.values())
+        )
+    ):
+        checkpoints.setdefault(video_id, set()).add(activity_id)
+    wanted = {s.activity_id for s in segments if s.kind == "activity" and s.activity_id}
+    wanted |= {a for ids in checkpoints.values() for a in ids}
+    # Nobody can answer these yet, so they count as answered and passed.
+    no_ui = set(
+        session.scalars(
+            select(Activity.id).where(
+                Activity.id.in_(wanted), Activity.kind.in_(KINDS_WITHOUT_STUDENT_UI)
+            )
+        )
+    )
+    # Each activity's last hint level: an answer given after it was shown also counts.
+    last_hint = dict(
+        session.execute(
+            select(Hint.activity_id, func.max(Hint.level))
+            .where(Hint.activity_id.in_(wanted))
+            .group_by(Hint.activity_id)
+        ).all()
+    )
+    one_answer = set(
+        session.scalars(
+            select(Activity.id).where(
+                Activity.id.in_(wanted), Activity.purpose.in_(ONE_ANSWER_PURPOSES)
+            )
+        )
+    )
+    answered: set[int] = set(no_ui)  # done: answered correctly, or after the last hint
+    passed: set[int] = set(no_ui)
+    for activity_id, correct, hint_level in session.execute(
+        select(Attempt.activity_id, Attempt.correct, Attempt.hint_level).where(
+            Attempt.user_id == user_id, Attempt.activity_id.in_(wanted)
+        )
+    ):
+        last = last_hint.get(activity_id)
+        if correct or activity_id in one_answer or (last is not None and hint_level >= last):
+            answered.add(activity_id)
+        if correct:
+            passed.add(activity_id)
+    done: set[int] = set()
+    for segment in segments:
+        if segment.kind == "activity" and segment.activity_id is not None:
+            if segment.activity_id in answered:
+                done.add(segment.id)
+        elif segment.kind == "video" and segment.id in videos:
+            if checkpoints.get(videos[segment.id], set()) <= passed:
+                done.add(segment.id)
+        else:
+            done.add(segment.id)
+    return done
+
+
+def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleDetailOut:
+    """One module with its segments in order. Raises `ModuleNotFound` or `ModuleLocked`."""
+    status = _status(session, user_id, module_id)
+    if status == "locked":
+        raise ModuleLocked(module_id)
+    module = session.get_one(Module, module_id)
+    row = session.scalar(
+        select(ModuleProgress).where(
+            ModuleProgress.user_id == user_id, ModuleProgress.module_id == module_id
+        )
+    )
+    segments = _segments(session, module_id)
+    retrieval = session.scalars(
+        select(Activity)
+        .where(Activity.module_id == module_id, Activity.purpose == "retrieval")
+        .order_by(Activity.id)
+    ).all()
+    answered = _answered(session, user_id, [activity.id for activity in retrieval])
+    videos = _videos(session, segments)
+    done = done_segments(session, user_id, segments)
+    attempted = _answered(session, user_id, [s.activity_id for s in segments if s.activity_id])
+    # TODO (FR-8.1): leave out the refreshers module 0's diagnostic has ruled out, once the
+    # diagnostic records its result. Until then every refresher is shown.
+    return ModuleDetailOut(
+        **_summary(module, status, len(segments), row).model_dump(),
+        segments=[
+            SegmentOut(
+                id=segment.id,
+                position=index,
+                kind=segment.kind,  # type: ignore[arg-type]
+                title=segment.title,
+                body=segment.body or None,
+                video_id=videos.get(segment.id),
+                activity_id=segment.activity_id,
+                done=segment.id in done,
+                attempted=segment.activity_id is not None and segment.activity_id in attempted,
+            )
+            for index, segment in enumerate(segments)
+        ],
+        retrieval=[
+            RetrievalActivityOut(
+                id=activity.id, title=activity.title, answered=activity.id in answered
+            )
+            for activity in retrieval
+        ],
+    )
+
+
+def _answered(session: Session, user_id: int, activity_ids: Sequence[int]) -> set[int]:
+    """Which of these activities the student has made at least one attempt at."""
+    return set(
+        session.scalars(
+            select(Attempt.activity_id).where(
+                Attempt.user_id == user_id, Attempt.activity_id.in_(activity_ids)
+            )
+        )
+    )
+
+
+def save_position(
+    session: Session, user_id: int, module_id: int, segment_position: int
+) -> ModuleProgress:
+    """Record that the student reached `segment_position` (0-based) in this module.
+
+    The furthest position reached is kept: stepping back is allowed and changes nothing. Moving
+    more than one segment past the furthest raises `PositionTooFar`, and moving past a segment
+    the student hasn't done raises `SegmentNotDone` (FR-2.7). The module is complete once the
+    furthest position is the last segment and that segment is done, so saving the last segment
+    again after doing it completes the module (the page's "Finish module"); saving it while it
+    isn't done yet changes nothing. A complete module stays complete (FR-2.6). Raises
+    `ModuleNotFound` or `ModuleLocked` like `get_module_detail`.
+
+    Raises `RetrievalIncomplete` until the student has answered the module's retrieval questions
+    (FR-2.4), unless the module is already complete: a student who finished it before its
+    questions were added can still go back over it.
+    """
+    lock_student(session, user_id)  # a double-clicked Next must not insert progress twice (#138)
+    status = _status(session, user_id, module_id)
+    if status == "locked":
+        raise ModuleLocked(module_id)
+    if status != "complete":
+        retrieval_ids = session.scalars(
+            select(Activity.id).where(
+                Activity.module_id == module_id, Activity.purpose == "retrieval"
+            )
+        ).all()
+        if not set(retrieval_ids) <= _answered(session, user_id, retrieval_ids):
+            raise RetrievalIncomplete(module_id)
+    segments = _segments(session, module_id)
+    last = len(segments) - 1
+    if last < 0:
+        raise PositionTooFar(module_id)  # nothing to move through yet
+    row = session.scalar(
+        select(ModuleProgress)
+        .where(ModuleProgress.user_id == user_id, ModuleProgress.module_id == module_id)
+        .with_for_update()
+    )
+    reached = row.current_segment_position if row else 0
+    if segment_position > min(reached + 1, last):
+        raise PositionTooFar(module_id)
+    done = done_segments(session, user_id, segments)
+    # Only moving on leaves a segment behind. Saving a position already reached (stepping back
+    # then forward again, or "Finish module" on a last segment that isn't done) moves past
+    # nothing, so it isn't refused: it just doesn't complete the module (below).
+    if (
+        status != "complete"
+        and segment_position > reached
+        and segments[segment_position - 1].id not in done
+    ):
+        raise SegmentNotDone(module_id)
+    if row is None:
+        row = ModuleProgress(user_id=user_id, module_id=module_id, status="in_progress")
+        session.add(row)
+    row.current_segment_position = max(reached, segment_position)
+    if (
+        row.status != "complete"
+        and row.current_segment_position == last
+        and segments[last].id in done
+    ):
+        row.status = "complete"
+        row.completed_at = datetime.now(tz=UTC)
+        # Once per module: a complete module stays complete (FR-10.1, #141). Its points and badge
+        # come only with real work in it (FR-9.1, FR-9.6): see reward_module.
+        log_event(session, user_id, "module_completed", f"module:{module_id}")
+        reward_module(session, user_id, module_id)
+    session.flush()
+    return row
+
+
+def _module_activities(session: Session, module_id: int) -> set[int]:
+    """The activities a module asks for: those its segments show, and its own (recall questions)."""
+    shown = session.scalars(
+        select(Segment.activity_id).where(
+            Segment.module_id == module_id, Segment.activity_id.is_not(None)
+        )
+    )
+    own = session.scalars(select(Activity.id).where(Activity.module_id == module_id))
+    return {a for a in shown if a is not None} | set(own)
+
+
+def reward_module(session: Session, user_id: int, module_id: int) -> bool:
+    """Give a complete module's 25 points, and the First Module badge with the first, once
+    (FR-9.1, FR-9.3), if the student has done real work in it: at least one of its activities
+    answered correctly without hint 3 or 4. A module walked through by opening every hint and
+    sending anything earns nothing (FR-9.6, ID document §7.2: badges mark real progress, not
+    clicks; #166 review). Called when the module completes, when such a right answer comes later,
+    and by the seed for modules completed before this rule. Returns whether it was earned."""
+    activities = _module_activities(session, module_id)
+    earned = (
+        session.scalar(
+            select(Attempt.id)
+            .where(
+                Attempt.user_id == user_id,
+                Attempt.activity_id.in_(activities),
+                Attempt.correct.is_(True),
+                Attempt.hint_level < rewards.SUPPORT_LEVEL,
+            )
+            .limit(1)
+        )
+        is not None
+    )
+    if earned:
+        rewards.on_module_completed(session, user_id, module_id)  # points and badge once each
+    return earned
+
+
+def reward_completed_modules(session: Session, user_id: int, activity: Activity) -> None:
+    """After a right answer without hint 3 or 4: a complete module of this activity's that hadn't
+    earned its reward yet earns it now."""
+    homes = set(
+        session.scalars(
+            select(Segment.module_id).where(
+                Segment.activity_id == activity.id, Segment.module_id.is_not(None)
+            )
+        )
+    )
+    if activity.module_id is not None:
+        homes.add(activity.module_id)
+    complete = session.scalars(
+        select(ModuleProgress.module_id).where(
+            ModuleProgress.user_id == user_id,
+            ModuleProgress.module_id.in_({m for m in homes if m is not None}),
+            ModuleProgress.status == "complete",
+        )
+    )
+    for module_id in complete:
+        reward_module(session, user_id, module_id)
+
+
+def backfill_module_rewards(session: Session) -> int:
+    """Reward every complete module that has earned it but has no points yet: modules completed
+    before module points were awarded (#166 review). Safe to run on every seed: points and badges
+    are given once. Not committed. Returns how many modules gained their points."""
+    gained = 0
+    rows = session.scalars(select(ModuleProgress).where(ModuleProgress.status == "complete"))
+    for row in list(rows):
+        before = rewards.total_points(session, row.user_id)
+        reward_module(session, row.user_id, row.module_id)
+        gained += rewards.total_points(session, row.user_id) > before
+    return gained

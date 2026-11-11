@@ -1,0 +1,532 @@
+{
+  "modules": [
+    {
+      "id": 4,
+      "slug": "build-bfs",
+      "title": "Build BFS",
+      "estimated_minutes": 15,
+      "goals": [
+        "Build bfs(graph, start) in Python on your own Graph class, using a queue and a visited set, so it returns the vertices in the order BFS visits them.",
+        "Put the lines of BFS in order, then fill in its missing parts with less help each time."
+      ],
+      "segments": [
+        {
+          "id": 403,
+          "kind": "video",
+          "title": "From a trace to code",
+          "body": "Staff attach the narrated video to this segment in the video editor, with its checkpoint questions: see `docs/id/module-4/narration-script.md`."
+        },
+        {
+          "id": 404,
+          "kind": "worked_example",
+          "title": "Worked example: BFS line by line",
+          "body": "Tracing BFS on seven buildings took a whole table. How long would a campus with a hundred buildings take, or a social network with millions of people? Each step of your module 3 trace becomes a line of Python: here is the whole function.\n\nEach line does something you did by hand in module 3.\n\n```python\nfrom collections import deque\n\n\ndef bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                visited.add(n)\n                queue.append(n)\n    return order\n```\n\nThe set is called `visited`, as in most BFS code, but it holds every vertex BFS has **found**. A vertex goes in it when it joins the queue, as in module 3, so it can never join the queue twice.\n\n| Line | What it does in the trace |\n|---|---|\n| `visited = {start}` | The start is found straight away. |\n| `queue = deque([start])` | The start waits in the queue. |\n| `order = []` | Nothing has been visited yet. |\n| `while queue:` | Keep going until no vertex is waiting. |\n| `v = queue.popleft()` | Take the vertex at the front: it is visited now. |\n| `order.append(v)` | Write it in the order. |\n| `for n in sorted(graph.adjacency[v]):` | Look at its neighbours in alphabetical order. |\n| `if n not in visited:` | Skip a neighbour BFS has already found. |\n| `visited.add(n)`, then `queue.append(n)` | A new neighbour is found and joins the back of the queue. |\n| `return order` | The queue is empty, so the order is complete. |\n\n**Running it** on the graph with edges P–Q, P–R and Q–S, starting at P:\n\n| `v` | Order so far | Queue after | Found (`visited`) |\n|---|---|---|---|\n| P | P | Q, R | P, Q, R |\n| Q | P, Q | R, S | P, Q, R, S |\n| R | P, Q, R | S | P, Q, R, S |\n| S | P, Q, R, S | (empty) | P, Q, R, S |\n\n**Result:** `[\"P\", \"Q\", \"R\", \"S\"]`.\n\nNext you put these lines in order yourself. The three starting values can come in any order, and so can `visited.add(n)` and `queue.append(n)`: each order gives the same BFS.",
+          "skip_check_activity_id": 403
+        },
+        {
+          "id": 405,
+          "kind": "activity",
+          "title": "Put BFS in order",
+          "activity_id": 404
+        },
+        {
+          "id": 406,
+          "kind": "activity",
+          "title": "Code: fill in the missing lines",
+          "activity_id": 405
+        },
+        {
+          "id": 407,
+          "kind": "activity",
+          "title": "Code: build BFS with less help",
+          "activity_id": 406
+        },
+        {
+          "id": 408,
+          "kind": "activity",
+          "title": "Closing task: BFS on the shuttle",
+          "activity_id": 407
+        }
+      ]
+    }
+  ],
+  "activities": [
+    {
+      "id": 401,
+      "kind": "multiple_choice",
+      "title": "Quick recall: the BFS order",
+      "module_id": 4,
+      "purpose": "retrieval",
+      "objective_id": 5,
+      "config": {
+        "prompt": "Quick recall from module 3. On the campus graph, the walkways join A–C, A–E, B–C, B–G, C–F, D–E and E–F. You traced BFS from the Admin block (A), taking neighbours in alphabetical order. In what order did BFS visit the buildings?",
+        "options": [
+          {
+            "id": "b",
+            "label": "A, B, C, D, E, F, G"
+          },
+          {
+            "id": "a",
+            "label": "A, C, E, B, F, D, G"
+          },
+          {
+            "id": "c",
+            "label": "A, C, B, G, F, E, D"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "BFS visits A, then its neighbours C and E, then their new neighbours in turn: B and F from C, D from E, and finally G from B.",
+        "correct": "a",
+        "feedback": {
+          "b": "Not quite. That's just alphabetical order. Alphabetical order only decides which neighbour joins the queue first; BFS still goes ring by ring. Think about which buildings are one walkway from A.",
+          "c": "Not quite. That goes deep first. This order follows one path as far as it goes (A, C, B, G) before coming back. BFS finishes each ring first. Visit all of A's neighbours before any of their neighbours."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "BFS explores in rings: one edge away, then two, then three."
+        },
+        {
+          "level": 2,
+          "body": "A's neighbours are C and E, so they come straight after A."
+        },
+        {
+          "level": 3,
+          "body": "Two edges away: B and F (through C) and D (through E)."
+        },
+        {
+          "level": 4,
+          "body": "Answer: A, C, E, B, F, D, G."
+        }
+      ]
+    },
+    {
+      "id": 402,
+      "kind": "multiple_choice",
+      "title": "Quick recall: adjacency lists",
+      "module_id": 4,
+      "purpose": "retrieval",
+      "objective_id": 2,
+      "config": {
+        "prompt": "Quick recall from module 2. You build the campus graph with your Graph class: g = Graph(), then one g.add_edge call for each walkway, in this order: A–C, A–E, B–C, B–G, C–F, D–E and E–F. What is g.adjacency[\"C\"]?",
+        "options": [
+          {
+            "id": "b",
+            "label": "[\"F\"]"
+          },
+          {
+            "id": "a",
+            "label": "[\"A\", \"B\", \"F\"]"
+          },
+          {
+            "id": "c",
+            "label": "[\"A\", \"B\", \"E\", \"F\"]"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "Each add_edge call adds a neighbour to both vertices. C is in A–C, B–C and C–F, so its list gets A, B and F, in that order.",
+        "correct": "a",
+        "feedback": {
+          "b": "Not quite. That stores edges one way only. A–C and B–C are undirected, so A and B must also be in C's list. Remember: an undirected edge goes in both lists.",
+          "c": "Not quite. E isn't joined to C. C and E are both joined to A and F, but there's no walkway C–E. Only list vertices with their own edge to C."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "g.adjacency[\"C\"] is the list of C's neighbours."
+        },
+        {
+          "level": 2,
+          "body": "Find every edge that touches C."
+        },
+        {
+          "level": 3,
+          "body": "The edges are A–C, B–C and C–F, added in that order."
+        },
+        {
+          "level": 4,
+          "body": "Answer: [\"A\", \"B\", \"F\"]."
+        }
+      ]
+    },
+    {
+      "id": 403,
+      "kind": "multiple_choice",
+      "title": "Check: BFS line by line",
+      "module_id": 4,
+      "purpose": "practice",
+      "objective_id": 6,
+      "config": {
+        "prompt": "Already confident? The graph has edges W–X, W–Z, X–Y and Y–Z. What does bfs(g, \"W\") return?",
+        "options": [
+          {
+            "id": "a",
+            "label": "[\"W\", \"X\", \"Z\", \"Y\"]"
+          },
+          {
+            "id": "b",
+            "label": "[\"W\", \"X\", \"Y\", \"Z\"]"
+          },
+          {
+            "id": "c",
+            "label": "[\"W\", \"X\", \"Z\", \"Y\", \"Y\"]"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "BFS visits W, then its neighbours X and Z. Y is found from X, so when Z is processed, Y is already found and isn't added again.",
+        "correct": "a",
+        "feedback": {
+          "b": "Not quite. That goes deep first. Y is two edges from W, so it comes after both X and Z. Read the worked example: the queue keeps the rings in order.",
+          "c": "Not quite. Y appears twice. Y is added to visited when X finds it, so Z doesn't add it again. Read the worked example: a vertex goes in visited when it joins the queue."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Start with W in the queue and in visited."
+        },
+        {
+          "level": 2,
+          "body": "W's neighbours X and Z join the queue in alphabetical order."
+        },
+        {
+          "level": 3,
+          "body": "X finds Y. When Z leaves the queue, Y is already in visited."
+        },
+        {
+          "level": 4,
+          "body": "Answer: [\"W\", \"X\", \"Z\", \"Y\"]."
+        }
+      ]
+    },
+    {
+      "id": 404,
+      "kind": "parsons",
+      "title": "Put BFS in order",
+      "module_id": 4,
+      "purpose": "practice",
+      "objective_id": 6,
+      "config": {
+        "lines": [
+          {
+            "id": 10,
+            "text": "            if n not in visited:"
+          },
+          {
+            "id": 4,
+            "text": "    queue = deque([start])"
+          },
+          {
+            "id": 13,
+            "text": "    return order"
+          },
+          {
+            "id": 1,
+            "text": "from collections import deque"
+          },
+          {
+            "id": 8,
+            "text": "        order.append(v)"
+          },
+          {
+            "id": 6,
+            "text": "    while queue:"
+          },
+          {
+            "id": 11,
+            "text": "                visited.add(n)"
+          },
+          {
+            "id": 3,
+            "text": "    visited = {start}"
+          },
+          {
+            "id": 2,
+            "text": "def bfs(graph, start):"
+          },
+          {
+            "id": 12,
+            "text": "                queue.append(n)"
+          },
+          {
+            "id": 7,
+            "text": "        v = queue.popleft()"
+          },
+          {
+            "id": 5,
+            "text": "    order = []"
+          },
+          {
+            "id": 9,
+            "text": "        for n in sorted(graph.adjacency[v]):"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "Start with the start vertex found and in the queue. Then, while the queue isn't empty, visit the vertex at the front, and mark each neighbour not found yet as found and add it at the back.",
+        "order": [
+          1,
+          2,
+          [
+            3,
+            4,
+            5
+          ],
+          6,
+          7,
+          8,
+          9,
+          10,
+          [
+            11,
+            12
+          ],
+          13
+        ]
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Start with the import and the def line."
+        },
+        {
+          "level": 2,
+          "body": "Before the loop come the three starting values: visited, queue and order, in any order. Inside the loop, take the front vertex first, then add it to the order."
+        },
+        {
+          "level": 3,
+          "body": "For each neighbour: the for line, then if n not in visited:, then visited.add(n) and queue.append(n), in either order. return order comes last, after the loop."
+        },
+        {
+          "level": 4,
+          "body": "Answer: the worked example's order is one right answer. The import, def bfs(graph, start):, visited = {start}, queue = deque([start]), order = [], while queue:, v = queue.popleft(), order.append(v), for n in sorted(graph.adjacency[v]):, if n not in visited:, visited.add(n), queue.append(n), and last return order. The three starting values can go in any order, and so can visited.add(n) and queue.append(n)."
+        }
+      ]
+    },
+    {
+      "id": 405,
+      "kind": "fill_in",
+      "title": "Code: fill in the missing lines",
+      "module_id": 4,
+      "purpose": "practice",
+      "objective_id": 6,
+      "config": {
+        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    # Two lines are missing. Fill them in so bfs returns the vertices in the order BFS visits them.\n    # graph is your Graph class from module 2: graph.adjacency[v] is the list of v's neighbours.\n    visited = {start}  # every vertex BFS has found\n    queue = deque([start])\n    order = []\n    while queue:\n        v = __1__  # take the vertex at the front of the queue\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                __2__  # n is found: add it to the visited set\n                __3__  # then add it to the back of the queue\n    return order",
+        "blanks": [
+          1,
+          2,
+          3
+        ],
+        "options": [
+          "queue.popleft()",
+          "queue.pop()",
+          "queue[0]",
+          "visited.add(n)",
+          "queue.append(n)",
+          "queue.appendleft(n)",
+          "pass"
+        ]
+      },
+      "solution": {
+        "explanation": "popleft takes the vertex that has waited longest, from the front. A new neighbour is marked found and added at the back in the same step, so it is never added twice.",
+        "answers": {
+          "1": "queue.popleft()",
+          "2": "visited.add(n)",
+          "3": "queue.append(n)"
+        },
+        "feedback": {
+          "1": {
+            "queue.pop()": "Not quite. pop() takes from the back of the queue, the vertex that joined last. That makes it a stack, so the search goes deep instead of wide: on the campus it visits E before C. Take from the front with popleft().",
+            "queue[0]": "Not quite. queue[0] reads the front vertex but doesn't remove it, so the queue never empties and the loop never ends. Use the method that takes the vertex out of the queue as well."
+          },
+          "2": {
+            "pass": "Not quite. A vertex waiting in the queue isn't in visited, so another neighbour can add it again: in a triangle A, B, C, both A and B add C. Add n to visited as soon as it is found."
+          },
+          "3": {
+            "queue.appendleft(n)": "Not quite. appendleft puts n at the front, so it leaves before vertices that have waited longer, and BFS goes deep instead of wide. New vertices join at the back: use append.",
+            "pass": "Not quite. n is found but never joins the queue, so BFS never visits it: on the campus it stops after A. Add n to the back of the queue."
+          }
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "The first blank takes a vertex out of the queue. The other two handle a neighbour BFS hasn't found yet."
+        },
+        {
+          "level": 2,
+          "body": "Take from the front of a deque with popleft()."
+        },
+        {
+          "level": 3,
+          "body": "For a new neighbour, two lines: add it to the visited set, then add it to the back of the queue."
+        },
+        {
+          "level": 4,
+          "body": "Answer: blank 1 is queue.popleft(), blank 2 is visited.add(n), and blank 3 is queue.append(n)."
+        }
+      ]
+    },
+    {
+      "id": 406,
+      "kind": "fill_in",
+      "title": "Code: build BFS with less help",
+      "module_id": 4,
+      "purpose": "practice",
+      "objective_id": 6,
+      "config": {
+        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    # Return the vertices in the order BFS visits them, starting at start.\n    # Take neighbours in alphabetical order.\n    visited = __1__\n    queue = __2__\n    order = []\n    while __3__:\n        v = __4__\n        order.append(v)\n        for n in __5__:\n            if __6__:\n                visited.__7__\n                queue.__8__\n    return __9__",
+        "blanks": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "options": [
+          "{start}",
+          "set()",
+          "deque([start])",
+          "deque([\"A\"])",
+          "queue",
+          "True",
+          "queue.popleft()",
+          "queue.pop()",
+          "sorted(graph.adjacency[v])",
+          "graph.adjacency[v]",
+          "sorted(graph.adjacency)",
+          "n not in visited",
+          "n in visited",
+          "add(n)",
+          "append(n)",
+          "appendleft(n)",
+          "order",
+          "visited"
+        ]
+      },
+      "solution": {
+        "explanation": "The start is found and queued first. Each round takes the front of the queue, visits it, and adds the neighbours not found yet, in alphabetical order, at the back. When the queue is empty, order holds every vertex BFS reached.",
+        "answers": {
+          "1": "{start}",
+          "2": "deque([start])",
+          "3": "queue",
+          "4": "queue.popleft()",
+          "5": "sorted(graph.adjacency[v])",
+          "6": "n not in visited",
+          "7": "add(n)",
+          "8": "append(n)",
+          "9": "order"
+        },
+        "feedback": {
+          "1": {
+            "set()": "Not quite. The start is found straight away, so it must be in visited from the beginning. Otherwise a neighbour adds it to the queue again and it is visited twice. Start visited with the start vertex in it."
+          },
+          "2": {
+            "deque([\"A\"])": "Not quite. That always starts at A. Starting from another vertex, such as D, gives the wrong order. Use the start parameter, not a fixed vertex."
+          },
+          "3": {
+            "True": "Not quite. With True the loop never stops on its own: once the queue is empty, taking the next vertex fails. Loop while a vertex is still waiting in the queue."
+          },
+          "4": {
+            "queue.pop()": "Not quite. pop() takes from the back of the queue, so the search goes deep instead of wide. BFS takes from the front with popleft()."
+          },
+          "5": {
+            "graph.adjacency[v]": "Not quite. That takes the neighbours in the order their edges were added. BFS takes them in alphabetical order: if the edges were added in the order D, B, C, it must still take B, C, D. Sort the list.",
+            "sorted(graph.adjacency)": "Not quite. That loops over every vertex in the graph, not just v's neighbours, so BFS would reach vertices with no path from the start. Loop over v's own list of neighbours."
+          },
+          "6": {
+            "n in visited": "Not quite. That's the wrong way round: only vertices BFS has already found would be added, so nothing new ever joins the queue and BFS stops after the start. Add a neighbour only if it isn't in visited yet."
+          },
+          "7": {
+            "append(n)": "Not quite. visited is a set, and a set has no append, so Python stops with an error. Add to a set with add."
+          },
+          "8": {
+            "add(n)": "Not quite. queue is a deque, and a deque has no add, so Python stops with an error. A new vertex joins the back with append.",
+            "appendleft(n)": "Not quite. appendleft puts n at the front, so it leaves before vertices that have waited longer, and BFS goes deep instead of wide. New vertices join at the back: use append."
+          },
+          "9": {
+            "visited": "Not quite. visited is a set, and a set has no order. bfs must return the list of vertices in the order BFS visited them."
+          }
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Before the loop you need a visited set and a queue, and the start vertex goes in both."
+        },
+        {
+          "level": 2,
+          "body": "Loop while the queue isn't empty. Each time, take the vertex at the front and add it to the order."
+        },
+        {
+          "level": 3,
+          "body": "For each neighbour in alphabetical order: if it isn't in visited, add it to visited and to the back of the queue. Return the order at the end."
+        },
+        {
+          "level": 4,
+          "body": "Answer: 1 {start}, 2 deque([start]), 3 queue, 4 queue.popleft(), 5 sorted(graph.adjacency[v]), 6 n not in visited, 7 add(n), 8 append(n), 9 order."
+        }
+      ]
+    },
+    {
+      "id": 407,
+      "kind": "multiple_choice",
+      "title": "Closing task: BFS on the shuttle",
+      "module_id": 4,
+      "purpose": "practice",
+      "objective_id": 6,
+      "config": {
+        "prompt": "Closing task. The campus shuttle is a directed graph with arrows A → D, D → G and G → A. You build it with g = Graph(directed=True) and run your bfs from D. What does bfs(g, \"D\") return?",
+        "options": [
+          {
+            "id": "a",
+            "label": "[\"D\", \"G\", \"A\"]"
+          },
+          {
+            "id": "b",
+            "label": "[\"D\", \"A\", \"G\"]"
+          },
+          {
+            "id": "c",
+            "label": "[\"D\", \"G\"]"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "From D the only arrow out is D → G, and from G the only arrow out is G → A. Arrows can't be followed backwards, so BFS visits D, G, A.",
+        "correct": "a",
+        "feedback": {
+          "b": "Not quite. That treats the edges as two-way. There's no arrow from D to A, and BFS can only follow arrows forwards. Follow the arrows leaving D, then the ones leaving G.",
+          "c": "Not quite. BFS keeps going. After G, BFS checks G's list and finds A, which it hasn't found yet. Keep looping until the queue is empty."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "BFS follows each vertex's adjacency list."
+        },
+        {
+          "level": 2,
+          "body": "In a directed graph, D's list only holds G."
+        },
+        {
+          "level": 3,
+          "body": "After G, look at G's list."
+        },
+        {
+          "level": 4,
+          "body": "Answer: [\"D\", \"G\", \"A\"]."
+        }
+      ]
+    }
+  ]
+}

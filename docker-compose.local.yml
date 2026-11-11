@@ -1,0 +1,9 @@
+# Local only: publishes ports so you can open the app and reach Postgres.
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
+services:
+  web:
+    ports:
+      - "8080:80"
+  db:
+    ports:
+      - "5432:5432"

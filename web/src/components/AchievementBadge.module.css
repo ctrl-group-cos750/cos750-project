@@ -1,0 +1,81 @@
+/* Each state sets three colours; the parts below use them. Tokens: --badge-* and --color-*. */
+.badge {
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.frame {
+  fill: var(--fill);
+  stroke: var(--stroke);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.inner {
+  fill: none;
+  stroke: var(--stroke);
+  stroke-width: 1.25;
+  stroke-linejoin: round;
+}
+
+.star {
+  fill: var(--stroke);
+  stroke: var(--fill);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.glyph {
+  color: var(--stroke);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lock circle {
+  fill: var(--color-text-muted);
+}
+
+.lock {
+  color: var(--color-surface);
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+}
+
+.bronze {
+  --fill: var(--badge-bronze-soft);
+  --stroke: var(--badge-bronze);
+}
+
+.gold {
+  --fill: var(--badge-gold-soft);
+  --stroke: var(--badge-gold);
+}
+
+.milestone,
+.hidden {
+  --fill: var(--color-accent-soft);
+  --stroke: var(--color-accent-text);
+}
+
+.quest {
+  --fill: var(--color-success-soft);
+  --stroke: var(--color-success);
+}
+
+/* Not earned yet: muted, dashed and faded, so it reads as "still to come", not as a loss. */
+.locked {
+  --fill: var(--color-surface-sunken);
+  --stroke: var(--color-control-border);
+}
+
+.locked .frame {
+  stroke-dasharray: 4 3;
+}
+
+.locked .glyph {
+  opacity: 0.6;
+}

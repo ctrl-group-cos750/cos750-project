@@ -1,0 +1,93 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+  cursor: pointer;
+  transition:
+    background-color 120ms,
+    border-color 120ms,
+    box-shadow 120ms,
+    transform 120ms ease;
+}
+
+.button:hover:not(:disabled, [aria-disabled='true']) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.button:active:not(:disabled, [aria-disabled='true']) {
+  transform: translateY(1px);
+  box-shadow: var(--shadow-xs);
+}
+
+/* Focus (WCAG 2.4.7). The button's own box-shadow (depth, hover lift) beat the global
+   :focus-visible ring, which is a box-shadow in a lower cascade layer, so a focused button looked
+   unfocused. An outline can't be overridden by a shadow, still draws in forced-colours mode, and
+   follows the border radius. Offset and width match --focus-ring: a 3px gap, then a 2px ring. */
+.button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+
+.button:disabled,
+.button[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.55;
+  box-shadow: none;
+}
+
+.md {
+  min-height: 2.75rem; /* 44px touch target */
+  padding: 0 var(--space-5);
+  font-size: var(--text-md);
+}
+
+.sm {
+  min-height: 2.25rem;
+  padding: 0 var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.primary {
+  background: var(--color-primary);
+  color: var(--color-on-accent);
+}
+
+.primary:hover:not(:disabled, [aria-disabled='true']) {
+  background: var(--color-accent-hover);
+}
+
+.secondary {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-control-border);
+}
+
+.secondary:hover:not(:disabled, [aria-disabled='true']) {
+  border-color: var(--color-primary);
+  color: var(--color-accent-text);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--color-accent-text);
+}
+
+.ghost:hover:not(:disabled, [aria-disabled='true']) {
+  background: var(--color-accent-soft);
+}
+
+.danger {
+  background: var(--color-danger);
+  color: var(--color-bg);
+}
+
+.danger:hover:not(:disabled, [aria-disabled='true']) {
+  filter: brightness(0.92);
+}

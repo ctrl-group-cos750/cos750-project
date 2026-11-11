@@ -1,0 +1,61 @@
+# Coolify deploys this file as-is (Docker Compose build pack). Only `web` gets a domain;
+# it serves the SPA and forwards /api to `api`. Nothing publishes a port: Coolify's proxy
+# reaches `web` on the internal network. For local use add docker-compose.local.yml.
+services:
+  web:
+    build: ./web
+    expose:
+      - "80"
+    environment:
+      # Set in Coolify for staging only: the whole site then sits behind a team-password page.
+      STAGING_PASSWORD: ${STAGING_PASSWORD:-}
+    volumes:
+      # Uploaded videos and captions, served at /media/. Read-only here: only the API writes.
+      - media:/srv/media:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  api:
+    build: ./api
+    expose:
+      - "8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-ctrl}:${POSTGRES_PASSWORD:?}@db:5432/${POSTGRES_DB:-ctrl}
+      # Signs session cookies. Unset, the API makes a random one and everyone is logged out on restart.
+      SECRET_KEY: ${SECRET_KEY:-}
+      # "off" in production: hides /api/docs and /api/openapi.json. Staging keeps them for the team.
+      API_DOCS: ${API_DOCS:-on}
+      # The password of every seeded demo account (FR-1.4, app/seed/demo_accounts.py). Unset, none
+      # are made. Set it where the demo runs; changing it takes effect on the next deploy.
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-}
+      # Where staff uploads go (app/media.py). The same volume the web container serves.
+      MEDIA_DIR: /media
+    volumes:
+      - media:/media
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ctrl}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: ${POSTGRES_DB:-ctrl}
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  db-data:
+  # Narrated videos and captions, uploaded by staff in the app (/staff/videos). On Coolify this
+  # is a persistent volume: it survives deploys and is not in git or any image.
+  media:

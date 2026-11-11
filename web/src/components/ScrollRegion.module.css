@@ -1,0 +1,52 @@
+/* The frame holds the scroll cue; the scroller inside does the scrolling (ScrollRegion.tsx). */
+.frame {
+  position: relative;
+  min-width: 0;
+}
+
+.scroller {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.scroller:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+/* Scroll cue: a shade in the text colour on each edge where content is hidden. It sits over the
+   scroller and lets clicks through. */
+.frame::before,
+.frame::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  width: 2rem;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms;
+}
+
+.frame::before {
+  inset-inline-start: 0;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, currentColor 30%, transparent),
+    transparent
+  );
+}
+
+.frame::after {
+  inset-inline-end: 0;
+  background: linear-gradient(
+    to left,
+    color-mix(in srgb, currentColor 30%, transparent),
+    transparent
+  );
+}
+
+.frame[data-more-start]::before,
+.frame[data-more-end]::after {
+  opacity: 1;
+}

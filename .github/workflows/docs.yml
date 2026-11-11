@@ -1,0 +1,72 @@
+name: docs
+
+# Builds the SE and ID documents into PDFs whenever they change. Download them from the run's
+# "documents" artifact. On staging, the PDFs are also published as the "docs-latest" release,
+# whose download links never change:
+#   https://github.com/ctrl-group-cos750/cos750-project/releases/download/docs-latest/ctrl-group-se-document.pdf
+#   https://github.com/ctrl-group-cos750/cos750-project/releases/download/docs-latest/ctrl-group-id-document.pdf
+on:
+  pull_request:
+    branches: [staging, master]
+    paths: ["docs/**", "assets/svg/**", ".github/workflows/docs.yml"]
+  push:
+    branches: [staging, master]
+    paths: ["docs/**", "assets/svg/**", ".github/workflows/docs.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  # A newer PR push supersedes an older run. On staging, a publish is never cut off halfway.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  pdf:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docs/build
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # The footer names the commit each document was last changed in.
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: docs/build/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run pdf
+      - uses: actions/upload-artifact@v4
+        with:
+          name: documents
+          path: docs/build/out/*.pdf
+          if-no-files-found: error
+
+  publish:
+    needs: pdf
+    if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: documents
+          path: out
+      # Recreated each time, so the release and its tag point at the commit the PDFs came from.
+      # The tag name, and with it every download link, stays the same.
+      - name: Replace the docs-latest release
+        run: |
+          gh release delete docs-latest --cleanup-tag --yes || true
+          gh release create docs-latest out/*.pdf \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title "Documents: latest from staging" \
+            --notes "The SE and ID documents as they are on \`staging\`, built from $GITHUB_SHA by the docs workflow on $(date -u +%Y-%m-%d). This release is replaced on every change to \`docs/\`, so the download links below always give the newest version."

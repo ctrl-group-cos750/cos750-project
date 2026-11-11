@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en-ZA">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#141413" />
+    <title>Ctrl Academy · Staging</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@400;500;700&display=swap"
+    />
+    <!--
+      Staging gate. nginx serves this page instead of the app until the browser holds the cookie
+      ctrl_staging = sha256("ctrl-academy-staging:" + password). See web/staging-gate.sh.
+    -->
+    <style>
+      :root {
+        --accent: #2470c9;
+        --edge: #184a85;
+        --ink: #141413;
+        --paper: #fafaf7;
+        --bg: var(--paper);
+        --surface: #ffffff;
+        --line: #dcdbd3;
+        --fg: var(--ink);
+        --muted: #5c5b55;
+        --danger: #b42318;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: var(--ink);
+          --surface: #1f1f1d;
+          --line: #3a3a35;
+          --fg: var(--paper);
+          --muted: #a8a79f;
+          --danger: #f97066;
+          color-scheme: dark;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          16px/1.5 'Space Grotesk',
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      main {
+        width: 100%;
+        max-width: 22rem;
+      }
+      .lockup {
+        display: block;
+        height: 40px;
+        width: auto;
+        margin-bottom: 40px;
+        color: var(--fg);
+      }
+      .lockup .word {
+        fill: currentColor;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 1.75rem;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+      }
+      p {
+        margin: 0 0 28px;
+        color: var(--muted);
+      }
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        font-size: 0.95rem;
+      }
+      input {
+        width: 100%;
+        height: 46px;
+        padding: 0 14px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--surface);
+        color: var(--fg);
+        font:
+          500 1rem 'JetBrains Mono',
+          ui-monospace,
+          monospace;
+      }
+      input:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+      }
+      input[aria-invalid='true'] {
+        border-color: var(--danger);
+      }
+      .error {
+        min-height: 1.4em;
+        margin: 8px 0 0;
+        color: var(--danger);
+        font-size: 0.875rem;
+      }
+      /* Built like the logo's keycap: darker edge underneath, face on top. */
+      button {
+        position: relative;
+        width: 100%;
+        height: 48px;
+        margin-top: 12px;
+        border: 0;
+        border-radius: 10px;
+        background: var(--edge);
+        color: #fff;
+        font:
+          700 1rem 'Space Grotesk',
+          system-ui,
+          sans-serif;
+        cursor: pointer;
+        padding: 0 0 4px;
+      }
+      button span {
+        position: absolute;
+        inset: 0 0 4px;
+        display: grid;
+        place-items: center;
+        border-radius: 10px;
+        background: var(--accent);
+        transition: transform 0.06s;
+      }
+      button:active span {
+        transform: translateY(3px);
+      }
+      button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
+      }
+      button:disabled {
+        cursor: progress;
+        opacity: 0.8;
+      }
+      .foot {
+        margin: 32px 0 0;
+        font:
+          500 0.75rem 'JetBrains Mono',
+          ui-monospace,
+          monospace;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <svg class="lockup" viewBox="0 0 529.84 160.00" role="img" aria-label="Ctrl Group">
+        <rect x="0.00" y="0.00" width="160.00" height="160.00" rx="26.00" fill="#184a85" />
+        <rect x="11.00" y="7.00" width="138.00" height="134.00" rx="19.00" fill="#2470C9" />
+        <path
+          fill="#FFFFFF"
+          d="M41.768 121.54Q38.828 121.54 36.623000000000005 120.427Q34.418 119.31400000000001 33.221000000000004 117.27700000000002Q32.024 115.24000000000001 32.024 112.468V99.112Q32.024 96.298 33.221000000000004 94.28200000000001Q34.418 92.266 36.623000000000005 91.153Q38.828 90.04 41.768 90.04Q44.75 90.04 46.913 91.153Q49.076 92.266 50.294 94.28200000000001Q51.512 96.298 51.512 99.112H46.22Q46.22 96.928 45.065 95.794Q43.91 94.66 41.768 94.66Q39.626000000000005 94.66 38.45 95.794Q37.274 96.928 37.274 99.07000000000001V112.468Q37.274 114.61 38.45 115.765Q39.626000000000005 116.92 41.768 116.92Q43.91 116.92 45.065 115.765Q46.22 114.61 46.22 112.468H51.512Q51.512 115.19800000000001 50.294 117.256Q49.076 119.31400000000001 46.913 120.427Q44.75 121.54 41.768 121.54ZM68.48 121.12Q65.162 121.12 63.293000000000006 119.272Q61.424 117.424 61.424 114.19V102.766H55.166V98.02000000000001H61.424V91.51H66.71600000000001V98.02000000000001H75.578V102.766H66.71600000000001V114.19Q66.71600000000001 116.37400000000001 68.858 116.37400000000001H75.158V121.12ZM81.668 121.12V98.02000000000001H86.624V102.43H87.926L86.372 105.118Q86.372 101.38 88.05199999999999 99.49Q89.732 97.6 93.008 97.6Q96.746 97.6 98.888 99.91Q101.03 102.22 101.03 106.29400000000001V107.974H95.52799999999999V106.672Q95.52799999999999 104.446 94.37299999999999 103.22800000000001Q93.218 102.01 91.202 102.01Q89.144 102.01 88.031 103.22800000000001Q86.918 104.446 86.918 106.672V121.12ZM118.208 121.12Q115.94 121.12 114.239 120.196Q112.538 119.272 111.572 117.571Q110.606 115.87 110.606 113.644V95.206H103.214V90.46000000000001H115.856V113.644Q115.856 114.90400000000001 116.591 115.63900000000001Q117.326 116.37400000000001 118.586 116.37400000000001H125.55799999999999V121.12Z"
+        />
+        <path
+          class="word"
+          d="M238.192 124.64Q229.264 124.64 222.01 120.61Q214.756 116.58 210.478 108.83Q206.2 101.08 206.2 89.91999999999999V69.088Q206.2 52.348 215.624 43.358Q225.048 34.367999999999995 241.168 34.367999999999995Q257.164 34.367999999999995 265.906 42.861999999999995Q274.648 51.355999999999995 274.648 65.864V66.36H258.528V65.368Q258.528 60.779999999999994 256.606 57.06Q254.684 53.34 250.84 51.17Q246.996 49.0 241.168 49.0Q232.488 49.0 227.52800000000002 54.331999999999994Q222.568 59.663999999999994 222.568 68.84V90.168Q222.568 99.22 227.52800000000002 104.738Q232.488 110.256 241.416 110.256Q250.344 110.256 254.436 105.544Q258.528 100.832 258.528 93.64V92.39999999999999H237.94400000000002V78.512H274.648V122.904H259.52V114.596H257.288Q256.42 116.704 254.498 119.06Q252.576 121.416 248.732 123.02799999999999Q244.888 124.64 238.192 124.64ZM284.568 122.904V61.4H299.94399999999996V68.344H302.176Q303.53999999999996 64.624 306.702 62.88799999999999Q309.864 61.151999999999994 314.08 61.151999999999994H321.52V75.03999999999999H313.832Q307.88 75.03999999999999 304.03599999999994 78.202Q300.19199999999995 81.364 300.19199999999995 87.936V122.904ZM354.504 124.64Q345.328 124.64 338.012 120.92Q330.696 117.2 326.48 110.132Q322.264 103.064 322.264 93.144V91.16Q322.264 81.24 326.48 74.172Q330.696 67.104 338.012 63.384Q345.328 59.663999999999994 354.504 59.663999999999994Q363.68 59.663999999999994 370.996 63.384Q378.312 67.104 382.528 74.172Q386.744 81.24 386.744 91.16V93.144Q386.744 103.064 382.528 110.132Q378.312 117.2 370.996 120.92Q363.68 124.64 354.504 124.64ZM354.504 110.752Q361.696 110.752 366.408 106.102Q371.12 101.452 371.12 92.77199999999999V91.532Q371.12 82.852 366.47 78.202Q361.82 73.55199999999999 354.504 73.55199999999999Q347.312 73.55199999999999 342.6 78.202Q337.888 82.852 337.888 91.532V92.77199999999999Q337.888 101.452 342.6 106.102Q347.312 110.752 354.504 110.752ZM418.364 123.896Q411.17199999999997 123.896 405.778 120.61Q400.384 117.324 397.408 111.496Q394.432 105.66799999999999 394.432 98.104V61.4H410.056V96.864Q410.056 103.80799999999999 413.466 107.28Q416.876 110.752 423.2 110.752Q430.392 110.752 434.36 105.978Q438.328 101.204 438.328 92.648V61.4H453.952V122.904H438.576V114.844H436.344Q434.856 117.944 430.764 120.92Q426.67199999999997 123.896 418.364 123.896ZM465.112 147.704V61.4H480.488V68.84H482.72Q484.82800000000003 65.244 489.29200000000003 62.45399999999999Q493.75600000000003 59.663999999999994 502.064 59.663999999999994Q509.504 59.663999999999994 515.828 63.32199999999999Q522.152 66.97999999999999 525.9960000000001 74.048Q529.84 81.116 529.84 91.16V93.144Q529.84 103.18799999999999 525.9960000000001 110.256Q522.152 117.324 515.828 120.982Q509.504 124.64 502.064 124.64Q496.48400000000004 124.64 492.702 123.338Q488.92 122.036 486.626 119.99000000000001Q484.332 117.944 482.968 115.836H480.736V147.704ZM497.35200000000003 111.0Q504.668 111.0 509.442 106.35Q514.216 101.69999999999999 514.216 92.77199999999999V91.532Q514.216 82.604 509.38 77.95400000000001Q504.54400000000004 73.304 497.35200000000003 73.304Q490.16 73.304 485.324 77.95400000000001Q480.488 82.604 480.488 91.532V92.77199999999999Q480.488 101.69999999999999 485.324 106.35Q490.16 111.0 497.35200000000003 111.0Z"
+        />
+      </svg>
+      <h1>Ctrl Academy staging</h1>
+      <p>
+        This is where the Ctrl Group tests work in progress. Enter the team password to continue.
+      </p>
+      <form id="gate" novalidate>
+        <label for="password">Team password</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          autofocus
+          required
+          aria-describedby="error"
+        />
+        <p id="error" class="error" role="alert"></p>
+        <button type="submit"><span>Continue</span></button>
+      </form>
+      <p class="foot">Not on the team? The live site is ctrlacademy.co.za.</p>
+    </main>
+    <script>
+      const form = document.getElementById('gate')
+      const input = document.getElementById('password')
+      const error = document.getElementById('error')
+      const button = form.querySelector('button')
+
+      async function token(password) {
+        const bytes = new TextEncoder().encode('ctrl-academy-staging:' + password)
+        const hash = await crypto.subtle.digest('SHA-256', bytes)
+        return Array.from(new Uint8Array(hash), (b) => b.toString(16).padStart(2, '0')).join('')
+      }
+
+      function setCookie(value, maxAge) {
+        const secure = location.protocol === 'https:' ? '; Secure' : ''
+        document.cookie = `ctrl_staging=${value}; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`
+      }
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault()
+        if (!input.value) {
+          error.textContent = 'Enter the team password.'
+          input.setAttribute('aria-invalid', 'true')
+          return
+        }
+        button.disabled = true
+        error.textContent = ''
+        setCookie(await token(input.value), 60 * 60 * 24 * 30)
+        const res = await fetch(location.pathname + location.search, {
+          method: 'HEAD',
+          cache: 'no-store',
+        })
+        if (res.status !== 401) {
+          location.reload()
+          return
+        }
+        setCookie('', 0)
+        button.disabled = false
+        input.setAttribute('aria-invalid', 'true')
+        error.textContent = "That password didn't work. Ask the team for it."
+        input.select()
+      })
+      input.addEventListener('input', () => {
+        input.removeAttribute('aria-invalid')
+        error.textContent = ''
+      })
+    </script>
+  </body>
+</html>

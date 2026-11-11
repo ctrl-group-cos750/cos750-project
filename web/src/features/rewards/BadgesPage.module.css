@@ -1,0 +1,95 @@
+.lead {
+  max-width: var(--reading-width);
+  color: var(--color-text-muted);
+}
+
+.muted {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.settings {
+  max-width: var(--reading-width);
+  margin-top: var(--space-5);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 600;
+}
+
+.toggle input {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--color-primary);
+}
+
+.totals {
+  display: flex;
+  gap: var(--space-6);
+  margin: var(--space-6) 0 0;
+}
+
+.totals dt {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.totals dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+}
+
+.group {
+  margin-top: var(--space-6);
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-xs);
+}
+
+.card[data-state='locked'] {
+  background: transparent;
+}
+
+.name {
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.tier {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.description,
+.next {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.next {
+  color: var(--color-accent-text);
+}

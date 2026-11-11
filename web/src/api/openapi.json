@@ -1,0 +1,6157 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Ctrl Academy API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/auth/register": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Register",
+        "description": "Create an account and log straight in (FR-1.1).",
+        "operationId": "register_api_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login",
+        "operationId": "login_api_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Logout",
+        "description": "Ends the session everywhere: every token issued to this user stops working, including\nany copy of the cookie. Works without a valid session too, so logging out never fails.",
+        "operationId": "logout_api_auth_logout_post",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Me",
+        "operationId": "me_api_auth_me_get",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/activities/{activity_id}": {
+      "get": {
+        "tags": [
+          "activities"
+        ],
+        "summary": "Get Activity",
+        "description": "The activity to render. `ActivityOut` has no `solution`, so the answer never reaches the\nbrowser (FR-5.3, NFR-S2). `solved` says whether this student has already answered it\ncorrectly, so the page stops offering hints after a refresh too (#158).",
+        "operationId": "get_activity_api_activities__activity_id__get",
+        "parameters": [
+          {
+            "name": "activity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Activity Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/activities/{activity_id}/attempts": {
+      "post": {
+        "tags": [
+          "activities"
+        ],
+        "summary": "Submit Attempt",
+        "description": "Grade a submission by comparison with the stored solution and record the attempt (FR-4.2,\nFR-4.5, FR-5.3).\n\nSend `{\"submitted\": {...}}` in the kind's shape: `{\"selected\": \"<option id>\"}` for multiple\nchoice, `{\"order\": [...]}` for Parsons, `{\"answers\": {...}}` for fill-in, and\n`{\"rows\": [{\"visitedVertex\", \"queue\", \"visited\", \"order\"}, ...]}` for a trace table, one row\nper BFS step (graded against the engine, so a trace has no stored solution). A submission in the\nwrong shape, or one that answers nothing (no option, line, token, pair, test or row), is 422\nand isn't recorded. No student code is executed: `check_activity` compares the submission with\nthe solution, which stays in this process (NFR-S7).",
+        "operationId": "submit_attempt_api_activities__activity_id__attempts_post",
+        "parameters": [
+          {
+            "name": "activity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Activity Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttemptIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttemptOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/activities/{activity_id}/hints": {
+      "get": {
+        "tags": [
+          "activities"
+        ],
+        "summary": "Get Revealed Hints",
+        "description": "Every hint level this student has already unlocked on this activity (FR-4.4, FR-4.5).\n\nReturns an empty list if they have not asked for any hints yet.",
+        "operationId": "get_revealed_hints_api_activities__activity_id__hints_get",
+        "parameters": [
+          {
+            "name": "activity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Activity Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HintOut"
+                  },
+                  "title": "Response Get Revealed Hints Api Activities  Activity Id  Hints Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "activities"
+        ],
+        "summary": "Reveal Hint",
+        "description": "Reveal this student's next hint level, one at a time, and record it (FR-4.4, FR-4.5).\n\nNo body. Each call returns the next level (1, then 2, …); once every level has been shown,\nor once the student has answered correctly, it is 409. When `nextCountsAsSupport` is true,\nwarn the student before calling again: a correct answer after hint 3 or 4 counts as \"met\nwith support\" (ID document §7.4).",
+        "operationId": "reveal_hint_api_activities__activity_id__hints_post",
+        "parameters": [
+          {
+            "name": "activity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Activity Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HintOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events": {
+      "post": {
+        "tags": [
+          "events"
+        ],
+        "summary": "Report Event",
+        "description": "Log something only the browser sees, for the pilot's evaluation (FR-10.1). The server adds\nwho and when. 404 if the video, checkpoint or segment doesn't exist; 429 past 120 a minute. A\nsegment viewed in a module still locked for the student is accepted but not logged.",
+        "operationId": "report_event_api_events_post",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/graphs/{scenario_id}": {
+      "get": {
+        "tags": [
+          "graphs"
+        ],
+        "summary": "Get Scenario",
+        "description": "The graph scenario to draw (FR-6.1).",
+        "operationId": "get_scenario_api_graphs__scenario_id__get",
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Scenario Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphScenarioOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/graphs/{scenario_id}/bfs": {
+      "get": {
+        "tags": [
+          "graphs"
+        ],
+        "summary": "Get Bfs",
+        "description": "The breadth-first traversal of the scenario, step by step (FR-6.1).\n\nComputed by the one tested engine so the animation, prediction and trace table agree (FR-6.5).\nA scenario the engine refuses (bad start vertex, duplicate vertex, edge to an unknown vertex)\nis a 422, since the stored data, not the request, is at fault.",
+        "operationId": "get_bfs_api_graphs__scenario_id__bfs_get",
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Scenario Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BfsResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/rewards": {
+      "get": {
+        "tags": [
+          "rewards"
+        ],
+        "summary": "Get Rewards",
+        "description": "The logged-in student's points total and badges (FR-9.4: private to them). Points come from\nthe server-side rules table and are never negative; badges are never taken away.",
+        "operationId": "get_rewards_api_rewards_get",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RewardsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/rewards/seen": {
+      "post": {
+        "tags": [
+          "rewards"
+        ],
+        "summary": "Mark Rewards Seen",
+        "description": "The app has announced every new badge, so none is announced twice.",
+        "operationId": "mark_rewards_seen_api_rewards_seen_post",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RewardsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/rewards/settings": {
+      "put": {
+        "tags": [
+          "rewards"
+        ],
+        "summary": "Update Rewards Settings",
+        "description": "Hide or show points and badges (FR-9.5). They are still earned while hidden, and the\nmastery report is never hidden.",
+        "operationId": "update_rewards_settings_api_rewards_settings_put",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RewardsSettingsIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RewardsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/report": {
+      "get": {
+        "tags": [
+          "mastery"
+        ],
+        "summary": "Get Report",
+        "description": "The logged-in student's mastery report: each objective's result, whether they are ready\nfor the lecture, and the review path's progress for each objective module 6 marked \"not yet\"\n(FR-7.3 to FR-7.5).\n\nWorked out from their attempts on every request (app/services/mastery.py), so it always follows\nthe current rules (FR-7.6). Nothing a client sends can set a result: they change only through\nattempts. Only ever the student's own.",
+        "operationId": "get_report_api_me_report_get",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MasteryReportOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/review/{objective_id}": {
+      "get": {
+        "tags": [
+          "mastery"
+        ],
+        "summary": "Get Review Path",
+        "description": "The objective's review path: its steps in order, and which the student has answered\n(FR-7.5). 404 if the objective has no path; 403 until module 6 marks it \"not yet\", so the\nfresh items stay unseen until the student needs them.",
+        "operationId": "get_review_path_api_me_review__objective_id__get",
+        "parameters": [
+          {
+            "name": "objective_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Objective Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewPathOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/avatar": {
+      "put": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Set Avatar",
+        "description": "Choose a profile picture from the team's set, or none (FR-1.6). Only the student sees it.",
+        "operationId": "set_avatar_api_me_avatar_put",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AvatarIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/password": {
+      "post": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Change Password",
+        "description": "Change the password (FR-1.5). The current one is required, so a session left open on a\nshared computer can't be used to take the account over; the new one must pass the same rules\nas registration (NFR-S1). Every other session is logged out, and this one carries on.\n\n400 with the reason if the current password is wrong or the new one breaks a rule; 429 after\n10 tries a minute.",
+        "operationId": "change_password_api_me_password_post",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordChangeIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "The current password is wrong, or the new one is the same or breaks a password rule. `detail` says which.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "More than 10 tries in a minute.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/modules": {
+      "get": {
+        "tags": [
+          "modules"
+        ],
+        "summary": "List Modules",
+        "description": "All modules with the student's computed status and progress (FR-2).\n\nReturns every module in display order.  ``status`` is one of:\n``locked | open | in_progress | complete``.  No commit needed — read-only.",
+        "operationId": "list_modules_api_modules_get",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ModuleOut"
+                  },
+                  "title": "Response List Modules Api Modules Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/modules/{module_id}": {
+      "get": {
+        "tags": [
+          "modules"
+        ],
+        "summary": "Get Module",
+        "description": "One module with its full ordered segment list and the student's status.\n\nReturns 404 if the module does not exist; 403 if it is locked for this\nstudent (the previous module has not been completed yet).",
+        "operationId": "get_module_api_modules__module_id__get",
+        "parameters": [
+          {
+            "name": "module_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Module Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleDetailOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/modules/{module_id}/position": {
+      "post": {
+        "tags": [
+          "modules"
+        ],
+        "summary": "Save Module Position",
+        "description": "Record the student's current segment position and return the updated module.\n\nThe client calls this whenever the student advances to a new segment.\nThe furthest segment reached is kept, so stepping back changes nothing. A segment must be\ndone (its activity answered, or its video's checkpoints passed) before moving past it, and\nsaving the last segment again once it is done marks the module ``complete`` for good (saving\nit while it isn't done changes nothing).\n\nReturns the updated ``ModuleDetailOut`` so the frontend can re-render the\nmodule detail page with the new status in one round-trip (consistent with\n``submit_attempt`` returning ``AttemptOut``).\n\nReturns 404 if the module does not exist; 403 if it is locked; 409 if the position is more\nthan one segment past the furthest the student has reached, or past a segment they haven't\ndone yet.",
+        "operationId": "save_module_position_api_modules__module_id__position_post",
+        "parameters": [
+          {
+            "name": "module_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Module Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PositionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleDetailOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/videos/{video_id}": {
+      "get": {
+        "tags": [
+          "videos"
+        ],
+        "summary": "Get Video",
+        "description": "Everything the player needs in one call (FR-3): media and captions paths, the transcript,\nand each checkpoint with its activity (without the answer) and whether this student has\npassed it. Answer a checkpoint with `POST /api/activities/{activityId}/attempts`.",
+        "operationId": "get_video_api_videos__video_id__get",
+        "parameters": [
+          {
+            "name": "video_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Video Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/media": {
+      "post": {
+        "tags": [
+          "staff"
+        ],
+        "summary": "Upload Media",
+        "description": "Upload one file to the media volume. Send the raw file as the body, with\n`Content-Type: video/mp4` and `?kind=video`, or `Content-Type: text/vtt` and `?kind=captions`.\nReturns the `/media/…` path to put in the video. Up to 95 MB for a video, 1 MB for captions.\n\nThe exact Content-Type is required: a cross-site form can't send these types, so another\nsite can't make a logged-in team member's browser upload files.",
+        "operationId": "upload_media_api_staff_media_post",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "video",
+                "captions"
+              ],
+              "type": "string",
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/videos": {
+      "get": {
+        "tags": [
+          "staff"
+        ],
+        "summary": "List Videos",
+        "description": "Every video, newest first, with how many checkpoints each has.",
+        "operationId": "list_videos_api_staff_videos_get",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StaffVideoSummary"
+                  },
+                  "title": "Response List Videos Api Staff Videos Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "staff"
+        ],
+        "summary": "Create Video",
+        "description": "Create a video with its checkpoints (leave out checkpoint ids). Students see it at\n`GET /api/videos/{id}`.",
+        "operationId": "create_video_api_staff_videos_post",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffVideoIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffVideoOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/videos/{video_id}": {
+      "get": {
+        "tags": [
+          "staff"
+        ],
+        "summary": "Get Video For Editor",
+        "description": "The video with every checkpoint's question, correct option, feedback and hints.",
+        "operationId": "get_video_for_editor_api_staff_videos__video_id__get",
+        "parameters": [
+          {
+            "name": "video_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Video Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffVideoOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "staff"
+        ],
+        "summary": "Update Video",
+        "description": "Replace the video and its checkpoint list. Keep each existing checkpoint's `id` so its\nattempts stay linked; a checkpoint left out is removed.",
+        "operationId": "update_video_api_staff_videos__video_id__put",
+        "parameters": [
+          {
+            "name": "video_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Video Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffVideoIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffVideoOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/members": {
+      "get": {
+        "tags": [
+          "staff"
+        ],
+        "summary": "List Members",
+        "description": "Every team member, by name.",
+        "operationId": "list_members_api_staff_members_get",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StaffMemberOut"
+                  },
+                  "title": "Response List Members Api Staff Members Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "staff"
+        ],
+        "summary": "Add Member",
+        "description": "Make the account with this email a team member. It must exist already. Someone who is\nstaff already stays staff (no error), so pressing the button twice is harmless.",
+        "operationId": "add_member_api_staff_members_post",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffMemberIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffMemberOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/members/{user_id}": {
+      "delete": {
+        "tags": [
+          "staff"
+        ],
+        "summary": "Remove Member",
+        "description": "Take staff access away. It ends at once: every request reads `is_staff` afresh. Nobody can\nremove themselves, so the portal always has at least one team member left.",
+        "operationId": "remove_member_api_staff_members__user_id__delete",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/accounts": {
+      "get": {
+        "tags": [
+          "staff"
+        ],
+        "summary": "List Accounts",
+        "description": "Every account, newest first. The portal searches this list as you type.",
+        "operationId": "list_accounts_api_staff_accounts_get",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AccountSummary"
+                  },
+                  "title": "Response List Accounts Api Staff Accounts Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/accounts/{user_id}": {
+      "get": {
+        "tags": [
+          "staff"
+        ],
+        "summary": "Get Account",
+        "description": "One account: who they are, totals, progress through each video and their last 10 answers.\nWhat they answered is left out: staff see whether it was right, not the answer itself.",
+        "operationId": "get_account_api_staff_accounts__user_id__get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "staff"
+        ],
+        "summary": "Delete Account",
+        "description": "Delete the account and everything stored about it (attempts, hint views, points, badges:\nevery table of student history, app/services/history.py), in one\ntransaction. Their session stops working at once: there is no user left to load. Nobody can\ndelete their own account here.",
+        "operationId": "delete_account_api_staff_accounts__user_id__delete",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/export/{table}.csv": {
+      "get": {
+        "tags": [
+          "staff"
+        ],
+        "summary": "Export Csv",
+        "description": "Download one table as CSV for every real student (FR-10.2), oldest first:\n\n- `attempts`: each answer; `submitted` and `detail` are what was answered and the per-part\n  result, as JSON.\n- `hints`: each hint shown.\n- `events`: the timeline (app/services/events.py): videos started and finished, checkpoints\n  reached, segments viewed, hints shown, results changing, modules completed; `payload` as JSON.\n  Segment views and module completions give time per segment and per module.\n- `objective_results`: each student's current result per objective, with the attempts it was\n  decided from (`evidence`).",
+        "operationId": "export_csv_api_staff_export__table__csv_get",
+        "parameters": [
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "attempts",
+                "hints",
+                "events",
+                "objective_results"
+              ],
+              "type": "string",
+              "title": "Table"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/insights": {
+      "get": {
+        "tags": [
+          "staff"
+        ],
+        "summary": "Insights",
+        "description": "The pilot at a glance (ID document §8.4): per activity, how many students tried it, wrong\nattempts, and how many needed hint 3 or 4; per video, how many started it, passed each\ncheckpoint and finished it, which shows where students stopped. Real students only (no staff\nor demo accounts); counts only.",
+        "operationId": "insights_api_staff_insights_get",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Insights"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/content": {
+      "get": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Content Overview",
+        "description": "Everything the editor lists: objectives, modules, review paths, activities (not the video\ncheckpoints' questions), graphs, and the videos a video segment can play.",
+        "operationId": "content_overview_api_staff_content_get",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorContentOverview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/content/export": {
+      "get": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Export Content",
+        "description": "The content as fixture files (a zip laid out like api/app/seed), to commit to the\nrepository so a fresh database is seeded with what the portal holds now.",
+        "operationId": "export_content_api_staff_content_export_get",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/zip": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/content/objectives": {
+      "post": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Create Objective",
+        "description": "Add the next objective (up to 8: each has a badge).",
+        "operationId": "create_objective_api_staff_content_objectives_post",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditorObjectiveIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorObjectiveOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/content/objectives/{objective_id}": {
+      "put": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Update Objective",
+        "description": "Change an objective's wording or its mastery rule. Every student's result is worked out\nagain with the new rule.",
+        "operationId": "update_objective_api_staff_content_objectives__objective_id__put",
+        "parameters": [
+          {
+            "name": "objective_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Objective Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditorObjectiveIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorObjectiveOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/content/modules/{module_id}": {
+      "get": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Get Module",
+        "operationId": "get_module_api_staff_content_modules__module_id__get",
+        "parameters": [
+          {
+            "name": "module_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Module Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorModuleOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Update Module",
+        "description": "Replace a module's details and its segments, in order. Keep each existing segment's `id`;\nleave it out for a new one. A segment left out is removed.",
+        "operationId": "update_module_api_staff_content_modules__module_id__put",
+        "parameters": [
+          {
+            "name": "module_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Module Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditorModuleIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorModuleOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Delete Module",
+        "description": "Delete an empty module made in the portal that no student has started.",
+        "operationId": "delete_module_api_staff_content_modules__module_id__delete",
+        "parameters": [
+          {
+            "name": "module_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Module Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "409": {
+            "description": "Not possible here; the message says why."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/content/modules": {
+      "post": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Create Module",
+        "description": "Add a module after the last one.",
+        "operationId": "create_module_api_staff_content_modules_post",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditorModuleIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorModuleOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/content/review-paths/{objective_id}": {
+      "get": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Get Review Path",
+        "operationId": "get_review_path_api_staff_content_review_paths__objective_id__get",
+        "parameters": [
+          {
+            "name": "objective_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Objective Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorReviewPathOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Update Review Path",
+        "description": "Replace the objective's review path: its segments, in order.",
+        "operationId": "update_review_path_api_staff_content_review_paths__objective_id__put",
+        "parameters": [
+          {
+            "name": "objective_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Objective Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditorReviewPathIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorReviewPathOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/content/activities/{activity_id}": {
+      "get": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Get Activity",
+        "operationId": "get_activity_api_staff_content_activities__activity_id__get",
+        "parameters": [
+          {
+            "name": "activity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Activity Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorActivityOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "409": {
+            "description": "Not possible here; the message says why."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Update Activity",
+        "description": "Replace an activity and its hints. Earlier attempts keep the result they were given.",
+        "operationId": "update_activity_api_staff_content_activities__activity_id__put",
+        "parameters": [
+          {
+            "name": "activity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Activity Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditorActivityIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorActivityOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "409": {
+            "description": "Not possible here; the message says why."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Delete Activity",
+        "description": "Delete an activity no segment shows. One students have used, or one from the repository,\nis taken out of use instead (`deleted: false`).",
+        "operationId": "delete_activity_api_staff_content_activities__activity_id__delete",
+        "parameters": [
+          {
+            "name": "activity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Activity Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorDeleteResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "409": {
+            "description": "Not possible here; the message says why."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/content/activities": {
+      "post": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Create Activity",
+        "description": "Add an activity. A segment shows it once a module or review path lists it.",
+        "operationId": "create_activity_api_staff_content_activities_post",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditorActivityIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorActivityOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/content/graphs/{graph_id}": {
+      "get": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Get Graph",
+        "operationId": "get_graph_api_staff_content_graphs__graph_id__get",
+        "parameters": [
+          {
+            "name": "graph_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Graph Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorGraphOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Update Graph",
+        "operationId": "update_graph_api_staff_content_graphs__graph_id__put",
+        "parameters": [
+          {
+            "name": "graph_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Graph Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditorGraphIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorGraphOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Delete Graph",
+        "description": "Delete a graph made in the portal.",
+        "operationId": "delete_graph_api_staff_content_graphs__graph_id__delete",
+        "parameters": [
+          {
+            "name": "graph_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Graph Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "409": {
+            "description": "Not possible here; the message says why."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/content/graphs": {
+      "post": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Create Graph",
+        "operationId": "create_graph_api_staff_content_graphs_post",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditorGraphIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorGraphOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/content/{kind}/{item_id}/use-repository": {
+      "post": {
+        "tags": [
+          "staff content"
+        ],
+        "summary": "Use Repository Version",
+        "description": "Drop the portal's edit of this item and load the repository's version of it now.",
+        "operationId": "use_repository_version_api_staff_content__kind___item_id__use_repository_post",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "objectives",
+                "modules",
+                "review-paths",
+                "activities",
+                "graphs"
+              ],
+              "type": "string",
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Item Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "No such item."
+          },
+          "409": {
+            "description": "Not possible here; the message says why."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Api Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AccountAttempt": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "activityTitle": {
+            "type": "string",
+            "title": "Activitytitle"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "correct": {
+            "type": "boolean",
+            "title": "Correct"
+          },
+          "hintLevel": {
+            "type": "integer",
+            "title": "Hintlevel"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "activityTitle",
+          "kind",
+          "correct",
+          "hintLevel",
+          "createdAt"
+        ],
+        "title": "AccountAttempt",
+        "description": "One answer, for the recent-activity list."
+      },
+      "AccountDetail": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "displayName": {
+            "type": "string",
+            "title": "Displayname"
+          },
+          "isStaff": {
+            "type": "boolean",
+            "title": "Isstaff"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "lastActiveAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastactiveat"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/AccountStats"
+          },
+          "videos": {
+            "items": {
+              "$ref": "#/components/schemas/AccountVideo"
+            },
+            "type": "array",
+            "title": "Videos"
+          },
+          "recentAttempts": {
+            "items": {
+              "$ref": "#/components/schemas/AccountAttempt"
+            },
+            "type": "array",
+            "title": "Recentattempts"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "displayName",
+          "isStaff",
+          "createdAt",
+          "lastActiveAt",
+          "stats",
+          "videos",
+          "recentAttempts"
+        ],
+        "title": "AccountDetail"
+      },
+      "AccountStats": {
+        "properties": {
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts"
+          },
+          "correctAttempts": {
+            "type": "integer",
+            "title": "Correctattempts"
+          },
+          "activitiesTried": {
+            "type": "integer",
+            "title": "Activitiestried"
+          },
+          "activitiesPassed": {
+            "type": "integer",
+            "title": "Activitiespassed"
+          },
+          "hintsViewed": {
+            "type": "integer",
+            "title": "Hintsviewed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "attempts",
+          "correctAttempts",
+          "activitiesTried",
+          "activitiesPassed",
+          "hintsViewed"
+        ],
+        "title": "AccountStats"
+      },
+      "AccountSummary": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "displayName": {
+            "type": "string",
+            "title": "Displayname"
+          },
+          "isStaff": {
+            "type": "boolean",
+            "title": "Isstaff"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "lastActiveAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastactiveat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "displayName",
+          "isStaff",
+          "createdAt",
+          "lastActiveAt"
+        ],
+        "title": "AccountSummary",
+        "description": "One row of the accounts list."
+      },
+      "AccountVideo": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "checkpointsPassed": {
+            "type": "integer",
+            "title": "Checkpointspassed"
+          },
+          "checkpointsTotal": {
+            "type": "integer",
+            "title": "Checkpointstotal"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "checkpointsPassed",
+          "checkpointsTotal"
+        ],
+        "title": "AccountVideo",
+        "description": "Progress through one video: checkpoints answered correctly, out of all its checkpoints."
+      },
+      "ActivityInsight": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "students": {
+            "type": "integer",
+            "title": "Students"
+          },
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts"
+          },
+          "wrongAttempts": {
+            "type": "integer",
+            "title": "Wrongattempts"
+          },
+          "studentsPassed": {
+            "type": "integer",
+            "title": "Studentspassed"
+          },
+          "studentsWithSupport": {
+            "type": "integer",
+            "title": "Studentswithsupport"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "kind",
+          "students",
+          "attempts",
+          "wrongAttempts",
+          "studentsPassed",
+          "studentsWithSupport"
+        ],
+        "title": "ActivityInsight",
+        "description": "How students got on with one activity, as ID document §8.4 analyses it."
+      },
+      "ActivityOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "visible": {
+            "type": "boolean",
+            "title": "Visible"
+          },
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config"
+          },
+          "solved": {
+            "type": "boolean",
+            "title": "Solved",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "visible",
+          "config"
+        ],
+        "title": "ActivityOut",
+        "description": "An activity as the browser sees it. There is deliberately no `solution` field: the answer\nstays on the server (SE document §8 \"Answers never leave the server\")."
+      },
+      "AttemptIn": {
+        "properties": {
+          "submitted": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Submitted"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "submitted"
+        ],
+        "title": "AttemptIn",
+        "description": "A submission: only the student's choices (line ids, chosen tokens), never free-form code."
+      },
+      "AttemptOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "activityId": {
+            "type": "integer",
+            "title": "Activityid"
+          },
+          "correct": {
+            "type": "boolean",
+            "title": "Correct"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "parts": {
+            "items": {
+              "$ref": "#/components/schemas/PartResult"
+            },
+            "type": "array",
+            "title": "Parts"
+          },
+          "feedback": {
+            "type": "string",
+            "title": "Feedback"
+          },
+          "hintLevel": {
+            "type": "integer",
+            "title": "Hintlevel"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "activityId",
+          "correct",
+          "score",
+          "parts",
+          "feedback",
+          "hintLevel"
+        ],
+        "title": "AttemptOut",
+        "description": "The graded result sent back. Carries per-part correctness and messages, never the solution."
+      },
+      "AvatarIn": {
+        "properties": {
+          "avatar": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "vertex",
+                  "edge",
+                  "path",
+                  "cycle",
+                  "tree",
+                  "star",
+                  "grid",
+                  "queue"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "avatar"
+        ],
+        "title": "AvatarIn",
+        "description": "The picture to show, or null for the student's initial."
+      },
+      "BfsResult": {
+        "properties": {
+          "startVertex": {
+            "type": "string",
+            "title": "Startvertex"
+          },
+          "order": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Order"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/BfsStep"
+            },
+            "type": "array",
+            "title": "Steps"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "startVertex",
+          "order",
+          "steps"
+        ],
+        "title": "BfsResult",
+        "description": "The whole traversal from the start vertex: the final visit order and every step, ready for\nthe visualiser to animate without further server calls (FR-6.1, NFR-P4)."
+      },
+      "BfsStep": {
+        "properties": {
+          "visitedVertex": {
+            "type": "string",
+            "title": "Visitedvertex"
+          },
+          "queue": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Queue"
+          },
+          "visited": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Visited"
+          },
+          "order": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Order"
+          },
+          "discovered": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Discovered"
+          },
+          "frontierEdges": {
+            "items": {
+              "$ref": "#/components/schemas/GraphEdge"
+            },
+            "type": "array",
+            "title": "Frontieredges"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "visitedVertex",
+          "queue",
+          "visited",
+          "order",
+          "discovered",
+          "frontierEdges"
+        ],
+        "title": "BfsStep",
+        "description": "One step of the traversal: the vertex just visited (dequeued), and the state after it\n(SE document FR-6.2). `discovered` are the vertices this step added to the queue, in the\nalphabetical order they were enqueued; `frontier_edges` are the edges along which they were\ndiscovered (from the visited vertex to each newly discovered neighbour)."
+      },
+      "CheckpointInsight": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "atSeconds": {
+            "type": "number",
+            "title": "Atseconds"
+          },
+          "activityTitle": {
+            "type": "string",
+            "title": "Activitytitle"
+          },
+          "studentsPassed": {
+            "type": "integer",
+            "title": "Studentspassed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "atSeconds",
+          "activityTitle",
+          "studentsPassed"
+        ],
+        "title": "CheckpointInsight"
+      },
+      "CheckpointOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "atSeconds": {
+            "type": "number",
+            "title": "Atseconds"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          },
+          "activity": {
+            "$ref": "#/components/schemas/ActivityOut"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "atSeconds",
+          "passed",
+          "activity"
+        ],
+        "title": "CheckpointOut",
+        "description": "Where playback stops, and the activity to answer there. `passed` is true once this student\nhas answered it correctly, so a returning student can seek past it (FR-3.5)."
+      },
+      "ChoiceOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "ChoiceOption"
+      },
+      "EarnedBadgeOut": {
+        "properties": {
+          "badge": {
+            "type": "string",
+            "title": "Badge"
+          },
+          "ref": {
+            "type": "string",
+            "title": "Ref"
+          },
+          "tier": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "bronze",
+                  "gold"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tier"
+          },
+          "awardedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Awardedat"
+          },
+          "upgradedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upgradedat"
+          },
+          "seen": {
+            "type": "boolean",
+            "title": "Seen"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "badge",
+          "ref",
+          "tier",
+          "awardedAt",
+          "upgradedAt",
+          "seen"
+        ],
+        "title": "EarnedBadgeOut",
+        "description": "A badge the student holds. `badge` is a catalogue id (web/src/components/achievements.ts);\n`ref` tells repeatable badges apart (the bonus quest's id), \"\" otherwise. `seen` is false until\nthe app has announced it; an upgrade from bronze to gold makes it unseen again."
+      },
+      "EditorActivityIn": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "multiple_choice",
+              "matching",
+              "parsons",
+              "fill_in",
+              "trace",
+              "fix_the_bug",
+              "choose_tests"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "visible": {
+            "type": "boolean",
+            "title": "Visible",
+            "default": true
+          },
+          "moduleId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moduleid"
+          },
+          "objectiveId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objectiveid"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "practice",
+              "diagnostic",
+              "retrieval",
+              "mastery",
+              "review",
+              "bonus"
+            ],
+            "title": "Purpose",
+            "default": "practice"
+          },
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config"
+          },
+          "solution": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Solution"
+          },
+          "hints": {
+            "items": {
+              "$ref": "#/components/schemas/StaffHint"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "title": "Hints"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "title",
+          "config",
+          "solution"
+        ],
+        "title": "EditorActivityIn",
+        "description": "`config` and `solution` have the kind's shape (app/schemas/activities.py), exactly as in a\nfixture."
+      },
+      "EditorActivityOut": {
+        "properties": {
+          "edited": {
+            "type": "boolean",
+            "title": "Edited"
+          },
+          "inRepository": {
+            "type": "boolean",
+            "title": "Inrepository"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "multiple_choice",
+              "matching",
+              "parsons",
+              "fill_in",
+              "trace",
+              "fix_the_bug",
+              "choose_tests"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "visible": {
+            "type": "boolean",
+            "title": "Visible",
+            "default": true
+          },
+          "moduleId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moduleid"
+          },
+          "objectiveId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objectiveid"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "practice",
+              "diagnostic",
+              "retrieval",
+              "mastery",
+              "review",
+              "bonus"
+            ],
+            "title": "Purpose",
+            "default": "practice"
+          },
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config"
+          },
+          "solution": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Solution"
+          },
+          "hints": {
+            "items": {
+              "$ref": "#/components/schemas/StaffHint"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "title": "Hints"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "inUse": {
+            "type": "boolean",
+            "title": "Inuse"
+          },
+          "shownIn": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Shownin"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "edited",
+          "inRepository",
+          "kind",
+          "title",
+          "config",
+          "solution",
+          "id",
+          "inUse",
+          "shownIn"
+        ],
+        "title": "EditorActivityOut"
+      },
+      "EditorActivitySummary": {
+        "properties": {
+          "edited": {
+            "type": "boolean",
+            "title": "Edited"
+          },
+          "inRepository": {
+            "type": "boolean",
+            "title": "Inrepository"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "multiple_choice",
+              "matching",
+              "parsons",
+              "fill_in",
+              "trace",
+              "fix_the_bug",
+              "choose_tests"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "moduleId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moduleid"
+          },
+          "objectiveId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objectiveid"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "practice",
+              "diagnostic",
+              "retrieval",
+              "mastery",
+              "review",
+              "bonus"
+            ],
+            "title": "Purpose"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "edited",
+          "inRepository",
+          "id",
+          "kind",
+          "title",
+          "moduleId",
+          "objectiveId",
+          "purpose"
+        ],
+        "title": "EditorActivitySummary"
+      },
+      "EditorContentOverview": {
+        "properties": {
+          "objectives": {
+            "items": {
+              "$ref": "#/components/schemas/EditorObjectiveOut"
+            },
+            "type": "array",
+            "title": "Objectives"
+          },
+          "modules": {
+            "items": {
+              "$ref": "#/components/schemas/EditorModuleSummary"
+            },
+            "type": "array",
+            "title": "Modules"
+          },
+          "reviewPaths": {
+            "items": {
+              "$ref": "#/components/schemas/EditorReviewPathSummary"
+            },
+            "type": "array",
+            "title": "Reviewpaths"
+          },
+          "activities": {
+            "items": {
+              "$ref": "#/components/schemas/EditorActivitySummary"
+            },
+            "type": "array",
+            "title": "Activities"
+          },
+          "graphs": {
+            "items": {
+              "$ref": "#/components/schemas/EditorGraphSummary"
+            },
+            "type": "array",
+            "title": "Graphs"
+          },
+          "videos": {
+            "items": {
+              "$ref": "#/components/schemas/EditorVideoChoice"
+            },
+            "type": "array",
+            "title": "Videos"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "objectives",
+          "modules",
+          "reviewPaths",
+          "activities",
+          "graphs",
+          "videos"
+        ],
+        "title": "EditorContentOverview"
+      },
+      "EditorDeleteResult": {
+        "properties": {
+          "deleted": {
+            "type": "boolean",
+            "title": "Deleted"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "deleted"
+        ],
+        "title": "EditorDeleteResult",
+        "description": "`deleted`: the row is gone. Otherwise it was only taken out of use (students' answers to\nit are kept for the evaluation, FR-10)."
+      },
+      "EditorGraphIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "directed": {
+            "type": "boolean",
+            "title": "Directed",
+            "default": false
+          },
+          "vertices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Vertices"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/GraphEdge"
+            },
+            "type": "array",
+            "title": "Edges"
+          },
+          "startVertex": {
+            "type": "string",
+            "title": "Startvertex"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "vertices",
+          "startVertex"
+        ],
+        "title": "EditorGraphIn"
+      },
+      "EditorGraphOut": {
+        "properties": {
+          "edited": {
+            "type": "boolean",
+            "title": "Edited"
+          },
+          "inRepository": {
+            "type": "boolean",
+            "title": "Inrepository"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "directed": {
+            "type": "boolean",
+            "title": "Directed",
+            "default": false
+          },
+          "vertices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Vertices"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/GraphEdge"
+            },
+            "type": "array",
+            "title": "Edges"
+          },
+          "startVertex": {
+            "type": "string",
+            "title": "Startvertex"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "edited",
+          "inRepository",
+          "name",
+          "vertices",
+          "startVertex",
+          "id"
+        ],
+        "title": "EditorGraphOut"
+      },
+      "EditorGraphSummary": {
+        "properties": {
+          "edited": {
+            "type": "boolean",
+            "title": "Edited"
+          },
+          "inRepository": {
+            "type": "boolean",
+            "title": "Inrepository"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "edited",
+          "inRepository",
+          "id",
+          "name"
+        ],
+        "title": "EditorGraphSummary"
+      },
+      "EditorModuleIn": {
+        "properties": {
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "goals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Goals"
+          },
+          "estimatedMinutes": {
+            "type": "integer",
+            "title": "Estimatedminutes"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/EditorSegmentIn"
+            },
+            "type": "array",
+            "title": "Segments"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "slug",
+          "title",
+          "goals",
+          "estimatedMinutes"
+        ],
+        "title": "EditorModuleIn"
+      },
+      "EditorModuleOut": {
+        "properties": {
+          "edited": {
+            "type": "boolean",
+            "title": "Edited"
+          },
+          "inRepository": {
+            "type": "boolean",
+            "title": "Inrepository"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "goals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Goals"
+          },
+          "estimatedMinutes": {
+            "type": "integer",
+            "title": "Estimatedminutes"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/EditorSegmentOut"
+            },
+            "type": "array",
+            "title": "Segments"
+          },
+          "segmentsEdited": {
+            "type": "boolean",
+            "title": "Segmentsedited"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "edited",
+          "inRepository",
+          "id",
+          "slug",
+          "title",
+          "goals",
+          "estimatedMinutes",
+          "segments",
+          "segmentsEdited"
+        ],
+        "title": "EditorModuleOut"
+      },
+      "EditorModuleSummary": {
+        "properties": {
+          "edited": {
+            "type": "boolean",
+            "title": "Edited"
+          },
+          "inRepository": {
+            "type": "boolean",
+            "title": "Inrepository"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "segmentCount": {
+            "type": "integer",
+            "title": "Segmentcount"
+          },
+          "segmentsEdited": {
+            "type": "boolean",
+            "title": "Segmentsedited"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "edited",
+          "inRepository",
+          "id",
+          "slug",
+          "title",
+          "segmentCount",
+          "segmentsEdited"
+        ],
+        "title": "EditorModuleSummary"
+      },
+      "EditorObjectiveIn": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "bloomLevel": {
+            "type": "string",
+            "title": "Bloomlevel"
+          },
+          "criterion": {
+            "type": "string",
+            "title": "Criterion"
+          },
+          "passFraction": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Passfraction"
+          },
+          "maxWrong": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maxwrong"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text",
+          "bloomLevel",
+          "criterion"
+        ],
+        "title": "EditorObjectiveIn"
+      },
+      "EditorObjectiveOut": {
+        "properties": {
+          "edited": {
+            "type": "boolean",
+            "title": "Edited"
+          },
+          "inRepository": {
+            "type": "boolean",
+            "title": "Inrepository"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "bloomLevel": {
+            "type": "string",
+            "title": "Bloomlevel"
+          },
+          "criterion": {
+            "type": "string",
+            "title": "Criterion"
+          },
+          "passFraction": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Passfraction"
+          },
+          "maxWrong": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maxwrong"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "edited",
+          "inRepository",
+          "text",
+          "bloomLevel",
+          "criterion",
+          "id"
+        ],
+        "title": "EditorObjectiveOut"
+      },
+      "EditorReviewPathIn": {
+        "properties": {
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/EditorSegmentIn"
+            },
+            "type": "array",
+            "title": "Segments"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "segments"
+        ],
+        "title": "EditorReviewPathIn"
+      },
+      "EditorReviewPathOut": {
+        "properties": {
+          "objectiveId": {
+            "type": "integer",
+            "title": "Objectiveid"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/EditorSegmentOut"
+            },
+            "type": "array",
+            "title": "Segments"
+          },
+          "edited": {
+            "type": "boolean",
+            "title": "Edited"
+          },
+          "inRepository": {
+            "type": "boolean",
+            "title": "Inrepository"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "objectiveId",
+          "segments",
+          "edited",
+          "inRepository"
+        ],
+        "title": "EditorReviewPathOut"
+      },
+      "EditorReviewPathSummary": {
+        "properties": {
+          "objectiveId": {
+            "type": "integer",
+            "title": "Objectiveid"
+          },
+          "segmentCount": {
+            "type": "integer",
+            "title": "Segmentcount"
+          },
+          "edited": {
+            "type": "boolean",
+            "title": "Edited"
+          },
+          "inRepository": {
+            "type": "boolean",
+            "title": "Inrepository"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "objectiveId",
+          "segmentCount",
+          "edited",
+          "inRepository"
+        ],
+        "title": "EditorReviewPathSummary"
+      },
+      "EditorSegmentIn": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "video",
+              "text",
+              "worked_example",
+              "activity",
+              "refresher"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body",
+            "default": ""
+          },
+          "activityId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activityid"
+          },
+          "skipCheckActivityId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skipcheckactivityid"
+          },
+          "refresherFor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refresherfor"
+          },
+          "videoId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Videoid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "title"
+        ],
+        "title": "EditorSegmentIn",
+        "description": "One step of a module or review path. Leave `id` out for a new one. A `video` segment may\nname the video that plays it (`videoId`); the video is made on the Videos page."
+      },
+      "EditorSegmentOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "video",
+              "text",
+              "worked_example",
+              "activity",
+              "refresher"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body",
+            "default": ""
+          },
+          "activityId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activityid"
+          },
+          "skipCheckActivityId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skipcheckactivityid"
+          },
+          "refresherFor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refresherfor"
+          },
+          "videoId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Videoid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "title"
+        ],
+        "title": "EditorSegmentOut"
+      },
+      "EditorVideoChoice": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "segmentId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segmentid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "segmentId"
+        ],
+        "title": "EditorVideoChoice",
+        "description": "A video a `video` segment can play, and the segment that plays it now, if any."
+      },
+      "ErrorOut": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorOut",
+        "description": "An error the client shows as it is: `detail` says what went wrong, in plain words."
+      },
+      "EventIn": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "video_started",
+              "video_completed",
+              "checkpoint_reached",
+              "segment_viewed"
+            ],
+            "title": "Type"
+          },
+          "targetId": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Targetid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "targetId"
+        ],
+        "title": "EventIn",
+        "description": "What the browser saw: `video_started` or `video_completed` (`targetId` is the video),\n`checkpoint_reached` (the checkpoint) or `segment_viewed` (the segment)."
+      },
+      "GraphEdge": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "target"
+        ],
+        "title": "GraphEdge",
+        "description": "A single edge. For an undirected graph the pair is unordered; for a directed graph the edge\ngoes from `source` to `target`."
+      },
+      "GraphScenarioOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "directed": {
+            "type": "boolean",
+            "title": "Directed"
+          },
+          "vertices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Vertices"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/GraphEdge"
+            },
+            "type": "array",
+            "title": "Edges"
+          },
+          "startVertex": {
+            "type": "string",
+            "title": "Startvertex"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "directed",
+          "vertices",
+          "edges",
+          "startVertex"
+        ],
+        "title": "GraphScenarioOut",
+        "description": "A graph scenario as the frontend renders it (FR-6.1): the vertices, the edges, whether it is\ndirected and where the traversal starts."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HintOut": {
+        "properties": {
+          "level": {
+            "type": "integer",
+            "title": "Level"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "hasMore": {
+            "type": "boolean",
+            "title": "Hasmore"
+          },
+          "nextCountsAsSupport": {
+            "type": "boolean",
+            "title": "Nextcountsassupport"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "level",
+          "body",
+          "hasMore",
+          "nextCountsAsSupport"
+        ],
+        "title": "HintOut",
+        "description": "The hint just revealed. `next_counts_as_support` is true when the *next* hint would be level\n3 or 4: show the \"this counts as met with support\" warning before asking for it (ID doc §7.4)."
+      },
+      "Insights": {
+        "properties": {
+          "students": {
+            "type": "integer",
+            "title": "Students"
+          },
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts"
+          },
+          "hintsViewed": {
+            "type": "integer",
+            "title": "Hintsviewed"
+          },
+          "activities": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityInsight"
+            },
+            "type": "array",
+            "title": "Activities"
+          },
+          "videos": {
+            "items": {
+              "$ref": "#/components/schemas/VideoInsight"
+            },
+            "type": "array",
+            "title": "Videos"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "students",
+          "attempts",
+          "hintsViewed",
+          "activities",
+          "videos"
+        ],
+        "title": "Insights"
+      },
+      "LoginIn": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "title": "Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "LoginIn"
+      },
+      "MasteryReportOut": {
+        "properties": {
+          "ready": {
+            "type": "boolean",
+            "title": "Ready"
+          },
+          "objectives": {
+            "items": {
+              "$ref": "#/components/schemas/ObjectiveReportOut"
+            },
+            "type": "array",
+            "title": "Objectives"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ready",
+          "objectives"
+        ],
+        "title": "MasteryReportOut",
+        "description": "The student's own mastery report. `ready` (for the lecture) is true when every objective is\nmet, with or without support (FR-7.4). Always shown, even when rewards are hidden (FR-9.5)."
+      },
+      "MediaOut": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "bytes": {
+            "type": "integer",
+            "title": "Bytes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "path",
+          "bytes"
+        ],
+        "title": "MediaOut",
+        "description": "Where the upload is served from. Put it in a video's `mediaPath` or `captionsPath`."
+      },
+      "ModuleDetailOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "goals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Goals"
+          },
+          "estimatedMinutes": {
+            "type": "integer",
+            "title": "Estimatedminutes"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "locked",
+              "open",
+              "in_progress",
+              "complete"
+            ],
+            "title": "Status"
+          },
+          "segmentCount": {
+            "type": "integer",
+            "title": "Segmentcount"
+          },
+          "currentSegmentPosition": {
+            "type": "integer",
+            "title": "Currentsegmentposition"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/SegmentOut"
+            },
+            "type": "array",
+            "title": "Segments"
+          },
+          "retrieval": {
+            "items": {
+              "$ref": "#/components/schemas/RetrievalActivityOut"
+            },
+            "type": "array",
+            "title": "Retrieval"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "number",
+          "slug",
+          "title",
+          "goals",
+          "estimatedMinutes",
+          "status",
+          "segmentCount",
+          "currentSegmentPosition",
+          "segments",
+          "retrieval"
+        ],
+        "title": "ModuleDetailOut",
+        "description": "A module with its full ordered segment list.\n\nReturned by ``GET /api/modules/{moduleId}``.  Extends ``ModuleOut`` so the\nfrontend can use the same type for map cards and detail views."
+      },
+      "ModuleOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "goals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Goals"
+          },
+          "estimatedMinutes": {
+            "type": "integer",
+            "title": "Estimatedminutes"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "locked",
+              "open",
+              "in_progress",
+              "complete"
+            ],
+            "title": "Status"
+          },
+          "segmentCount": {
+            "type": "integer",
+            "title": "Segmentcount"
+          },
+          "currentSegmentPosition": {
+            "type": "integer",
+            "title": "Currentsegmentposition"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "number",
+          "slug",
+          "title",
+          "goals",
+          "estimatedMinutes",
+          "status",
+          "segmentCount",
+          "currentSegmentPosition"
+        ],
+        "title": "ModuleOut",
+        "description": "A module as it appears on the module map.\n\n``status`` is computed per-student at query time (never stored directly on the\nmodule); it is one of: locked | open | in_progress | complete.\n``segment_count`` and ``current_segment_position`` let the map show a progress\nbar without loading the full segment list."
+      },
+      "ObjectiveReportOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "criterion": {
+            "type": "string",
+            "title": "Criterion"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "not_attempted",
+              "met_independently",
+              "met_with_support",
+              "not_yet"
+            ],
+            "title": "State"
+          },
+          "answered": {
+            "type": "integer",
+            "title": "Answered"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "review": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewProgressOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "criterion",
+          "state",
+          "answered",
+          "total",
+          "review"
+        ],
+        "title": "ObjectiveReportOut",
+        "description": "One objective on the mastery report (FR-7.2, FR-7.3). `answered` of `total` is how many of\nits module 6 items the student has answered; the result stays `not_attempted` until all are.\n`review` is there once module 6 marks it \"not yet\", which opens its review path."
+      },
+      "PartResult": {
+        "properties": {
+          "ref": {
+            "type": "integer",
+            "title": "Ref"
+          },
+          "correct": {
+            "type": "boolean",
+            "title": "Correct"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ref",
+          "correct"
+        ],
+        "title": "PartResult",
+        "description": "One graded part: a position in the ordering (Parsons, fix the bug), a blank id (fill-in),\nor the index of an item in the config (matching: a left item; choose tests: a test case)."
+      },
+      "PasswordChangeIn": {
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "maxLength": 128,
+            "title": "Currentpassword"
+          },
+          "newPassword": {
+            "type": "string",
+            "maxLength": 128,
+            "title": "Newpassword"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ],
+        "title": "PasswordChangeIn"
+      },
+      "PositionIn": {
+        "properties": {
+          "segmentPosition": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Segmentposition"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "segmentPosition"
+        ],
+        "title": "PositionIn",
+        "description": "Request body for ``POST /api/modules/{moduleId}/position`` (FR-2.5).\n\nThe client sends the zero-based position of the segment the student just\nreached. The server keeps the furthest one, and refuses a position more than one past it,\nso a module can't be finished by jumping to its end.\n\n``ge=0`` rejects negative values at the API boundary: a negative position stored in\n``ModuleProgress.current_segment_position`` would cause ``segments[-1]`` (undefined\nin JavaScript) on resume, crashing the ModulePage render."
+      },
+      "RegisterIn": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "displayName": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Displayname"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "title": "Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "email",
+          "displayName",
+          "password"
+        ],
+        "title": "RegisterIn"
+      },
+      "RetrievalActivityOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "answered": {
+            "type": "boolean",
+            "title": "Answered"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "answered"
+        ],
+        "title": "RetrievalActivityOut",
+        "description": "A retrieval question the module opens with, before its segments (FR-2.4).\n\nThe page loads the question itself from ``GET /api/activities/{id}``, so it is shown like any\nother activity, with feedback and hints. ``answered`` is true once the student has made an\nattempt at it: the page resumes at the first one still unanswered."
+      },
+      "ReviewPathOut": {
+        "properties": {
+          "objectiveId": {
+            "type": "integer",
+            "title": "Objectiveid"
+          },
+          "objectiveText": {
+            "type": "string",
+            "title": "Objectivetext"
+          },
+          "criterion": {
+            "type": "string",
+            "title": "Criterion"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "not_attempted",
+              "met_independently",
+              "met_with_support",
+              "not_yet"
+            ],
+            "title": "State"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/ReviewProgressOut"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewStepOut"
+            },
+            "type": "array",
+            "title": "Steps"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "objectiveId",
+          "objectiveText",
+          "criterion",
+          "state",
+          "progress",
+          "steps"
+        ],
+        "title": "ReviewPathOut",
+        "description": "An objective's review path for the logged-in student (FR-7.5, ID document §7.6)."
+      },
+      "ReviewProgressOut": {
+        "properties": {
+          "answered": {
+            "type": "integer",
+            "title": "Answered"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "answered",
+          "total"
+        ],
+        "title": "ReviewProgressOut",
+        "description": "How far the student is through an open review path's fresh items (FR-7.5). Once all are\nanswered they decide the objective's result, so `answered == total` means the path is done."
+      },
+      "ReviewStepOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "video",
+              "text",
+              "worked_example",
+              "activity",
+              "refresher"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "activityId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activityid"
+          },
+          "purpose": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "review",
+                  "mastery"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purpose"
+          },
+          "answered": {
+            "type": "boolean",
+            "title": "Answered"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "body",
+          "activityId",
+          "purpose",
+          "answered"
+        ],
+        "title": "ReviewStepOut",
+        "description": "One step of a review path, in order. An activity step names its activity and its purpose:\n`review` is practice with the full hint ladder, `mastery` a fresh item that decides the\nresult. `answered` is whether the student has submitted an answer to it."
+      },
+      "RewardsOut": {
+        "properties": {
+          "hideRewards": {
+            "type": "boolean",
+            "title": "Hiderewards"
+          },
+          "points": {
+            "type": "integer",
+            "title": "Points"
+          },
+          "badges": {
+            "items": {
+              "$ref": "#/components/schemas/EarnedBadgeOut"
+            },
+            "type": "array",
+            "title": "Badges"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "hideRewards",
+          "points",
+          "badges"
+        ],
+        "title": "RewardsOut",
+        "description": "The student's own points and badges, and whether they chose to hide them (FR-9.4, FR-9.5).\nOnly ever the logged-in student's: there is no way to see anyone else's."
+      },
+      "RewardsSettingsIn": {
+        "properties": {
+          "hideRewards": {
+            "type": "boolean",
+            "title": "Hiderewards"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "hideRewards"
+        ],
+        "title": "RewardsSettingsIn"
+      },
+      "SegmentOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "video",
+              "text",
+              "worked_example",
+              "activity",
+              "refresher"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "videoId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Videoid"
+          },
+          "activityId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activityid"
+          },
+          "done": {
+            "type": "boolean",
+            "title": "Done",
+            "default": true
+          },
+          "attempted": {
+            "type": "boolean",
+            "title": "Attempted",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "position",
+          "kind",
+          "title"
+        ],
+        "title": "SegmentOut",
+        "description": "One segment of a module, in display order.\n\nKind-specific nullable fields:\n- ``body``        — Markdown content, for ``text`` / ``worked_example`` / ``refresher``.\n- ``video_id``    — FK to the video, present only for ``video`` segments.\n- ``activity_id`` — FK to the activity, present only for ``activity`` segments.\n\n``body``, ``video_id``, and ``activity_id`` are mutually exclusive in practice;\nthe schema keeps them separate and nullable so the frontend can branch on ``kind``."
+      },
+      "StaffCheckpointIn": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "atSeconds": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Atseconds"
+          },
+          "question": {
+            "$ref": "#/components/schemas/StaffQuestion"
+          },
+          "hints": {
+            "items": {
+              "$ref": "#/components/schemas/StaffHint"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "title": "Hints"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "atSeconds",
+          "question"
+        ],
+        "title": "StaffCheckpointIn",
+        "description": "`id` is set for a checkpoint that already exists (it keeps its activity and the attempts\non it) and left out for a new one."
+      },
+      "StaffCheckpointOut": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "atSeconds": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Atseconds"
+          },
+          "question": {
+            "$ref": "#/components/schemas/StaffQuestion"
+          },
+          "hints": {
+            "items": {
+              "$ref": "#/components/schemas/StaffHint"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "title": "Hints"
+          },
+          "activityId": {
+            "type": "integer",
+            "title": "Activityid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "atSeconds",
+          "question",
+          "activityId"
+        ],
+        "title": "StaffCheckpointOut"
+      },
+      "StaffHint": {
+        "properties": {
+          "level": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 1.0,
+            "title": "Level"
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Body"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "level",
+          "body"
+        ],
+        "title": "StaffHint"
+      },
+      "StaffMemberIn": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 320,
+            "title": "Email"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "StaffMemberIn",
+        "description": "Make an existing account staff. By exact email: staff never browse the student list."
+      },
+      "StaffMemberOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "displayName": {
+            "type": "string",
+            "title": "Displayname"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "displayName"
+        ],
+        "title": "StaffMemberOut",
+        "description": "A team member, as the staff portal's \"Staff members\" page lists them."
+      },
+      "StaffQuestion": {
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Prompt"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/ChoiceOption"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "minItems": 2,
+            "title": "Options"
+          },
+          "correct": {
+            "type": "string",
+            "title": "Correct"
+          },
+          "feedback": {
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 2000
+            },
+            "type": "object",
+            "title": "Feedback"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "prompt",
+          "options",
+          "correct"
+        ],
+        "title": "StaffQuestion",
+        "description": "A multiple-choice question. `feedback` says why each wrong option is wrong, by option id."
+      },
+      "StaffVideoIn": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "mediaPath": {
+            "type": "string",
+            "pattern": "^/media/videos/[A-Za-z0-9_-]+\\.(mp4|vtt)$",
+            "title": "Mediapath"
+          },
+          "captionsPath": {
+            "type": "string",
+            "pattern": "^/media/videos/[A-Za-z0-9_-]+\\.(mp4|vtt)$",
+            "title": "Captionspath"
+          },
+          "transcript": {
+            "type": "string",
+            "maxLength": 50000,
+            "title": "Transcript",
+            "default": ""
+          },
+          "durationSeconds": {
+            "type": "integer",
+            "maximum": 14400.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Durationseconds"
+          },
+          "checkpoints": {
+            "items": {
+              "$ref": "#/components/schemas/StaffCheckpointIn"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Checkpoints"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "mediaPath",
+          "captionsPath",
+          "durationSeconds"
+        ],
+        "title": "StaffVideoIn",
+        "description": "A whole video as the editor saves it. PUT replaces the checkpoint list: a checkpoint left\nout is removed. Media paths come from `POST /api/staff/media` and must exist."
+      },
+      "StaffVideoOut": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "mediaPath": {
+            "type": "string",
+            "pattern": "^/media/videos/[A-Za-z0-9_-]+\\.(mp4|vtt)$",
+            "title": "Mediapath"
+          },
+          "captionsPath": {
+            "type": "string",
+            "pattern": "^/media/videos/[A-Za-z0-9_-]+\\.(mp4|vtt)$",
+            "title": "Captionspath"
+          },
+          "transcript": {
+            "type": "string",
+            "maxLength": 50000,
+            "title": "Transcript",
+            "default": ""
+          },
+          "durationSeconds": {
+            "type": "integer",
+            "maximum": 14400.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Durationseconds"
+          },
+          "checkpoints": {
+            "items": {
+              "$ref": "#/components/schemas/StaffCheckpointOut"
+            },
+            "type": "array",
+            "title": "Checkpoints"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "mediaPath",
+          "captionsPath",
+          "durationSeconds",
+          "checkpoints",
+          "id"
+        ],
+        "title": "StaffVideoOut"
+      },
+      "StaffVideoSummary": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "durationSeconds": {
+            "type": "integer",
+            "title": "Durationseconds"
+          },
+          "checkpointCount": {
+            "type": "integer",
+            "title": "Checkpointcount"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "durationSeconds",
+          "checkpointCount"
+        ],
+        "title": "StaffVideoSummary"
+      },
+      "UserOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "displayName": {
+            "type": "string",
+            "title": "Displayname"
+          },
+          "isStaff": {
+            "type": "boolean",
+            "title": "Isstaff"
+          },
+          "avatar": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "displayName",
+          "isStaff"
+        ],
+        "title": "UserOut"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VideoInsight": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "students": {
+            "type": "integer",
+            "title": "Students"
+          },
+          "finished": {
+            "type": "integer",
+            "title": "Finished"
+          },
+          "checkpoints": {
+            "items": {
+              "$ref": "#/components/schemas/CheckpointInsight"
+            },
+            "type": "array",
+            "title": "Checkpoints"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "students",
+          "finished",
+          "checkpoints"
+        ],
+        "title": "VideoInsight",
+        "description": "How far students got through one video: who started it (or answered one of its\ncheckpoints), who passed each checkpoint and who watched to the end. A drop between two steps\nis where students stopped."
+      },
+      "VideoOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "mediaPath": {
+            "type": "string",
+            "title": "Mediapath"
+          },
+          "captionsPath": {
+            "type": "string",
+            "title": "Captionspath"
+          },
+          "transcript": {
+            "type": "string",
+            "title": "Transcript"
+          },
+          "durationSeconds": {
+            "type": "integer",
+            "title": "Durationseconds"
+          },
+          "checkpoints": {
+            "items": {
+              "$ref": "#/components/schemas/CheckpointOut"
+            },
+            "type": "array",
+            "title": "Checkpoints"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "mediaPath",
+          "captionsPath",
+          "transcript",
+          "durationSeconds",
+          "checkpoints"
+        ],
+        "title": "VideoOut",
+        "description": "`mediaPath` and `captionsPath` are same-origin URLs under /media/. Checkpoints come in the\norder they are reached."
+      }
+    }
+  }
+}

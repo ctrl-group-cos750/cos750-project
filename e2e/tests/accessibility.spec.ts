@@ -37,6 +37,8 @@ test('pages before logging in', async ({ page }) => {
 })
 
 test('pages for a signed-in student', async ({ page }) => {
+  // Nine pages, each waiting for its animations: give it three times the usual time.
+  test.slow()
   // Only visits pages, so the account's progress stays the same.
   await logIn(page, demo.notYet, DEMO_PASSWORD)
   const pages = [

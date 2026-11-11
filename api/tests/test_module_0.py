@@ -1,7 +1,7 @@
 """Module 0 (Warm-up and queue refresher, #26): the diagnostic warm-up before BFS.
 
 Module 0 is different from the others: its activities are *diagnostics* (purpose "diagnostic", no
-objective), each one gating a refresher the student skips when they answer it right (FR-8.1). So
+objective), each one followed by a refresher on its topic (FR-8.1 will let a right answer skip it: #31). So
 the checks here are the content rules from issue #26: three diagnostics on queues, Python basics
 and loops, each with four hint levels and feedback for every wrong answer, and a refresher for each
 that a real diagnostic skips, plus the invariant that a diagnostic carries no objective.
@@ -63,3 +63,15 @@ def test_every_activity_has_four_hint_levels_and_the_last_gives_the_answer(
 def test_every_wrong_answer_has_feedback(a: ActivityFixture) -> None:
     wrong = {o["id"] for o in a.config["options"]} - {a.solution["correct"]}
     assert set(a.solution["feedback"]) == wrong
+
+
+def test_the_queue_diagnostic_needs_first_in_first_out() -> None:
+    """It used to say who stood at the front, which gave the answer away (#147)."""
+    a = next(a for a in ACTIVITIES if a.id == 1)
+    prompt = a.config["prompt"]
+    assert "front" not in prompt
+    people = [o["label"] for o in a.config["options"]]
+    joined = sorted(people, key=prompt.index)  # in the order the prompt says they joined
+    right = next(o["label"] for o in a.config["options"] if o["id"] == a.solution["correct"])
+    assert right == joined[0]
+    assert a.config["options"][0]["label"] != right

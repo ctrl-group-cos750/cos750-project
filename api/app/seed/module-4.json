@@ -20,7 +20,7 @@
           "id": 404,
           "kind": "worked_example",
           "title": "Worked example: BFS line by line",
-          "body": "Here is the whole function. Each line does something you did by hand in module 3.\n\n```python\nfrom collections import deque\n\n\ndef bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                visited.add(n)\n                queue.append(n)\n    return order\n```\n\nThe set is called `visited`, as in most BFS code, but it holds every vertex BFS has **found**. A vertex goes in it when it joins the queue, as in module 3, so it can never join the queue twice.\n\n| Line | What it does in the trace |\n|---|---|\n| `visited = {start}` | The start is found straight away. |\n| `queue = deque([start])` | The start waits in the queue. |\n| `order = []` | Nothing has been visited yet. |\n| `while queue:` | Keep going until no vertex is waiting. |\n| `v = queue.popleft()` | Take the vertex at the front: it is visited now. |\n| `order.append(v)` | Write it in the order. |\n| `for n in sorted(graph.adjacency[v]):` | Look at its neighbours in alphabetical order. |\n| `if n not in visited:` | Skip a neighbour BFS has already found. |\n| `visited.add(n)`, then `queue.append(n)` | A new neighbour is found and joins the back of the queue. |\n| `return order` | The queue is empty, so the order is complete. |\n\n**Running it** on the graph with edges P–Q, P–R and Q–S, starting at P:\n\n| `v` | Order so far | Queue after | Found (`visited`) |\n|---|---|---|---|\n| P | P | Q, R | P, Q, R |\n| Q | P, Q | R, S | P, Q, R, S |\n| R | P, Q, R | S | P, Q, R, S |\n| S | P, Q, R, S | (empty) | P, Q, R, S |\n\n**Result:** `[\"P\", \"Q\", \"R\", \"S\"]`.\n\nNext you put these lines in order yourself. Keep the order shown here: `visited`, then `queue`, then `order`, and add a new neighbour to `visited` before you add it to the queue.",
+          "body": "Tracing BFS on seven buildings took a whole table. How long would a campus with a hundred buildings take, or a social network with millions of people? Each step of your module 3 trace becomes a line of Python: here is the whole function.\n\nEach line does something you did by hand in module 3.\n\n```python\nfrom collections import deque\n\n\ndef bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                visited.add(n)\n                queue.append(n)\n    return order\n```\n\nThe set is called `visited`, as in most BFS code, but it holds every vertex BFS has **found**. A vertex goes in it when it joins the queue, as in module 3, so it can never join the queue twice.\n\n| Line | What it does in the trace |\n|---|---|\n| `visited = {start}` | The start is found straight away. |\n| `queue = deque([start])` | The start waits in the queue. |\n| `order = []` | Nothing has been visited yet. |\n| `while queue:` | Keep going until no vertex is waiting. |\n| `v = queue.popleft()` | Take the vertex at the front: it is visited now. |\n| `order.append(v)` | Write it in the order. |\n| `for n in sorted(graph.adjacency[v]):` | Look at its neighbours in alphabetical order. |\n| `if n not in visited:` | Skip a neighbour BFS has already found. |\n| `visited.add(n)`, then `queue.append(n)` | A new neighbour is found and joins the back of the queue. |\n| `return order` | The queue is empty, so the order is complete. |\n\n**Running it** on the graph with edges P–Q, P–R and Q–S, starting at P:\n\n| `v` | Order so far | Queue after | Found (`visited`) |\n|---|---|---|---|\n| P | P | Q, R | P, Q, R |\n| Q | P, Q | R, S | P, Q, R, S |\n| R | P, Q, R | S | P, Q, R, S |\n| S | P, Q, R, S | (empty) | P, Q, R, S |\n\n**Result:** `[\"P\", \"Q\", \"R\", \"S\"]`.\n\nNext you put these lines in order yourself. The three starting values can come in any order, and so can `visited.add(n)` and `queue.append(n)`: each order gives the same BFS.",
           "skip_check_activity_id": 403
         },
         {
@@ -62,12 +62,12 @@
         "prompt": "Quick recall from module 3. On the campus graph, the walkways join A–C, A–E, B–C, B–G, C–F, D–E and E–F. You traced BFS from the Admin block (A), taking neighbours in alphabetical order. In what order did BFS visit the buildings?",
         "options": [
           {
-            "id": "a",
-            "label": "A, C, E, B, F, D, G"
-          },
-          {
             "id": "b",
             "label": "A, B, C, D, E, F, G"
+          },
+          {
+            "id": "a",
+            "label": "A, C, E, B, F, D, G"
           },
           {
             "id": "c",
@@ -113,12 +113,12 @@
         "prompt": "Quick recall from module 2. You build the campus graph with your Graph class: g = Graph(), then one g.add_edge call for each walkway, in this order: A–C, A–E, B–C, B–G, C–F, D–E and E–F. What is g.adjacency[\"C\"]?",
         "options": [
           {
-            "id": "a",
-            "label": "[\"A\", \"B\", \"F\"]"
-          },
-          {
             "id": "b",
             "label": "[\"F\"]"
+          },
+          {
+            "id": "a",
+            "label": "[\"A\", \"B\", \"F\"]"
           },
           {
             "id": "c",

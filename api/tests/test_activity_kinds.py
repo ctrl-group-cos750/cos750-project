@@ -617,3 +617,30 @@ def test_a_solution_stored_with_string_ids_still_grades() -> None:
     assert check_activity("fix_the_bug", FIX_CONFIG, fix, {"order": FIX_RIGHT}).correct
     with pytest.raises(ValueError, match="'2' in the group"):
         validate_activity("parsons", config, stored)
+
+
+def test_no_mastery_item_explains_its_answer_yet() -> None:
+    """The mastery check shows feedback at once, so one item's explanation would be on screen
+    before the next item is answered, and could answer it (603 → 604, 610 → 611 to 613; #167
+    review). Mastery items get explanations once #144 decides when the check shows feedback."""
+    explained = [
+        a.id
+        for a in read_fixtures().activities
+        if a.purpose == "mastery" and (a.solution or {}).get("explanation")
+    ]
+    assert explained == []
+
+
+def test_choose_tests_text_never_names_a_test_by_its_stored_id() -> None:
+    """The screen numbers the test cases ("Test 1: start at A") because an id such as
+    `two-islands` names what the student has to spot. Hints, feedback and explanations must use the
+    numbers too (#167 review)."""
+    for a in read_fixtures().activities:
+        if a.kind != "choose_tests":
+            continue
+        ids = [t["id"] for t in a.config["tests"] if "-" in t["id"]]  # the telling ones
+        texts = [h.body for h in a.hints]
+        texts += list((a.solution or {}).get("feedback", {}).values())
+        texts.append((a.solution or {}).get("explanation") or "")
+        for text in texts:
+            assert not [i for i in ids if i in text], (a.id, text)

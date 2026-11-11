@@ -116,19 +116,19 @@
       "purpose": "retrieval",
       "objective_id": 2,
       "config": {
-        "prompt": "Using the `Graph` class from module 2, an empty undirected graph runs `add_vertex(\"A\")`, `add_vertex(\"C\")` and then `add_edge(\"A\", \"C\")`. What is `adjacency` now?",
+        "prompt": "Using the Graph class from module 2, an empty undirected graph runs add_vertex(\"A\"), add_vertex(\"C\") and then add_edge(\"A\", \"C\"). What is adjacency now?",
         "options": [
           {
-            "id": "a",
-            "label": "`{\"A\": [\"C\"], \"C\": [\"A\"]}`"
-          },
-          {
             "id": "b",
-            "label": "`{\"A\": [\"C\"], \"C\": []}`"
+            "label": "{\"A\": [\"C\"], \"C\": []}"
           },
           {
             "id": "c",
-            "label": "`{\"A\": \"C\"}`"
+            "label": "{\"A\": \"C\"}"
+          },
+          {
+            "id": "a",
+            "label": "{\"A\": [\"C\"], \"C\": [\"A\"]}"
           }
         ]
       },
@@ -167,7 +167,7 @@
       "purpose": "practice",
       "objective_id": 4,
       "config": {
-        "prompt": "For each situation, choose whether BFS is a good fit and why.",
+        "prompt": "For each situation, choose whether BFS is a good fit and why. A reason can fit more than one situation, and some reasons fit none.",
         "left": [
           {
             "id": "s1",
@@ -180,20 +180,32 @@
           {
             "id": "s3",
             "label": "Add up the prices of all items in a shopping list."
+          },
+          {
+            "id": "s4",
+            "label": "Find the fewest links you must click to get from one web page to another."
           }
         ],
         "right": [
-          {
-            "id": "r1",
-            "label": "Good fit: BFS reaches vertices in order of the fewest edges from the start."
-          },
           {
             "id": "r2",
             "label": "Good fit: BFS explores one ring of neighbours at a time, so it finds everyone within two steps first."
           },
           {
+            "id": "r4",
+            "label": "Good fit: BFS takes neighbours in alphabetical order, so it lists the items in order."
+          },
+          {
             "id": "r3",
             "label": "Not a fit: there are no connections to follow, so this is not a graph problem."
+          },
+          {
+            "id": "r1",
+            "label": "Good fit: BFS reaches vertices in order of the fewest edges from the start."
+          },
+          {
+            "id": "r5",
+            "label": "Not a fit: BFS follows paths on a map, so it can't follow links between people."
           }
         ]
       },
@@ -202,12 +214,14 @@
         "pairs": {
           "s1": "r1",
           "s2": "r2",
-          "s3": "r3"
+          "s3": "r3",
+          "s4": "r1"
         },
         "feedback": {
-          "s3": "A list of prices has no vertices and edges to traverse. A simple loop is enough.",
           "s1": "Fewest stops means fewest edges. That is exactly the order in which BFS reaches vertices.",
-          "s2": "Friends are one edge away, friends of friends two edges. BFS finds them ring by ring."
+          "s2": "Friends are one edge away, friends of friends two edges. BFS finds them ring by ring, whatever the vertices stand for.",
+          "s3": "A list of prices has no vertices and edges to traverse. A simple loop is enough.",
+          "s4": "Pages are vertices and links are edges, so the fewest clicks is the fewest edges. Alphabetical order only decides which neighbour joins the queue first; it isn't why BFS finds the fewest."
         }
       },
       "hints": [
@@ -221,11 +235,11 @@
         },
         {
           "level": 3,
-          "body": "'Fewest stops' and 'friend of a friend' are both about counting edges from a start."
+          "body": "'Fewest stops', 'fewest clicks' and 'friend of a friend' are all about counting edges from a start. Any connections can be edges, not only paths on a map."
         },
         {
           "level": 4,
-          "body": "Answer: s1 → r1 (fewest stops), s2 → r2 (ring by ring), s3 → r3 (not a graph)."
+          "body": "Answer: s1 → r1 (fewest stops), s2 → r2 (ring by ring), s3 → r3 (not a graph), s4 → r1 (fewest clicks)."
         }
       ]
     },
@@ -240,16 +254,16 @@
         "prompt": "Already confident? On the campus graph from A, after C is processed, what is in the queue (front first)?",
         "options": [
           {
-            "id": "a",
-            "label": "E, B, F"
-          },
-          {
             "id": "b",
             "label": "B, F, E"
           },
           {
             "id": "c",
             "label": "B, E, F"
+          },
+          {
+            "id": "a",
+            "label": "E, B, F"
           }
         ]
       },
@@ -351,16 +365,16 @@
         "prompt": "On the campus graph, what is the fewest number of walkways from the Admin block (A) to the Green (G)? Use the BFS order you found: A, C, E, B, F, D, G.",
         "options": [
           {
+            "id": "c",
+            "label": "2"
+          },
+          {
             "id": "a",
             "label": "3"
           },
           {
             "id": "b",
             "label": "6"
-          },
-          {
-            "id": "c",
-            "label": "2"
           }
         ]
       },
@@ -368,7 +382,7 @@
         "explanation": "BFS reaches G through A, C, B, G: three walkways. BFS finds each vertex by the fewest edges from the start, so there is no shorter route.",
         "correct": "a",
         "feedback": {
-          "b": "6 is G's position in the order, not its distance. Follow who discovered whom back to A.",
+          "b": "6 is how many vertices come before G in the order (G is 7th), not how many walkways separate it from A. Follow who found whom back to A.",
           "c": "G is not joined to C or E. It needs one more walkway, from B."
         }
       },

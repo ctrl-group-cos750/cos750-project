@@ -93,8 +93,8 @@ Students may progress through the material at different speeds. They may also di
 Beginners make predictable mistakes when they first meet BFS. We expect students to:
 
 - confuse BFS with depth-first order and follow one branch to its end before visiting the other neighbours;
-- forget to mark vertices as visited, which causes repeated visits or an endless loop on a graph with a cycle;
-- mark a vertex as visited only when it leaves the queue, so the same vertex is added to the queue more than once;
+- forget to record a vertex as found (in the code, to add it to the `visited` set) when it joins the queue, which causes repeated visits or an endless loop on a graph with a cycle;
+- record a vertex as found only when it leaves the queue (when it is visited), so the same vertex is added to the queue more than once;
 - not see why a queue, and not a stack, produces the level-by-level order;
 - assume that BFS reaches every vertex, and miss the vertices in a disconnected part of the graph.
 
@@ -567,16 +567,16 @@ Good feedback answers three questions: Where am I going? How am I going? Where t
 2. Reason: why it is correct or wrong, linked to the concept.
 3. Next step: what to check, try or review.
 
-Example for a trace error: “Not quite. You added C to the queue, but C is already in the visited set. BFS adds only unvisited vertices. Check the neighbours of B again.”
+Example for a trace error: “Not quite. You added C to the queue, but C has already been found: it is still waiting in the queue. BFS adds only vertices it has not found yet. Check the neighbours of B again.”
 
-Feedback on code is given line by line. The student sees which lines or blanks are wrong and a message for each one, for example: “Vertex B was visited twice. Is it marked as visited when it is added to the queue?” A wrong answer at a video checkpoint can be tried again with hints, and the video continues once the answer is correct.
+Feedback on code is given line by line. The student sees which lines or blanks are wrong and a message for each one, for example: “Vertex B was visited twice. Is it added to the `visited` set, which holds every vertex found so far, when it joins the queue?” A wrong answer at a video checkpoint can be tried again with hints, and the video continues once the answer is correct.
 
 ## Scaffolding: the four-level hint ladder
 
 Every activity offers a four-level hint ladder. Hints are shown one level at a time and only when the student asks:
 
 1. Nudge: reminds the student of the key idea. Example: “Which vertex has been in the queue the longest?”
-2. Targeted hint: points to the exact step or line. Example: “Look at where a vertex is marked as visited.”
+2. Targeted hint: points to the exact step or line. Example: “Look at where a vertex is added to the visited set.”
 3. Partial solution: shows part of the answer, such as the next state of the queue or one key line of code.
 4. Worked solution: shows the full answer with an explanation of each step.
 

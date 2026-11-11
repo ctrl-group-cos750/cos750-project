@@ -5,10 +5,14 @@ import { useRefreshRewards } from '../rewards/hooks.ts'
 import { NarratedVideoPlayer } from './NarratedVideoPlayer.tsx'
 import { fetchVideo, requestCheckpointHint, submitCheckpointAttempt } from './video.api.ts'
 
-/** /videos/:videoId — one narrated video with its checkpoints. The module player (#15) will
- * show videos as segments; until then this page is how a video is reached and tested. */
+/** /videos/:videoId — one narrated video with its checkpoints, on its own page. */
 export function VideoPage() {
-  const id = Number(useParams().videoId)
+  return <VideoView videoId={Number(useParams().videoId)} />
+}
+
+/** A narrated video with its checkpoints: the video page, and a video segment in a module
+ * (SegmentView), which keeps the module's own navigation on screen. */
+export function VideoView({ videoId: id }: { videoId: number }) {
   const query = useQuery({ queryKey: ['video', id], queryFn: () => fetchVideo(id) })
   const refreshRewards = useRefreshRewards()
   if (query.isPending) return <Spinner label="Loading the video" />

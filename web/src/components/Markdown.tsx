@@ -3,7 +3,7 @@ import ReactMarkdown, { type Components, type ExtraProps } from 'react-markdown'
 import { gfmTableFromMarkdown } from 'mdast-util-gfm-table'
 import { gfmTable } from 'micromark-extension-gfm-table'
 import styles from './Markdown.module.css'
-import { useScrollable } from './useScrollable.ts'
+import { ScrollRegion } from './ScrollRegion.tsx'
 
 export interface MarkdownProps {
   children: string
@@ -59,42 +59,22 @@ function codeLabel(pre: HastNode | undefined): string {
   return `Code: ${first.length > 40 ? `${first.slice(0, 40)}…` : first}`
 }
 
-/**
- * A wide table scrolls inside its own box, so the page never scrolls sideways at 320 px (WCAG
- * 1.4.10 allows two-dimensional content such as a data table to scroll). Only while it actually
- * overflows is the box a named region and a tab stop, so a keyboard user can scroll it with the
- * arrow keys (2.1.1); a table that fits adds no tab stop and no landmark.
- */
+/** A table scrolls sideways in its own region when it is too wide (ScrollRegion). */
 function ScrollableTable({ node, ...props }: ComponentPropsWithoutRef<'table'> & ExtraProps) {
-  const { ref, scrollable } = useScrollable<HTMLElement>()
   return (
-    <section
-      ref={ref}
-      className={styles.tableScroll}
-      // An unnamed section is not a region landmark; it becomes one only while it scrolls.
-      aria-label={scrollable ? tableLabel(node as HastNode | undefined) : undefined}
-      // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scroll container must be reachable by keyboard (WCAG 2.1.1)
-      tabIndex={scrollable ? 0 : undefined}
-    >
+    <ScrollRegion label={tableLabel(node as HastNode | undefined)} className={styles.tableScroll}>
       <table {...props} />
-    </section>
+    </ScrollRegion>
   )
 }
 
-/** A code block keeps its indentation and scrolls sideways when a line is too long; like a
- * table, it is a named tab stop only while it overflows. */
+/** A code block keeps its indentation and scrolls sideways in its own region when a line is too
+ * long (ScrollRegion). */
 function ScrollableCode({ node, ...props }: ComponentPropsWithoutRef<'pre'> & ExtraProps) {
-  const { ref, scrollable } = useScrollable<HTMLElement>()
   return (
-    <section
-      ref={ref}
-      className={styles.codeScroll}
-      aria-label={scrollable ? codeLabel(node as HastNode | undefined) : undefined}
-      // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scroll container must be reachable by keyboard (WCAG 2.1.1)
-      tabIndex={scrollable ? 0 : undefined}
-    >
+    <ScrollRegion label={codeLabel(node as HastNode | undefined)} className={styles.codeScroll}>
       <pre {...props} />
-    </section>
+    </ScrollRegion>
   )
 }
 

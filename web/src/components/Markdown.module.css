@@ -59,10 +59,9 @@
   margin-block: 0.75em;
 }
 
-/* A fenced code block sits in a focusable region (Markdown.tsx) that does the scrolling, so a
-   keyboard user can scroll a long line into view; the pre inside grows to its longest line. */
+/* A fenced code block's scroll box (a ScrollRegion: a named tab stop only while a line is too
+   long). The pre inside grows to its longest line, so the box, not the pre, scrolls. */
 .codeScroll {
-  overflow-x: auto;
   margin-block: 0.75em;
   border-radius: 0.375rem;
   background: color-mix(in srgb, currentColor 8%, transparent);
@@ -94,29 +93,21 @@
   text-underline-offset: 2px;
 }
 
-/* GFM tables (remark-gfm). The wrapper scrolls sideways when the table is wider than the
-   column; the page itself never does (WCAG 1.4.10). It is focusable (tabindex=0) so keyboard
-   users can scroll it, and shows the focus ring like every other control. */
+/* GFM tables (the table extension only, Markdown.tsx). The table's scroll box is a ScrollRegion:
+   it scrolls sideways when the table is wider than the column, so the page never does (WCAG
+   1.4.10), and it is a named tab stop, with the focus ring and a scroll cue, only while it does. */
 .tableScroll {
-  max-width: 100%;
-  overflow-x: auto;
   margin-block: 0.75em;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-sm);
-}
-
-.codeScroll:focus-visible,
-.tableScroll:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-  box-shadow: none;
 }
 
 .prose table {
   border-collapse: collapse;
   min-width: 100%;
   font-size: var(--text-sm);
-  /* Cells wrap at spaces only; a table that still doesn't fit scrolls in its wrapper. */
+  /* Prose in a cell wraps at spaces; code in a cell may break anywhere (below). A table that still
+     doesn't fit scrolls in its region. */
   overflow-wrap: normal;
 }
 

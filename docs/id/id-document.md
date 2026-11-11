@@ -15,7 +15,7 @@ This document describes how the application teaches: who the learners are, what 
 
 Graphs are a core topic in computer science. The CS2023 curriculum places graphs and graph traversal, including BFS, in its Algorithmic Foundations knowledge area [40]. BFS is also the base for later graph algorithms, such as depth-first search and shortest-path algorithms.
 
-CS2023 numbers each topic so that it can be cited exactly [40, p. 33; 57, p. 16]. Our topic covers these CS Core entries:
+CS2023 numbers each topic so that it can be cited exactly [40, p. 33]. Our topic covers these CS Core entries:
 
 - **AL-Foundational: 8**, graphs: directed or undirected, cyclic or acyclic, connected or not, weighted or not [40, p. 88]. This is the data structure the specification asks for.
 - **AL-Foundational: 8.a**, graph representation: adjacency list against adjacency matrix [40, p. 88].
@@ -23,9 +23,10 @@ CS2023 numbers each topic so that it can be cited exactly [40, p. 33; 57, p. 16]
 - **AI-Search: 2.a**, uninformed graph search for problem solving: breadth-first search [40, p. 68].
 - **MSF-Discrete: 7.b**, a CS Core learning outcome: "Demonstrate different traversal methods for trees and graphs, including … breadth-first and depth-first search for graphs" [40, p. 188].
 
-AL-Foundational 11.c speaks of *tree* search, so we do not rely on it alone. AI-Search 2.a and MSF-Discrete 7.b name BFS on graphs, and both are CS Core. CS2023 also sets a skill level for each topic [40, pp. 31–32, 320]: graphs (8) at Explain, the representation choice (8.a) at Apply, and BFS (11.c) at Apply. Section 3.1 maps our objectives to these levels.
+AL-Foundational 11.c speaks of *tree* search, so we do not rely on it alone. AI-Search 2.a and MSF-Discrete 7.b name BFS on graphs, and both are CS Core. CS2023 also sets a skill level for each topic [40, pp. 31–32, 320; 57, p. 16]: graphs (8) at Explain, the representation choice (8.a) at Apply, and BFS (11.c) at Apply. Table 1 in Section 3.2 maps our objectives to these levels.
 
 Two parts of these topics are not taught yet. The application uses only an adjacency list (a Python dictionary), so the list-against-matrix choice in 8.a is not taught. It also never explains BFS's running time, which AL-Complexity's learning outcome 4 asks for every algorithm in AL-Foundational [40, p. 92]. Both would fit in module 2 and module 3 as one short segment and one item each.
+
 BFS is hard for beginners. A student must track the current vertex, the queue and the visited set at the same time, and one mistake changes the whole traversal. A lecture leaves little time to practise this tracking. The application gives guided practice before the lecture, so the lecture can go deeper.
 
 ## Our instructional design approach
@@ -149,6 +150,8 @@ A student is ready for the lecture when no objective is marked "Not yet". The st
 
 Table: Level, CS2023 skill level, evidence and success criterion for each learning objective.
 
+Table 1 gives the evidence as designed. On staging, some items are simpler. Objective 2 uses four matching items instead of labelled diagrams. Objective 3 uses four multiple-choice items, so the student recognises a model rather than naming its parts. Objective 5 has one trace item, which has no student screen yet (#136).
+
 # Instructional design model and its application
 
 An instructional design model is a clear step-by-step guide for creating good learning materials. It helps designers identify what students need, plan lessons, develop content and evaluate its effectiveness. Using an instructional design model gives teachers and designers a structured process for planning and improving learning materials. The aim is to stay organised and ensure that each lesson supports student learning.
@@ -180,12 +183,12 @@ We use Gagné's Nine Events of Instruction as a step-by-step guide to structure 
 | 1. Gain attention | A short puzzle on a campus map: "Which building can you reach in the fewest steps?" It appears before any terms are taught. |
 | 2. Inform learners of the objectives | Each module starts with "By the end of this module you can …" in plain words. The words match the objectives. |
 | 3. Stimulate recall of prior learning | A quick queue refresher that uses COS110 knowledge: add an item, remove an item and first in, first out. |
-| 4. Present the content | A narrated walkthrough that shows the graph, the queue and the visited set together. Each segment covers one idea. |
+| 4. Present the content | A narrated walkthrough that shows the graph, the queue and the visited set together. Each segment covers one idea. The walkthroughs are scripted, not yet recorded (#37); until then, worked examples and the visualiser carry this event. |
 | 5. Provide learning guidance | A worked example first. Then partly completed code. Then a blank task. A four-level hint ladder is always available. |
 | 6. Elicit performance | Checkpoints where the student predicts, traces, completes or orders code before the lesson continues. |
 | 7. Provide feedback | Instant and specific feedback from trace checks and comparison with the solution. The feedback explains why an answer is wrong. |
 | 8. Assess performance | A final mastery check with unseen graphs. The result is shown for each objective. |
-| 9. Enhance retention and transfer | Opening questions that recall earlier modules. A closing task that applies BFS to a new problem. An optional bonus quest. |
+| 9. Enhance retention and transfer | Opening questions that recall earlier modules. A closing task that applies BFS to a new problem. An optional bonus quest: designed, not yet built (#87). |
 
 Table: Gagné's nine events applied to the BFS lessons.
 
@@ -199,15 +202,17 @@ Constructive alignment means that objectives, learning activities and assessment
 
 | Module | Learning objectives | Main learning activities | Assessment evidence | Duration (minutes) |
 |---|---|---|---|---|
-| 0. Warm-up and queue refresher | Prior knowledge | Short quiz on queues and basic Python. The application picks the refreshers the student needs. | Diagnostic score | 5 |
-| 1. What is a graph? | 1, 2, 3 | Build a campus graph by adding vertices and edges. Classify directed and undirected graphs. Match real situations to graphs. | Labelling and matching checkpoints | 12 |
+| 0. Warm-up and queue refresher | Prior knowledge | Short quiz on queues and basic Python. The application is designed to pick the refreshers the student needs; not yet built, so every student sees every refresher (#31). | Diagnostic score | 5 |
+| 1. What is a graph? | 1, 2, 3 | Build a campus graph by matching each walkway to the two buildings it joins (designed as adding vertices and edges by hand; not built). Classify directed and undirected graphs. Match real situations to graphs. | Labelling and matching checkpoints | 12 |
 | 2. A graph in Python | 2, 6 | Complete `add_vertex` and `add_edge` in a `Graph` class by filling in missing tokens. Make the class handle directed and undirected edges. | Completed code checked against the solution | 10 |
-| 3. Meet BFS | 4, 5 | Watch BFS on the campus graph. Predict the next vertex. Fill in the queue, the visited set and the traversal order. | Trace checkpoints | 12 |
+| 3. Meet BFS | 4, 5 | Watch BFS on the campus graph. Predict the next vertex. Fill in the queue, the visited set and the traversal order (the trace table has no student screen yet, #136). | Trace checkpoints | 12 |
 | 4. Build BFS | 6 | Put shuffled lines of code in order (Parsons). Fill in the missing tokens. | Line order and tokens checked against the solution | 15 |
 | 5. Test and debug | 7 | Find and fix bugs in faulty BFS code by selecting and ordering the corrections. Choose the test cases (a disconnected graph, a graph with a cycle) that expose each bug. | Fixes and test choices checked against the solution | 10 |
 | 6. Mastery check and report | 1–7 | Unseen items on every objective. A report for each objective with next steps. | Criteria in Table 1 | 10 |
 
 Table: The lesson sequence, in which each row links objectives, activities and evidence. This follows constructive alignment [4].
+
+The timings are the plan. Our own estimate of the content as written on staging, at about a minute per multiple-choice item and the video lengths in the scripts, is 130 to 140 minutes. Module 6 alone, with 24 items, takes about 45 to 50 minutes. The pilot's timings will decide what to cut (Section 8.5).
 
 Each checkpoint is small and focused on one key idea. Here is an example from module 2. The lesson explains that an undirected edge must be stored in both directions. The student then completes the method below.
 
@@ -233,7 +238,7 @@ Merrill's first principles describe when learning is most effective [58, pp. 16�
 |---|---|---|---|
 | 1. Task-centred | Learn in the context of a real-world task. | One task runs through the course: finding the route with the fewest walkways across the campus. The same campus graph returns in modules 1, 3 and 4. | Each module is organised by topic (graphs, then code, then BFS), not as a series of harder whole tasks. |
 | 2. Activation | Recall relevant earlier knowledge. | The module 0 diagnostic and queue refreshers. One or two retrieval questions open each module from module 2. | Module 0 recalls queues but not the Python the code tasks use: dictionaries, sets and classes. |
-| 3. Demonstration | Watch the skill being done. | Worked examples in modules 1 to 4, and the BFS visualiser in watch mode. | The narrated videos are scripted but not yet recorded. Until they are, module 1's definitions and module 3's explanation of BFS are not shown at all, and module 3's worked example comes after the visualiser practice (#149). |
+| 3. Demonstration | Watch the skill being done. | Worked examples in modules 1 to 4, and the BFS visualiser in watch mode. | The narrated videos are scripted but not yet recorded. Until they are, module 1's definitions and module 3's explanation of BFS are not shown at all, and module 3's worked example comes after the visualiser practice (#37; #149 adds a text fallback). |
 | 4. Application | Practise the new skill, with feedback. | Activities with three-part feedback and the hint ladder in modules 1 to 4, and the mastery check. | Trace, fix-the-bug and choose-tests activities have no student screen yet, and module 5 is empty, so objectives 5 and 7 are not practised (#136). |
 | 5. Integration | Use the skill in one's own work: reflect, discuss, defend. | The per-objective report, and the COS212 lecture that follows. | Nothing in the application asks the student to explain, defend or reuse what they learnt. |
 
@@ -243,11 +248,11 @@ The lecture asks how Merrill's principles differ from Gagné's [58, p. 38]. Gagn
 
 ## Why ADDIE, and how it compares with other models
 
-The lecture presents eight instructional design models [58, p. 20]. Table 6 compares the four we considered most closely with ADDIE.
+The lecture lists eight instructional design models, among others [58, p. 20]. Table 6 compares the four we considered most closely with ADDIE.
 
 | Model | What it is | What we took from it, or why we did not choose it |
 |---|---|---|
-| Dick and Carey (1978) | A systems model. Goals and entry behaviours lead to performance objectives, then criterion-referenced tests, then strategy and materials, then formative and summative evaluation and revision [58, p. 21]. | We took its order: Table 1's criteria were written before the content. As a whole it has more steps than three weeks allow, and its evaluation comes after the materials are finished. |
+| Dick and Carey (1978) | A systems model. Goals and entry behaviours lead to performance objectives, then criterion-referenced tests, then strategy and materials, then formative and summative evaluation and revision [58, p. 21]. | We took its order: Table 1's criteria were written before the content. As a whole it has more steps than a two-week build (Sprints 1 and 2, 2–15 November) allows, and its evaluation comes after the materials are finished. |
 | ASSURE (1996) | Analyse learners, state objectives, select media, use them, require learner participation, evaluate and revise. It builds in Gagné's events [58, p. 33]. | It is made for a teacher choosing existing media for a class. We have to build the media. |
 | Pebble in a Pond (Merrill, 2012) | Problem-centred. Start from a problem, design a progression of problems, then the component skills, then strategy, then evaluation. Objectives are less detailed [58, pp. 34–35]. | Our campus-routing problem is its first ripple. We did not follow it because the specification and our mastery reporting need detailed, measurable objectives from the start. |
 | SAM 2 (Allen, 2021) | An agile model. A preparation phase, then repeated design–prototype–review, then repeated develop–implement–evaluate, released as alpha, beta and gold [58, pp. 36–37]. | Closest to what we actually do (see below). |
@@ -255,7 +260,7 @@ The lecture presents eight instructional design models [58, p. 20]. Table 6 comp
 
 Table: Instructional design models compared with ADDIE [58].
 
-Section 4.1 says we use ADDIE as a repeating cycle with rapid prototyping inside it. That is, in practice, SAM. Content was written module by module, reviewed on staging after each one-week sprint (SE document §2.1), and changed; the pilot plays the role of SAM's beta. We kept the ADDIE names because they are the lecture's main model and they structure this document, but SAM describes our process more accurately. Smith and Ragan's three phases (analysis, strategy, evaluation) [58, p. 22] fold into the same steps and add nothing we need.
+Section 4.1 says we use ADDIE as a repeating cycle with rapid prototyping inside it. That is close to SAM. The platform was built in one-week sprints and reviewed on staging after each one (SE document §2.1), which is SAM's iterative development. The content arrived later, in Sprint 2, and has been through one review so far: the pilot, which plays the role of SAM's beta. So our platform followed SAM, while our content has had only one design–build–review cycle before the deadline. We kept the ADDIE names because they are the lecture's main model and they structure this document. Smith and Ragan's three phases (analysis, strategy, evaluation) [58, p. 22] fold into the same steps and add nothing we need.
 
 ## Storyboards
 
@@ -263,10 +268,10 @@ The lecture calls the storyboard "one of the most important steps" of ADDIE's De
 
 Our storyboards are of two kinds:
 
-- **Narration scripts** for modules 1 to 4, in `docs/id/module-1/` to `docs/id/module-4/`. Each row is one frame: the time, what is on screen and the narration. These are the same three columns as the lecture's example storyboard (video, diagram, audio) [58, p. 28]. They also give each video's checkpoint questions, feedback and hints.
+- **Narration scripts** for modules 1 to 4, in `docs/id/module-1/` to `docs/id/module-4/`. Each row is one frame: the time, what is on screen and the narration. These are close to the three columns of the lecture's example storyboard (video, diagram, audio) [58, p. 28]. They also give each video's checkpoint questions, feedback and hints.
 - **Wireframes** of the main screens in the SE document (§11.1), which storyboard the interactive screens.
 
-This part of the Design phase was done late and is incomplete. The scripts were written between 8 and 11 November, at the same time as the content was loaded, not before it. There is no storyboard for modules 0, 5 and 6, or for the review paths, and the videos the scripts describe are not yet recorded.
+This part of the Design phase was done late and is incomplete. The scripts were added to the repository between 8 and 11 November, at the same time as the content was loaded, not before it. There is no storyboard for modules 0, 5 and 6, or for the review paths, and the videos the scripts describe are not yet recorded.
 
 ## Are SE and ID so different?
 
@@ -294,7 +299,7 @@ Working memory is limited, so a lesson must avoid overload. BFS asks a student t
 
 We also apply Mayer's multimedia principles [15]. We use signalling, which means the current vertex is highlighted in each step. We use segmenting, which means each segment covers one idea and the student controls the pace. We use pre-training, which means the key terms and the queue refresher come before BFS. We use coherence, which means we leave out decoration that does not teach. These choices cut extra load, so students can spend their effort on the algorithm.
 
-Support must also fade as skill grows. Kalyuga and colleagues found that guidance that helps novices can hurt more experienced learners [10]. For example, a confident student may find a long worked example slow and boring. The application therefore lets students skip a refresher or a worked example after they pass a short check. It also offers optional bonus quests for students who want more challenge.
+Support must also fade as skill grows. Kalyuga and colleagues found that guidance that helps novices can hurt more experienced learners [10]. For example, a confident student may find a long worked example slow and boring. The application is therefore designed to let students skip a refresher or a worked example after they pass a short check, and to offer optional bonus quests for students who want more challenge. Neither is built yet (#31, #87).
 
 ## Scaffolding and the zone of proximal development
 
@@ -312,13 +317,13 @@ New ideas stick best when they link to what students already know. Ausubel argue
 
 Recalling information strengthens memory. Roediger and Karpicke found that taking memory tests led to better long-term retention than repeated study [18]. For this reason each module opens with one or two questions on earlier modules. This practice helps students remember. It also shows them which ideas are still weak.
 
-Students need to trace code before they can write it well. Lister and colleagues found that many novice programmers could not trace short pieces of code correctly. They suggested that reading and tracing are skills students need before they write code [13]. For this reason students trace BFS by hand in module 3, before they build it in module 4.
+Students need to trace code before they can write it well. Lister and colleagues found that many novice programmers could not trace short pieces of code correctly. They suggested that reading and tracing are skills students need before they write code [13]. For this reason students trace BFS by hand in module 3, before they build it in module 4. On staging they predict each step in the visualiser and read a worked trace table; the trace-table activity itself has no student screen yet (#136).
 
 Showing BFS on screen helps only if students take part. Hundhausen, Douglas and Stasko found that how students use a visualisation matters more than what it shows [9]. Naps and colleagues reached a similar view. They concluded that visualisations help when they make learners active [16]. For this reason students predict the next vertex before the animation shows it. The animation then confirms or corrects the prediction.
 
 | Theory | Key idea | How the application applies it |
 |---|---|---|
-| Active learning [6] | Deeper activity leads to deeper learning. | Checkpoints ask students to predict, trace, order and complete code. |
+| Active learning [6] | Deeper activity leads to deeper learning. | Checkpoints ask students to predict, order and complete code. Tracing is designed but has no student screen yet (#136). |
 | Cognitive load [21, 15] | Working memory is limited. | Worked examples first. One idea per segment. The graph, queue and visited set shown together. |
 | Scaffolding [27, 28] | Support lets students do more than they can alone. It fades over time. | A four-level hint ladder. Parsons problems. Less help in later modules. |
 | Retrieval practice [18] | Recalling information strengthens memory. | Opening questions on earlier modules. A final mastery check. |
@@ -336,7 +341,7 @@ The module defines learning as "an enduring change in behavior, or in the capaci
 | Information processing (cognitivism) | Information passes from the sensory registers to a working memory of limited capacity, and is kept in long-term memory when it is organised and linked to what the learner knows. Advance organisers and reducing extraneous load apply this [47, pp. 224–226]. | The visualiser's panel keeps the current vertex, the queue and the visited set on screen, so the student does not hold them in memory. One idea per segment. Each module states its goals first, as an advance organiser. The campus graph gives one familiar context. | — |
 | Constructivism | Learners construct their own understanding. The teacher structures the environment and gives scaffolding in the zone of proximal development. Discovery needs carefully arranged activities [47, pp. 274–276]. | Students predict the next vertex before BFS shows it, then compare. Scaffolding fades across modules (Section 5.3). | Pure discovery, which works poorly for novices [11]. Peer discussion, which the application cannot offer; the lecture provides it. |
 | Social cognitive theory | People learn by doing (enactively) and by observing models, reading and listening (vicariously). Self-efficacy and visible progress towards goals sustain learning. Worked examples apply these ideas [47, pp. 159–161]. | Worked examples, and the planned narrated walkthroughs, model the skill. Activities give enactive practice. Module goals, the module map and the per-objective report make progress visible. "Met with support" keeps self-efficacy honest. | Peer models: the student works alone. |
-| Transformative learning | A "disorienting dilemma" leads to critical reflection on one's assumptions and a change of perspective. Smaller predicaments set by a teacher can also start it [49]. | On a small scale: the campus puzzle comes before any teaching, and feedback names the student's misconception, for example that marking a vertex only when it leaves the queue lets it join twice. | A 75-minute tutorial cannot transform a perspective. This theory fits the individual reflection report better than the application. |
+| Transformative learning | A "disorienting dilemma" leads to critical reflection on one's assumptions and a change of perspective. Smaller predicaments set by a teacher can also start it [49]. | On a small scale: the campus puzzle comes before any teaching, and feedback names the student's misconception, for example that adding a vertex to `visited` (the set of found vertices) only when it leaves the queue lets it join the queue twice. | A 75-minute tutorial cannot transform a perspective. This theory fits the individual reflection report better than the application. |
 
 Table: The module's learning theories applied to the application [47, 48, 49].
 
@@ -349,9 +354,9 @@ Instead, we follow Universal Design for Learning (UDL), which gives every studen
 
 | UDL principle | How the application applies it |
 |---|---|
-| Multiple means of representation | Each idea appears as text, a worked example and, where relevant, code. BFS also appears in the visualiser, which draws the graph and shows the current vertex, the queue and the visited set. Narrated videos with captions and a transcript are scripted for modules 1 to 4; the player is built, but the videos are not yet recorded (#149). |
+| Multiple means of representation | Each idea appears as text, a worked example and, where relevant, code. BFS also appears in the visualiser, which draws the graph and shows the current vertex, the queue and the visited set. Narrated videos with captions and a transcript are scripted for modules 1 to 4; the player is built, but the videos are not yet recorded (#37). |
 | Multiple means of action and expression |	Students answer by choosing, matching, ordering lines, completing code and predicting each BFS step in the visualiser. Filling in trace tables is planned (#136). Labelling and building graphs by hand are not built; module 1 uses matching instead. |
-| Multiple means of engagement |	Students control their pace and ask for hints only when they choose. Skipping refreshers and worked examples after a short check is designed (SE document FR-8.1, FR-8.2) but not yet wired. Optional bonus quests are planned; none exist yet. |
+| Multiple means of engagement |	Students control their pace and ask for hints only when they choose. Skipping refreshers and worked examples after a short check is designed (SE document FR-8.1, FR-8.2) but not yet wired (#31). Optional bonus quests are planned; none exist yet (#87). |
 
 Table: Universal Design for Learning applied to the application [31].
 
@@ -360,7 +365,7 @@ The examination specification asks which learning styles the application caters 
 | Style category | Where the application provides it |
 |---|---|
 | Visual | The visualiser's drawing of the graph, with each vertex's state shown by colour, a marker and a label, and the panel showing the queue and visited set. A text drawing of the campus map in module 1. |
-| Aural | Narrated videos for each walkthrough: scripted, not yet recorded (#149). |
+| Aural | Narrated videos for each walkthrough: scripted, not yet recorded (#37). |
 | Read/write | Short definitions, worked examples, code, written feedback and hints, and the per-objective report. Transcripts come with the videos. |
 | Kinesthetic | Ordering Parsons lines, completing code, matching, and stepping through BFS in the visualiser. Filling in trace tables is planned (#136). |
 
@@ -370,7 +375,7 @@ So, on staging, the aural channel is missing until the videos are recorded, and 
 
 ### Where VARK sits, and the lecture's other style models
 
-Curry's onion sorts learning-style models into three layers: perceptual modality, information processing and personality [50, p. 4]. VARK belongs to the outer layer, perceptual modality, and Honey and Mumford's model to the information-processing layer [50, p. 24]. We cater for the outer two layers. We do not address personality models.
+Curry's onion sorts learning-style models into three layers: perceptual modality, information processing and personality [50, p. 4]. VARK belongs to the perceptual-modality layer, and Honey and Mumford's model to the information-processing layer [50, p. 24]. We cater for these two layers. We do not address personality models.
 
 Honey and Mumford describe four styles: activists learn by doing, reflectors by observing and thinking back, theorists by understanding the theory, and pragmatists by putting learning into practice in the real world [50, p. 19]. Each finds something in every module. Activists answer a checkpoint before the explanation. Reflectors can step back through BFS in the visualiser and reread worked examples and feedback. Theorists get the rules of BFS and the reason a queue gives the level-by-level order. Pragmatists get the campus routes and real networks. The model also says learners should know their own style [50, p. 18]. We do not test students' styles, for the reason Pashler et al. give [42].
 
@@ -378,13 +383,13 @@ The lecture and Pashler et al. start from different positions but reach the same
 
 ### Kolb's learning cycle in each module
 
-Kolb's experiential learning theory describes a four-stage cycle: concrete experience (have an experience), reflective observation (reflect on it), abstract conceptualisation (draw a conclusion) and active experimentation (put the theory into practice) [50, pp. 12, 16]. The lecture adds that "an ideal learning process engages all 4" [50, p. 13]. Table 11 checks each stage.
+Kolb's experiential learning theory describes a four-stage cycle: concrete experience (have an experience), reflective observation (reflect on it), abstract conceptualisation (draw a conclusion) and active experimentation (put the theory into practice) [50, pp. 12, 16]. The lecture says that an ideal learning process engages all four of Kolb's learning styles [50, p. 13], Divergers, for example, favour concrete experience and reflective observation [50, p. 14], so we check that every stage appears. Table 11 checks each stage.
 
 | Stage | Where the application provides it | What is weak |
 |---|---|---|
 | Concrete experience | The campus puzzle before any terms are taught (module 1). Predicting each BFS step in the visualiser (module 3). | After their retrieval questions, modules 2 and 4 open with a video or a worked example, so they start at abstract conceptualisation. |
 | Reflective observation | Feedback that gives the reason for a result. Stepping back and replaying BFS in the visualiser. | No activity asks the student to reflect. A short "why" question after each worked example would add it (#150). |
-| Abstract conceptualisation | Definitions, the three rules of BFS, and worked examples in modules 1 to 4. | In module 1, the definitions are only in the unrecorded video (#149). |
+| Abstract conceptualisation | Definitions, the three rules of BFS, and worked examples in modules 1 to 4. | In module 1, the definitions are only in the unrecorded video (#37, #149). |
 | Active experimentation | Practice on new graphs, ordering and completing BFS in module 4, and the closing task on a new directed graph. | Testing and debugging, the clearest experiment, is module 5, which is empty (#136). |
 
 Table: Kolb's learning cycle in the application's modules [50].
@@ -401,7 +406,7 @@ The application aims to meet WCAG 2.1 at level AA [45], the same target as the S
 | Light text or thin lines on graph diagrams.	| Text and controls meet a contrast ratio of at least 4.5:1. |	1.4.3 Contrast (Minimum) |
 | Parsons problems use drag and drop.	| Lines can also be moved with the arrow keys. Every activity works with the keyboard alone. |	2.1.1 Keyboard |
 | Graph diagrams cannot be read by a screen reader.	| Each graph in the content has a short text description, such as its list of vertices and edges.	| 1.1.1 Non-text Content |
-| Narrated videos. |	Captions are on by default, and a transcript is shown below every video. |	1.2.2 Captions (Prerecorded) |
+| Narrated videos. |	The player shows captions by default and a transcript below each video. No video is recorded yet (#37). |	1.2.2 Captions (Prerecorded) |
 | Moving BFS animations.	| Students can pause, step forward and back, reset and change the speed. |	2.2.2 Pause, Stop, Hide |
 | Time pressure. |	No timers on activities, checkpoints or the mastery check. |	2.2.1 Timing Adjustable |
 
@@ -410,8 +415,8 @@ Table: Accessibility barriers and how the design removes them [45].
 ## Inclusive design for our students
 
 -	**Language**. Many students learn in English as an additional language. The lessons use plain English, short sentences and one term for one idea (for example, always “vertex”). Each key term is defined when it is first used and comes back in the retrieval questions.
--	**Devices and data.** Laptops and desktops are the main devices, because modules 2, 4 and 5 need a keyboard for code. The other modules also work on tablets and phones (SE document, NFR-U1). Videos are short, and every video has a transcript, so a student with limited data can read instead of streaming.
--	**Different preparation.** The module 0 diagnostic picks the refreshers each student needs (Section 2.4). Students with weaker preparation get support without slowing down students who do not need it.
+-	**Devices and data.** Laptops and desktops are the main devices, because modules 2, 4 and 5 need a keyboard for code. The other modules also work on tablets and phones (SE document, NFR-U1). Videos are planned to be short, and the player shows a transcript with each one, so a student with limited data can read instead of streaming. No video is recorded yet (#37).
+-	**Different preparation.** The module 0 diagnostic is designed to pick the refreshers each student needs (Section 2.4); that choice is not yet built, so every student sees every refresher (#31). Students with weaker preparation get support without slowing down students who do not need it.
 -	**Low stakes and privacy.** Results are for learning, not for marks. Points and badges are private, and there is no leaderboard (Section 7.2). A wrong answer leads to feedback and hints, not a penalty, so mistakes feel like part of learning.
 -	**Familiar examples.** Examples use the University of Pretoria campus and everyday networks, not knowledge that only some students have.
 
@@ -427,7 +432,7 @@ We use Keller’s ARCS model to design for motivation [37, 38]. It says that stu
 
 | ARCS part | What it means | How the application does it |
 |---|---|---|
-| Attention | Spark and hold curiosity. | A campus-map puzzle opens the lesson. Students predict the next vertex before the animation shows it. Videos pause at checkpoints for a task; the player does this, but the videos are not yet recorded (#149). |
+| Attention | Spark and hold curiosity. | A campus-map puzzle opens the lesson. Students predict the next vertex before the animation shows it. Videos pause at checkpoints for a task; the player does this, but the videos are not yet recorded (#37). |
 | Relevance	| Show why the content matters.	| The University of Pretoria campus map. Real networks such as routes and social links. A clear link to the COS212 lecture. |
 | Confidence |	Make success feel possible.	| Clear objectives at the start of each module. Small steps, worked examples, the hint ladder and no timers. |
 | Satisfaction |	Make effort feel worthwhile. |	Immediate feedback, points and badges, and a report for each objective that ends in “ready for the lecture”. |
@@ -453,7 +458,7 @@ Malone and Lepper studied what makes learning environments intrinsically motivat
 | Factor | What it asks [41, pp. 15–20] | How the application meets it | What is weak or left out |
 |---|---|---|---|
 | Challenge | Goals that are obvious, visible and both short- and long-term; outcomes that are uncertain; feedback that is clear without hurting self-esteem. | Module goals (short term) and "ready for the lecture" (long term). Predicting the next vertex has an uncertain outcome. Feedback explains, never scolds, and there are no timers. | Difficulty does not vary with the student's performance. |
-| Curiosity | Sensory curiosity from sound and visual effects; cognitive curiosity from showing that the learner's knowledge is incomplete or inconsistent. | The campus puzzle comes before any teaching. The visualiser animates each step. Feedback that names a misconception shows the student where their idea fails. | The narrated videos, the main sensory element, are not yet recorded (#149). |
+| Curiosity | Sensory curiosity from sound and visual effects; cognitive curiosity from showing that the learner's knowledge is incomplete or inconsistent. | The campus puzzle comes before any teaching. The visualiser animates each step. Feedback that names a misconception shows the student where their idea fails. | The narrated videos, the main sensory element, are not yet recorded (#37). |
 | Control | Contingency (outcomes depend on the learner's responses), choice and power. | Feedback and hints respond to each answer. The visualiser can be played, paused, stepped forward and back, reset and slowed down. Hints are by choice. | The module path is linear, so there is little choice of what to do next. |
 | Fantasy | Imagined situations; in educational games, an accurate simulation rather than imitation. | The campus storyline: on the first day, find the route with the fewest walkways to friends waiting at the Green. The routing problem is real, so the fantasy is a simulation. | It is a light storyline, not a game world. |
 | Cooperation | Group work towards a clear goal. | None in the application. | Left to the COS212 lecture and tutorials. |
@@ -474,9 +479,9 @@ Gamification is the use of game design elements outside games [32]. A review fou
 |---|---|
 | Module map with progress |	Shows how far the student has come and what is left. |
 | Private points	| Reward correct work, finished modules and objectives met. Fewer points are given after hint level 3 or 4. Points for a finished module are in the rules but not yet awarded (#141). |
-| Badges for milestones |	Mark real progress, not time spent or clicks. Built: a badge per objective met, "ready for the lecture", and one for meeting an objective after its review path. Planned: a first-module badge and quest badges (#141). |
+| Badges for milestones |	Mark real progress, not time spent or clicks. Built: a badge per objective met, "ready for the lecture", one for meeting every objective independently, and one for meeting an objective after its review path. The first-module badge is to be wired or removed (#141); quest badges wait for bonus quests (#87). |
 | Campus storyline |	Links the modules into one problem: finding routes across campus. |
-| Optional bonus quests	| Extra challenge for strong students. They give points but never affect mastery. Planned; none exist yet. |
+| Optional bonus quests	| Extra challenge for strong students. They give points but never affect mastery. Planned; none exist yet (#87). |
 
 Table: Game elements and the learning purpose of each.
 
@@ -506,9 +511,9 @@ The lecture plans assessment in a table with five columns: the learning activity
 | Learning activity name | Learning outcomes | Assessment criteria | Assessment strategy | Learning and teaching strategy |
 |---|---|---|---|---|
 | Module 0: warm-up and queue refresher | Prior knowledge: queues (COS110), Python lists and loops | Answers three diagnostic questions: one on a queue, two on Python lists and loops. | Diagnostic and formative. The diagnostic is designed to choose the refreshers each student needs (SE document FR-8.1); on staging every student sees every refresher. | Activate prior knowledge; refreshers with short examples. |
-| Module 1: what is a graph? | 1, 2, 3 | Table 1, objectives 1 to 3 | Formative: multiple-choice and matching practice with three-part feedback and the hint ladder. | Problem first (the campus puzzle), then a worked example, then practice. A narrated video is scripted (#149). |
-| Module 2: a graph in Python | 2, 6 | The completed `Graph` methods match the solution. | Formative: fill-in-the-blank code checked blank by blank; retrieval questions at the start. | Worked example, then fill-in tasks with more blanks each time (fading). |
-| Module 3: meet BFS | 4, 5 | Table 1, objectives 4 and 5 | Formative: matching, multiple choice, and predicting each step in the visualiser. The trace table has no student screen yet (#136). | Demonstration (worked trace table; narrated videos scripted), then prediction with immediate feedback. |
+| Module 1: what is a graph? | 1, 2, 3 | Table 1, objectives 1 to 3 | Formative: multiple-choice and matching practice with three-part feedback and the hint ladder. | Problem first (the campus puzzle), then a worked example, then practice. A narrated video is scripted, not yet recorded (#37). |
+| Module 2: a graph in Python | 2, 6 | The completed `Graph` methods match the solution. | Formative: fill-in-the-blank code checked blank by blank; retrieval questions at the start. | Worked example, then three fill-in tasks (two, four and three blanks). |
+| Module 3: meet BFS | 4, 5 | Table 1, objectives 4 and 5 | Formative: matching, multiple choice, and predicting each step in the visualiser. The trace table has no student screen yet (#136). | Demonstration (worked trace table; narrated videos scripted, not yet recorded, #37), then prediction with immediate feedback. |
 | Module 4: build BFS | 6 | Table 1, objective 6 | Formative: Parsons problem and fill-in code checked against the solution. | Worked example, then Parsons, then three blanks, then nine blanks (fading). |
 | Module 5: test and debug | 7 | Table 1, objective 7 | Formative: fix-the-bug and choose-tests. Designed; the module is empty on staging and the two activity kinds have no student screen (#136). | Planned: a worked debugging example on a graph with a cycle and a disconnected graph, then faded practice. |
 | Module 6: mastery check | 1 to 7 | Table 1, all criteria. Only the first attempt at each item counts. | Summative within the application and criterion-referenced: one state per objective. | Unseen items; a report with the next step for each objective. |
@@ -522,13 +527,13 @@ The lecture divides each assessment criterion into a pass descriptor and differe
 
 | Objective and criterion | Pass descriptor | Limited | Satisfactory | Good | Excellent |
 |---|---|---|---|---|---|
-| 5. Traces BFS on an unseen graph | Correct queue, visited set and next vertex at every step, with at most one error. | Errors from the first steps, such as stack order or adding a vertex twice. | Meets the pass descriptor after hint level 3 or 4. | Meets it without hint level 3 or 4. | Meets it with no error, and can say why the queue gives the level-by-level order. |
-| 6. Implements BFS | The ordered and completed code matches the solution. | Lines in the wrong structure, such as marking a vertex only when it leaves the queue. | Matches the solution after hint level 3 or 4. | Matches it without hint level 3 or 4. | Matches it at the first check, and rejects every distractor line. |
+| 5. Traces BFS on an unseen graph | Correct queue, visited set and next vertex at every step, with at most one error. | Errors from the first steps, such as stack order or adding a vertex twice. | Meets the pass descriptor after hint level 3 or 4. | Meets it without hint level 3 or 4. | Meets it with no error, and can explain why the queue gives the level-by-level order. |
+| 6. Implements BFS | The ordered and completed code matches the solution. | Lines in the wrong structure, such as adding a vertex to `visited` (the set of found vertices) only when it leaves the queue. | Matches the solution after hint level 3 or 4. | Matches it without hint level 3 or 4. | Matches it at the first check, and rejects every distractor line. |
 | 7. Tests and debugs BFS | Both faulty versions corrected, and a test chosen that exposes each bug. | Fixes one bug, or chooses tests that both versions pass. | Meets the pass descriptor after hint level 3 or 4. | Meets it without hint level 3 or 4. | Meets it, and can name the misconception behind each bug. |
 
 Table: Pass and differentiated descriptors for objectives 5 to 7 [52].
 
-The application reports three states, not four descriptors. "Not yet" matches Limited, "Met with support" matches Satisfactory, and "Met independently" matches Good. Excellent asks for an explanation, which no item collects. The descriptors are therefore a design for the report and for the lecturer, not yet something the application shows.
+The application reports three states, not four descriptors. "Not yet" matches Limited, "Met with support" matches Satisfactory, and "Met independently" matches Good. For objectives 5 and 7, Excellent asks for an explanation, which no item collects; for objective 6 it asks for a first-time match, which the application does not report. The descriptors are therefore a design for the report and for the lecturer, not yet something the application shows.
 
 ### Criterion-referenced, not norm-referenced
 
@@ -541,14 +546,14 @@ The lecture shows Oregon State University's revision of Bloom's taxonomy for gen
 This affects our assessment in three ways:
 
 - **AI can answer most of our items.** A student could paste a Parsons problem or a trace into a chatbot. The application cannot tell. Our defence is that the stakes are low: the result only tells the student whether they are ready for the lecture, so outsourcing it gains nothing.
-- **The process is logged.** The event and attempt export records time, hint levels and every answer (SE document FR-10). An answer that arrives too quickly, with no attempts, could be flagged. We do not do this yet.
+- **The process is logged.** The event and attempt export records time, hint levels and every answer (SE document FR-10). An answer that arrives too quickly, with no hints or earlier attempts, could be flagged. We do not do this yet.
 - **The final check is human.** The lecture that follows uses the same skills without the application.
 
 Fritz makes a related point: a working program does not prove mastery, because it can be copied or bought. She replaces some programming assignments with work where the student explains their solution, such as short videos, posters and essay questions [54]. Our application has no such item: nothing asks the student to explain. Objective 8, "explain why BFS guarantees" the shortest route, would be the natural place for one (#70).
 
 ### Formative assessment as elicit, interpret, respond
 
-Stanja et al. describe formative assessment as three practices: eliciting evidence, interpreting it, and responding [55, p. 61]. The application does all three for each answer. It elicits with items whose wrong options are built from the misconceptions in Section 2.5, so a wrong answer says something about the student's thinking. It interprets by linking each wrong option to its own feedback. It responds with that feedback, the hint ladder and, for a "Not yet" objective, the review path.
+Stanja et al. describe formative assessment as three practices: eliciting evidence, interpreting it, and responding [55, p. 61]. The application does all three for each answer. It elicits with items, many of whose wrong options are built from the misconceptions in Section 2.5, so a wrong answer can say something about the student's thinking. Not every item does this yet; some distractors are not plausible (#150). It interprets by linking each wrong option to its own feedback. It responds with that feedback, the hint ladder and, for a "Not yet" objective, the review path.
 
 Stanja et al. also warn against two things. Reducing understanding to right or wrong hides what the student needs [55, p. 61], and closed formats such as multiple choice capture students' conceptions only partly [55, p. 67]. Our per-objective states are close to right or wrong. The attempt export keeps every answer, so wrong options could be counted per misconception, but the pilot analysis (Section 8.4) does not do this yet.
 
@@ -575,7 +580,7 @@ Every activity offers a four-level hint ladder. Hints are shown one level at a t
 
 Before level 3, the application warns the student that using it will mark the objective as “Met with support”. This keeps the student in control and keeps the result honest (Section 3.2).
 
-Support also fades through the lesson [26]. Modules 1 to 3 start with worked examples. Module 4 moves from a Parsons problem, to filling in missing lines, to a version with most of the lines left blank. Module 5 starts from faulty code with less given. A student who passes a short check can skip a worked example, because guidance that helps beginners can slow down stronger students [10].
+Support also fades through the lesson [26]. Modules 1 to 3 start with worked examples. Module 4 moves from a Parsons problem, to filling in missing lines, to a version with most of the lines left blank. Module 5 is designed to start from faulty code with less given; on staging it is still empty (#136). A student who passes a short check is meant to be able to skip a worked example, because guidance that helps beginners can slow down stronger students [10]. The checks are written but not yet shown (SE document FR-8.2, #31).
 
 ## The review path for “Not yet” results
 
@@ -641,7 +646,7 @@ We will report two measures of gain. Hake's normalised gain [33] shows how much 
 
 *g* = (post-test % − pre-test %) / (100 − pre-test %)
 
-Hake used *g* on validated concept tests taken by thousands of students [33]. It is biased in favour of groups with high pre-test scores [59], and with four or five items per objective, one item changes it a great deal. We therefore also report Cohen's *d*, the change in means divided by the pooled standard deviation, which takes the spread of scores into account [59]:
+Hake used *g* on validated concept tests taken by thousands of students [33]. It is biased in favour of groups with high pre-test scores [59], and with between one and five items per objective (the mastery check has one trace item for objective 5 and two code items for objective 6), one item changes it a great deal. We therefore also report Cohen's *d*, the change in means divided by the pooled standard deviation, which takes the spread of scores into account [59]:
 
 *d* = (*M*<sub>post</sub> − *M*<sub>pre</sub>) / *s*<sub>pooled</sub>, where *s*<sub>pooled</sub> = √((*s*<sub>pre</sub>² + *s*<sub>post</sub>²) / 2)
 
@@ -664,7 +669,7 @@ Taking part is voluntary, and a participant can stop at any time. The data expor
 
 ## Planned extension: a spaced retrieval quiz
 
-All the retrieval practice in the application happens in one sitting: one or two questions at the start of each module, minutes after the content was learnt (Section 7.3). Testing improves long-term retention more than restudying, but the effect shows on delayed tests [18], and spacing practice over time adds a further benefit. The best gap grows with how long the learning must last [60]. A review of learning techniques rated only two of them as of high use: practice testing and distributed practice [61]. The application has the first but not the second.
+All the retrieval practice in the application happens in one sitting: one or two questions at the start of each module, minutes after the content was learnt (Section 7.3). Testing improves long-term retention more than restudying, but the effect shows on delayed tests [18], and spacing practice over time adds a further benefit. The best gap grows with how long the learning must last [60]. A review of learning techniques rated only two of them as of high utility: practice testing and distributed practice [61]. The application has the first but not the second.
 
 As future work, we plan a short quiz that opens one to three days after a student finishes module 6, or on the morning of the COS212 lecture. It would hold six to eight items that mix all the objectives, drawn from the same item bank as the review paths. Its result would be reported per objective, like the mastery check, and a weak objective would point the student back to its review path. This quiz is not built. It would also give the delayed post-test of Section 8.4 a natural place in the application.
 
@@ -686,11 +691,11 @@ Table: Our main instructional choices and their trade-offs.
 Applying the module's frameworks to the design (Sections 4.5 to 4.8, 5.5, 6.1, 7.1 and 7.3) showed gaps that we had not seen when we used our own research alone:
 
 - **Reflection and integration are thin.** Kolb's reflective-observation stage and Merrill's integration principle are the weakest parts of every module. The application asks students to do and to check, but seldom to explain or think back.
-- **What is built lags what is designed.** Narrated videos, trace tables, module 5, skippable worked examples and bonus quests are in the design but not on staging. Several tables in this document now mark them as planned, so that no claim rests on a feature a student cannot use.
+- **What is built lags what is designed.** Narrated videos, trace tables, module 5, skippable worked examples and bonus quests are in the design but not on staging. This document now marks them as planned where it mentions them, so that its claims match what a student can use on staging.
 - **Two CS2023 topics are only half covered.** The adjacency matrix (AL-Foundational 8.a) and BFS's running time are not taught (Section 1.2).
 - **Results are close to right or wrong.** Three states per objective are better than one mark, but they do not yet use the lecture's differentiated descriptors or report which misconception a student holds (Section 7.3).
 - **The evaluation can show less than we first claimed.** The team pilot is a usability walkthrough, and learning needs a separate, delayed post-test with real students (Section 8).
-- **Our process is SAM in practice.** We named ADDIE, but we worked in short design–build–review cycles (Section 4.6).
+- **Our process is close to SAM.** We named ADDIE, but the platform was built in short design–build–review cycles. The content has had only one such cycle so far (Section 4.6).
 
 If the pilot shows that our choices do not work as intended, the first thing we would change is the review path: if students still score "Not yet" after it, the review segment needs a different representation of the idea, not only a new worked example.
 
@@ -749,6 +754,8 @@ To be added by Simphiwe Nhlapo (#74).
 To be added by Joshua Wereley (#74).
 
 # References and supporting evidence
+
+Lecture slides are cited by PDF page number, which can differ from the number printed on the slide.
 
 <div class="references">
 

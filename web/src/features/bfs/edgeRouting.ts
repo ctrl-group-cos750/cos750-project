@@ -3,9 +3,10 @@
  *
  * The visualiser places vertices on a circle (bfs.api.ts). A straight edge between two vertices
  * that are not neighbours on the circle can pass right beside a third vertex: on the campus graph
- * A–C ran past B and read as A–B plus B–C, which misleads a student predicting the queue: the
- * picture must signal the structure the lesson describes (Mayer's signalling principle, ID document
- * §5.2). Any edge that comes closer than `EDGE_CLEARANCE` to a vertex it doesn't join
+ * A–C ran past B and read as A–B plus B–C. The student predicts the next vertex from this
+ * drawing (FR-6.4). Byrne et al. (1999) found that prediction is what helps students learn from
+ * algorithm animations; that a drawing suggesting a wrong neighbour undermines it is our own
+ * inference, not their finding. Any edge that comes closer than `EDGE_CLEARANCE` to a vertex it doesn't join
  * is drawn as a gentle curve, bent away from that vertex, with the smallest bend that clears every
  * vertex. This works for any graph and layout, not just the campus graph.
  */

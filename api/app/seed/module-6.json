@@ -997,7 +997,7 @@
           },
           {
             "id": "f",
-            "label": "Yes. BFS treats each word as a vertex, so it finds a shortest ladder to the goal."
+            "label": "Yes. BFS treats each word as a vertex and searches in rings, which finds a shortest ladder."
           }
         ]
       },
@@ -1023,7 +1023,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: Yes. BFS treats each word as a vertex, so it finds a shortest ladder to the goal."
+          "body": "Answer: Yes. BFS treats each word as a vertex and searches in rings, which finds a shortest ladder."
         }
       ]
     },

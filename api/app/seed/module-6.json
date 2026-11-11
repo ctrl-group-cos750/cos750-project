@@ -1541,7 +1541,7 @@
         ],
         "feedback": {
           "3": "Not quite. The start vertex is in the queue but not in the visited set, which holds every vertex found so far, so a neighbour can add it again. Start with the start vertex already in visited.",
-          "8": "Not quite. A vertex added to visited only when it leaves the queue can be found again while it waits, and added twice. Is it added to visited when it joins the queue? Add each neighbour to visited as it joins the queue instead."
+          "8": "Not quite. Line 8 is the bug: it adds a vertex to visited only when it leaves the queue, so a vertex still waiting can be found again and added twice. Once each neighbour is added to visited as it joins the queue, line 8 does nothing at all: leave it out."
         }
       },
       "hints": [

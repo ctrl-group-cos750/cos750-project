@@ -38,8 +38,14 @@
           "id": 317,
           "kind": "worked_example",
           "title": "Worked example: filling in a trace table",
-          "body": "We trace BFS on the campus graph from **A**, one row for each vertex that leaves the queue. A vertex is **found** when it joins the queue, and BFS never adds a vertex it has already found. It is **visited** when it leaves the queue, which is when it joins the order.\n\n| Step | Current vertex | Queue after the step | Visited | Order so far |\n|---|---|---|---|---|\n| start | – | A | – | – |\n| 1 | A | C, E | A | A |\n| 2 | C | E, B, F | A, C | A, C |\n| 3 | E | B, F, D | A, C, E | A, C, E |\n\n**Step 1.** A leaves the queue, so it is visited and joins the order. Its neighbours in alphabetical order are C and E. Neither has been found yet, so both join the back of the queue.\n\n**Step 2.** C is at the front, so C leaves. Its neighbours are A, B and F. A has been found already, so only B and F join.\n\n**Step 3.** E leaves. Its neighbours are A, D and F. A is visited, and F is already waiting in the queue, so only D joins.\n\nThe remaining steps work the same way. The full order is **A, C, E, B, F, D, G**.",
+          "body": "We trace BFS on the campus graph from **A**, one row for each vertex that leaves the queue. A vertex is **found** when it joins the queue, and BFS never adds a vertex it has already found. It is **visited** when it leaves the queue, which is when it joins the order.\n\nEvery row follows the same four subgoals. First, **initialise**: the start is found and waits in the queue (the start row). Then, for each row: **take the next vertex** from the front of the queue. Then, **for each neighbour** of that vertex, in alphabetical order, ask whether it has been found. If it hasn't, **mark and enqueue** it: it is found and joins the back.\n\n| Step | Current vertex | Queue after the step | Visited | Order so far |\n|---|---|---|---|---|\n| start | – | A | – | – |\n| 1 | A | C, E | A | A |\n| 2 | C | E, B, F | A, C | A, C |\n| 3 | E | B, F, D | A, C, E | A, C, E |\n\n**Step 1.** *Take the next vertex:* A leaves the queue, so it is visited and joins the order. *For each neighbour:* A's neighbours in alphabetical order are C and E. *Mark and enqueue:* neither has been found yet, so both join the back of the queue.\n\n**Step 2.** *Take the next vertex:* C is at the front, so C leaves. *For each neighbour:* its neighbours are A, B and F. *Mark and enqueue:* A has been found already, so only B and F join.\n\n**Step 3.** *Take the next vertex:* E leaves. *For each neighbour:* its neighbours are A, D and F. *Mark and enqueue:* A is visited, and F is already waiting in the queue, so only D joins.\n\nThe remaining steps work the same way. The full order is **A, C, E, B, F, D, G**.",
           "skip_check_activity_id": 314
+        },
+        {
+          "id": 370,
+          "kind": "activity",
+          "title": "Why doesn't F join again?",
+          "activity_id": 360
         },
         {
           "id": 318,
@@ -291,6 +297,57 @@
         {
           "level": 4,
           "body": "Answer: E, B, F."
+        }
+      ]
+    },
+    {
+      "id": 360,
+      "kind": "multiple_choice",
+      "title": "Why doesn't F join again?",
+      "module_id": 3,
+      "purpose": "practice",
+      "objective_id": 5,
+      "config": {
+        "prompt": "In step 3 of the worked example, E leaves the queue. Its neighbours are A, D and F, but only D joins. Why doesn't F join the queue?",
+        "options": [
+          {
+            "id": "a",
+            "label": "F was found at step 2 and is already waiting in the queue."
+          },
+          {
+            "id": "b",
+            "label": "F comes after D in the alphabet, so it must wait its turn."
+          },
+          {
+            "id": "c",
+            "label": "F has been visited already, so it is in the order so far."
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "C added F at step 2, so F has been found and is waiting in the queue. BFS never adds a vertex it has already found, so F doesn't join a second time.",
+        "correct": "a",
+        "feedback": {
+          "b": "Not quite. Alphabetical order only decides the order in which new neighbours join. F is left out because C already added it at step 2. Before a neighbour joins, check whether it is already in the queue.",
+          "c": "Not quite. F isn't in the order yet: it is still waiting in the queue, so it is found but not visited. BFS adds only neighbours it hasn't found, so check the queue as well as the order."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Look at the queue after step 2."
+        },
+        {
+          "level": 2,
+          "body": "After step 2 the queue is E, B, F."
+        },
+        {
+          "level": 3,
+          "body": "F joined at step 2, when C left. Can a vertex be in the queue twice?"
+        },
+        {
+          "level": 4,
+          "body": "Answer: F was found at step 2 and is already waiting in the queue."
         }
       ]
     },

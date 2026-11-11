@@ -43,6 +43,12 @@
           "skip_check_activity_id": 103
         },
         {
+          "id": 170,
+          "kind": "activity",
+          "title": "Why is A–C one edge?",
+          "activity_id": 160
+        },
+        {
           "id": 106,
           "kind": "activity",
           "title": "Label the bus-stop graph",
@@ -260,6 +266,57 @@
         {
           "level": 4,
           "body": "Answer: 3 edges, and Q has the most neighbours (P, R and S)."
+        }
+      ]
+    },
+    {
+      "id": 160,
+      "kind": "multiple_choice",
+      "title": "Why is A–C one edge?",
+      "module_id": 1,
+      "purpose": "practice",
+      "objective_id": 2,
+      "config": {
+        "prompt": "In the worked example, the walkway between A and C touches two vertices, yet it is one edge. Why is it counted only once?",
+        "options": [
+          {
+            "id": "a",
+            "label": "A owns the edge, because A comes first in the alphabet."
+          },
+          {
+            "id": "c",
+            "label": "An edge is one line, named by the two vertices it joins."
+          },
+          {
+            "id": "b",
+            "label": "C–A is a second edge, but the map draws only one of them."
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "One line is one edge. It touches two vertices because it has two ends, and it is named by both of them, in either order.",
+        "correct": "c",
+        "feedback": {
+          "a": "Not quite. No vertex owns an edge: A–C and C–A name the same line. Name an edge by both its ends, in either order.",
+          "b": "Not quite. On an undirected graph one line works both ways, so C–A is the same edge as A–C. Count each line once."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Look at the campus map. How many lines join A and C?"
+        },
+        {
+          "level": 2,
+          "body": "An edge is a line between two vertices, and a line has two ends."
+        },
+        {
+          "level": 3,
+          "body": "A–C and C–A are two names for the same line."
+        },
+        {
+          "level": 4,
+          "body": "Answer: an edge is one line, named by the two vertices it joins, so A–C counts once."
         }
       ]
     },

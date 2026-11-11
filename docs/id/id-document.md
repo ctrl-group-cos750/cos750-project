@@ -25,7 +25,7 @@ CS2023 numbers each topic so that it can be cited exactly [40, p. 33]. Our topic
 
 AL-Foundational 11.c speaks of *tree* search, so we do not rely on it alone. AI-Search 2.a and MSF-Discrete 7.b name BFS on graphs, and both are CS Core. CS2023 also sets a skill level for each topic [40, pp. 31–32, 320; 57, p. 16]: graphs (8) at Explain, the representation choice (8.a) at Apply, and BFS (11.c) at Apply. Table 1 in Section 3.2 maps our objectives to these levels.
 
-Two parts of these topics are not taught yet. The application uses only an adjacency list (a Python dictionary), so the list-against-matrix choice in 8.a is not taught. It also never explains BFS's running time, which AL-Complexity's learning outcome 4 asks for every algorithm in AL-Foundational [40, p. 92]. Both would fit in module 2 and module 3 as one short segment and one item each.
+Two parts of these topics are taught only briefly (#150). Module 2 compares the adjacency list with the adjacency matrix (8.a): the space each takes, and which answers "is X joined to Y?" or "which vertices are next to X?" in one step; BFS then uses the list. Module 4 explains BFS's running time, which AL-Complexity's learning outcome 4 asks for every algorithm in AL-Foundational [40, p. 92]: O(V + E) with an adjacency list, O(V²) with a matrix. Each is one short text segment, with no practice item yet.
 
 BFS is hard for beginners. A student must track the current vertex, the queue and the visited set at the same time, and one mistake changes the whole traversal. A lecture leaves little time to practise this tracking. The application gives guided practice before the lecture, so the lecture can go deeper.
 
@@ -214,7 +214,7 @@ Constructive alignment means that objectives, learning activities and assessment
 
 Table: The lesson sequence, in which each row links objectives, activities and evidence. This follows constructive alignment [4].
 
-The timings are the plan. Our own estimate of the content as written on staging, at about a minute per multiple-choice item and the video lengths in the scripts, is 130 to 140 minutes. Module 6 alone, with 24 items, takes about 45 to 50 minutes. The pilot's timings will decide what to cut (Section 8.5).
+The timings are the plan; the Duration column is unchanged. Our own estimate of the content as written, at about a minute per multiple-choice item and the video lengths in the scripts, is about 145 minutes against the 75 planned, now that the support and evidence-based items are in (#150, #173). Module 6 alone, with 24 items, takes about 52 minutes against 10 planned. The pilot's timings will decide what to cut (Section 8.5).
 
 The application shows students the planned times, which are the modules' estimated minutes in the content: 74 minutes in total, on the register page and the module map alike (#146; the plan's "about 75" is the same figure, rounded). So the application tells students about half the time the content takes. When the pilot's timings are written up (#76), either the estimated minutes are changed to the measured times or the content is cut to fit the plan. The SE document lists this as a known limitation (§15.5).
 
@@ -299,7 +299,7 @@ Interactive video also supports learning. Zhang and colleagues compared video th
 
 ## Cognitive load and multimedia design
 
-Working memory is limited, so a lesson must avoid overload. BFS asks a student to track the current vertex, the queue and the visited set at the same time. Sweller showed that novices who solve problems by searching for a method can struggle to build useful knowledge, and that worked examples can help [20]. Later work asks designers to cut load that does not help learning [21]. For this reason each module starts with a worked example. It then moves to partly completed tasks and then to blank tasks.
+Working memory is limited, so a lesson must avoid overload. BFS asks a student to track the current vertex, the queue and the visited set at the same time. Sweller showed that novices who solve problems by searching for a method can struggle to build useful knowledge, and that worked examples can help [20]. Later work asks designers to cut load that does not help learning [21]. For this reason each module starts with a worked example. It then moves to partly completed tasks and then to blank tasks. The worked examples in modules 3 and 4 also label the subgoals of BFS: initialise, take the next vertex, for each neighbour, mark and enqueue. Module 4's Parsons problem names them in its first hint. Subgoal labels improve novices' performance and transfer, and help on Parsons problems [63, 64, 65].
 
 We also apply Mayer's multimedia principles [15]. We use signalling, which means the current vertex is highlighted in each step. We use segmenting, which means each segment covers one idea and the student controls the pace. We use pre-training, which means the key terms and the queue refresher come before BFS. We use coherence, which means we leave out decoration that does not teach. These choices cut extra load, so students can spend their effort on the algorithm.
 
@@ -394,7 +394,7 @@ Kolb's experiential learning theory describes a four-stage cycle: concrete exper
 | Stage | Where the application provides it | What is weak |
 |---|---|---|
 | Concrete experience | The campus puzzle before any terms are taught (module 1). Predicting each BFS step in the visualiser (module 3). | After their retrieval questions, modules 2 and 4 open with a video or a worked example, so they start at abstract conceptualisation. |
-| Reflective observation | Feedback that gives the reason for a result. Stepping back and replaying BFS in the visualiser. | No activity asks the student to reflect. A short "why" question after each worked example would add it (#150). |
+| Reflective observation | Feedback that gives the reason for a result. Stepping back and replaying BFS in the visualiser. A short "why" question after each worked example in modules 1 to 4 asks the student to explain a step [62] (#150). | No "why" question follows a level-4 hint yet. |
 | Abstract conceptualisation | Definitions, the three rules of BFS, and worked examples in modules 1 to 4. | In module 1, the definitions are only in the unrecorded video (#37, #149). |
 | Active experimentation | Practice on new graphs, ordering and completing BFS in module 4, and the closing task on a new directed graph. | Testing and debugging, the clearest experiment, is module 5, which is empty (#136). |
 
@@ -559,7 +559,7 @@ Fritz makes a related point: a working program does not prove mastery, because i
 
 ### Formative assessment as elicit, interpret, respond
 
-Stanja et al. describe formative assessment as three practices: eliciting evidence, interpreting it, and responding [55, p. 61]. The application does all three for each answer. It elicits with items, many of whose wrong options are built from the misconceptions in Section 2.5, so a wrong answer can say something about the student's thinking. Not every item does this yet; some distractors are not plausible (#150). It interprets by linking each wrong option to its own feedback. It responds with that feedback, the hint ladder and, for a "Not yet" objective, the review path.
+Stanja et al. describe formative assessment as three practices: eliciting evidence, interpreting it, and responding [55, p. 61]. The application does all three for each answer. It elicits with items, many of whose wrong options are built from the misconceptions in Section 2.5, so a wrong answer can say something about the student's thinking. Module 4 has two items whose neighbour lists are not in alphabetical order, because students over-generalise alphabetical order into a rule of graph algorithms [67]. Their distractors are the orders that buggy BFS programs give (alphabetical order, DFS, a stack instead of a queue, marking a vertex only when it leaves the queue), and the feedback for each names that misconception, as Seppälä et al. did when they matched wrong answers to buggy algorithm variants [66] (#150). Not every item does this yet. It interprets by linking each wrong option to its own feedback. It responds with that feedback, the hint ladder and, for a "Not yet" objective, the review path.
 
 Stanja et al. also warn against two things. Reducing understanding to right or wrong hides what the student needs [55, p. 61], and closed formats such as multiple choice capture students' conceptions only partly [55, p. 67]. Our per-objective states are close to right or wrong. The attempt export keeps every answer, so wrong options could be counted per misconception, but the pilot analysis (Section 8.4) does not do this yet.
 
@@ -700,7 +700,7 @@ Applying the module's frameworks to the design (Sections 4.5 to 4.8, 5.5, 6.1, 7
 
 - **Reflection and integration are thin.** Kolb's reflective-observation stage and Merrill's integration principle are the weakest parts of every module. The application asks students to do and to check, but seldom to explain or think back.
 - **What is built lags what is designed.** Narrated videos, module 5, skippable worked examples and bonus quests are in the design but not on staging; trace tables reached staging on 11 November (SE document FR-6.6). This document now marks them as planned where it mentions them, so that its claims match what a student can use on staging.
-- **Two CS2023 topics are only half covered.** The adjacency matrix (AL-Foundational 8.a) and BFS's running time are not taught (Section 1.2).
+- **Two CS2023 topics are only half covered.** The adjacency matrix (AL-Foundational 8.a) and BFS's running time are taught only briefly: one short text segment each, with no practice item yet (Section 1.2).
 - **Results are close to right or wrong.** Three states per objective are better than one mark, but they do not yet use the lecture's differentiated descriptors or report which misconception a student holds (Section 7.3).
 - **The evaluation can show less than we first claimed.** The team pilot is a usability walkthrough, and learning needs a separate, delayed post-test with real students (Section 8).
 - **Our process is close to SAM.** We named ADDIE, but the platform was built in short design–build–review cycles. The content has had only one such cycle so far (Section 4.6).
@@ -891,5 +891,17 @@ Marcelo Pias, Susan Reiser, Christian Servin, Rahul Simha, Titus Winters, and Qi
 [60]	N. J. Cepeda, H. Pashler, E. Vul, J. T. Wixted, and D. Rohrer. Distributed practice in verbal recall tasks: A review and quantitative synthesis. *Psychological Bulletin*, 132(3):354–380, 2006. https://doi.org/10.1037/0033-2909.132.3.354
 
 [61]	J. Dunlosky, K. A. Rawson, E. J. Marsh, M. J. Nathan, and D. T. Willingham. Improving students' learning with effective learning techniques. *Psychological Science in the Public Interest*, 14(1):4–58, 2013. https://doi.org/10.1177/1529100612453266
+
+[62]	R. K. Atkinson, S. J. Derry, A. Renkl, and D. Wortham. Learning from examples: Instructional principles from the worked examples research. *Review of Educational Research*, 70(2):181–214, 2000.
+
+[63]	L. E. Margulieux, M. Guzdial, and R. Catrambone. Subgoal-labeled instructional material improves performance and transfer in learning to develop mobile applications. In *Proceedings of the 9th International Computing Education Research Conference (ICER '12)*. ACM, 2012. https://doi.org/10.1145/2361276.2361291
+
+[64]	B. B. Morrison, L. E. Margulieux, and M. Guzdial. Subgoals, context, and worked examples in learning computing problem solving. In *Proceedings of the 11th International Computing Education Research Conference (ICER '15)*, pages 21–29. ACM, 2015. https://doi.org/10.1145/2787622.2787733
+
+[65]	B. B. Morrison, L. E. Margulieux, B. Ericson, and M. Guzdial. Subgoals help students solve Parsons problems. In *Proceedings of the 47th ACM Technical Symposium on Computing Science Education (SIGCSE '16)*, pages 42–47. ACM, 2016.
+
+[66]	O. Seppälä, L. Malmi, and A. Korhonen. Observations on student misconceptions: A case study of the Build-Heap algorithm. *Computer Science Education*, 16(3):241–255, 2006. https://doi.org/10.1080/08993400600913523
+
+[67]	A. Tilanterä et al. Investigating students' misconceptions of Dijkstra's algorithm: Exploration of algorithm simulation traces. 2025. https://doi.org/10.1145/3724363.3729081 (venue and full author list not verified)
 
 </div>

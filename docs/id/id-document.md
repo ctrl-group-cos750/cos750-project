@@ -375,7 +375,7 @@ Feedback on code is given line by line. The student sees which lines or blanks a
 Every activity offers a four-level hint ladder. Hints are shown one level at a time and only when the student asks:
 
 1. Nudge: reminds the student of the key idea. Example: “Which vertex has been in the queue the longest?”
-2. Targeted hint: points to the exact step or line. Example: “Look at where a vertex is marked as visited.”
+2. Targeted hint: points to the exact step or line. Example: “Look at where a vertex is added to the visited set.”
 3. Partial solution: shows part of the answer, such as the next state of the queue or one key line of code.
 4. Worked solution: shows the full answer with an explanation of each step.
 

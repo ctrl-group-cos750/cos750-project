@@ -14,14 +14,18 @@ import type { AttemptResult, Submission } from './activities.types.ts'
 
 type ActivityViewProps = {
   activityId: number
-  /** Called with each checked answer, e.g. so a module's recall questions know when to move on. */
+  /** h1 on its own page; h2 for a module's recall questions, under the module's title; h3 inside
+   * a module segment, under the segment's title. */
+  heading?: 'h1' | 'h2' | 'h3'
+  /** Called with each checked answer, e.g. so a module knows the segment is done, or that its
+   * recall questions are answered. */
   onResult?: (result: AttemptResult) => void
-  /** The title's heading level: 1 on the activity page, 2 inside a module page (its title is 1). */
-  headingLevel?: 1 | 2 | 3
 }
 
-/** One activity with its feedback and hint ladder: the activity page, and a module's recall. */
-export function ActivityView({ activityId, onResult, headingLevel }: ActivityViewProps) {
+/** One activity with its feedback and hint ladder: the activity page, an activity segment in a
+ * module (SegmentView), which keeps the module's own navigation on screen, and a module's recall
+ * questions. */
+export function ActivityView({ activityId, heading, onResult }: ActivityViewProps) {
   const [result, setResult] = useState<AttemptResult>()
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
@@ -67,7 +71,7 @@ export function ActivityView({ activityId, onResult, headingLevel }: ActivityVie
         onSubmit={submit}
         requestHint={requestActivityHint}
         loadHints={fetchActivityHints}
-        headingLevel={headingLevel}
+        heading={heading}
       />
     </>
   )

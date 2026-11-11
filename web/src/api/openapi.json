@@ -1120,7 +1120,7 @@
           "modules"
         ],
         "summary": "Save Module Position",
-        "description": "Record the student's current segment position and return the updated module.\n\nThe client calls this whenever the student advances to a new segment.\nThe furthest segment reached is kept, so stepping back changes nothing. Reaching the last\nsegment marks the module ``complete`` for good.\n\nReturns the updated ``ModuleDetailOut`` so the frontend can re-render the\nmodule detail page with the new status in one round-trip (consistent with\n``submit_attempt`` returning ``AttemptOut``).\n\nReturns 404 if the module does not exist; 403 if it is locked; 409 if the position is more\nthan one segment past the furthest the student has reached.",
+        "description": "Record the student's current segment position and return the updated module.\n\nThe client calls this whenever the student advances to a new segment.\nThe furthest segment reached is kept, so stepping back changes nothing. A segment must be\ndone (its activity answered, or its video's checkpoints passed) before moving past it, and\nsaving the last segment again once it is done marks the module ``complete`` for good.\n\nReturns the updated ``ModuleDetailOut`` so the frontend can re-render the\nmodule detail page with the new status in one round-trip (consistent with\n``submit_attempt`` returning ``AttemptOut``).\n\nReturns 404 if the module does not exist; 403 if it is locked; 409 if the position is more\nthan one segment past the furthest the student has reached, or past (or finishing on) a\nsegment they haven't done yet.",
         "operationId": "save_module_position_api_modules__module_id__position_post",
         "parameters": [
           {
@@ -3447,6 +3447,11 @@
               }
             ],
             "title": "Activityid"
+          },
+          "done": {
+            "type": "boolean",
+            "title": "Done",
+            "default": true
           }
         },
         "additionalProperties": false,

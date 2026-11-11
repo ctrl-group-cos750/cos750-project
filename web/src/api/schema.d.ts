@@ -438,15 +438,17 @@ export interface paths {
      * @description Record the student's current segment position and return the updated module.
      *
      *     The client calls this whenever the student advances to a new segment.
-     *     The furthest segment reached is kept, so stepping back changes nothing. Reaching the last
-     *     segment marks the module ``complete`` for good.
+     *     The furthest segment reached is kept, so stepping back changes nothing. A segment must be
+     *     done (its activity answered, or its video's checkpoints passed) before moving past it, and
+     *     saving the last segment again once it is done marks the module ``complete`` for good.
      *
      *     Returns the updated ``ModuleDetailOut`` so the frontend can re-render the
      *     module detail page with the new status in one round-trip (consistent with
      *     ``submit_attempt`` returning ``AttemptOut``).
      *
      *     Returns 404 if the module does not exist; 403 if it is locked; 409 if the position is more
-     *     than one segment past the furthest the student has reached.
+     *     than one segment past the furthest the student has reached, or past (or finishing on) a
+     *     segment they haven't done yet.
      */
     post: operations['save_module_position_api_modules__module_id__position_post']
     delete?: never
@@ -1352,6 +1354,11 @@ export interface components {
       videoId?: number | null
       /** Activityid */
       activityId?: number | null
+      /**
+       * Done
+       * @default true
+       */
+      done: boolean
     }
     /**
      * StaffCheckpointIn

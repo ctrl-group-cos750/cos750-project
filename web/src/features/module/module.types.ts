@@ -26,6 +26,9 @@ export type Segment = {
   body: string | null
   videoId: number | null
   activityId: number | null
+  /** The student has done it and can move past it (FR-2.7): its activity answered at least
+   * once, or every checkpoint of its video passed. Always true for every other kind. */
+  done: boolean
 }
 
 /** A retrieval question the module asks before its segments (FR-2.4). */

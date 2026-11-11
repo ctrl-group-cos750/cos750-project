@@ -4,6 +4,7 @@ import { Alert, Button, Card, ProgressBar, Spinner, Tag } from '../../components
 import type { TagTone } from '../../components'
 import type { ModuleStatus, ModuleSummary } from './module.types.ts'
 import { fetchModules } from './module.api.ts'
+import { minutesProgress } from './minutes.ts'
 import styles from './ModuleMap.module.css'
 
 /** Maps a module status to a Tag tone and display label. */
@@ -86,14 +87,23 @@ export function ModuleMap() {
 
   const modules = query.data
   const continueTarget = findContinueTarget(modules)
-  const totalMinutes = modules.reduce((sum, m) => sum + m.estimatedMinutes, 0)
+  const minutes = minutesProgress(modules)
 
   return (
     <div className={styles.page}>
       <div className={styles.header}>
         <h1 className={styles.heading}>Graphs and breadth-first search</h1>
-        <span className={styles.totalDuration}>About {totalMinutes} minutes in total</span>
+        <span className={styles.totalDuration}>
+          {minutes.done === 0
+            ? `About ${minutes.total} minutes in total`
+            : minutes.done >= minutes.total
+              ? `All ${minutes.total} minutes done`
+              : `About ${minutes.done} of ${minutes.total} minutes done · about ${minutes.total - minutes.done} left`}
+        </span>
       </div>
+      {minutes.done > 0 && (
+        <ProgressBar label="Course progress in minutes" value={minutes.done} max={minutes.total} />
+      )}
 
       <ul className={styles.list}>
         {modules.map((m) => (

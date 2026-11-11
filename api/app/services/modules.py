@@ -9,8 +9,11 @@ the one before it is complete, and stays as it is once the student has started i
 no segments yet is passed over, so missing content never locks the rest of the course.
 
 Progress (FR-2.5, FR-2.6): the student moves through a module one segment at a time. The
-furthest segment reached is kept, so stepping back to reread never loses progress, and reaching
-the last segment completes the module for good.
+furthest segment reached is kept, so stepping back to reread never loses progress. A student moves
+past a segment only once it is done (FR-2.7): an activity segment once they have answered its
+activity at least once, right or wrong, and a video segment once they have passed every one of
+the video's checkpoints. Every other kind is done when shown. The module is complete, for good,
+once its last segment is done.
 """
 
 from __future__ import annotations
@@ -21,7 +24,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, Module, ModuleProgress, Segment, Video
+from app.models import Activity, Attempt, Checkpoint, Module, ModuleProgress, Segment, Video
 from app.schemas.modules import (
     ModuleDetailOut,
     ModuleOut,
@@ -45,6 +48,10 @@ class PositionTooFar(ValueError):
 
 class RetrievalIncomplete(ValueError):
     """The student has not answered every retrieval item before starting the module."""
+
+
+class SegmentNotDone(ValueError):
+    """The student tried to move past, or finish on, a segment they haven't done yet."""
 
 
 def _modules(session: Session) -> Sequence[Module]:
@@ -132,6 +139,56 @@ def get_modules_for_user(session: Session, user_id: int) -> list[ModuleOut]:
     ]
 
 
+def _videos(session: Session, segments: Sequence[Segment]) -> dict[int, int]:
+    """Each video segment's video, by segment id. A video points at the segment that plays it
+    (Video.segment_id): videos are made in the app."""
+    return {
+        video.segment_id: video.id
+        for video in session.scalars(
+            select(Video).where(Video.segment_id.in_([segment.id for segment in segments]))
+        )
+        if video.segment_id is not None
+    }
+
+
+def done_segments(session: Session, user_id: int, segments: Sequence[Segment]) -> set[int]:
+    """The ids of the segments this student has done (FR-2.7). An activity segment is done once
+    they have answered its activity at least once, and a video segment once they have passed
+    every checkpoint in its video. A segment with nothing to do (any other kind, or no activity
+    or video yet) is always done."""
+    videos = _videos(session, segments)
+    checkpoints: dict[int, set[int]] = {}
+    for video_id, activity_id in session.execute(
+        select(Checkpoint.video_id, Checkpoint.activity_id).where(
+            Checkpoint.video_id.in_(videos.values())
+        )
+    ):
+        checkpoints.setdefault(video_id, set()).add(activity_id)
+    wanted = {s.activity_id for s in segments if s.kind == "activity" and s.activity_id}
+    wanted |= {a for ids in checkpoints.values() for a in ids}
+    answered: set[int] = set()
+    passed: set[int] = set()
+    for activity_id, correct in session.execute(
+        select(Attempt.activity_id, Attempt.correct).where(
+            Attempt.user_id == user_id, Attempt.activity_id.in_(wanted)
+        )
+    ):
+        answered.add(activity_id)
+        if correct:
+            passed.add(activity_id)
+    done: set[int] = set()
+    for segment in segments:
+        if segment.kind == "activity" and segment.activity_id is not None:
+            if segment.activity_id in answered:
+                done.add(segment.id)
+        elif segment.kind == "video" and segment.id in videos:
+            if checkpoints.get(videos[segment.id], set()) <= passed:
+                done.add(segment.id)
+        else:
+            done.add(segment.id)
+    return done
+
+
 def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleDetailOut:
     """One module with its segments in order. Raises `ModuleNotFound` or `ModuleLocked`."""
     status = _status(session, user_id, module_id)
@@ -150,13 +207,8 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
         .order_by(Activity.id)
     ).all()
     answered = _answered(session, user_id, [activity.id for activity in retrieval])
-    # A video segment's video points at it (Video.segment_id): videos are made in the app.
-    videos = {
-        video.segment_id: video.id
-        for video in session.scalars(
-            select(Video).where(Video.segment_id.in_([segment.id for segment in segments]))
-        )
-    }
+    videos = _videos(session, segments)
+    done = done_segments(session, user_id, segments)
     # TODO (FR-8.1): leave out the refreshers module 0's diagnostic has ruled out, once the
     # diagnostic records its result. Until then every refresher is shown.
     return ModuleDetailOut(
@@ -170,6 +222,7 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
                 body=segment.body or None,
                 video_id=videos.get(segment.id),
                 activity_id=segment.activity_id,
+                done=segment.id in done,
             )
             for index, segment in enumerate(segments)
         ],
@@ -199,9 +252,11 @@ def save_position(
     """Record that the student reached `segment_position` (0-based) in this module.
 
     The furthest position reached is kept: stepping back is allowed and changes nothing. Moving
-    more than one segment past the furthest raises `PositionTooFar`. Reaching the last segment
-    completes the module, and a complete module stays complete (FR-2.6). Raises `ModuleNotFound`
-    or `ModuleLocked` like `get_module_detail`.
+    more than one segment past the furthest raises `PositionTooFar`, and moving past a segment
+    the student hasn't done raises `SegmentNotDone` (FR-2.7). Saving the last segment again once
+    it is done completes the module (the page's "Finish module"), and a complete module stays
+    complete (FR-2.6); finishing on a last segment that isn't done raises `SegmentNotDone`.
+    Raises `ModuleNotFound` or `ModuleLocked` like `get_module_detail`.
 
     Raises `RetrievalIncomplete` until the student has answered the module's retrieval questions
     (FR-2.4), unless the module is already complete: a student who finished it before its
@@ -218,7 +273,8 @@ def save_position(
         ).all()
         if not set(retrieval_ids) <= _answered(session, user_id, retrieval_ids):
             raise RetrievalIncomplete(module_id)
-    last = len(_segments(session, module_id)) - 1
+    segments = _segments(session, module_id)
+    last = len(segments) - 1
     if last < 0:
         raise PositionTooFar(module_id)  # nothing to move through yet
     row = session.scalar(
@@ -229,11 +285,23 @@ def save_position(
     reached = row.current_segment_position if row else 0
     if segment_position > min(reached + 1, last):
         raise PositionTooFar(module_id)
+    done = done_segments(session, user_id, segments)
+    if status != "complete":
+        # Moving on leaves the segment before this one; finishing stays on the last.
+        if segment_position > reached and segments[segment_position - 1].id not in done:
+            raise SegmentNotDone(module_id)
+        finishing = segment_position == last == reached
+        if finishing and segments[last].id not in done:
+            raise SegmentNotDone(module_id)
     if row is None:
         row = ModuleProgress(user_id=user_id, module_id=module_id, status="in_progress")
         session.add(row)
     row.current_segment_position = max(reached, segment_position)
-    if row.current_segment_position == last and row.status != "complete":
+    if (
+        row.status != "complete"
+        and row.current_segment_position == last
+        and segments[last].id in done
+    ):
         row.status = "complete"
         row.completed_at = datetime.now(tz=UTC)
     session.flush()

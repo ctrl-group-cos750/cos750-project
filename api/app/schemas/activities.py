@@ -64,10 +64,39 @@ class ParsonsConfig(ApiModel):
     lines: list[ParsonsLine] = Field(min_length=1, max_length=100)
 
 
-class ParsonsSolution(ApiModel):
-    """Server-only: the correct sequence of line IDs. Any line not listed is a distractor."""
+# One step of an accepted order: a line id, or a group of line ids that may go in any order among
+# themselves (they still fill that stretch of the answer together), e.g. `[3, 4, 5]`.
+ParsonsStep = int | Annotated[list[int], Field(max_length=100)]
 
-    order: list[int] = Field(min_length=1, max_length=100)
+
+class ParsonsSolution(ApiModel):
+    """Server-only: the accepted orders of line IDs (FR-5.4). Any line not used is a distractor.
+
+    `order` is one correct sequence. A step in it can be a list of line ids whose order doesn't
+    matter, so `[1, 2, [3, 4, 5], 6]` accepts 1, 2, then 3, 4 and 5 in any of their six orders,
+    then 6. `alternatives` lists more correct sequences in the same notation, for a line that can
+    sit in a different place (not just swap with its neighbours); each must use the same lines as
+    `order`. A plain list of ids, as before, is one order and nothing else. The checks that a
+    solution makes sense (known ids, no line twice, no group of one) are in
+    app/services/content.py."""
+
+    order: list[ParsonsStep] = Field(min_length=1, max_length=100)
+    alternatives: list[Annotated[list[ParsonsStep], Field(min_length=1, max_length=100)]] = Field(
+        default_factory=list, max_length=20
+    )
+
+    def accepted(self) -> list[list[ParsonsStep]]:
+        """Every accepted order, `order` first."""
+        return [self.order, *self.alternatives]
+
+    def first_order(self) -> list[int]:
+        """`order` as plain line ids, each group in the order written: one correct answer."""
+        return flatten(self.order)
+
+
+def flatten(steps: list[ParsonsStep]) -> list[int]:
+    """The line ids of an accepted order, each group's ids in the order written."""
+    return [i for step in steps for i in ([step] if isinstance(step, int) else step)]
 
 
 class ParsonsSubmission(ApiModel):

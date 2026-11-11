@@ -22,6 +22,7 @@ from app.schemas.activities import (
     ParsonsConfig,
     ParsonsSolution,
     TraceConfig,
+    flatten,
 )
 from app.schemas.base import ApiModel
 from app.schemas.graphs import GraphScenarioOut
@@ -43,6 +44,34 @@ SHAPES: dict[str, tuple[type[BaseModel], type[BaseModel]]] = {
     "choose_tests": (ChooseTestsConfig, ChooseTestsSolution),
     "trace": (TraceConfig, NoSolution),
 }
+
+
+def _parsons(config: ParsonsConfig, solution: ParsonsSolution) -> None:
+    """Every accepted order is one a student can build from the lines shown (FR-5.4, NFR-M5)."""
+    ids = [line.id for line in config.lines]
+    if len(ids) != len(set(ids)):
+        raise ValueError("two lines share an id, so a submission could not tell them apart")
+    used = set(solution.first_order())
+    for n, steps in enumerate(solution.accepted()):
+        name = "the order" if n == 0 else f"alternative {n}"
+        for step in steps:
+            if isinstance(step, list) and len(step) < 2:
+                # An empty group can't be placed; a group of one is just that line: write the id.
+                raise ValueError(f"{name}: a group of lines needs at least two ids, not {step}")
+        lines = flatten(steps)
+        if unknown := sorted(set(lines) - set(ids)):
+            raise ValueError(f"{name} uses unknown line ids {unknown}")
+        if len(lines) != len(set(lines)):
+            raise ValueError(f"{name} uses a line twice")
+        if set(lines) != used:
+            # Lines one order needs and another leaves out would be a distractor and an answer
+            # line at once, so the feedback couldn't say which.
+            raise ValueError(f"{name} must use the same lines as the order")
+    shapes = [
+        tuple(s if isinstance(s, int) else frozenset(s) for s in o) for o in solution.accepted()
+    ]
+    if len(shapes) != len(set(shapes)):
+        raise ValueError("an alternative repeats an order already accepted")
 
 
 def _multiple_choice(config: MultipleChoiceConfig, solution: MultipleChoiceSolution) -> None:
@@ -155,7 +184,7 @@ def validate_activity(kind: str, config: dict[str, Any], solution: dict[str, Any
             _choose_tests(parsed_config, parsed_solution)
         case FillInConfig(), FillInSolution():
             _fill_in(parsed_config, parsed_solution)
+        case ParsonsConfig(), ParsonsSolution():
+            _parsons(parsed_config, parsed_solution)
         case TraceConfig(), _:
             _trace(parsed_config)
-        case _:
-            pass  # Parsons: the shapes are the whole check

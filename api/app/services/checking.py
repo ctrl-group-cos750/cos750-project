@@ -26,6 +26,7 @@ from app.schemas.activities import (
     MultipleChoiceSubmission,
     ParsonsConfig,
     ParsonsSolution,
+    ParsonsStep,
     ParsonsSubmission,
     PartResult,
     TraceConfig,
@@ -65,29 +66,84 @@ def _result(parts: list[PartResult]) -> CheckResult:
     )
 
 
+def _closest(steps: list[ParsonsStep], got: list[int]) -> list[int]:
+    """The order `steps` accepts that is closest to `got`: each group's lines in the order the
+    student put them (lines of a group the student left out go last, as written). No order the
+    steps accept keeps more of `got` in place, so this is the one to compare with."""
+    first: dict[int, int] = {}
+    for i, line in enumerate(got):
+        first.setdefault(line, i)
+    order: list[int] = []
+    for step in steps:
+        if isinstance(step, int):
+            order.append(step)
+        else:
+            order.extend(sorted(step, key=lambda line: first.get(line, len(got))))
+    return order
+
+
+def _in_sequence(expected: list[int], got: list[int]) -> set[int]:
+    """The positions in `got` of a longest run of lines already in `expected`'s relative order
+    (a longest common subsequence; ids in `expected` are distinct). Those lines can stay where
+    they are; every other line has to move, so only they are marked wrong. A line used twice
+    counts once. O(n²) for n ≤ 100 lines."""
+    rank = {line: r for r, line in enumerate(expected)}
+    ranked = [(i, rank[line]) for i, line in enumerate(got) if line in rank]
+    best: list[int] = []  # best[k]: length of the longest run ending at ranked[k]
+    back: list[int] = []  # the run's previous entry, or -1
+    for k, (_, r) in enumerate(ranked):
+        best.append(1)
+        back.append(-1)
+        for j in range(k):
+            if ranked[j][1] < r and best[j] + 1 > best[k]:
+                best[k], back[k] = best[j] + 1, j
+    kept: set[int] = set()
+    k = max(range(len(ranked)), key=lambda k: best[k], default=-1)
+    while k != -1:
+        kept.add(ranked[k][0])
+        k = back[k]
+    return kept
+
+
 def check_parsons(
     config: ParsonsConfig, solution: ParsonsSolution, submission: ParsonsSubmission
 ) -> CheckResult:
-    """One part per position: a position is correct when the student's line id there matches the
-    solution's. Extra lines (distractors placed, or a longer answer) and a short answer both fail
-    the positions they affect, so they lower the score. `config` is accepted for a uniform checker
-    signature; Parsons grading needs only the solution order."""
-    expected, got = solution.order, submission.order
-    in_solution = set(expected)  # a line id the answer should use somewhere
+    """Correct when the order is any the solution accepts (FR-5.4): its `order` or an
+    `alternative`, with the lines of each group in any order among themselves.
+
+    The feedback compares the student's order with the closest accepted order by relative order,
+    not position: the lines of a longest common subsequence stay, the rest are marked. So one
+    line in the wrong place is the only line marked wrong, instead of every line after it. The
+    Parsons reviews (Du et al. 2020; Ericson et al. 2022) set line-order grading against
+    execution-based grading; this keeps line order but accepts every order the content lists.
+
+    There is one part per position of the answer, as before: right if the line there is in that
+    longest run, otherwise "in the wrong place" (a solution line, or one used twice) or "does not
+    belong" (a distractor, or an id not in the activity). If the answer is shorter than the
+    solution, a "missing" part per line short follows, so a short answer cannot pass and its
+    score shows how much is missing. All parts right means the answer is exactly an accepted
+    order. `config` is accepted for a uniform checker signature; grading needs only the
+    solution."""
+    got = submission.order
+    closest: list[int] = []
+    kept: set[int] = set()
+    for n, steps in enumerate(solution.accepted()):  # `order` first, so it wins a tie
+        candidate = _closest(steps, got)
+        in_order = _in_sequence(candidate, got)
+        if n == 0 or len(in_order) > len(kept):
+            closest, kept = candidate, in_order
+    in_solution = set(closest)
     parts: list[PartResult] = []
-    for i in range(max(len(expected), len(got))):
-        want = expected[i] if i < len(expected) else None
-        have = got[i] if i < len(got) else None
-        if have == want:
+    for i, have in enumerate(got):
+        if i in kept:
             parts.append(PartResult(ref=i, correct=True))
-        elif want is None:
-            parts.append(PartResult(ref=i, correct=False, message=EXTRA_LINE))
-        elif have is None:
-            parts.append(PartResult(ref=i, correct=False, message=MISSING_LINE))
         else:
-            # A real line in the wrong place, or a distractor that does not belong at all.
             message = OUT_OF_PLACE if have in in_solution else EXTRA_LINE
             parts.append(PartResult(ref=i, correct=False, message=message))
+    parts.extend(
+        PartResult(ref=i, correct=False, message=MISSING_LINE)
+        for i in range(len(got), len(closest))
+    )
     return _result(parts)
 
 

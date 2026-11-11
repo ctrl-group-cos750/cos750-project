@@ -23,10 +23,13 @@ from types import FrameType
 from typing import Any
 
 import pytest
+from parsons_orders import runnable_orders
 
+from app.schemas.activities import ParsonsSolution
 from app.schemas.graphs import GraphEdge, GraphScenarioOut
 from app.seed import ActivityFixture, FixtureFile, ReviewPathFixture, read_fixtures
 from app.services.bfs import run_bfs
+from app.services.checking import check_activity
 from app.services.mastery import MASTERY_MODULE, Rule
 
 CONTENT: FixtureFile = read_fixtures()
@@ -159,7 +162,9 @@ def parts(a: ActivityFixture) -> int:
         case "trace":
             config = dict(a.config)
             return len(run_bfs(GraphScenarioOut(id=0, name="", **config)).steps)
-        case "parsons" | "fix_the_bug":
+        case "parsons":
+            return len(ParsonsSolution.model_validate(a.solution).first_order())
+        case "fix_the_bug":
             return len(a.solution["order"])
         case "fill_in":
             return len(a.config["blanks"])
@@ -172,6 +177,11 @@ def items_of(where: str, objective: int) -> list[ActivityFixture]:
     if where == "module 6":
         return [a for a in CHECK if a.objective_id == objective]
     return FRESH[objective]
+
+
+def first_order(a: ActivityFixture) -> list[int]:
+    """One correct order of a Parsons item's lines (its `order`, groups as written)."""
+    return ParsonsSolution.model_validate(a.solution).first_order()
 
 
 def lines_text(a: ActivityFixture, order: list[int]) -> str:
@@ -395,12 +405,34 @@ def test_the_queue_practice_answer_is_what_bfs_does() -> None:
 
 def test_the_reference_bfs_passes_every_hidden_test() -> None:
     parsons = next(a for a in CHECK if a.kind == "parsons")
-    assert passes_hidden(lines_text(parsons, parsons.solution["order"]))
+    assert passes_hidden(lines_text(parsons, first_order(parsons)))
+
+
+def test_the_parsons_item_accepts_exactly_the_orders_that_work() -> None:
+    """Every order of the answer's lines Python can run is tried on the hidden tests: each that
+    passes is accepted, and each the checker accepts passes (FR-5.4, #145). Objective 6 needs
+    every part right, so a working order marked wrong would decide the result. The import after
+    the function also runs, but is marked wrong on purpose (imports come first, as in module 4).
+    Distractors are covered by the next test: an answer with a line it doesn't need is wrong."""
+    a = next(a for a in CHECK if a.kind == "parsons")
+    every = {x["id"]: x["text"] for x in a.config["lines"]}
+    text = {i: every[i] for i in first_order(a)}
+    working, accepted = [], []
+    for order in runnable_orders(text):
+        if passes_hidden(lines_text(a, order)):
+            working.append(order)
+        if check_activity("parsons", a.config, a.solution, {"order": order}).correct:
+            accepted.append(order)
+    assert accepted == [order for order in working if text[order[0]].startswith("from ")]
+    assert len(accepted) == 24
+    assert len(working) == 48
+    shown = [x["id"] for x in a.config["lines"]]
+    assert not check_activity("parsons", a.config, a.solution, {"order": shown}).correct
 
 
 def test_each_parsons_distractor_breaks_bfs() -> None:
     a = next(a for a in CHECK if a.kind == "parsons")
-    order = a.solution["order"]
+    order = first_order(a)
     by_id = {x["id"]: x["text"] for x in a.config["lines"]}
     distractors = [x for x in a.config["lines"] if x["id"] not in order]
     assert len(distractors) == 4

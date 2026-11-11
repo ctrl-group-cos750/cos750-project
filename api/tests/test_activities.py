@@ -260,3 +260,71 @@ def test_get_hints_returns_already_revealed_hints(client: TestClient, db: Sessio
     assert [h["level"] for h in hints] == [1, 2]
     assert [h["hasMore"] for h in hints] == [True, True]
     assert [h["nextCountsAsSupport"] for h in hints] == [False, True]
+
+
+# --- Every correct order (FR-5.4, #145) -----------------------------------------------------------
+
+# Lines 1 and 2 may swap; 0 comes first and 3 last. 9 is a distractor.
+GROUPED: dict[str, Any] = {
+    "kind": "parsons",
+    "title": "Order the BFS set-up",
+    "visible": True,
+    "config": {"lines": [{"id": i, "text": f"line {i}"} for i in (0, 1, 2, 3, 9)]},
+    "solution": {"order": [0, [1, 2], 3]},
+}
+
+
+def test_an_equivalent_order_passes_and_is_recorded_as_correct(
+    client: TestClient, db: Session
+) -> None:
+    activity_id = make_activity(db, **GROUPED)
+    log_in(client)
+    for order in ([0, 1, 2, 3], [0, 2, 1, 3]):
+        res = client.post(
+            f"/api/activities/{activity_id}/attempts", json={"submitted": {"order": order}}
+        )
+        assert res.status_code == 201, res.text
+        body = res.json()
+        assert (body["correct"], body["score"], body["feedback"]) == (True, 1.0, "All correct.")
+        assert [p["correct"] for p in body["parts"]] == [True] * 4
+    stored = db.scalars(select(Attempt).where(Attempt.activity_id == activity_id)).all()
+    assert [a.correct for a in stored] == [True, True]
+    assert all(a.score == 1.0 for a in stored)
+    # The parts the mastery rule counts are stored with the attempt (app/services/mastery.py).
+    assert [p["correct"] for p in stored[1].detail["parts"]] == [True] * 4
+
+
+def test_one_misplaced_line_is_the_only_line_marked_wrong(client: TestClient, db: Session) -> None:
+    activity_id = make_activity(db, **GROUPED)
+    log_in(client)
+    res = client.post(
+        f"/api/activities/{activity_id}/attempts", json={"submitted": {"order": [3, 0, 2, 1]}}
+    )
+    body = res.json()
+    assert body["correct"] is False
+    assert body["score"] == 0.75
+    assert [p["correct"] for p in body["parts"]] == [False, True, True, True]
+    assert body["parts"][0]["message"] == "This line is in the wrong place."
+    assert "solution" not in res.text
+    assert "[1, 2]" not in res.text
+
+
+def test_hostile_parsons_submissions_are_refused_or_graded_wrong(
+    client: TestClient, db: Session
+) -> None:
+    activity_id = make_activity(db, **GROUPED)
+    log_in(client)
+    url = f"/api/activities/{activity_id}/attempts"
+    for bad in (
+        {},
+        {"order": "0123"},
+        {"order": [[0, 1], 2, 3]},  # a group is solution notation, not an answer
+        {"order": [0, None, 2, 3]},
+        {"order": list(range(101))},
+        {"order": [0, 1, 2, 3], "alternatives": [[3, 2, 1, 0]]},
+    ):
+        assert client.post(url, json={"submitted": bad}).status_code == 422, bad
+    for wrong in ([], [0, 1, 2, 3, 9], [0, 0, 0, 0], [-5, 2**62, 1, 3], [3, 2, 1, 0]):
+        res = client.post(url, json={"submitted": {"order": wrong}})
+        assert res.status_code == 201, wrong
+        assert res.json()["correct"] is False, wrong

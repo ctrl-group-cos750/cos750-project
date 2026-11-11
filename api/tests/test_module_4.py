@@ -19,10 +19,13 @@ from types import FrameType
 from typing import Any
 
 import pytest
+from parsons_orders import runnable_orders
 
+from app.schemas.activities import ParsonsSolution
 from app.schemas.graphs import GraphEdge, GraphScenarioOut
 from app.seed import ActivityFixture, FixtureFile, read_fixtures
 from app.services.bfs import run_bfs
+from app.services.checking import check_activity
 
 CONTENT: FixtureFile = read_fixtures()
 CAMPUS = GraphScenarioOut(**next(g for g in CONTENT.graphs if g.id == 4).model_dump())
@@ -211,12 +214,33 @@ def test_the_reference_is_the_engine_on_every_graph_from_every_start() -> None:
 
 def test_the_parsons_answer_is_the_worked_examples_code() -> None:
     a = activity(404)
+    order = ParsonsSolution.model_validate(a.solution).first_order()
     text = {line["id"]: line["text"] for line in a.config["lines"]}
-    assert sorted(text) == sorted(a.solution["order"])  # every line is used, no distractors
-    assert [text[i] for i in a.solution["order"]] == [
-        line for line in reference().split("\n") if line.strip()
-    ]
-    assert [line["id"] for line in a.config["lines"]] != a.solution["order"]  # starts shuffled
+    assert sorted(text) == sorted(order)  # every line is used, no distractors
+    assert [text[i] for i in order] == [line for line in reference().split("\n") if line.strip()]
+    shown = [line["id"] for line in a.config["lines"]]
+    assert not check_activity("parsons", a.config, a.solution, {"order": shown}).correct  # shuffled
+
+
+def test_the_parsons_problem_accepts_exactly_the_orders_that_work() -> None:
+    """Every order of the lines Python can run is tried on the design's tests: each that passes
+    is accepted, and each the checker accepts passes (FR-5.4, #145). The one exception is
+    deliberate: the import after the function runs too, but the lessons and PEP 8 put imports
+    first, so that is still marked wrong."""
+    a = activity(404)
+    text = {line["id"]: line["text"] for line in a.config["lines"]}
+    import_line = next(i for i, t in text.items() if t.startswith("from collections"))
+    working, accepted = [], []
+    for order in runnable_orders(text):
+        if passes("\n".join(text[i] for i in order), TESTS[406]):
+            working.append(order)
+        if check_activity("parsons", a.config, a.solution, {"order": order}).correct:
+            accepted.append(order)
+    assert accepted == [order for order in working if order[0] == import_line]
+    assert {order[-1] for order in working if order not in accepted} == {import_line}
+    # The three starting values (3! orders) x visited.add/queue.append (2) x order.append(v)
+    # before or after the neighbour loop (2).
+    assert len(accepted) == 24
 
 
 @pytest.mark.parametrize("activity_id", sorted(TESTS))

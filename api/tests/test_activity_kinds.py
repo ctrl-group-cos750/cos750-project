@@ -262,14 +262,22 @@ FILL_SOLUTION: dict[str, Any] = {
 }
 
 
+# A Parsons problem with a group (2 and 3 in either order), an alternative that moves 1 to the end,
+# and a distractor (20).
+PARSONS_CONFIG: dict[str, Any] = {
+    "lines": [{"id": i, "text": f"line {i}"} for i in (1, 2, 3, 20)],
+}
+PARSONS_SOLUTION: dict[str, Any] = {"order": [1, [2, 3]], "alternatives": [[[2, 3], 1]]}
+
+
 def test_the_examples_are_valid_content() -> None:
     validate_activity("matching", MATCHING_CONFIG, MATCHING_SOLUTION)
     validate_activity("fix_the_bug", FIX_CONFIG, FIX_SOLUTION)
     validate_activity("choose_tests", TESTS_CONFIG, TESTS_SOLUTION)
     validate_activity("fill_in", FILL_CONFIG, FILL_SOLUTION)
     validate_activity("fill_in", FILL_CONFIG, {"answers": FILL_SOLUTION["answers"]})  # no feedback
-    # Parsons has no extra rules: its shape is the whole check.
     validate_activity("parsons", {"lines": [{"id": 1, "text": "x"}]}, {"order": [1]})
+    validate_activity("parsons", PARSONS_CONFIG, PARSONS_SOLUTION)  # groups and an alternative
 
 
 @pytest.mark.parametrize(
@@ -335,6 +343,56 @@ def test_the_examples_are_valid_content() -> None:
             "the correct token",
         ),
         ("essay", {}, {}, "unknown activity kind"),
+        ("parsons", PARSONS_CONFIG, {"order": [1, 2, 99]}, "the order uses unknown line ids .99."),
+        ("parsons", PARSONS_CONFIG, {"order": [1, [2, 3], 3]}, "the order uses a line twice"),
+        ("parsons", PARSONS_CONFIG, {"order": [1, [2, 3], []]}, "at least two ids, not .]"),
+        ("parsons", PARSONS_CONFIG, {"order": [1, [2], 3]}, "at least two ids, not .2."),
+        ("parsons", PARSONS_CONFIG, {"order": [1, [2, "x"]]}, "valid integer"),
+        ("parsons", PARSONS_CONFIG, {"order": [1, [[2, 3]]]}, "valid integer"),
+        ("parsons", PARSONS_CONFIG, {"order": []}, "at least 1 item"),
+        ("parsons", PARSONS_CONFIG, {"order": [1, 2], "also": [[2, 1]]}, "Extra inputs"),
+        (
+            "parsons",
+            {"lines": [*PARSONS_CONFIG["lines"], {"id": 1, "text": "again"}]},
+            {"order": [1, 2, 3]},
+            "two lines share an id",
+        ),
+        (
+            "parsons",
+            PARSONS_CONFIG,
+            {"order": [1, 2, 3], "alternatives": [[1, 3]]},
+            "alternative 1 must use the same lines",
+        ),
+        (
+            "parsons",
+            PARSONS_CONFIG,
+            {"order": [1, 2, 3], "alternatives": [[1, 3, 9]]},
+            "alternative 1 uses unknown line ids .9.",
+        ),
+        (
+            "parsons",
+            PARSONS_CONFIG,
+            {"order": [1, 2, 3], "alternatives": [[1, 3, 2], [1, 3, 2, 3]]},
+            "alternative 2 uses a line twice",
+        ),
+        (
+            "parsons",
+            PARSONS_CONFIG,
+            {"order": [1, [2, 3]], "alternatives": [[1, [3, 2]]]},
+            "repeats an order",
+        ),
+        (
+            "parsons",
+            PARSONS_CONFIG,
+            {"order": [1, 2, 3], "alternatives": [[1, 2, 3, 20]]},
+            "the same lines as the order",
+        ),
+        (
+            "parsons",
+            PARSONS_CONFIG,
+            {"order": [1, 2, 3], "alternatives": [[1, 2, 3]] * 21},
+            "at most 20 items",
+        ),
         ("fix_the_bug", FIX_CONFIG, {"order": [1, 99]}, "unknown line ids"),
         ("fix_the_bug", FIX_CONFIG, {"order": [1, 20, 20]}, "a line twice"),
         (

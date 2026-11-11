@@ -38,6 +38,9 @@ from app.services.bfs import run_bfs
 
 OUT_OF_PLACE = "This line is in the wrong place."
 MISSING_LINE = "A line is missing from this position."
+# What to do about lines left out of an ordered answer: (one line, several lines).
+MISSING_PARSONS = ("add it from the available lines.", "add them from the available lines.")
+MISSING_FIX = ("put it back, or add its correction.", "put them back, or add their corrections.")
 EXTRA_LINE = "This line does not belong in the answer."
 WRONG_CHOICE = "This is not the right choice for this blank."
 EMPTY_BLANK = "This blank has not been filled in."
@@ -55,9 +58,6 @@ UNKNOWN_TEST = "This is not one of the test cases."
 WRONG_TRACE_STEP = "This step does not match the traversal."
 MISSING_TRACE_STEP = "The traversal has more steps than this."
 EXTRA_TRACE_STEP = "The traversal is already finished by this step."
-# What to do about lines left out of an ordered answer: (one line, several lines).
-MISSING_PARSONS = ("add it from the available lines.", "add them from the available lines.")
-MISSING_FIX = ("put it back, or add its correction.", "put them back, or add their corrections.")
 
 
 def _result(parts: list[PartResult], missing_hint: tuple[str, str] | None = None) -> CheckResult:

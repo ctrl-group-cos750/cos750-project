@@ -611,7 +611,7 @@ def test_a_database_error_is_json_for_the_student(
 ) -> None:
     """Before, any of these was a plain-text 500 and a dropped connection."""
 
-    def fail(*_: Any) -> None:
+    def fail(*_: Any, **__: Any) -> None:
         if error is SQLAlchemyError:
             raise SQLAlchemyError("boom")
         raise error("SELECT 1", {}, Exception("boom"))
@@ -639,7 +639,7 @@ def test_a_conflict_logs_the_constraint_that_refused_it(
     class Orig(Exception):
         diag = Diag()
 
-    def fail(*_: Any) -> None:
+    def fail(*_: Any, **__: Any) -> None:
         raise IntegrityError("INSERT", {}, Orig("duplicate"))
 
     monkeypatch.setattr(activities_router, "record_attempt", fail)

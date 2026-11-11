@@ -187,7 +187,7 @@ These are what make a working increment at the end of every week possible. Detai
 11. Seed content: the ID team's modules, activities and graph scenarios, loaded from version-controlled fixtures.
 
 ## Out of scope
-- An authoring interface: content is edited as fixture files in the repository and loaded by a seed command.
+- An authoring interface for modules, activities and review paths: they are edited as fixture files in the repository and loaded by a seed command. Videos and their checkpoint questions are the exception, made in the staff portal (FR-3.6). A content editor for the rest is in an open pull request (#128).
 - A public leaderboard (see FR-9 for why).
 - Topics beyond graphs and BFS (DFS, Dijkstra, trees), and programming languages other than Python.
 - Password reset, refresh tokens, and sign-in with the university account (future work, §15).
@@ -237,7 +237,7 @@ web container: nginx
   ├─ /media/      narrated videos and captions (static files, served with range requests)
   └─ /api/*  ──►  api container: FastAPI on Uvicorn
                     routers → services → SQLAlchemy models
-                    BfsEngine, answer checkers, mastery rules
+                    run_bfs (the BFS engine), answer checkers, mastery rules
                       │
                       ▼
                   db container:
@@ -280,7 +280,7 @@ Figure: Submitting a code activity. The browser never sees the solution, and the
 - **Code activities checked by comparison, never executed.** Students order shuffled lines (Parsons) or fill in missing tokens; the server compares the submission with the solution. No student-written code runs on the server, which removes the whole untrusted-code-execution attack surface (decision §15.3, superseding the earlier sandboxed runner).
 - **BFS computed server-side.** One tested implementation produces the animation steps that predictions are compared with, and checks trace tables, so they can never disagree.
 - **Stateless API with token auth.** The token travels in an httpOnly cookie (§5).
-- **Content as data.** Modules, activities, hints, tests and graph scenarios are fixture files the ID team can edit; adding content needs no frontend or API change.
+- **Content as data.** Modules, activities, hints, tests and graph scenarios are fixture files the ID team can edit; videos and their checkpoints are made in the staff portal (FR-3.6). Adding content needs no frontend or API change.
 
 # Technology stack
 
@@ -304,7 +304,7 @@ Figure: Submitting a code activity. The browser never sees the solution, and the
 | Drag and drop | **Native HTML5 drag and drop**, plus arrow keys | Parsons problems: drag a line, or move it with the up and down arrow keys, and a live region announces each move (NFR-A1). The dnd-kit library, named in earlier drafts, was not needed. |
 | Styling and UI components | **Tailwind CSS 4**, and **shadcn** components on **Base UI** (`@base-ui/react`), with **lucide-react** icons | Design tokens in `web/src/styles/tokens.css` (light and dark). The staff portal and some student screens use the shadcn components in `web/src/components/ui/`; the rest use the team's own kit in `web/src/components/` (§11). Merging the two kits is open work. |
 | Markdown | **react-markdown** | Renders prompts, hints, text segments and worked examples. It builds elements rather than inserting HTML, and drops raw HTML, so content can't inject a script. |
-| Testing (backend) | **pytest** with FastAPI `TestClient`, warnings treated as errors | Unit tests for the BfsEngine and services, plus API tests against a fresh SQLite database that every migration has been applied to. |
+| Testing (backend) | **pytest** with FastAPI `TestClient`, warnings treated as errors | Unit tests for the BFS engine (`run_bfs`) and services, plus API tests against a fresh SQLite database that every migration has been applied to. |
 | Testing (frontend) | **Vitest** + **React Testing Library** | Native fit with Vite; component and logic tests, with coverage reported in CI. |
 | End-to-end testing | **Playwright** *(planned, #35)* | To walk through the full student flow (register, a module, a video checkpoint, a code submission, the mastery report, a review path) in a real browser against a running stack. `@playwright/test` is a dev dependency, but no end-to-end test is on `staging` yet (§14.1). |
 | Lint and format (Python) | **ruff** (format + lint, including the bandit security rules and the FastAPI rules) and **mypy --strict** | Enforced in CI. |
@@ -457,7 +457,7 @@ Table: Which part of the ID document each functional requirement delivers.
 - **NFR-P5** Videos are served by nginx from a volume with range requests, so seeking doesn't download the whole file and video never passes through the API.
 
 ## Usability
-- **NFR-U1** Laptop and desktop are the primary devices, because the code activities in modules 2, 4 and 5 show long lines of code beside their results. Every other module also works on a tablet and a phone (from 360 px wide).
+- **NFR-U1** Laptop and desktop are the primary devices, because the code activities in modules 2, 4 and 5 need a keyboard and a wide screen: lines of code that move with the arrow keys, and results beside the code. Every other module also works on a tablet and a phone (from 360 px wide).
 - **NFR-U2** Clear, consistent controls for video, BFS stepping, activities and hints across all modules.
 - **NFR-U3** Every answer gets visible feedback within the activity; errors from the system are written for students, never as stack traces.
 - **NFR-U4** Before the feature freeze, team members pilot every module they did not build, and the defects they find are fixed or recorded (§14.7).
@@ -475,7 +475,7 @@ Table: Which part of the ID document each functional requirement delivers.
 - **NFR-S8** **Privacy (POPIA [8]).** The app stores only what it needs: email (to log in), a display name, and learning data. It shows no student's data to another student, and exports only internal IDs (FR-10.3). Staff do see students' emails and display names: the accounts pages (FR-1.8) list and search them. Those pages show whether an answer was right but never the answer. Test and demo data never uses real students' details.
 
 ## Maintainability
-- **NFR-M1** Layered backend (routers → services → data) with the BfsEngine, the answer checkers and the mastery rules isolated from web concerns and unit-testable in isolation.
+- **NFR-M1** Layered backend (routers → services → data) with the BFS engine (`run_bfs`), the answer checkers and the mastery rules isolated from web concerns and unit-testable in isolation.
 - **NFR-M2** Typed boundaries on both sides (Pydantic + TypeScript); the TypeScript API types in `web/src/api/` are generated from the OpenAPI schema by `scripts/gen-api.sh`, and CI fails if they are out of date.
 - **NFR-M3** ruff, mypy --strict, oxlint and Prettier enforced in CI on every PR.
 - **NFR-M4** Database migrations tracked with Alembic.
@@ -534,7 +534,7 @@ Figure: Entities and relationships.
 
 **Attempt** (append-only): `id`, `user_id`, `activity_id`, `submitted` (JSON: the answer — for a code activity, the chosen line order or filled-in tokens), `correct`, `score` (0 to 1, for partial results such as trace tables), `hint_level` (highest level shown before this attempt), `detail` (JSON: per-line or per-blank results for a code activity), `created_at`.
 
-**Event** (append-only): `id`, `user_id`, `type`, `ref` (what it was about: `video:3`, `checkpoint:12`, `segment:301`, `activity:301`, `objective:5`), `payload` (JSON: a hint's level, a result's old and new state), `created_at`. The server logs `hint_shown` and `result_changed` itself; the browser reports `video_started`, `video_completed`, `checkpoint_reached` and `segment_viewed` through `POST /api/events`, which takes only those types, each about a video, checkpoint or segment that exists, and no free text (`app/services/events.py`). On `staging` the web app sends only the video events; `segment_viewed` and a server-side `module_completed` are in progress (#141). Answers and hints shown also have their own tables, `Attempt` and `HintView`.
+**Event** (append-only): `id`, `user_id`, `type`, `ref` (what it was about: `video:3`, `checkpoint:12`, `segment:301`, `activity:301`, `objective:5`), `payload` (JSON: a hint's level, a result's old and new state), `created_at`. The server logs `hint_shown` and `result_changed` itself; the browser reports `video_started`, `video_completed`, `checkpoint_reached` and `segment_viewed` through `POST /api/events`, which takes only those types, each about a video, checkpoint or segment that exists, and no free text (`app/services/events.py`). On `staging` the web app sends only the video events; `segment_viewed` and a server-side `module_completed` are planned (#141). Answers and hints shown also have their own tables, `Attempt` and `HintView`.
 
 **ModuleProgress**: `user_id`, `module_id`, `status` (`open` | `in_progress` | `complete`), `current_segment_position` (the furthest segment reached), `completed_at`.
 
@@ -548,13 +548,13 @@ Figure: Entities and relationships.
 
 ## Notes
 - **Attempts and events are the source of truth.** Module progress, objective results, points and badges are derived from them by the services, and can be recomputed if a rule changes (FR-7.6).
-- **Answers never leave the server.** The API strips `answer` from every activity it sends; a code activity's solution (the correct line order and the expected tokens) stays on the server and is only ever compared against, never returned.
-- **JSON columns** hold the parts that differ by activity kind (`config`, `answer`, `feedback`, `submitted`, `detail`). Each kind has a Pydantic schema, so the JSON is still validated when fixtures load and when attempts arrive.
+- **Answers never leave the server.** No activity the API sends carries its `solution` (`ActivityOut` has no such field); a code activity's solution (the correct line order and the expected tokens) stays on the server and is only ever compared against, never returned.
+- **JSON columns** hold the parts that differ by activity kind (`config`; `solution`, which also holds the wrong-answer messages; `submitted`; `detail`). Each kind has a Pydantic schema, so the JSON is still validated when fixtures load and when attempts arrive.
 - **Content is loaded from fixtures** (`api/app/seed/`), versioned in the repository and validated in CI (NFR-M5). Each module has its own file (`module-3.json`) holding the module, its segments in order and its activities; the objectives are in `objectives.json`; each objective's review path (a worked example, practice of purpose `review` with the full hint ladder, then fresh items of purpose `mastery`, none of them in a module) is in `review.json`. Re-running the seed updates content without touching users' attempts.
 
 # API Design (REST)
 
-Base path: `/api`. JSON over HTTPS. Auth via the session cookie set by `/api/auth/login`, except where noted. Request and response bodies are validated by Pydantic, and the OpenAPI schema at `/api/docs` is the contract the frontend is built against. The tables below list every endpoint on `staging`. JSON field names are camelCase (`hintLevel`), Python names snake_case.
+Base path: `/api`. JSON over HTTPS. Auth via the session cookie set by `/api/auth/login`, except where noted. Request and response bodies are validated by Pydantic, and the OpenAPI schema at `/api/docs` is the contract the frontend is built against. The tables below list every endpoint on `staging`. JSON field names are camelCase (`hintLevel`); path parameters are named as in the routers (`{module_id}`).
 
 ## Auth
 | Method | Path | Auth | Purpose |
@@ -570,21 +570,21 @@ Base path: `/api`. JSON over HTTPS. Auth via the session cookie set by `/api/aut
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
 | GET | `/api/modules` | user | All modules with this student's state (locked, open, in progress, complete). |
-| GET | `/api/modules/{moduleId}` | user | The module's segments, in order, with this student's position, which segments are done, and the module's retrieval questions (FR-2.4). 403 while the module is locked. Activities come without answers. Every refresher is listed: the diagnostic does not filter them yet (FR-8.1, §15.5). |
-| POST | `/api/modules/{moduleId}/position` | user | Save the segment the student is on (FR-2.5). Refuses (409) to move past a segment that isn't done (FR-2.7). |
-| GET | `/api/videos/{videoId}` | user | Video metadata, captions and transcript paths, and checkpoints. The media itself comes from `/media/`. |
+| GET | `/api/modules/{module_id}` | user | The module's segments, in order, with this student's position, which segments are done, and the module's retrieval questions (FR-2.4). 403 while the module is locked. Activities come without answers. Every refresher is listed: the diagnostic does not filter them yet (FR-8.1, §15.5). |
+| POST | `/api/modules/{module_id}/position` | user | Save the segment the student is on (FR-2.5). Refuses (409) to move past a segment that isn't done (FR-2.7). |
+| GET | `/api/videos/{video_id}` | user | The video's title, duration, media and captions paths, the transcript as text, and its checkpoints in order, each with its activity and whether this student has passed it (FR-3.5). The media itself comes from `/media/`. |
 
 ## Activities, hints and code
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/api/activities/{activityId}` | user | The activity to show: kind, title and config, never the solution. 403 for an item on a review path that isn't open yet (FR-7.5). |
-| GET | `/api/activities/{activityId}/hints` | user | The hint levels this student has already seen, so a reload shows them again. |
-| POST | `/api/activities/{activityId}/hints` | user | Reveal the next hint level and record it. Returns the hint, whether there are more, and whether the next one counts as support (FR-7.2). 409 once every level is shown. |
-| POST | `/api/activities/{activityId}/attempts` | user | Submit an answer. The server checks it (a code activity is compared against its stored solution), records the attempt, updates results and points, and returns the outcome. A submission in the wrong shape for the kind is 422. |
+| GET | `/api/activities/{activity_id}` | user | The activity to show: kind, title and config, never the solution. 403 for an item on a review path that isn't open yet (FR-7.5). |
+| GET | `/api/activities/{activity_id}/hints` | user | The hint levels this student has already seen, so a reload shows them again. |
+| POST | `/api/activities/{activity_id}/hints` | user | Reveal the next hint level and record it. Returns the hint, whether there are more, and whether the next one counts as support (FR-7.2). 409 once every level is shown. |
+| POST | `/api/activities/{activity_id}/attempts` | user | Submit an answer. The server checks it (a code activity is compared against its stored solution), records the attempt, updates results and points, and returns the outcome. A submission in the wrong shape for the kind is 422. |
 
 The ungraded **Check** of FR-5.2 has no endpoint yet: every submission is graded and recorded (§15.5).
 
-Example `POST /api/activities/405/attempts`, the fill-in activity of module 4, with one wrong token. The shape of `submitted` depends on the kind: `{"order": [...]}` for a Parsons problem, `{"selected": "b"}` for multiple choice.
+Example `POST /api/activities/405/attempts`, one of module 4's two fill-in activities, with one wrong token. The shape of `submitted` depends on the kind: `{"order": [...]}` for a Parsons problem, `{"selected": "b"}` for multiple choice.
 ```json
 // request
 { "submitted": { "answers": { "1": "queue.pop()", "2": "visited.add(n)", "3": "queue.append(n)" } } }
@@ -611,10 +611,10 @@ Example `POST /api/activities/405/attempts`, the fill-in activity of module 4, w
 ## BFS
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/api/graphs/{scenarioId}` | user | Scenario detail (vertices, edges, start). |
-| GET | `/api/graphs/{scenarioId}/bfs` | user | BFS steps from the scenario's start vertex, for animation. |
+| GET | `/api/graphs/{scenario_id}` | user | Scenario detail (vertices, edges, start). |
+| GET | `/api/graphs/{scenario_id}/bfs` | user | BFS steps from the scenario's start vertex, for animation. |
 
-Example `GET /api/graphs/{scenarioId}/bfs` response:
+Example `GET /api/graphs/{scenario_id}/bfs` response:
 ```json
 {
   "startVertex": "A",
@@ -635,9 +635,10 @@ Example `GET /api/graphs/{scenarioId}/bfs` response:
 
 Each step is one vertex taken from the queue, with the state after it. The visualiser receives the steps and animates them; its next-vertex predictions are checked in the browser and are not recorded (FR-6.4, §15.5). A trace-table activity carries its own graph in its config, gets no steps, and is checked against the engine on the server when it is submitted (FR-6.6).
 
-## Progress and results
+## Progress, results and events
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
+| POST | `/api/events` | user | Report something only the browser sees (`video_started`, `video_completed`, `checkpoint_reached`, `segment_viewed`) for the event log (FR-10.1); 120 a minute per student. |
 | GET | `/api/rewards` | user | This student's points total and badges, and whether they are hidden (FR-9). |
 | POST | `/api/rewards/seen` | user | The app has announced every new badge, so none is announced twice. |
 | PUT | `/api/rewards/settings` | user | Hide or show points and badges (FR-9.5). |
@@ -646,19 +647,18 @@ Each step is one vertex taken from the queue, with the state after it. The visua
 
 Progress, results and points change only as a side effect of attempts and segment completion. There is no endpoint for a client to set them.
 
-## Staff portal and evaluation data
+## Staff portal (staff only)
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
 | GET | `/api/staff/export/{table}.csv` | staff | `events`, `attempts`, `hints` or `objective_results` as CSV, students identified by internal ID only, staff and demo accounts left out (FR-10). |
 | GET | `/api/staff/insights` | staff | The pilot page's counts per activity and per video, real students only (FR-10.2). |
 | POST | `/api/staff/media?kind=…` | staff | Upload an MP4 (`kind=video`, up to 95 MB) or a WebVTT file (`kind=captions`, up to 1 MB) to the media volume, as the raw body with that exact `Content-Type`. Returns its `/media/` path (FR-3.6). |
 | GET, POST | `/api/staff/videos` | staff | List the videos, or make one with its checkpoints (FR-3.6). |
-| GET, PUT | `/api/staff/videos/{videoId}` | staff | One video with every checkpoint's question, answer and hints; PUT replaces it, keeping the attempts of each checkpoint it keeps. |
+| GET, PUT | `/api/staff/videos/{video_id}` | staff | One video with every checkpoint's question, answer and hints; PUT replaces it, keeping the attempts of each checkpoint it keeps. |
 | GET | `/api/staff/accounts` | staff | Every account: email, display name, staff or not, created, last active (FR-1.8). |
-| GET, DELETE | `/api/staff/accounts/{userId}` | staff | One account's totals and last ten answers; DELETE removes it and its history (FR-1.8). |
+| GET, DELETE | `/api/staff/accounts/{user_id}` | staff | One account's totals and last ten answers; DELETE removes it and its history (FR-1.8). |
 | GET, POST | `/api/staff/members` | staff | The team members; make a registered account one, by exact email (FR-1.9). |
-| DELETE | `/api/staff/members/{userId}` | staff | Take staff access away; 409 for one's own (FR-1.9). |
-| POST | `/api/events` | user | Report something only the browser sees (`video_started`, `video_completed`, `checkpoint_reached`, `segment_viewed`) for the event log (FR-10.1); 120 a minute per student. |
+| DELETE | `/api/staff/members/{user_id}` | staff | Take staff access away; 409 for one's own (FR-1.9). |
 
 ## Conventions **[PROVISIONAL]**
 - Standard HTTP status codes; error bodies `{ "detail": "..." }`. `429` with a retry hint when a rate limit is reached.
@@ -886,11 +886,11 @@ Figure: The mastery report with one objective not yet met (FR-7).
 
 ## Interaction design
 
-The COS750 UX lecture (L06) [10] defines user experience by ISO 9241-210 as "a person's perceptions and responses that result from the use or anticipated use of a product, system or service" (slide 2), and lists the standard's parts: part 11 on usability and part 20 on accessibility (slide 10). We take usability, in part 11's terms, as effectiveness, efficiency and satisfaction for a stated user and task. Here the user is a COS212 student before the graphs lecture, and the task is to reach "ready for the lecture". The pilot (§14.7) and the event log (FR-10) measure the three: how many finish each module and the mastery check, the time per module, and the SUS and survey answers. Accessibility follows WCAG 2.1 AA [7] (NFR-A).
+The COS750 UX lecture (L06) [10] defines user experience by ISO 9241-210 as "a person's perceptions and responses that result from the use or anticipated use of a product, system or service" (slide 2), and lists the standard's parts: part 11 on usability and part 20 on accessibility (slide 10). We take usability as ISO 9241-11 defines it [17]: the effectiveness, efficiency and satisfaction with which specified users achieve specified goals in a specified context of use. Here the user is a COS212 student before the graphs lecture, and the task is to reach "ready for the lecture". The pilot (§14.7) and the evaluation data (FR-10) measure the three. Effectiveness: how many students answer each activity, pass each video's checkpoints and reach a result on the mastery check (the attempts, events and objective results). Efficiency: the time per module, which on `staging` comes from the survey, because the log does not yet record when a segment is viewed or a module completed (§15.5). Satisfaction: the SUS and the survey answers. Accessibility follows WCAG 2.1 AA [7] (NFR-A).
 
 **Who the users are.** L06 sorts users into casual, novice, knowledgeable intermittent and expert (slide 56), and separates experience of the domain and the technology from the expertise the designer expects (slide 55). Our students are **novices** in the domain: the specification assumes no prior knowledge of graphs and BFS [1]. They are experienced with the technology: by their second year they use a browser and ClickUP in every module. So the app keeps its controls ordinary (links, buttons, a video player, a list of choices) and puts the effort into the content.
 
-L06's strategies for performance, closure, attitude and anxiety (slides 33–35), shape the design:
+L06's strategies to enhance performance (closure, attitude and anxiety; slides 33–35) shape the design:
 
 - **Closure.** "Inexperienced users rely heavily on STM and need many small operations to keep them engaged" (slide 34). A module is a sequence of short segments, each one idea or one activity, with **Next** after each (FR-2.2, FR-2.7). A later version could let a student who passes a check skip a worked example (FR-8.2), since L06 warns that experienced users find many small operations tedious.
 - **Attitude and anxiety.** "Anxiety reduces STM and slows learning down. Failure to be able to understand the system can promote anxiety" (slide 35). There are no timers, a wrong answer can be tried again, hints come on request, points are private (FR-9.4), and the mastery report's worst result is "not yet", with a review path, not "fail" (FR-7.2). L06's "intuitive, friendly and forgiving" system (slide 36) is the same aim.
@@ -913,7 +913,7 @@ Command languages and natural language are not used: both need recall, and free 
 
 | Characteristic (L06) | How the app meets it | Requirement |
 |---|---|---|
-| Initiative | Mostly computer-initiated: the module leads, one segment at a time. The student takes the initiative for hints, replays and the visualiser's controls (mixed initiative). | FR-2.7, FR-4.4, FR-6.3 |
+| Initiative | Computer-initiated, as menus are (slide 40): the module leads, one segment at a time. Within it the student starts a hint, a replay or a visualiser step when they choose. | FR-2.7, FR-4.4, FR-6.3 |
 | Flexibility | More than one way to do a task: drag a line or move it with the keys; watch the video or read its transcript; play the animation or step it. | NFR-A1, FR-3.2, FR-6.3 |
 | Complexity | Each screen does one thing: a segment, a report, a review path. Staff functions are in a separate portal that students never see. | FR-2.2, FR-1.8 |
 | Power | Low by design: one action does one visible thing, which suits novices. The visualiser's Play is the one powerful command. | FR-6.3 |
@@ -922,7 +922,7 @@ Command languages and natural language are not used: both need recall, and free 
 | Feedback | "Immediate, unambiguous feedback … Never leave the user wondering" (slide 46). Every answer gets a result at once, part by part, with the reason a wrong part is wrong; **Next** says why it is held. | FR-4.2, NFR-U3 |
 | Observability | The student sees the BFS state the algorithm keeps, but not the rules behind mastery: the report says the result in plain words. | FR-6.2, FR-7.3 |
 | Controllability | The student "must be able to determine where they have been, where they are now, and where they are going" (slide 48): the module map shows each module's state, the module page its progress, and the report what is left. | FR-2.6, FR-7.3 |
-| Efficiency | Progress saves after every segment, so a student who stops resumes where they were. | FR-2.5 |
+| Efficiency | Slide 49 means the throughput of human and computer together. The app's share is to answer at once and never make the student redo work: an answer is checked within a second (NFR-P2, NFR-P3), and progress saves after every segment. It is the weakest fit of the eleven, because speed is not a goal for a learner. | NFR-P2, NFR-P3, FR-2.5 |
 | Balance | The computer does the routine, exact work (running BFS, checking answers, recording attempts); the student does the reasoning (predicting, ordering, tracing), which is what is being learned. | FR-6.1, FR-4.2 |
 
 Table: L06's desirable dialogue characteristics, and where the app meets each.
@@ -942,7 +942,7 @@ Table: L06's desirable dialogue characteristics, and where the app meets each.
 
 **Fit with UP's systems.** L10 [13] places a university's systems in three groups: the ERP (at UP, PeopleSoft's Student Centre: enrolment and grades), the CMS (the UP Portal) and the LMS (ClickUP, which is Blackboard Learn Ultra) (slides 2, 11). It lists the LMS's integration routes: a REST API, webhooks, SCORM, xAPI, cmi5 and LTI (slide 10). Ctrl Academy runs on its own today, with its own accounts. To use it in COS212 it would join ClickUP:
 
-- **LTI launch.** ClickUP opens the app from the COS212 course with an LTI 1.3 launch, which signs the student in and passes the course roster. The app would trust the launch instead of its own password (FR-1), and would no longer need to show staff anyone's email (NFR-S8).
+- **LTI launch.** ClickUP opens the app from the COS212 course with an LTI 1.3 launch, which signs the student in and says who they are and their role in the course. The class list comes from LTI Advantage's Names and Role Provisioning Services. The app would trust the launch instead of its own password (FR-1), and would no longer need to show staff anyone's email (NFR-S8).
 - **Grade passback.** The app returns one result per student to ClickUP's grade centre over LTI: "ready for the lecture" or the number of objectives met. It should stay a completion mark rather than a grade, so the low stakes the design depends on (FR-9.4) are kept.
 - **xAPI.** The event log (FR-10.1) already records who did what to which item and when, which is the actor, verb and object of an xAPI statement. Sending those statements to a learning record store would give the lecturer ClickUP-side analytics, one of the LMS functions L10 lists (slide 7), without a new data model.
 
@@ -959,7 +959,7 @@ cos750-project/
 ├─ docker-compose.local.yml     publishes ports for local use
 ├─ .env.example
 ├─ .github/
-│  ├─ workflows/ci.yml          web, api and compose jobs
+│  ├─ workflows/ci.yml          one `checks` job: web, api and compose steps
 │  ├─ workflows/docs.yml        builds this document and the ID document into PDFs
 │  ├─ workflows/branch-flow.yml, push-guard.yml, delete-guard.yml
 │  ├─ rulesets/                 branch rules for staging and master
@@ -1010,6 +1010,8 @@ cos750-project/
 │     ├─ styles/                tokens.css (design tokens, light and dark), base.css, global.css
 │     ├─ ui-kit/                the /ui-kit.html reference page
 │     ├─ features/              module, video, activities, bfs, mastery, rewards, profile, staff
+│     ├─ lib/                   utils.ts: the class-name helper the shadcn components use
+│     ├─ theme/                 light and dark theme, and its toggle
 │     └─ test/                  test setup
 ├─ assets/                      Ctrl Group logo pack
 └─ docs/
@@ -1079,7 +1081,7 @@ Testing follows the Definition of Done (§2.4): no item is done until it has tes
 | Unit | The BFS engine, one answer checker per activity kind, the mastery rules, the points rules; React components and hooks, including every activity component | pytest; Vitest + React Testing Library | Every PR (CI) |
 | API | Every endpoint against a freshly migrated database: correct and wrong answers, hint recording, progress and result updates; that one student can never read another's data; that no response ever contains an activity's `solution`; every attack from the security review (§14.6) | pytest + FastAPI `TestClient`, on SQLite and again on Postgres 18 | Every PR (CI) |
 | Migrations | Every migration applies to an empty database, the models match the migrations, and there is one head | pytest + Alembic | Every PR (CI) |
-| Content | Every fixture file matches its schema; every activity's config and solution have its kind's shape, and the solution is one a student can reach (a correct option or token is one on offer, a fixed program uses only lines that exist); no wrong-answer message is attached to a right answer; every trace-table graph runs in the BFS engine; every choose-tests test case is run through the BFS engine and its expected order must be the correct BFS's; a choose-tests answer may not select every test case. Which test cases expose the bug is trusted from the fixture: no faulty BFS is run to confirm it (NFR-M5) | pytest (`test_seed.py`, `services/content.py`) | Every PR that touches content (CI) |
+| Content | Every fixture file matches its schema; every activity's config and solution have its kind's shape, and the solution is one a student can reach (a correct option or token is one on offer, a fixed program uses only lines that exist); a fill-in activity may not carry a wrong-answer message for its right token (the other kinds only check that each message names a real option, item, line or test case); every trace-table graph runs in the BFS engine; every choose-tests test case is run through the BFS engine and its expected order must be the correct BFS's; a choose-tests answer may not select every test case. Which test cases expose the bug is trusted from the fixture: no faulty BFS is run to confirm it (NFR-M5) | pytest (`test_seed.py`, `services/content.py`) | Every PR that touches content (CI) |
 | End-to-end *(planned, #35)* | The student's path in a real browser against the full stack: register, module 0 and its diagnostic, a video checkpoint, a code activity (ordering and completing code), the mastery report and a review path; plus logging in as each demo account | Playwright | Not built: no end-to-end test is on `staging`, and CI has no such step. Until it is, the path is checked only by hand on staging (exploratory, below) |
 | Accessibility | Lint rules on every component (jsx-a11y, warnings fail the build); colour contrast of the design tokens (`contrast.test.ts`); one module completed with the keyboard only | oxlint jsx-a11y and Vitest on every PR (CI); a manual pass. Automated page checks with axe-core are planned with the end-to-end tests (#35) | Every PR (lint, contrast); the manual keyboard pass is not recorded yet |
 | Exploratory | The item's acceptance criteria tried by hand on staging, by someone other than its author | Staging | Every item, before it is accepted (DoD) |
@@ -1277,11 +1279,11 @@ The fourth round is why the runner was removed rather than patched further. The 
 
 Before the feature freeze, on 10 and 11 November, team members pilot the app on staging. Each member works through the modules they did not build, from a new account, thinking aloud while another member takes notes. Afterwards each completes a short survey: the System Usability Scale (SUS), the clarity of feedback and hints, and the time per module. The survey, the note-taker's sheet and the schedule are in `docs/pilot/`. The ID team uses the event export (FR-10) and the survey for the Implement and Evaluate phases of ADDIE (ID document [5], §8); defects go onto the board labelled `bug` (§14.4).
 
-**What the pilot is.** It is a **usability and defect walkthrough**, not a test of whether the app teaches. In ADDIE's terms it is formative evaluation (ID document §8), and in L06's terms it checks the dialogue characteristics of §11.2 with real use. It can find usability problems, defects, unclear feedback, dead ends and timing.
+**What the pilot is.** It is a **usability and defect walkthrough**, not a test of whether the app teaches. In ADDIE's terms it is formative evaluation, as the ID document's §8.1 puts it, and in L06's terms it checks the dialogue characteristics of §11.2 with real use. It can find usability problems, defects, unclear feedback, dead ends and timing.
 
 **What it cannot show.**
 
-- *Learning.* The participants are at most the seven team members. They already know graphs and BFS, and they know the design. Their mastery results say nothing about a student who starts with no knowledge, so neither document reports them as learning. The ID document plans a separate, delayed post-test without hints, with real COS212 students, for that (ID document §8).
+- *Learning.* The participants are at most the seven team members. They already know graphs and BFS, and they know the design. Their mastery results say nothing about a student who starts with no knowledge, so neither document reports them as learning. For that the ID document plans a separate, delayed post-test without hints, with real COS212 students (ID document §8.4).
 - *A usability score to compare.* Seven SUS responses are too few for a stable score. SUS itself is reliable over large samples [16], but we report each participant's score and the mean only as a rough signal, and do not compare it with published norms.
 - *Every problem.* Small think-aloud rounds find many problems when they are repeated, with fixes in between [14]; one round with people who know the design will miss the problems only novices have. Studies of algorithm-visualisation tools that measured usability alone are called shallow by the review that surveyed them [15]. So the pilot's findings decide what to fix, not whether the app works.
 
@@ -1323,7 +1325,7 @@ Table: Risk register.
 
 ## Future work
 - Password reset and refresh tokens; sign-in with the university account, which needs UP's IT to register the app.
-- An authoring interface for the ID team, replacing fixture files.
+- An authoring interface for the ID team for modules, activities and review paths, replacing fixture files. Videos already have one (FR-3.6); #128 adds the rest.
 - Student-built graphs in the visualiser, and topics beyond BFS (DFS, Dijkstra, trees).
 - If freeform code writing is reintroduced (for example to assess objective 6 by writing rather than ordering), run it in a stronger sandbox than the removed in-process runner — gVisor or a per-submission microVM — and move the grading decision out of the process that runs the student's code. The removed runner is preserved at git tag `archive/code-runner`.
 - Joining ClickUP: an LTI 1.3 launch, grade passback of "ready for the lecture", and xAPI statements from the event log (§11.3).
@@ -1331,32 +1333,32 @@ Table: Risk register.
 
 ## Known limitations
 
-What `staging` (commit `e8973c5`) does not yet do, or does only in part, against the requirements above. Work in progress is named by its card; none of it is counted as done here.
+What `staging` (commit `e8973c5`) does not yet do, or does only in part, against the requirements above. Each row names its card, marked in progress (being worked now) or planned (not started); none of it is counted as done here.
 
 | Area | Limitation on `staging` | Requirement | Work |
 |---|---|---|---|
-| Activity screens | Trace tables, fix the bug and choose tests have a server checker but no student screen: the student sees "This activity kind is not available yet", and the segment counts as done. Labelling a diagram, classifying graphs, building a graph and predicting the next vertex as an activity are not built as kinds; module content uses multiple choice and matching for them, and prediction exists only in the visualiser. | FR-4.1, FR-5.5, FR-6.6 | Screens for the first three in progress (#136) |
-| Objectives 5 and 7 | Their mastery items (a trace table; fix the bug and choose tests) have no screen, so a real student's result for them stays "not attempted", and nobody can become "ready for the lecture" except the seeded demo accounts. The review paths for 5 and 7 can't open for the same reason. | FR-7.1, FR-7.4, FR-7.5 | #136; review paths that meet the ID design (#148) |
-| Module 5 | Test and debug has one retrieval question and no segments, so module 6 opens without it and objective 7 is not taught. | FR-2.1, ID Table 4 | Content (#86) |
-| Objective 8 | In the ID document, but not in the app: no criterion, mastery item or review path. | FR-4.3 | Decision pending (#70) |
-| Diagnostic, fading, bonus | The diagnostic is recorded but does not pick refreshers; every refresher is shown. Worked examples can't be skipped (four check activities exist but are in no segment). There are no bonus quests. | FR-8.1–FR-8.3 | #31, #87 |
-| Practice **Check** | No ungraded check: every submission is graded and recorded. | FR-5.2 | Not scheduled |
-| Module locks on activities | An activity can be opened and answered by id before its module is open, so a module 6 item can be seen early. | FR-7.1 | In progress (#137) |
-| Concurrency | Two saves at once can fail: a deadlock on module 6 answers on Postgres, and a server error on a double-click. | NFR-U3 | In progress (#138) |
-| Answer rate limit | No rate limit or size limit on answers and hints. | NFR-S6 | In progress (#139) |
-| Segment done rule | A wrong answer counts as done, by design (FR-2.7); whether that should change is being decided. | FR-2.7 | #143 |
-| Mastery check | Feedback and hints 3–4 are available on mastery items, and the result shows at once. | FR-7.1, FR-7.2 | #144 |
-| Parsons | Only the one stored line order is accepted, though some lines could validly swap. | FR-5.4 | In progress (#145) |
-| Points and events | Module completion earns no points (the 25-point rule is never applied). The web app does not send `segment_viewed`, and no `module_completed` event is logged, so time per module can't be measured from the log. | FR-9.1, FR-10.1 | #141 |
-| Badges | No "first module" badge; the bonus-quest badges can't be earned; "every objective met" can't be earned by a real student (see objectives 5 and 7). | FR-9.3 | Follows #136, #87 |
-| Visualiser | Predictions are checked in the browser and not recorded, so they give no evidence for an objective. The visualiser is reached only from a link in module 3. | FR-6.4 | Not scheduled |
-| Videos | The fixtures hold no videos: staff upload them on each site. Placing a video in a module segment needs a database change on `staging`; the content editor adds it (#128). A video segment without a video shows "Video not available" and counts as done. | FR-3, NFR-A4 | #37, #128, text fallback (#149) |
-| Rendering and accessibility | Tables in worked examples and code indentation render wrongly in places; several issues from a browser walk-through (focus, contrast, labels). Two component kits are in use. | NFR-U2, NFR-A1–A3 | In progress (#140, #142) |
-| Navigation | Some dead ends: review-path steps and the visualiser have no way back, and a page that gets a 403 or 404 retries for several seconds. | NFR-U3 | #146 |
-| Staff view of students | The staff accounts pages list every student's email and display name (FR-1.8), more than the evaluation needs. | NFR-S8 | #146 |
-| Content | A content pass on answer positions, giveaways and wording is in progress. | FR-4.2 | #147, #150 |
-| Tests | No end-to-end or automated accessibility tests (§14.1); no timing test for NFR-P1 to NFR-P3, which are met by design (no execution, small graphs) but not measured. Definition of Done item 2 asks for an end-to-end test for each user-facing flow; no item has met it yet. | §14.1, NFR-P | #35 |
-| Responsive layout | 360 px wide (NFR-U1) is not yet checked on every page. | NFR-U1 | #142 |
+| Activity screens | Trace tables, fix the bug and choose tests have a server checker but no student screen: the student sees "This activity kind is not available yet", and the segment counts as done. Labelling a diagram, classifying graphs, building a graph and predicting the next vertex as an activity are not built as kinds; module content uses multiple choice and matching for them, and prediction exists only in the visualiser. | FR‑4.1, FR‑5.5, FR‑6.6 | Screens for the first three in progress (#136) |
+| Objectives 5 and 7 | Their mastery items (a trace table; fix the bug and choose tests) have no screen, so a real student's result for them stays "not attempted", and nobody can become "ready for the lecture" except the seeded demo accounts. The review paths for 5 and 7 can't open for the same reason. | FR‑7.1, FR‑7.4, FR‑7.5 | In progress (#136); review paths that meet the ID design planned (#148) |
+| Module 5 | Test and debug has one retrieval question and no segments, so module 6 opens without it and objective 7 is not taught. | FR‑2.1, ID Table 4 | Content (#86) |
+| Objective 8 | In the ID document, but not in the app: no criterion, mastery item or review path. | FR‑4.3 | Decision pending (#70) |
+| Diagnostic, fading, bonus | The diagnostic is recorded but does not pick refreshers; every refresher is shown. Worked examples can't be skipped (four check activities exist but are in no segment). There are no bonus quests. | FR‑8.1–FR‑8.3 | #31, #87 |
+| Practice **Check** | No ungraded check: every submission is graded and recorded. | FR‑5.2 | Not scheduled |
+| Module locks on activities | An activity can be opened and answered by id before its module is open, so a module 6 item can be seen early. | FR‑7.1 | In progress (#137) |
+| Concurrency | Two saves at once can fail: a deadlock on module 6 answers on Postgres, and a server error on a double-click. | NFR‑U3 | In progress (#138) |
+| Answer rate limit | No rate limit or size limit on answers and hints. | NFR‑S6 | In progress (#139) |
+| Segment done rule | A wrong answer counts as done, by design (FR-2.7); requiring a real answer is planned. | FR‑2.7 | Planned (#143) |
+| Mastery check | Feedback and hints 3–4 are available on mastery items, and the result shows at once. | FR‑7.1, FR‑7.2 | Planned (#144) |
+| Parsons | Only the one stored line order is accepted, though some lines could validly swap. | FR‑5.4 | In progress (#145) |
+| Points and events | Module completion earns no points (the 25-point rule is never applied). The web app does not send `segment_viewed`, and no `module_completed` event is logged, so neither time per module nor module completion can be measured from the log. | FR‑9.1, FR‑10.1 | Planned (#141) |
+| Badges | No "first module" badge; the bonus-quest badges can't be earned; "every objective met" can't be earned by a real student (see objectives 5 and 7). | FR‑9.3 | Follows #136, #87 |
+| Visualiser | Predictions are checked in the browser and not recorded, so they give no evidence for an objective. The visualiser is reached only from a link in module 3. | FR‑6.4 | Not scheduled |
+| Videos | The fixtures hold no videos: staff upload them on each site. Placing a video in a module segment needs a database change on `staging`; the content editor adds it (#128). A video segment without a video shows "Video not available" and counts as done. | FR‑3, NFR‑A4 | #37; #128 (open pull request); text fallback planned (#149) |
+| Rendering and accessibility | Tables in worked examples and code indentation render wrongly in places; several issues from a browser walk-through (focus, contrast, labels). Two component kits are in use. | NFR‑U2, NFR‑A1–A3 | In progress (#140, #142) |
+| Navigation | Some dead ends: review-path steps and the visualiser have no way back, and a page that gets a 403 or 404 retries for several seconds. | NFR‑U3 | Planned (#146) |
+| Staff view of students | The staff accounts pages list every student's email and display name (FR-1.8), more than the evaluation needs. | NFR‑S8 | Planned (#146) |
+| Content | A content pass on answer positions, giveaways and wording is in progress; evidence-based improvements (subgoals, self-explanation, misconceptions) are planned. | FR‑4.2 | In progress (#147); planned (#150) |
+| Tests | No end-to-end or automated accessibility tests (§14.1); no timing test for NFR-P1 to NFR-P3, which are met by design (no execution, small graphs) but not measured. Definition of Done item 2 asks for an end-to-end test for each user-facing flow; no item has met it yet. | §14.1, NFR‑P | #35 |
+| Responsive layout | 360 px wide (NFR-U1) is not yet checked on every page. | NFR‑U1 | In progress (#142) |
 | Sprint records | Only Sprint 0's record is in `docs/se/sprints/`. | §2.7 | Not yet written |
 
 Table: Known limitations of the build on `staging`.
@@ -1393,9 +1395,11 @@ Table: Known limitations of the build on `staging`.
 
 [14] J. Nielsen and T. K. Landauer. A mathematical model of the finding of usability problems. In *Proceedings of INTERCHI '93*, pages 206–213. ACM, 1993.
 
-[15] J. Urquiza-Fuentes and J. Á. Velázquez-Iturbide. A survey of successful evaluations of program visualization and algorithm animation systems. *ACM Transactions on Computing Education* 9(2), 2009. <https://doi.org/10.1145/1538234.1538236>
+[15] J. Urquiza-Fuentes and J. Á. Velázquez-Iturbide. A survey of successful evaluations of program visualization and algorithm animation systems. *ACM Transactions on Computing Education* 9(2), article 9, 2009. <https://doi.org/10.1145/1538234.1538236>
 
 [16] A. Bangor, P. T. Kortum and J. T. Miller. An empirical evaluation of the System Usability Scale. *International Journal of Human–Computer Interaction* 24(6), pages 574–594, 2008.
+
+[17] International Organization for Standardization. *ISO 9241-11:2018, Ergonomics of human-system interaction — Part 11: Usability: Definitions and concepts.* ISO, Geneva, 2018.
 
 </div>
 

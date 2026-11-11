@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams } from 'react-router'
 import { Alert, Button, ProgressBar, Spinner } from '../../components'
 import { ActivityView } from '../activities/ActivityPage.tsx'
 import { fetchModule, savePosition } from './module.api.ts'
 import { SegmentView } from './SegmentView.tsx'
+// A line of its own, so it merges cleanly with fix/web-rendering-a11y's change to the imports above.
+import { Link } from 'react-router'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { ApiError } from '../../api/client.ts'
 

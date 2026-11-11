@@ -350,6 +350,64 @@ describe('ModulePage — navigation and position saving', () => {
     ).toBeInTheDocument()
   })
 
+  it('opens a complete module at its first segment that is not done (#136 review)', async () => {
+    // A student who finished the module before its activity could be answered: the server keeps
+    // them on the last segment, but the page takes them to what is missing.
+    setupModuleApi({
+      ...allKindsDetail,
+      status: 'complete',
+      currentSegmentPosition: 3,
+      segments: [
+        textSegment,
+        videoSegment,
+        { ...activitySegment, done: false },
+        workedExampleSegment,
+      ],
+    })
+    renderApp('/modules/1')
+    expect(await screen.findByText('Segment 3 of 4')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Practice: BFS step by step' })).toBeInTheDocument()
+  })
+
+  it('opens a complete module with everything done where the student left it', async () => {
+    setupModuleApi({ ...allKindsDetail, status: 'complete', currentSegmentPosition: 3 })
+    renderApp('/modules/1')
+    expect(await screen.findByText('Segment 4 of 4')).toBeInTheDocument()
+  })
+
+  it('opens an in-progress module at a segment the student passed without doing it', async () => {
+    setupModuleApi({
+      ...allKindsDetail,
+      status: 'in_progress',
+      currentSegmentPosition: 3,
+      segments: [
+        textSegment,
+        videoSegment,
+        { ...activitySegment, done: false },
+        workedExampleSegment,
+      ],
+    })
+    renderApp('/modules/1')
+    expect(await screen.findByText('Segment 3 of 4')).toBeInTheDocument()
+  })
+
+  it('resumes an in-progress module on the segment the student is doing', async () => {
+    setupModuleApi({
+      ...allKindsDetail,
+      status: 'in_progress',
+      currentSegmentPosition: 2,
+      segments: [
+        textSegment,
+        videoSegment,
+        { ...activitySegment, done: false },
+        workedExampleSegment,
+      ],
+    })
+    renderApp('/modules/1')
+    expect(await screen.findByText('Segment 3 of 4')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Next →' })).toHaveAttribute('aria-disabled', 'true')
+  })
+
   it('clicking "Finish module" on the last segment saves the position and navigates to "/"', async () => {
     fakeApi({
       user: ada,
@@ -482,6 +540,67 @@ describe('ModulePage — activity segment', () => {
     ).toBeInTheDocument()
   })
 
+  it('stays on the segment it opened at when answering it makes another the first not done', async () => {
+    // A complete module with two segments left undone (#136): answering the first refetches the
+    // module, and the page must keep showing that answer's feedback, not jump to the second.
+    let answered = false
+    const detail = (): ModuleDetail => ({
+      ...allKindsDetail,
+      currentSegmentPosition: 3,
+      status: 'complete',
+      segments: [
+        textSegment,
+        videoSegment,
+        { ...activitySegment, done: answered },
+        { ...activitySegment, id: 14, position: 4, activityId: 8, title: 'Second', done: false },
+      ],
+    })
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules': () => Response.json([]),
+        'GET /api/modules/:id': () => Response.json(detail()),
+        'GET /api/activities/7': () =>
+          Response.json({
+            id: 7,
+            kind: 'multiple_choice',
+            title: 'Which vertex is next?',
+            visible: true,
+            config: {
+              prompt: 'Which?',
+              options: [
+                { id: 'b', label: 'B' },
+                { id: 'd', label: 'D' },
+              ],
+            },
+          }),
+        'GET /api/activities/7/hints': () => Response.json([]),
+        'POST /api/activities/7/attempts': () => {
+          answered = true
+          return Response.json({
+            id: 1,
+            activityId: 7,
+            correct: false,
+            score: 0,
+            parts: [],
+            feedback: 'Not quite: D joined the queue last.',
+            hintLevel: 0,
+          })
+        },
+      },
+    })
+    renderApp('/modules/1')
+    await screen.findByRole('heading', { level: 3, name: 'Which vertex is next?' })
+    expect(screen.getByText('Segment 3 of 4')).toBeInTheDocument()
+    await userEvent.click(screen.getByLabelText('D'))
+    await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(await screen.findByText('Not quite: D joined the queue last.')).toBeInTheDocument()
+    // Give the refetch time to land, then check the page didn't move.
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(screen.getByText('Segment 3 of 4')).toBeInTheDocument()
+    expect(screen.getByText('Not quite: D joined the queue last.')).toBeInTheDocument()
+  })
+
   it('asks for the video’s checkpoints, answered correctly, before moving on', async () => {
     const detail: ModuleDetail = {
       ...allKindsDetail,
@@ -572,8 +691,10 @@ describe('ModulePage — blocked Next', () => {
     })
     renderApp('/modules/1')
 
-    await userEvent.click(await screen.findByRole('button', { name: '← Previous' }))
+    // The page opens on the segment that was passed without being done (#136 review) ...
+    expect(await screen.findByText('Segment 3 of 4')).toBeInTheDocument()
     const next = await screen.findByRole('button', { name: 'Next →' })
+    // ... and doesn't block moving on from it.
     expect(next).not.toHaveAttribute('aria-disabled')
 
     await userEvent.click(next)

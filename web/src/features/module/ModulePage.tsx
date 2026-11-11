@@ -94,8 +94,22 @@ export function ModulePage() {
     )
   }
 
-  // Initialise from the server's position; clamp to valid range.
-  const currentIndex = segmentIndex ?? Math.min(module.currentSegmentPosition, segments.length - 1)
+  // Initialise from the server's position; clamp to valid range. But if a segment the student has
+  // already passed isn't done (or any segment, in a complete module), open there instead: a student
+  // who went past an activity before it could be answered (trace, fix the bug and choose tests
+  // until #136) lands on it, not on a later segment with nothing to show what is missing. Normally
+  // every segment before the position is done (FR-2.7), so this changes nothing else.
+  const firstNotDone = segments.findIndex((segment) => !segment.done)
+  const skipped =
+    firstNotDone >= 0 &&
+    (module.status === 'complete' || firstNotDone < module.currentSegmentPosition)
+  const currentIndex =
+    segmentIndex ??
+    (skipped ? firstNotDone : Math.min(module.currentSegmentPosition, segments.length - 1))
+  // Fix where the page opened: answering that segment refetches the module, and the page must stay
+  // on it to show the feedback, not jump on to the next segment that isn't done. (Setting state
+  // during render, guarded so it happens once, is React's pattern for state derived from props.)
+  if (segmentIndex === null) setSegmentIndex(currentIndex)
   const segment = segments[currentIndex]
   const isFirst = currentIndex === 0
   const isLast = currentIndex === segments.length - 1

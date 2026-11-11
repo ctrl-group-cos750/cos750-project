@@ -71,15 +71,39 @@ describe('ReportPage', () => {
       ],
     })
     renderApp('/report')
-    expect(await screen.findByText('Not ready yet: 2 objectives to review')).toBeVisible()
+    // Both kinds of gap are counted: one never hides the other (#136 review).
+    expect(
+      await screen.findByText(
+        'Not ready yet: 2 objectives to review and 2 objectives to answer in module 6',
+      ),
+    ).toBeVisible()
     expect(row(1).getByText('Not attempted')).toBeVisible()
-    expect(row(1).getByText(/Answer its questions in module 6/)).toBeVisible()
+    expect(row(1).getByText(/Not answered yet: its questions are in module 6/)).toBeVisible()
+    expect(
+      row(1).getByRole('link', { name: 'Answer its questions in module 6: objective 1' }),
+    ).toHaveAttribute('href', '/modules/6')
     expect(row(2).getByText('1 of 3 questions answered in module 6.')).toBeVisible()
+    expect(
+      row(2).getByRole('link', { name: 'Finish its questions in module 6: objective 2' }),
+    ).toHaveAttribute('href', '/modules/6')
     expect(row(3).getByText(/no questions on this objective yet/)).toBeVisible()
+    expect(row(3).queryByRole('link')).not.toBeInTheDocument()
+    expect(row(4).queryByRole('link', { name: /module 6/ })).not.toBeInTheDocument()
   })
 
-  it('asks the student to finish the check when nothing is not yet', async () => {
+  it('counts the objectives still to answer when nothing is not yet', async () => {
     withReport({ ready: false, objectives: [objective(1, { state: 'not_attempted' })] })
+    renderApp('/report')
+    expect(
+      await screen.findByText('Not ready yet: 1 objective to answer in module 6'),
+    ).toBeVisible()
+  })
+
+  it('asks the student to finish the check when nothing else explains it', async () => {
+    withReport({
+      ready: false,
+      objectives: [objective(1, { state: 'not_attempted', answered: 0, total: 0 })],
+    })
     renderApp('/report')
     expect(await screen.findByText('Not ready yet: finish the mastery check')).toBeVisible()
   })

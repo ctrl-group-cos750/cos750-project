@@ -24,6 +24,8 @@ function BadgeCard({ item }: { item: ShelfItem }) {
 }
 
 function Group({ title, items }: { title: string; items: ShelfItem[] }) {
+  // An empty group has nothing to show: today the hidden group, since Off the Map was removed.
+  if (items.length === 0) return null
   return (
     <section className={styles.group}>
       <h2>{title}</h2>

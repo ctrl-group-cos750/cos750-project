@@ -15,7 +15,8 @@ from app.services.checking import check_activity, is_blank
 from app.services.events import log_event
 from app.services.locks import lock_student
 from app.services.mastery import counts, recompute
-from app.services.rewards import on_attempt
+from app.services.modules import reward_completed_modules
+from app.services.rewards import SUPPORT_LEVEL, on_attempt
 
 
 def hint_level_seen(session: Session, user_id: int, activity_id: int) -> int:
@@ -54,6 +55,9 @@ def record_attempt(
     session.add(attempt)
     session.flush()
     on_attempt(session, attempt)  # points for a first correct answer (FR-9.1, FR-9.2)
+    if result.correct and attempt.hint_level < SUPPORT_LEVEL:
+        # Real work in a module already complete earns its reward now (#166 review).
+        reward_completed_modules(session, user_id, activity)
     if counts(activity):
         recompute(session, user_id)  # the objective results, and what they earn (FR-7)
     return attempt, result

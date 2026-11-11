@@ -480,7 +480,7 @@ Gamification is the use of game design elements outside games [32]. A review fou
 | Element | Purpose |
 |---|---|
 | Module map with progress |	Shows how far the student has come and what is left. |
-| Private points	| Reward correct work, finished modules and objectives met. Fewer points are given after hint level 3 or 4. |
+| Private points	| Reward correct work, finished modules and objectives met. Fewer points are given after hint level 3 or 4. A finished module is rewarded only if at least one of its activities was answered correctly without hint 3 or 4, so clicking through hints earns nothing. |
 | Badges for milestones |	Mark real progress, not time spent or clicks. Built: a badge per objective met, "ready for the lecture", one for meeting every objective independently, one for meeting an objective after its review path, and one for the first module completed. Quest badges wait for bonus quests (#87). |
 | Campus storyline |	Links the modules into one problem: finding routes across campus. |
 | Optional bonus quests	| Extra challenge for strong students. They give points but never affect mastery. Planned; none exist yet (#87). |

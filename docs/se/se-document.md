@@ -407,7 +407,7 @@ Code activities never execute student-written code. The student constructs code 
 - **FR-8.3** Offer optional bonus quests after modules for students who want more challenge. They give points but never affect mastery.
 
 ## Points and badges (FR-9)
-- **FR-9.1** Award points for completed modules, correct activities and objectives met, from a server-side rules table.
+- **FR-9.1** Award points for completed modules, correct activities and objectives met, from a server-side rules table. A completed module earns its points, and the first one the First Module badge, only with real work in it: at least one of its activities answered correctly without hint 3 or 4. A module walked through by opening every hint earns nothing until then (FR-9.6). Modules completed before these points existed get them, if earned, when the seed next runs.
 - **FR-9.2** Award fewer points for a correct answer reached after hint level 3 or 4, matching "met with support".
 - **FR-9.3** Award badges for milestones (first module, every objective met, all bonus quests).
 - **FR-9.4** Points and badges are **private**: each student sees only their own. There is no public leaderboard, because public ranking discourages the students who most need the app (those motivated by avoiding failure, L05 [4]).

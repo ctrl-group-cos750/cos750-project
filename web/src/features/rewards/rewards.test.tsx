@@ -77,6 +77,8 @@ describe('Badges page', () => {
     ).toBeVisible()
     expect(screen.getByRole('img', { name: 'Word Smith, not earned yet' })).toBeVisible()
     expect(screen.getByRole('img', { name: 'First Module, not earned yet' })).toBeVisible()
+    // No hidden badge exists today, so its group isn't shown as an empty heading (#166 review).
+    expect(screen.queryByRole('heading', { name: 'Something to find' })).toBeNull()
   })
 
   it('can hide points and badges, and show them again', async () => {

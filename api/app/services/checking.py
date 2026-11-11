@@ -53,6 +53,18 @@ UNKNOWN_TEST = "This is not one of the test cases."
 WRONG_TRACE_STEP = "This step does not match the traversal."
 MISSING_TRACE_STEP = "The traversal has more steps than this."
 EXTRA_TRACE_STEP = "The traversal is already finished by this step."
+# What to check in each column of a wrong trace row (ID document §7.3: the reason and the next
+# step, not just "wrong"). Named by column, never by the right value, so a row's message helps
+# without giving the answer away.
+TRACE_COLUMN_HINTS = {
+    "visited_vertex": "Current vertex: it is the vertex at the front of the queue before this step.",
+    "queue": (
+        "Queue: the current vertex leaves from the front, and only its neighbours that have not "
+        "been found yet join at the back, in alphabetical order."
+    ),
+    "visited": "Visited: every vertex that has left the queue so far, and only those.",
+    "order": "Order so far: the vertices in the order they left the queue.",
+}
 
 
 def _result(parts: list[PartResult]) -> CheckResult:
@@ -114,10 +126,12 @@ def check_trace(config: TraceConfig, submission: TraceSubmission) -> CheckResult
     """One part per step: a step is correct when the student's visited vertex, queue, visited set
     and order all match the engine's step at that position (FR-6.6). The queue and the order are
     sequences, so their order counts; the visited set is a set, so it is compared regardless of the
-    order the student wrote it in (a repeated vertex still makes it wrong). The traversal is the engine's,
-    not a stored answer, so a trace is always graded against what the lessons teach (SE document
-    decision "BFS computed server-side"); no `solution` is kept for this kind. A short answer leaves
-    its missing steps wrong and a long one leaves its extra steps wrong, so both lower the score."""
+    order the student wrote it in (a repeated vertex still makes it wrong). A wrong step's message
+    names each column that is wrong and what to check in it (`TRACE_COLUMN_HINTS`), never the
+    right value. The traversal is the engine's, not a stored answer, so a trace is always graded
+    against what the lessons teach (SE document decision "BFS computed server-side"); no
+    `solution` is kept for this kind. A short answer leaves its missing steps wrong and a long one
+    leaves its extra steps wrong, so both lower the score."""
     scenario = GraphScenarioOut(
         id=0,
         name="",
@@ -136,15 +150,22 @@ def check_trace(config: TraceConfig, submission: TraceSubmission) -> CheckResult
             parts.append(PartResult(ref=i, correct=False, message=EXTRA_TRACE_STEP))
         elif have is None:
             parts.append(PartResult(ref=i, correct=False, message=MISSING_TRACE_STEP))
-        elif (
-            have.visited_vertex == want.visited_vertex
-            and have.queue == want.queue
-            and sorted(have.visited) == sorted(want.visited)
-            and have.order == want.order
-        ):
-            parts.append(PartResult(ref=i, correct=True))
         else:
-            parts.append(PartResult(ref=i, correct=False, message=WRONG_TRACE_STEP))
+            wrong = [
+                column
+                for column, right in (
+                    ("visited_vertex", have.visited_vertex == want.visited_vertex),
+                    ("queue", have.queue == want.queue),
+                    ("visited", sorted(have.visited) == sorted(want.visited)),
+                    ("order", have.order == want.order),
+                )
+                if not right
+            ]
+            if not wrong:
+                parts.append(PartResult(ref=i, correct=True))
+            else:
+                message = " ".join([WRONG_TRACE_STEP, *(TRACE_COLUMN_HINTS[c] for c in wrong)])
+                parts.append(PartResult(ref=i, correct=False, message=message))
     return _result(parts)
 
 

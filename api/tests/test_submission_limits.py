@@ -5,6 +5,7 @@ hint reveals are rate-limited per student, and an id past a Postgres integer is 
 plain-text 500. Run on Postgres too (TEST_DATABASE_URL), where the int4 overflow was real.
 """
 
+import itertools
 import json
 from typing import Any
 
@@ -19,7 +20,14 @@ from test_mastery import correct_submission
 from app.models import Activity, Attempt, Hint
 from app.routers import activities as activities_router
 from app.routers.activities import attempts_limiter, hints_limiter
-from app.schemas.activities import MAX_SUBMISSION_BYTES
+from app.schemas.activities import (
+    MAX_SUBMISSION_BYTES,
+    TRACE_LABEL,
+    TRACE_VERTICES,
+    TraceConfig,
+    TraceSubmission,
+)
+from app.schemas.base import ApiModel
 from app.seed import read_fixtures
 
 STUDENT = {"email": "ada@example.com", "password": "Correct horse 1", "displayName": "Ada"}
@@ -112,25 +120,151 @@ def test_a_submission_that_is_not_an_object_is_422(student: TestClient, db: Sess
     assert attempts(db) == 0
 
 
-def test_a_trace_table_too_large_to_be_honest_is_413(student: TestClient, db: Session) -> None:
-    """A trace table is the one shape the per-field bounds still let grow (50 rows of 50 labels
-    of 32 characters): the cap on the whole submission stops it."""
+def test_a_trace_table_larger_than_its_graph_could_need_is_422(
+    student: TestClient, db: Session
+) -> None:
+    """A trace graph has at most 20 vertices with 12-character labels, so a table of more rows,
+    longer lists or longer labels can't be an answer to one."""
     activity_id = make(db, *TRACE)
-    label = "V" * 32
-    row: dict[str, Any] = {"visitedVertex": label, "queue": [label] * 50, "visited": [label] * 50,
-           "order": [label] * 50}  # fmt: skip
-    submitted = {"rows": [row] * 50}
-    assert len(json.dumps(submitted)) > MAX_SUBMISSION_BYTES
-    response = student.post(
-        f"/api/activities/{activity_id}/attempts", json={"submitted": submitted}
-    )
-    assert response.status_code == 413
-    assert response.json() == {"detail": "This answer is too long to check."}
-    # The analysis stored 900 kB of padding in an unknown field; now it is refused unread.
+    label = "V" * 12
+    row: dict[str, Any] = {"visitedVertex": label, "queue": [label] * 20, "visited": [label] * 20,
+           "order": [label] * 20}  # fmt: skip
+    for submitted in (
+        {"rows": [row] * 21},
+        {"rows": [{**row, "queue": [label] * 21}]},
+        {"rows": [{**row, "visitedVertex": "V" * 13}]},
+    ):
+        response = student.post(
+            f"/api/activities/{activity_id}/attempts", json={"submitted": submitted}
+        )
+        assert response.status_code == 422
+    # The largest table the shape allows is still graded (wrong), not refused for its size.
+    largest = {"rows": [row] * 20}
+    assert len(json.dumps(largest, separators=(",", ":"))) < MAX_SUBMISSION_BYTES
+    response = student.post(f"/api/activities/{activity_id}/attempts", json={"submitted": largest})
+    assert response.status_code == 201
+    assert attempts(db) == 1
+
+
+def test_padding_past_the_cap_is_413_and_not_stored(student: TestClient, db: Session) -> None:
+    """The analysis stored 900 kB of padding in an unknown field; now it is refused unread."""
     padded = {"selected": "a", "note": "x" * 900_000}
     response = student.post(f"/api/activities/{make(db, *MC)}/attempts", json={"submitted": padded})
     assert response.status_code == 413
+    assert response.json() == {"detail": "This answer is too long to check."}
     assert attempts(db) == 0
+
+
+def largest_valid(kind: str) -> dict[str, Any]:
+    """The biggest submission each kind's shape accepts (compact JSON)."""
+    big_int = -(2**31)
+    match kind:
+        case "multiple_choice":
+            return {"selected": "x" * 50}
+        case "parsons":
+            return {"order": [big_int] * 100}
+        case "fix_the_bug":
+            return {"order": [big_int] * 150}
+        case "fill_in":
+            return {"answers": {str(big_int + n): "x" * 200 for n in range(100)}}
+        case "matching":
+            return {"pairs": {f"{n:02d}" + "l" * 48: "r" * 50 for n in range(20)}}
+        case "choose_tests":
+            return {"selected": ["t" * 50] * 8}
+        case "trace":
+            label = "V" * 12
+            row = {"visitedVertex": label, "queue": [label] * 20, "visited": [label] * 20,
+                   "order": [label] * 20}  # fmt: skip
+            return {"rows": [row] * 20}
+    raise AssertionError(kind)
+
+
+@pytest.mark.parametrize(
+    "kind",
+    ["multiple_choice", "parsons", "fix_the_bug", "fill_in", "matching", "choose_tests", "trace"],
+)
+def test_the_cap_never_refuses_a_submission_its_shape_accepts(kind: str) -> None:
+    """MAX_SUBMISSION_BYTES is only a backstop: every valid submission of every kind fits."""
+    import app.schemas.activities as schemas
+
+    shapes: dict[str, type[ApiModel]] = {
+        "multiple_choice": schemas.MultipleChoiceSubmission,
+        "parsons": schemas.ParsonsSubmission,
+        "fix_the_bug": schemas.FixTheBugSubmission,
+        "fill_in": schemas.FillInSubmission,
+        "matching": schemas.MatchingSubmission,
+        "choose_tests": schemas.ChooseTestsSubmission,
+        "trace": schemas.TraceSubmission,
+    }
+    submitted = largest_valid(kind)
+    shapes[kind].model_validate(submitted)  # it is valid
+    assert len(json.dumps(submitted, separators=(",", ":"))) < MAX_SUBMISSION_BYTES
+
+
+def test_the_worst_right_trace_answer_fits_the_cap_with_room() -> None:
+    """The right answer to the largest trace graph TraceConfig allows (20 vertices, 12-character
+    labels), from the BFS engine, for the shapes that make the table longest."""
+    vertices = [f"V{n:011d}" for n in range(TRACE_VERTICES)]
+    assert {len(v) for v in vertices} == {TRACE_LABEL}
+    shapes = {
+        "complete": list(itertools.combinations(vertices, 2)),
+        "star": [(vertices[0], v) for v in vertices[1:]],
+        "path": list(itertools.pairwise(vertices)),
+    }
+    sizes = {}
+    for name, edges in shapes.items():
+        config = {
+            "directed": False,
+            "vertices": vertices,
+            "edges": [{"source": a, "target": b} for a, b in edges],
+            "startVertex": vertices[0],
+        }
+        TraceConfig.model_validate(config)
+        answer = correct_submission(Activity(kind="trace", config=config, solution={}))
+        TraceSubmission.model_validate(answer)
+        sizes[name] = len(json.dumps(answer, separators=(",", ":")))
+    assert max(sizes.values()) * 3 < MAX_SUBMISSION_BYTES, sizes
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"vertices": [f"v{n}" for n in range(21)]},
+        {"vertices": ["A" * 13, "B"]},
+    ],
+)
+def test_a_trace_graph_too_big_to_trace_by_hand_is_refused_in_content(
+    change: dict[str, Any],
+) -> None:
+    from pydantic import ValidationError
+
+    config = {**TRACE[1], **change}
+    with pytest.raises(ValidationError):
+        TraceConfig.model_validate(config)
+
+
+@pytest.mark.parametrize(
+    ("model", "data"),
+    [
+        ("ChoiceOption", {"id": "a\x00", "label": "A"}),
+        ("MatchingItem", {"id": "l\n", "label": "L"}),
+        ("FillInConfig", {"code": "__1__", "blanks": [1], "options": ["ok", "tab\there"]}),
+        ("MultipleChoiceSolution", {"correct": "a\x7f"}),
+        ("MatchingSolution", {"pairs": {"l": "r\x01"}}),
+        ("ChooseTestsSolution", {"exposing": ["t\x00"]}),
+        ("FillInSolution", {"answers": {"1": "x\ny"}}),
+    ],
+)
+def test_content_cannot_hold_a_choice_a_student_would_be_refused_for(
+    model: str, data: dict[str, Any]
+) -> None:
+    """The same no-control-characters rule as the submissions, on the content side (#139)."""
+    from pydantic import ValidationError
+
+    import app.schemas.activities as schemas
+
+    with pytest.raises(ValidationError):
+        getattr(schemas, model).model_validate(data)
 
 
 @pytest.mark.parametrize(
@@ -170,7 +304,7 @@ def test_every_committed_activitys_answer_fits_well_under_the_cap() -> None:
         )
         for a in content.activities
     }
-    assert max(sizes.values()) * 10 < MAX_SUBMISSION_BYTES, max(sizes.values())
+    assert max(sizes.values()) * 30 < MAX_SUBMISSION_BYTES, max(sizes.values())
 
 
 def test_a_fill_in_token_longer_than_200_is_refused_in_content() -> None:
@@ -339,3 +473,28 @@ def test_a_database_error_is_json_for_the_student(
     assert response.json() == {"detail": detail}
     if status == 503:
         assert response.headers["Retry-After"] == "2"
+
+
+def test_a_conflict_logs_the_constraint_that_refused_it(
+    student: TestClient,
+    db: Session,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    class Diag:
+        constraint_name = "points_entries_user_id_ref_key"
+
+    class Orig(Exception):
+        diag = Diag()
+
+    def fail(*_: Any) -> None:
+        raise IntegrityError("INSERT", {}, Orig("duplicate"))
+
+    monkeypatch.setattr(activities_router, "record_attempt", fail)
+    activity_id = make(db, *MC)
+    with caplog.at_level("WARNING", logger="app.errors"):
+        response = student.post(
+            f"/api/activities/{activity_id}/attempts", json={"submitted": {"selected": "a"}}
+        )
+    assert response.status_code == 409
+    assert "points_entries_user_id_ref_key" in caplog.text

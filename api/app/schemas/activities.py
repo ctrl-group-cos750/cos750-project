@@ -20,24 +20,32 @@ from app.schemas.graphs import VERTEX, GraphEdge
 
 Vertex = Annotated[str, Field(pattern=VERTEX)]
 
-# No C0 control characters or DEL (NUL among them) in anything a student submits: no option, id,
-# token or label contains one, and they would reach the evaluation export (FR-10).
+# No C0 control characters or DEL (NUL among them) in an id or token, on either side: content may
+# not hold one (configs and solutions), so a student is never refused for choosing what they were
+# shown, and a submission may not carry one into the evaluation export (FR-10).
 NO_CONTROL = r"^[^\x00-\x1f\x7f]*$"
-ID_LENGTH = 50  # option, matching item and test case ids (the configs' own bound)
-TOKEN_LENGTH = 200  # a fill-in token (FillInConfig.options)
+ID_LENGTH = 50  # option, matching item and test case ids
+TOKEN_LENGTH = 200  # a fill-in token
 
-# A choice the student made, by id or by token: one of a fixed set, so short and printable.
+# An id or token as content defines it (config and solution) and as a student sends it back.
+ContentId = Annotated[str, Field(min_length=1, max_length=ID_LENGTH, pattern=NO_CONTROL)]
+ContentToken = Annotated[str, Field(max_length=TOKEN_LENGTH, pattern=NO_CONTROL)]
 ChosenId = Annotated[str, Field(max_length=ID_LENGTH, pattern=NO_CONTROL)]
-ChosenToken = Annotated[str, Field(max_length=TOKEN_LENGTH, pattern=NO_CONTROL)]
+ChosenToken = ContentToken
 # A line or blank id. Fixture ids are small; anything past a Postgres integer is never one.
 SubmittedInt = Annotated[int, Field(ge=-(2**31), le=2**31 - 1)]
 
-# The whole submission, in bytes of compact ASCII JSON. The largest right answer in the
-# committed content is a trace table of about 660 (activity 618; tests/test_submission_limits.py
-# checks the margin); this leaves room for far bigger content, and stops the one shape the
-# per-field bounds still let grow (a trace table of a 50-vertex graph with 32-character labels,
-# about 260 kB) from filling the attempts table.
-MAX_SUBMISSION_BYTES = 16_384
+# A trace table is filled in by hand, one row per vertex, so its graph is small: at most 20
+# vertices with labels of at most 12 characters (VERTEX allows 32 for scenarios). The committed
+# trace graphs have 5 to 7 one-letter vertices.
+TRACE_VERTICES = 20
+TRACE_LABEL = 12
+
+# The whole submission, in bytes of compact ASCII JSON: a backstop to the per-field bounds, which
+# already keep every valid submission below it. The largest right answer they allow is a trace of
+# a complete 20-vertex graph with 12-character labels, about 10.5 kB, and the largest valid
+# submission of any kind about 20 kB (tests/test_submission_limits.py computes both).
+MAX_SUBMISSION_BYTES = 32_768
 
 CodeActivityKind = Literal["parsons", "fill_in", "fix_the_bug", "choose_tests"]
 ActivityKind = Literal[
@@ -49,7 +57,7 @@ ActivityKind = Literal[
 
 
 class ChoiceOption(ApiModel):
-    id: str = Field(min_length=1, max_length=50)
+    id: ContentId
     label: str = Field(max_length=2_000)
 
 
@@ -64,7 +72,7 @@ class MultipleChoiceSolution(ApiModel):
     """Server-only: the correct option, and why each wrong one is wrong (FR-4.2), keyed by option
     id. A wrong option without a message gets a generic one."""
 
-    correct: str
+    correct: ContentId
     feedback: dict[str, str] = Field(default_factory=dict)
 
 
@@ -105,9 +113,7 @@ class FillInConfig(ApiModel):
 
     code: str = Field(max_length=20_000)
     blanks: list[int] = Field(min_length=1, max_length=100)
-    options: list[Annotated[str, Field(max_length=TOKEN_LENGTH)]] = Field(
-        min_length=1, max_length=200
-    )
+    options: list[ContentToken] = Field(min_length=1, max_length=200)
 
 
 class FillInSolution(ApiModel):
@@ -115,7 +121,7 @@ class FillInSolution(ApiModel):
     wrong (FR-4.2): a message per blank and token, e.g. `{1: {"in": "Not quite. With in, …"}}`.
     A wrong token without a message gets a generic one."""
 
-    answers: dict[int, str]
+    answers: dict[int, ContentToken]
     feedback: dict[int, dict[str, str]] = Field(default_factory=dict)
 
 
@@ -129,7 +135,7 @@ class FillInSubmission(ApiModel):
 
 
 class MatchingItem(ApiModel):
-    id: str = Field(min_length=1, max_length=50)
+    id: ContentId
     label: str = Field(max_length=2_000)
 
 
@@ -155,7 +161,7 @@ class MatchingSolution(ApiModel):
     """Server-only: the right item for each left item, and why a wrong pairing is wrong, keyed by
     left item id (FR-4.2)."""
 
-    pairs: dict[str, str]
+    pairs: dict[ContentId, ContentId]
     feedback: dict[str, str] = Field(default_factory=dict)
 
 
@@ -207,7 +213,7 @@ class TestCase(ApiModel):
 
     __test__ = False  # not a pytest test class, despite the name
 
-    id: str = Field(min_length=1, max_length=50)
+    id: ContentId
     directed: bool = False
     vertices: list[Vertex] = Field(min_length=1, max_length=20)
     edges: list[GraphEdge] = Field(default_factory=list, max_length=60)
@@ -234,7 +240,7 @@ class ChooseTestsSolution(ApiModel):
     """Server-only: the test cases the faulty version fails, and a message per test case for a
     wrong choice: why it does, or doesn't, expose the bug."""
 
-    exposing: list[str] = Field(min_length=1)
+    exposing: list[ContentId] = Field(min_length=1)
     feedback: dict[str, str] = Field(default_factory=dict)
 
 
@@ -251,15 +257,18 @@ class TraceConfig(ApiModel):
     (FR-6.6), so the answer never reaches the browser."""
 
     directed: bool
-    # Same label rule as a graph fixture, so a trace graph draws like any other scenario.
-    vertices: list[Annotated[str, Field(pattern=VERTEX)]] = Field(min_length=1, max_length=50)
+    # Same label rule as a graph fixture, so a trace graph draws like any other scenario, but a
+    # graph small enough to trace by hand (TRACE_VERTICES, TRACE_LABEL).
+    vertices: list[Annotated[str, Field(pattern=VERTEX, max_length=TRACE_LABEL)]] = Field(
+        min_length=1, max_length=TRACE_VERTICES
+    )
     edges: list[GraphEdge] = Field(max_length=200)
     start_vertex: str
 
 
-# A vertex label as the student types it. Only the length is bounded (labels are at most 32
-# characters, see VERTEX): a label that is not in the graph is a wrong answer, not a 422.
-TracedVertex = Annotated[str, Field(max_length=32, pattern=NO_CONTROL)]
+# A vertex label as the student types it. Only the length is bounded (a trace graph's labels are
+# at most TRACE_LABEL characters): a label that is not in the graph is a wrong answer, not a 422.
+TracedVertex = Annotated[str, Field(max_length=TRACE_LABEL, pattern=NO_CONTROL)]
 
 
 class TraceRow(ApiModel):
@@ -267,13 +276,15 @@ class TraceRow(ApiModel):
     state after it — the queue, the visited set and the visit order (the columns in FR-4.1)."""
 
     visited_vertex: TracedVertex
-    queue: list[TracedVertex] = Field(max_length=50)
-    visited: list[TracedVertex] = Field(max_length=50)
-    order: list[TracedVertex] = Field(max_length=50)
+    queue: list[TracedVertex] = Field(max_length=TRACE_VERTICES)
+    visited: list[TracedVertex] = Field(max_length=TRACE_VERTICES)
+    order: list[TracedVertex] = Field(max_length=TRACE_VERTICES)
 
 
 class TraceSubmission(ApiModel):
-    rows: list[TraceRow] = Field(max_length=50)
+    """One row per vertex dequeued, so at most one per vertex of the graph."""
+
+    rows: list[TraceRow] = Field(max_length=TRACE_VERTICES)
 
 
 # --- The result of checking a submission -------------------------------------------------------

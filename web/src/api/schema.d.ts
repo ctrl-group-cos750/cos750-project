@@ -89,7 +89,8 @@ export interface paths {
     /**
      * Get Activity
      * @description The activity to render. `ActivityOut` has no `solution`, so the answer never reaches the
-     *     browser (FR-5.3, NFR-S2).
+     *     browser (FR-5.3, NFR-S2). `solved` says whether this student has already answered it
+     *     correctly, so the page stops offering hints after a refresh too (#158).
      */
     get: operations['get_activity_api_activities__activity_id__get']
     put?: never
@@ -118,7 +119,8 @@ export interface paths {
      *     choice, `{"order": [...]}` for Parsons, `{"answers": {...}}` for fill-in, and
      *     `{"rows": [{"visitedVertex", "queue", "visited", "order"}, ...]}` for a trace table, one row
      *     per BFS step (graded against the engine, so a trace has no stored solution). A submission in the
-     *     wrong shape is 422. No student code is executed: `check_activity` compares the submission with
+     *     wrong shape, or one that answers nothing (no option, line, token, pair, test or row), is 422
+     *     and isn't recorded. No student code is executed: `check_activity` compares the submission with
      *     the solution, which stays in this process (NFR-S7).
      */
     post: operations['submit_attempt_api_activities__activity_id__attempts_post']
@@ -147,9 +149,10 @@ export interface paths {
      * Reveal Hint
      * @description Reveal this student's next hint level, one at a time, and record it (FR-4.4, FR-4.5).
      *
-     *     No body. Each call returns the next level (1, then 2, …); once every level has been shown it
-     *     is 409. When `nextCountsAsSupport` is true, warn the student before calling again: a correct
-     *     answer after hint 3 or 4 counts as "met with support" (ID document §7.4).
+     *     No body. Each call returns the next level (1, then 2, …); once every level has been shown,
+     *     or once the student has answered correctly, it is 409. When `nextCountsAsSupport` is true,
+     *     warn the student before calling again: a correct answer after hint 3 or 4 counts as "met
+     *     with support" (ID document §7.4).
      */
     post: operations['reveal_hint_api_activities__activity_id__hints_post']
     delete?: never
@@ -170,7 +173,8 @@ export interface paths {
     /**
      * Report Event
      * @description Log something only the browser sees, for the pilot's evaluation (FR-10.1). The server adds
-     *     who and when. 404 if the video, checkpoint or segment doesn't exist; 429 past 120 a minute.
+     *     who and when. 404 if the video, checkpoint or segment doesn't exist; 429 past 120 a minute. A
+     *     segment viewed in a module still locked for the student is accepted but not logged.
      */
     post: operations['report_event_api_events_post']
     delete?: never
@@ -664,7 +668,8 @@ export interface paths {
      *       result, as JSON.
      *     - `hints`: each hint shown.
      *     - `events`: the timeline (app/services/events.py): videos started and finished, checkpoints
-     *       reached, segments viewed, hints shown, results changing; `payload` as JSON.
+     *       reached, segments viewed, hints shown, results changing, modules completed; `payload` as JSON.
+     *       Segment views and module completions give time per segment and per module.
      *     - `objective_results`: each student's current result per objective, with the attempts it was
      *       decided from (`evidence`).
      */
@@ -1108,6 +1113,11 @@ export interface components {
       config: {
         [key: string]: unknown
       }
+      /**
+       * Solved
+       * @default false
+       */
+      solved: boolean
     }
     /**
      * AttemptIn
@@ -2013,6 +2023,11 @@ export interface components {
        * @default true
        */
       done: boolean
+      /**
+       * Attempted
+       * @default false
+       */
+      attempted: boolean
     }
     /**
      * StaffCheckpointIn

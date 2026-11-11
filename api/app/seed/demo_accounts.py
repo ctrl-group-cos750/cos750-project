@@ -44,10 +44,13 @@ from app.models import Activity, Attempt, Checkpoint, Module, Segment, User, Vid
 from app.models.user import DEMO_EMAIL_DOMAIN
 from app.passwords import password_problem
 from app.schemas.activities import (
+    ChooseTestsConfig,
     ChooseTestsSolution,
+    FillInConfig,
     FillInSolution,
     FixTheBugConfig,
     FixTheBugSolution,
+    MatchingConfig,
     MatchingSolution,
     MultipleChoiceConfig,
     MultipleChoiceSolution,
@@ -346,9 +349,45 @@ def _trace_rows(activity: Activity) -> dict[str, Any]:
     }
 
 
-# For each kind: how to build a right answer, and a wrong one. A wrong answer is the mistake a
-# student would make where there is an obvious one (a wrong option, leaving the bug in), and an
-# empty answer otherwise.
+def _wrong_pairs(activity: Activity) -> dict[str, Any]:
+    """Every left item paired with a right item that isn't its match."""
+    pairs = MatchingSolution.model_validate(activity.solution).pairs
+    right = [item.id for item in MatchingConfig.model_validate(activity.config).right]
+    return {
+        "pairs": {
+            left: next((r for r in right if r != match), match) for left, match in pairs.items()
+        }
+    }
+
+
+def _wrong_tokens(activity: Activity) -> dict[str, Any]:
+    """Every blank filled with a token that isn't its answer."""
+    answers = FillInSolution.model_validate(activity.solution).answers
+    options = FillInConfig.model_validate(activity.config).options
+    return {
+        "answers": {
+            blank: next((o for o in options if o != token), token)
+            for blank, token in answers.items()
+        }
+    }
+
+
+def _wrong_tests(activity: Activity) -> dict[str, Any]:
+    """The test cases that don't expose the bug, or, if every one does, only the first."""
+    exposing = ChooseTestsSolution.model_validate(activity.solution).exposing
+    tests = [test.id for test in ChooseTestsConfig.model_validate(activity.config).tests]
+    return {"selected": [t for t in tests if t not in exposing] or exposing[:1]}
+
+
+def _first_trace_row(activity: Activity) -> dict[str, Any]:
+    """Only the first step of the trace: stopped too early."""
+    return {"rows": _trace_rows(activity)["rows"][:1]}
+
+
+# For each kind: how to build a right answer, and a wrong one. A wrong answer is a real attempt,
+# never a blank one (the server refuses those, #143): the mistake a student would make where there
+# is an obvious one (a wrong option, leaving the bug in), and a partial answer otherwise (a line
+# left out, a wrong pairing or token, the wrong tests, a trace stopped early).
 Build = Callable[[Activity], dict[str, Any]]
 _BUILDERS: dict[str, tuple[Build, Build]] = {
     "multiple_choice": (
@@ -357,15 +396,15 @@ _BUILDERS: dict[str, tuple[Build, Build]] = {
     ),
     "matching": (
         lambda a: {"pairs": MatchingSolution.model_validate(a.solution).pairs},
-        lambda a: {"pairs": {}},
+        _wrong_pairs,
     ),
     "parsons": (
         lambda a: {"order": ParsonsSolution.model_validate(a.solution).first_order()},
-        lambda a: {"order": []},
+        lambda a: {"order": ParsonsSolution.model_validate(a.solution).first_order()[:-1]},
     ),
     "fill_in": (
         lambda a: {"answers": FillInSolution.model_validate(a.solution).answers},
-        lambda a: {"answers": {}},
+        _wrong_tokens,
     ),
     "fix_the_bug": (
         lambda a: {"order": FixTheBugSolution.model_validate(a.solution).first_order()},
@@ -373,7 +412,7 @@ _BUILDERS: dict[str, tuple[Build, Build]] = {
     ),
     "choose_tests": (
         lambda a: {"selected": ChooseTestsSolution.model_validate(a.solution).exposing},
-        lambda a: {"selected": []},
+        _wrong_tests,
     ),
-    "trace": (_trace_rows, lambda a: {"rows": []}),
+    "trace": (_trace_rows, _first_trace_row),
 }

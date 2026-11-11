@@ -14,7 +14,7 @@
           "id": 1,
           "kind": "text",
           "title": "Before we start",
-          "body": "BFS explores a graph **one ring at a time**, and to do that it keeps a **queue** of places still to visit. The code we will write and read uses Python **lists** and a **loop**.\n\nThis short warm-up checks what you already remember. Answer each question: if you get it right, you skip straight past the refresher for that idea; if not, you get a quick recap before we move on. Nothing here is marked, it only decides what you need to revise."
+          "body": "How does a social network find your friends of friends without checking every account it has? It starts from you and spreads out one ring of friends at a time. That search is **breadth-first search** (BFS), and by the end of this course you will have written it yourself.\n\nBFS explores a graph **one ring at a time**, and to do that it keeps a **queue** of places still to visit. The code we will write and read uses Python **lists** and a **loop**.\n\nThis short warm-up checks what you already remember. Each question is followed by a short refresher on the same idea: if you got the question wrong or weren't sure, read it before you move on. Nothing here is marked."
         },
         {
           "id": 2,
@@ -75,25 +75,26 @@
       "module_id": 0,
       "purpose": "diagnostic",
       "config": {
-        "prompt": "Three people join a queue in this order: Ama, then Ben, then Cebo. Ama is at the front. Who is served first?",
+        "prompt": "Three people join an empty queue: Ama joins, then Ben, then Cebo. Who is served first?",
         "options": [
-          { "id": "a", "label": "Ama" },
           { "id": "b", "label": "Cebo" },
+          { "id": "a", "label": "Ama" },
           { "id": "c", "label": "Ben" }
         ]
       },
       "solution": {
+        "explanation": "A queue is first in, first out. Ama joined first, so she is at the front and is served first.",
         "correct": "a",
         "feedback": {
           "b": "Cebo joined last, so Cebo is served last. A queue is first in, first out.",
-          "c": "Ben is in the middle. The person at the front, who joined first, is served first."
+          "c": "Ben is in the middle. In a queue the person who joined first is at the front, and is served first."
         }
       },
       "hints": [
         { "level": 1, "body": "A queue works like a real line of people. Who gets served first in a line?" },
         { "level": 2, "body": "A queue is first in, first out: the item that was added first comes out first." },
-        { "level": 3, "body": "Ama joined before Ben and Cebo, and is standing at the front." },
-        { "level": 4, "body": "Answer: Ama. She joined first and is at the front, so she is served first." }
+        { "level": 3, "body": "Picture the line: who has been waiting the longest?" },
+        { "level": 4, "body": "Answer: Ama. She joined first, so she is at the front and is served first." }
       ]
     },
     {
@@ -103,23 +104,24 @@
       "module_id": 0,
       "purpose": "diagnostic",
       "config": {
-        "prompt": "Given `items = [\"B\", \"C\", \"D\"]`, what is `items[1]`?",
+        "prompt": "The list items is [\"B\", \"C\", \"D\"]. What is items[1]?",
         "options": [
-          { "id": "a", "label": "\"C\"" },
           { "id": "b", "label": "\"B\"" },
-          { "id": "c", "label": "[\"B\", \"C\"]" }
+          { "id": "c", "label": "[\"B\", \"C\"]" },
+          { "id": "a", "label": "\"C\"" }
         ]
       },
       "solution": {
+        "explanation": "Python counts list positions from 0. items[0] is \"B\", so items[1] is the second item, \"C\".",
         "correct": "a",
         "feedback": {
-          "b": "\"B\" is `items[0]`: a list is indexed from 0, so index 1 is the second item.",
-          "c": "`items[1]` reads a single item at that index, not a slice of the list."
+          "b": "\"B\" is items[0]: a list is indexed from 0, so index 1 is the second item.",
+          "c": "items[1] reads a single item at that index, not a slice of the list."
         }
       },
       "hints": [
         { "level": 1, "body": "A list is indexed from 0, not 1." },
-        { "level": 2, "body": "`items[0]` is the first item, so `items[1]` is the second." },
+        { "level": 2, "body": "items[0] is the first item, so items[1] is the second." },
         { "level": 3, "body": "The list is [\"B\", \"C\", \"D\"]; count B as 0, C as 1." },
         { "level": 4, "body": "Answer: \"C\". Index 1 is the second item in the list." }
       ]
@@ -131,24 +133,25 @@
       "module_id": 0,
       "purpose": "diagnostic",
       "config": {
-        "prompt": "What does this print?\n\n```python\nfor x in [\"B\", \"C\", \"D\"]:\n    print(x)\n```",
+        "prompt": "What does this loop print? It is written on one line: for x in [\"B\", \"C\", \"D\"]: print(x)",
         "options": [
           { "id": "a", "label": "B then C then D, one per line" },
-          { "id": "b", "label": "x three times" },
+          { "id": "b", "label": "The letter x, printed three times" },
           { "id": "c", "label": "[\"B\", \"C\", \"D\"] on one line" }
         ]
       },
       "solution": {
+        "explanation": "The loop takes each item in turn and prints it, so you get B, then C, then D, one per line.",
         "correct": "a",
         "feedback": {
-          "b": "`x` is the loop variable: each time round it holds the next item, so it prints the items, not the word x.",
+          "b": "x is the loop variable: each time round it holds the next item, so it prints the items, not the letter x.",
           "c": "The loop runs its body once per item and prints each one on its own line, not the whole list at once."
         }
       },
       "hints": [
         { "level": 1, "body": "A for-loop runs its body once for each item in the list." },
-        { "level": 2, "body": "Each time round the loop, `x` is set to the next item in the list." },
-        { "level": 3, "body": "So the body `print(x)` runs three times, with x being \"B\", then \"C\", then \"D\"." },
+        { "level": 2, "body": "Each time round the loop, x is set to the next item in the list." },
+        { "level": 3, "body": "So the body print(x) runs three times, with x being \"B\", then \"C\", then \"D\"." },
         { "level": 4, "body": "Answer: it prints B, then C, then D, each on its own line." }
       ]
     }

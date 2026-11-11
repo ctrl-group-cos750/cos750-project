@@ -38,6 +38,8 @@ export type Segment = {
   /** The student has done it and can move past it (FR-2.7): its activity answered at least
    * once, or every checkpoint of its video passed. Always true for every other kind. */
   done: boolean
+  /** The student has answered its activity at least once, right or wrong. */
+  attempted?: boolean
 }
 
 /** A retrieval question the module asks before its segments (FR-2.4). */

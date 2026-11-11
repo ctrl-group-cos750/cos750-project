@@ -22,7 +22,7 @@ export type AchievementGlyph =
   | 'solo-run'
   | 'quest'
   | 'all-quests'
-  | 'off-the-map'
+  | 'first-module'
 
 /**
  * The badge's shape. Objective badges are hexagons with two tiers; milestones are medals; quest
@@ -39,6 +39,11 @@ export type Achievement = {
   objective?: number
   /** What the badge means, in words that praise the skill or the strategy, not the student. */
   description: string
+  /**
+   * False while the course has nothing that earns it, so the shelf doesn't ask for it. Shortcut
+   * Finder waits on objective 8, which the course doesn't assess yet (#70).
+   */
+  offered?: boolean
 }
 
 export const ACHIEVEMENTS: readonly Achievement[] = [
@@ -107,6 +112,7 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     glyph: 'shortcut-finder',
     objective: 8,
     description: 'You used BFS to find the shortest route, and can say why it is the shortest.',
+    offered: false,
   },
   {
     id: 'ready-for-lecture',
@@ -121,6 +127,13 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     kind: 'milestone',
     glyph: 'came-back-stronger',
     description: 'You went back over an objective in the review path and met it.',
+  },
+  {
+    id: 'first-module',
+    name: 'First Module',
+    kind: 'milestone',
+    glyph: 'first-module',
+    description: 'You worked all the way through your first module.',
   },
   {
     id: 'solo-run',
@@ -142,12 +155,5 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     kind: 'quest',
     glyph: 'all-quests',
     description: 'You finished every bonus quest.',
-  },
-  {
-    id: 'off-the-map',
-    name: 'Off the Map',
-    kind: 'hidden',
-    glyph: 'off-the-map',
-    description: 'You went exploring beyond what the lesson asked.',
   },
 ]

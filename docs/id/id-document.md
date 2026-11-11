@@ -8,7 +8,7 @@ version: Draft 1
 
 ## Purpose of the application
 
-Ctrl Academy is a pre-lecture, tutor-style application for COS212 students. It teaches one data structure, graphs, and one algorithm, Breadth-First Search (BFS). Students use it before they attend the COS212 lecture on this topic, and it assumes no prior knowledge of graphs or BFS. A full session takes about 75 minutes and is split into seven short modules (0 to 6). Students can stop after any module and continue later.
+Ctrl Academy is a pre-lecture, tutor-style application for COS212 students. It teaches one data structure, graphs, and one algorithm, Breadth-First Search (BFS). Students use it before they attend the COS212 lecture on this topic, and it assumes no prior knowledge of graphs or BFS. A full session is planned to take about 75 minutes, split into seven short modules (0 to 6); the content as written takes longer (Section 4.4). Students can stop after any module and continue later.
 This document describes how the application teaches: who the learners are, what they must learn, how the lessons are designed, and how we will check that the design works. The SE document describes how the application is built. Both documents describe the same prototype.
 
 ## Why we chose graphs and BFS
@@ -196,7 +196,7 @@ Table: Gagné's nine events applied to the BFS lessons.
 
 ## Lesson sequence
 
-The application has seven short modules, each focused on one main idea. This keeps every part small enough to complete in one sitting. The total duration is approximately 75 minutes. Students can stop after any module and the application saves their progress. Table 4 shows each module, the objectives it covers and its activities.
+The application has seven short modules, each focused on one main idea. This keeps every part small enough to complete in one sitting. The planned total is about 75 minutes (74 in Table 4). Students can stop after any module and the application saves their progress. Table 4 shows each module, the objectives it covers and its activities.
 
 Constructive alignment means that objectives, learning activities and assessment point to the same skill [4]. For example, learning objective 6 asks students to implement BFS. So the activity is constructing BFS — ordering shuffled lines and filling in the missing tokens — and the assessment compares the result with the reference solution. Parsons problems are a validated proxy for code-writing ability (§5.3), so this keeps the objective at its level while running no student-written code. A multiple-choice question about BFS would not show that a student can build it. The alignment keeps the application honest about what it teaches and what it measures.
 
@@ -215,6 +215,8 @@ Constructive alignment means that objectives, learning activities and assessment
 Table: The lesson sequence, in which each row links objectives, activities and evidence. This follows constructive alignment [4].
 
 The timings are the plan. Our own estimate of the content as written on staging, at about a minute per multiple-choice item and the video lengths in the scripts, is 130 to 140 minutes. Module 6 alone, with 24 items, takes about 45 to 50 minutes. The pilot's timings will decide what to cut (Section 8.5).
+
+The application shows students the planned times, which are the modules' estimated minutes in the content: the register page says about 75 minutes, and the module map adds up the modules that have content, 64 minutes today, because module 5 has none yet. So on staging the application tells students about half the time the content takes. When the pilot's timings are written up (#76), either the estimated minutes are changed to the measured times or the content is cut to fit the plan. The SE document lists this as a known limitation (§15.5).
 
 Each checkpoint is small and focused on one key idea. Here is an example from module 2. The lesson explains that an undirected edge must be stored in both directions. The student then completes the method below.
 
@@ -582,7 +584,7 @@ Every activity offers a four-level hint ladder. Hints are shown one level at a t
 
 Before level 3, the application warns the student that using it will mark the objective as “Met with support”. This keeps the student in control and keeps the result honest (Section 3.2).
 
-Support also fades through the lesson [26]. Modules 1 to 3 start with worked examples. Module 4 moves from a Parsons problem, to filling in missing lines, to a version with most of the lines left blank. Module 5 is designed to start from faulty code with less given; on staging it is still empty (#136). A student who passes a short check is meant to be able to skip a worked example, because guidance that helps beginners can slow down stronger students [10]. The checks are written but not yet shown (SE document FR-8.2, #31).
+Support also fades through the lesson [26]. Modules 1 to 3 start with worked examples. Module 4 moves from a Parsons problem, to filling in missing lines, to a version with most of the lines left blank. Module 5 is designed to start from faulty code with less given; on staging it is still empty (#86). A student who passes a short check is meant to be able to skip a worked example, because guidance that helps beginners can slow down stronger students [10]. The checks are written but not yet shown (SE document FR-8.2, #31).
 
 ## The review path for “Not yet” results
 
@@ -640,7 +642,7 @@ Table: Evaluation questions and the instruments that answer them.
 
 ## Analysis
 
-For each activity we count how often hint level 3 or 4 was used and how many attempts were wrong. For each module we compare the real time with the planned time in Table 4. We report the SUS score and the ARCS ratings, and group the open answers and think-aloud notes by theme.
+For each activity we count how often hint level 3 or 4 was used and how many attempts were wrong. For each module we compare the real time with the planned time in Table 4 and with our estimate of the content as written (Section 4.4). We report the SUS score and the ARCS ratings, and group the open answers and think-aloud notes by theme.
 
 When the application is tested with real COS212 students, we will use a pre-test and a separate post-test. Both have items parallel to the mastery check, one or more per objective, with no hints. The pre-test is given before module 0. The post-test is given at least a day after the student finishes, and ideally one to seven days later, so that it measures what was retained, not what was just practised [18]. The mastery check is not the post-test: it comes straight after instruction and, on staging, allows hint levels 3 and 4, so a result on it measures performance with help, minutes after teaching. It stays the application's own check of readiness (Section 7.3).
 
@@ -693,7 +695,7 @@ Table: Our main instructional choices and their trade-offs.
 Applying the module's frameworks to the design (Sections 4.5 to 4.8, 5.5, 6.1, 7.1 and 7.3) showed gaps that we had not seen when we used our own research alone:
 
 - **Reflection and integration are thin.** Kolb's reflective-observation stage and Merrill's integration principle are the weakest parts of every module. The application asks students to do and to check, but seldom to explain or think back.
-- **What is built lags what is designed.** Narrated videos, trace tables, module 5, skippable worked examples and bonus quests are in the design but not on staging. This document now marks them as planned where it mentions them, so that its claims match what a student can use on staging.
+- **What is built lags what is designed.** Narrated videos, module 5, skippable worked examples and bonus quests are in the design but not on staging; trace tables reached staging on 11 November (SE document FR-6.6). This document now marks them as planned where it mentions them, so that its claims match what a student can use on staging.
 - **Two CS2023 topics are only half covered.** The adjacency matrix (AL-Foundational 8.a) and BFS's running time are not taught (Section 1.2).
 - **Results are close to right or wrong.** Three states per objective are better than one mark, but they do not yet use the lecture's differentiated descriptors or report which misconception a student holds (Section 7.3).
 - **The evaluation can show less than we first claimed.** The team pilot is a usability walkthrough, and learning needs a separate, delayed post-test with real students (Section 8).

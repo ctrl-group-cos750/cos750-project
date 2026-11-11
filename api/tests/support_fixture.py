@@ -4,7 +4,7 @@ The real support content is a separate card (#173). Until it lands, the tests us
 a local run of the app (`PYTHONPATH=. python tests/support_fixture.py <folder>`, then load that
 folder): the repository's fixtures, with a worked example and one fresh question for objective 6
 put in right after module 2's base practice on it (segments 206 to 208), as the content will be
-placed. Ids are in module 2's 90s.
+placed. Ids are 280 and 281, clear of the real support content (#173), which uses module 2's 90s.
 """
 
 import json
@@ -18,12 +18,12 @@ from app.seed import FIXTURES
 MODULE = 2
 OBJECTIVE = 6
 AFTER_SEGMENT = 208  # the last of module 2's base practice on objective 6
-SUPPORT_SEGMENTS = (290, 291)
-SUPPORT_ACTIVITY = 291
+SUPPORT_SEGMENTS = (280, 281)
+SUPPORT_ACTIVITY = 281
 
 SUPPORT: list[dict[str, Any]] = [
     {
-        "id": 290,
+        "id": 280,
         "kind": "worked_example",
         "title": "Another way to see it: add_edge",
         "body": (
@@ -35,7 +35,7 @@ SUPPORT: list[dict[str, Any]] = [
         "support_for": OBJECTIVE,
     },
     {
-        "id": 291,
+        "id": 281,
         "kind": "activity",
         "title": "Try a fresh one",
         "activity_id": SUPPORT_ACTIVITY,

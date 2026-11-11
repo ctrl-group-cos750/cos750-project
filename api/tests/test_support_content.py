@@ -10,7 +10,12 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
-from support_fixture import AFTER_SEGMENT, SUPPORT_SEGMENTS, write_support_fixtures
+from support_fixture import (
+    AFTER_SEGMENT,
+    SUPPORT_ACTIVITY,
+    SUPPORT_SEGMENTS,
+    write_support_fixtures,
+)
 
 from app.models import (
     Activity,
@@ -51,12 +56,14 @@ def _module_6_support(data: dict[str, Any]) -> None:
 
 
 def _video_support(data: dict[str, Any]) -> None:
-    _segments(data)[-1] = {"id": 291, "kind": "video", "title": "x", "support_for": 6}
+    segments = _segments(data)
+    at = next(i for i, s in enumerate(segments) if s["id"] == SUPPORT_SEGMENTS[1])
+    segments[at] = {"id": SUPPORT_SEGMENTS[1], "kind": "video", "title": "x", "support_for": 6}
 
 
 def _support_activity(**changes: Any) -> Any:
     def change(data: dict[str, Any]) -> None:
-        next(a for a in data["activities"] if a["id"] == 291).update(changes)
+        next(a for a in data["activities"] if a["id"] == SUPPORT_ACTIVITY).update(changes)
 
     return change
 
@@ -77,8 +84,8 @@ def _support_for(objective: int) -> Any:
 
 
 def _skippable(data: dict[str, Any]) -> None:
-    support = next(s for s in _segments(data) if s["id"] == 290)
-    support["skip_check_activity_id"] = 291
+    support = next(s for s in _segments(data) if s["id"] == SUPPORT_SEGMENTS[0])
+    support["skip_check_activity_id"] = SUPPORT_ACTIVITY
 
 
 @pytest.mark.parametrize(
@@ -298,7 +305,7 @@ def _module(client: TestClient, module_id: int) -> dict[str, Any]:
 def _new_support_question(db: Session) -> None:
     db.add(
         Activity(
-            id=291,
+            id=SUPPORT_ACTIVITY,
             kind="multiple_choice",
             title="Both ways",
             module_id=2,
@@ -324,7 +331,7 @@ def test_staff_can_add_support_and_students_keep_their_place(
     at = next(i for i, s in enumerate(body["segments"]) if s["id"] == AFTER_SEGMENT) + 1
     body["segments"][at:at] = [
         {"kind": "worked_example", "title": "Another way", "body": "Example.", "supportFor": 6},
-        {"kind": "activity", "title": "Try again", "activityId": 291, "supportFor": 6},
+        {"kind": "activity", "title": "Try again", "activityId": SUPPORT_ACTIVITY, "supportFor": 6},
     ]
     saved = staff.put(f"{BASE}/modules/2", json=body)
     assert saved.status_code == 200, saved.text

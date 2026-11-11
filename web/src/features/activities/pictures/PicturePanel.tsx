@@ -1,5 +1,5 @@
 import { useId, useRef, useState, type KeyboardEvent } from 'react'
-import { Button } from '../../../components'
+import { Button, ScrollRegion } from '../../../components'
 import { GraphDrawing } from './GraphDrawing.tsx'
 import { pictureName, type Picture } from './pictures.ts'
 import { PHONE, useMediaQuery } from './useMediaQuery.ts'
@@ -179,11 +179,12 @@ export function PicturePanel({ tabs, caption, initial = 0, version }: PicturePan
                 Close
               </Button>
             </div>
-            <div className="overflow-auto">
+            {/* Wider than a phone, so labels are readable; it scrolls, also by keyboard. */}
+            <ScrollRegion label={`${current.name}, full size`}>
               <div className="min-w-[640px]">
                 <PictureView picture={current.picture} large />
               </div>
-            </div>
+            </ScrollRegion>
           </div>
         )}
       </dialog>

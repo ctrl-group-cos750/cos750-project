@@ -569,6 +569,8 @@ Good feedback answers three questions: Where am I going? How am I going? Where t
 2. Reason: why it is correct or wrong, linked to the concept.
 3. Next step: what to check, try or review.
 
+Content authors write each message in this form; the authoring guide (`api/app/seed/README.md`) and its templates show it for every activity kind (#64).
+
 Example for a trace error: “Not quite. You added C to the queue, but C has already been found: it is still waiting in the queue. BFS adds only vertices it has not found yet. Check the neighbours of B again.”
 
 Feedback on code is given line by line. The student sees which lines or blanks are wrong and a message for each one, for example: “Vertex B was visited twice. Is it added to the `visited` set, which holds every vertex found so far, when it joins the queue?” A wrong answer at a video checkpoint can be tried again with hints, and the video continues once the answer is correct.

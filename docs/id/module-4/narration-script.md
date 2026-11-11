@@ -34,7 +34,7 @@ Plays after the two recall questions.
 
 | Time | On screen | Narration |
 |---|---|---|
-| 0:00 | Campus graph and state panel, empty code editor | In module 3 you traced BFS by hand. You kept a queue, a visited set and the order. Each of those becomes one line of Python. |
+| 0:00 | Campus graph and state panel, empty code editor | In module 3 you traced BFS by hand. You kept a queue, the vertices you had found, and the order. Each of those becomes one line of Python. |
 | 0:15 | `from collections import deque` and `queue = deque([start])` appear | For the queue we use `deque` from Python's `collections` module. `append` adds to the back, and `popleft` takes from the front. We start with just the start vertex in it. |
 | 0:35 | `visited = {start}` appears; A shown as found | The visited set starts with the start vertex too. It's already in the queue, so it counts as found. |
 | 0:50 | `order = []` appears | And an empty list for the order. |

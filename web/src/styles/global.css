@@ -15,7 +15,9 @@
   --secondary: rgb(243, 245, 247);
   --secondary-foreground: rgb(38, 38, 38);
   --muted: rgb(245, 245, 245);
-  --muted-foreground: rgb(115, 115, 115);
+  /* Secondary text: 4.9:1 on --muted, 5.3:1 on white, 4.8:1 on --accent (WCAG 1.4.3). It was
+   * rgb(115,115,115), 4.34:1 on --muted, which failed on the neutral Tag (#142). */
+  --muted-foreground: rgb(107, 107, 107);
   --accent: rgb(236, 244, 253);
   --accent-foreground: rgb(13, 79, 165);
   --destructive: rgb(206, 18, 18);

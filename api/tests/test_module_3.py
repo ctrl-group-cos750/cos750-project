@@ -78,3 +78,22 @@ def test_the_trace_tables_last_hint_is_the_engines_answer() -> None:
 def test_the_visualiser_link_opens_the_campus_graph() -> None:
     predict = next(s for s in MODULE.segments if s.title.startswith("Your turn: predict"))
     assert f"(/graphs/{CAMPUS.id})" in predict.body
+
+
+def test_the_closing_tasks_feedback_counts_g_s_place_right() -> None:
+    """316's feedback said G was 6th in A, C, E, B, F, D, G (#147)."""
+    order = run_bfs(CAMPUS).order
+    for text in activity(316).solution["feedback"].values():
+        for place in re.findall(r"G is (\d+)(?:st|nd|rd|th)", text):
+            assert int(place) == order.index("G") + 1
+    assert f"G is {order.index('G') + 1}th" in activity(316).solution["feedback"]["b"]
+
+
+def test_when_bfs_fits_cannot_be_done_by_elimination() -> None:
+    """313 had three situations and three reasons, one of them the only "Not a fit" (#147)."""
+    a = activity(313)
+    pairs = a.solution["pairs"]
+    unused = {r["id"] for r in a.config["right"]} - set(pairs.values())
+    assert unused  # reasons that fit no situation
+    assert len(set(pairs.values())) < len(pairs)  # and one that fits two
+    assert sum(r["label"].startswith("Not a fit") for r in a.config["right"]) >= 2

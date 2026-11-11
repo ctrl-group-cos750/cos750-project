@@ -226,3 +226,10 @@ def test_the_closing_task_answer() -> None:
     assert printed == 'print(g.adjacency["D"])'
     adjacency = run("\n".join(calls))
     assert json.loads(chosen_label(208)) == adjacency["D"]
+
+
+def test_the_add_edge_feedback_only_names_the_items_own_vertices() -> None:
+    """207's feedback used to talk about a-c and D to G, which the item never mentions (#147)."""
+    for messages in activity(207).solution["feedback"].values():
+        for text in messages.values():
+            assert not EDGE.search(text), text  # its vertices are a and b, never capitals

@@ -78,6 +78,11 @@ class Segment(Base):
     `worked_example`, an `activity` (`activity_id`), or a `refresher` that module 0's diagnostic
     can rule out (`refresher_for` names the diagnostic topic, FR-8.1). A segment with a
     `skip_check_activity_id` can be skipped by passing that activity (FR-8.2).
+
+    A module's segment with `support_for` is support for that objective (FR-8.4, #172): a worked
+    example or a fresh practice item that only a student struggling with the objective in this
+    module is shown (app/services/support.py decides). It stays in the list for everyone, so
+    positions never shift; for a student who doesn't need it, it is hidden and counts as done.
     """
 
     __tablename__ = "segments"
@@ -98,6 +103,8 @@ class Segment(Base):
     activity_id: Mapped[int | None] = mapped_column(ForeignKey("activities.id"))
     skip_check_activity_id: Mapped[int | None] = mapped_column(ForeignKey("activities.id"))
     refresher_for: Mapped[str | None] = mapped_column(String(100))
+    # The objective this is support for (FR-8.4): shown only to a student struggling with it.
+    support_for: Mapped[int | None] = mapped_column(ForeignKey("objectives.id"))
 
 
 class ObjectiveResult(Base):

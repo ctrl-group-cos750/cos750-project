@@ -26,6 +26,15 @@
   box-shadow: var(--shadow-xs);
 }
 
+/* Focus (WCAG 2.4.7). The button's own box-shadow (depth, hover lift) beat the global
+   :focus-visible ring, which is a box-shadow in a lower cascade layer, so a focused button looked
+   unfocused. An outline can't be overridden by a shadow, still draws in forced-colours mode, and
+   follows the border radius. Offset and width match --focus-ring: a 3px gap, then a 2px ring. */
+.button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+
 .button:disabled,
 .button[aria-disabled='true'] {
   cursor: not-allowed;

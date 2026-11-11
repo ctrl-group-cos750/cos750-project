@@ -158,6 +158,8 @@ function ModuleEditor(props: {
           moduleId={id}
           allowRefreshers={id === 0}
           allowSkipping
+          // Module 6 is the mastery check, the same for everyone (FR-7.1).
+          allowSupport={id !== 6}
           onChange={(segments) => change({ segments })}
         />
       </section>

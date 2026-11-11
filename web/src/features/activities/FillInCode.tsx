@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button } from '../../components'
+import { Button, ScrollRegion } from '../../components'
 import type { AttemptResult, FillInActivity } from './activities.types.ts'
 
 type FillInCodeProps = {
@@ -87,26 +87,30 @@ export function FillInCode({ activity, result, submitting, onSubmit }: FillInCod
         void onSubmit(answers)
       }}
     >
-      <div
-        className="overflow-x-auto rounded border bg-muted/40 p-3 font-mono text-sm leading-7"
-        aria-label="Python code with blanks"
+      {/* The code keeps its indentation (whitespace-pre): in Python it is the program, and the
+          student has to see what sits inside the loop (#140). A line wider than the screen
+          scrolls inside this box instead of wrapping or widening the page (WCAG 1.4.10). The box
+          is a ScrollRegion: a named tab stop, with a scroll cue, only while it overflows. */}
+      <ScrollRegion
+        label="Python code with blanks"
+        className="rounded border bg-muted/40 p-3 font-mono text-sm leading-7"
       >
         {activity.config.code.split('\n').map((line, index) => {
           const occurrence = lineOccurrences.get(line) ?? 0
           lineOccurrences.set(line, occurrence + 1)
           return (
-            <div key={`${line}-${occurrence}`} className="grid grid-cols-[2.5rem_1fr]">
+            <div key={`${line}-${occurrence}`} className="grid w-max grid-cols-[2.5rem_1fr]">
               <span
                 aria-hidden="true"
                 className="select-none pr-3 text-right text-muted-foreground"
               >
                 {index + 1}
               </span>
-              <code>{renderLine(line)}</code>
+              <code className="whitespace-pre">{renderLine(line)}</code>
             </div>
           )
         })}
-      </div>
+      </ScrollRegion>
       {result && (
         <ul className="m-0 grid list-none gap-2 p-0" aria-label="Result for each blank">
           {activity.config.blanks.map((blankId) => {
@@ -121,7 +125,14 @@ export function FillInCode({ activity, result, submitting, onSubmit }: FillInCod
         </ul>
       )}
       <div>
-        <Button type="submit" loading={submitting} disabled={disabled}>
+        {/* Focusable while the answer is checked, so a failed check leaves focus here and a
+            result can take it from here (WCAG 2.4.3). */}
+        <Button
+          type="submit"
+          loading={submitting}
+          keepFocusWhileLoading
+          disabled={result?.correct === true}
+        >
           Check answer
         </Button>
       </div>

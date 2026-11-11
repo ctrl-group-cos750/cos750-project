@@ -369,7 +369,7 @@ Figure: Use cases. The student takes part in every use case in the first two gro
 ## Activities, feedback and hints (FR-4)
 - **FR-4.1** Support these activity kinds, each defined entirely by content data:
   multiple choice; matching; labelling vertices and edges on a diagram; classifying graphs (directed or undirected); building a graph by adding vertices and edges; predicting the next BFS vertex; filling in a BFS trace table (current vertex, queue, visited set, order); Parsons problems (ordering shuffled lines of code); completing code by choosing a token for each blank; fixing a faulty BFS; choosing the test cases that expose a bug.
-- **FR-4.2** Check every answer on the server and return feedback straight away. Feedback says why an answer is wrong, not only that it is wrong.
+- **FR-4.2** Check every answer on the server and return feedback straight away. Feedback says why an answer is wrong, not only that it is wrong. A right answer can say why it is right too: the content gives an optional `explanation`, shown in place of the plain "Correct."
 - **FR-4.3** Tag every activity with the learning objective it gives evidence for (1 to 7) and its purpose: practice, diagnostic, retrieval, mastery, review or bonus.
 - **FR-4.4** Offer a four-level hint ladder on every activity, one level at a time. Level 4 is the worked solution.
 - **FR-4.5** Record every attempt with the answer, the result and the highest hint level used. Hint levels 3 and 4 make a later correct answer count as "with support" (FR-7.2).

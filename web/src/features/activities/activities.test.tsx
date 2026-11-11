@@ -190,6 +190,20 @@ describe('code activities', () => {
     expect(await screen.findByText('Third hint.')).toBeInTheDocument()
   })
 
+  it('keeps the hints shown but offers no more once the answer is right', async () => {
+    const loadHints = vi
+      .fn<(activityId: number) => Promise<readonly Hint[]>>()
+      .mockResolvedValue([
+        { level: 1, body: 'First recorded hint.', hasMore: true, nextCountsAsSupport: false },
+      ])
+    const requestHint = vi.fn<(activityId: number) => Promise<Hint>>()
+
+    render(<HintLadder activityId={7} solved loadHints={loadHints} requestHint={requestHint} />)
+
+    expect(await screen.findByText('First recorded hint.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Show next hint' })).not.toBeInTheDocument()
+  })
+
   it('does not offer hints when recorded hints cannot be loaded', async () => {
     const loadHints = vi
       .fn<(activityId: number) => Promise<readonly Hint[]>>()

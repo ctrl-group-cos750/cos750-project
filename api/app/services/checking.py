@@ -357,7 +357,19 @@ def check_choose_tests(
 def check_activity(
     kind: str, config: dict[str, Any], solution: dict[str, Any], submission: dict[str, Any]
 ) -> CheckResult:
-    """Parse the stored config and solution and the student's submission for `kind`, and grade."""
+    """Parse the stored config and solution and the student's submission for `kind`, and grade.
+    A right answer's feedback is the solution's `explanation`, when the content gives one, so it
+    says why the answer is right instead of only that it is."""
+    result = _check(kind, config, solution, submission)
+    explanation = solution.get("explanation") if isinstance(solution, dict) else None
+    if result.correct and isinstance(explanation, str) and explanation:
+        return result.model_copy(update={"feedback": explanation})
+    return result
+
+
+def _check(
+    kind: str, config: dict[str, Any], solution: dict[str, Any], submission: dict[str, Any]
+) -> CheckResult:
     if kind == "multiple_choice":
         return check_multiple_choice(
             MultipleChoiceConfig.model_validate(config),

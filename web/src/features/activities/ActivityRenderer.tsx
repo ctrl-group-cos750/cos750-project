@@ -72,6 +72,7 @@ export function ActivityRenderer(props: ActivityRendererProps) {
           <HintLadder
             activityId={props.activity.id}
             disabled={props.submitting}
+            solved={props.result?.correct === true}
             requestHint={props.requestHint}
             loadHints={props.loadHints}
           />

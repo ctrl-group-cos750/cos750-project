@@ -6,6 +6,8 @@ import type { Hint } from './activities.types.ts'
 type HintLadderProps = {
   activityId: number
   disabled?: boolean
+  /** The student has answered correctly: the hints already shown stay, but no more are offered. */
+  solved?: boolean
   requestHint: (activityId: number) => Promise<Hint>
   loadHints?: (activityId: number) => Promise<readonly Hint[]>
 }
@@ -14,6 +16,7 @@ type HintLadderProps = {
 export function HintLadder({
   activityId,
   disabled = false,
+  solved = false,
   requestHint,
   loadHints = fetchActivityHints,
 }: HintLadderProps) {
@@ -46,7 +49,7 @@ export function HintLadder({
   }, [activityId, loadHints])
 
   const lastHint = hints.at(-1)
-  const hasMore = !loadFailed && !loadingInitial && (lastHint?.hasMore ?? true)
+  const hasMore = !solved && !loadFailed && !loadingInitial && (lastHint?.hasMore ?? true)
 
   async function showNextHint() {
     if (lastHint?.nextCountsAsSupport && lastHint.level < 3 && !confirmingSupport) {

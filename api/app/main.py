@@ -26,6 +26,7 @@ from app.routers import (
     staff_evaluation,
     videos,
 )
+from app.services.locking import StudentGone
 
 # Every route lives under /api: nginx in the web container forwards that prefix here unchanged.
 
@@ -128,6 +129,13 @@ UNAVAILABLE = "Ctrl Academy is busy. Try again in a moment."
 SERVER_ERROR = "Something went wrong on our side. Try again in a moment."
 
 
+@app.exception_handler(StudentGone)
+async def student_gone(_request: Request, _exc: StudentGone) -> JSONResponse:
+    """The account was deleted while this request waited (app/services/locking.py): as for any
+    request after the deletion, the session no longer belongs to anyone."""
+    return JSONResponse(status_code=401, content={"detail": "Log in to continue."})
+
+
 @app.exception_handler(DataError)
 async def data_error(request: Request, exc: DataError) -> JSONResponse:
     """A value the database can't store or compare, e.g. an integer past 2^31: 422."""
@@ -137,7 +145,7 @@ async def data_error(request: Request, exc: DataError) -> JSONResponse:
 
 @app.exception_handler(IntegrityError)
 async def integrity_error(request: Request, exc: IntegrityError) -> JSONResponse:
-    """A unique or foreign-key constraint refused a write, e.g. a race the locks don't cover: 409."""
+    """A unique or foreign-key constraint refused a write (a race the locks don't cover): 409."""
     diag = getattr(exc.orig, "diag", None)  # psycopg: which constraint refused it
     constraint = getattr(diag, "constraint_name", None) or "?"
     log.warning(

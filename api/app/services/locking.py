@@ -14,13 +14,28 @@ purpose: inserting a row that references the student takes `FOR KEY SHARE` on th
 can't deadlock with it. Different students never wait for each other. Marking badges seen and
 deleting an account take it too, so neither interleaves with an answer being recorded.
 
-Lock order. An answer or hint first takes `FOR KEY SHARE` on its activity (`hold_activity`), then
-the student. The seed, on a deploy, deletes unused activities (taking their rows) and then
-recomputes students (taking theirs). Taken the other way round, an answer to an activity the seed
-is deleting held the student while waiting for the activity, the seed held the activity while
-waiting for the student, and Postgres killed one. In this order the answer waits without holding
-the student, and once the seed commits it finds the activity gone (404). The seed's other writes
-to activities are plain updates, which `FOR KEY SHARE` doesn't wait for.
+A student deleted while their requests wait for this lock (staff deleting the account) leaves
+nothing to lock: `lock_student` then raises `StudentGone`, which the API answers with 401, as it
+would for any request after the deletion, instead of failing later on a foreign key.
+
+Lock order against the seed. An answer or hint first takes `FOR KEY SHARE` on its activity
+(`hold_activity`), then the student. On a deploy the seed's `retire_dropped_activities` deletes
+each dropped activity nobody has used (taking its row), and later `recompute_all` takes students.
+There are two orders in which they can meet, and only one is fixed here:
+
+- The seed deletes first. An answer to that activity used to hold the student while waiting for
+  the activity, while the seed, holding the activity, waited for the student: a deadlock, and
+  Postgres killed one. Now the answer waits holding nothing, and once the seed commits it finds
+  the activity gone (`ActivityGone`, 404). Tested in tests/test_concurrency.py.
+- The answer comes first. It holds the activity and inserts its attempt, not yet committed; the
+  seed's "used?" check can't see that attempt, so it deletes the activity, waits for the answer,
+  and then fails on the foreign key (ForeignKeyViolation), which fails that seed run. The deploy
+  runs it again on the next start; nothing a student did is lost. Closing this needs the seed to
+  lock each activity `FOR UPDATE` before its "used?" check, in app/seed/__init__.py, which #128
+  rewrites: a follow-up once #128 has merged.
+
+The seed's other writes to activities are plain updates, which `FOR KEY SHARE` doesn't wait for,
+so an ordinary deploy holds up no answers.
 
 SQLite (the tests' default database) has no row locks and ignores all this; the Postgres tests
 run the races for real.
@@ -32,13 +47,20 @@ from sqlalchemy.orm import Session
 from app.models import Activity, User
 
 
+class StudentGone(LookupError):
+    """The student's account was deleted while this request waited for their lock."""
+
+
 class ActivityGone(LookupError):
     """The activity was deleted (by the seed, on a deploy) while this request was answering it."""
 
 
 def lock_student(session: Session, user_id: int) -> None:
-    """Wait for, then hold until commit or rollback, this student's write lock."""
-    session.execute(select(User.id).where(User.id == user_id).with_for_update(key_share=True))
+    """Wait for, then hold until commit or rollback, this student's write lock. Raises
+    `StudentGone` if the account no longer exists (deleted while this request waited)."""
+    held = session.scalar(select(User.id).where(User.id == user_id).with_for_update(key_share=True))
+    if held is None:
+        raise StudentGone(user_id)
 
 
 def hold_activity(session: Session, activity_id: int) -> None:

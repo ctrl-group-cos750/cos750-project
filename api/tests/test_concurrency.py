@@ -227,6 +227,43 @@ def test_deleting_an_account_waits_for_its_answer_in_flight(
     assert db.scalar(select(func.count()).where(Attempt.user_id == user_id)) == 0
 
 
+def test_a_request_queued_behind_the_accounts_deletion_is_401(
+    client: TestClient, committed: Session
+) -> None:
+    """The student's answer arrives while staff are deleting the account: it waits for the
+    student's lock, finds no student when it gets it, and answers 401 as any later request
+    would, instead of failing on the foreign key (409)."""
+    from app.services.history import delete_history
+    from app.services.locking import lock_student
+
+    db = committed
+    assert client.post("/api/auth/register", json=STUDENT).status_code == 201
+    me = user_id(db)
+    engine = db.get_bind()
+    assert isinstance(engine, Engine)
+    status: list[int] = []
+    with Session(engine) as deleting:  # what DELETE /api/staff/accounts/{id} does, held open
+        lock_student(deleting, me)
+        delete_history(deleting, me)
+        deleting.delete(deleting.get_one(User, me))
+        deleting.flush()
+        thread = threading.Thread(
+            target=lambda: status.append(
+                client.post(
+                    "/api/activities/1/attempts", json={"submitted": right(db, 1)}
+                ).status_code
+            )
+        )
+        thread.start()
+        thread.join(timeout=WAIT)
+        assert thread.is_alive(), "the answer should wait for the deletion"
+        deleting.commit()
+        thread.join(timeout=20)
+    assert status == [401]
+    db.expire_all()
+    assert db.scalar(select(func.count()).where(Attempt.user_id == me)) == 0
+
+
 def test_an_answer_to_an_activity_the_seed_is_deleting_does_not_deadlock(
     committed: Session,
 ) -> None:

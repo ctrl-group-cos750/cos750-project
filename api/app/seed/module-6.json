@@ -1482,20 +1482,20 @@
         ],
         "corrections": [
           {
-            "id": 20,
-            "text": "    visited = {start}"
-          },
-          {
-            "id": 21,
-            "text": "                visited.add(n)"
-          },
-          {
             "id": 22,
             "text": "    visited = []"
           },
           {
+            "id": 20,
+            "text": "    visited = {start}"
+          },
+          {
             "id": 23,
             "text": "                order.append(n)"
+          },
+          {
+            "id": 21,
+            "text": "                visited.add(n)"
           }
         ]
       },
@@ -1608,16 +1608,16 @@
         ],
         "corrections": [
           {
-            "id": 20,
-            "text": "        v = queue.popleft()"
-          },
-          {
             "id": 21,
             "text": "        v = queue.pop(0)"
           },
           {
             "id": 22,
             "text": "        v = queue[0]"
+          },
+          {
+            "id": 20,
+            "text": "        v = queue.popleft()"
           }
         ]
       },

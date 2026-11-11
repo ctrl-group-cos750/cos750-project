@@ -354,7 +354,7 @@ Figure: Use cases. The student takes part in every use case in the first two gro
 - **FR-2.3** Each module starts by stating its objectives in plain words ("By the end of this module you can …"), taken from the content.
 - **FR-2.4** Each module from module 2 onwards opens with one or two retrieval questions on earlier modules.
 - **FR-2.5** Save progress after every segment. A student who returns resumes at the segment they left, or, if they moved past an activity without ever answering it (possible only before its activity could be answered), at the first such activity, with a note saying why; a complete module opens at its first such activity. An activity they answered, even wrongly under an earlier rule, never pulls them back.
-- **FR-2.6** Show a module map with each module's state (locked, open, in progress, complete) and estimated duration.
+- **FR-2.6** Show a module map with each module's state (locked, open, in progress, complete) and estimated duration. A module with no content yet reads "coming soon", and **Continue** passes over it. The course total is the sum of the modules' estimates (74 minutes today), the same number the register page shows (`GET /api/modules/length`, #146).
 - **FR-2.7** A student moves past a segment only once it is done: a practice activity once it has been answered correctly, or answered after its last hint was shown (the last hint gives the answer away, so no student is kept there); a mastery or diagnostic item once it has been answered at all, because only the first answer counts there (FR-7.1) and the diagnostic finds gaps rather than gating; a video segment once every checkpoint in the video is passed. Other segments are done when shown. An activity whose kind has no student UI yet counts as done until its UI exists, so it never strands a student; since #136 every kind has one, so none is let through unanswered. A module is complete once its last segment is done. A complete module can be reread freely. A blank answer (no option, line, token, pair, test or row) is refused and not recorded, so it never counts as an attempt.
 
 ## Narrated video with checkpoints (FR-3)
@@ -487,7 +487,7 @@ Table: Which part of the ID document each functional requirement delivers.
 - **NFR-S7** **No untrusted code execution.** Code activities run no student-written code anywhere in the system. The student constructs code by ordering shuffled lines (Parsons) or filling in tokens from a given set, and the server checks the submission by comparison with the solution (FR-5). This removes the untrusted-code-execution attack surface entirely, rather than trying to contain it.
 
   An isolated code runner was built and hardened earlier (a network-less container running each submission as a separate seccomp-confined process) and was pentested on staging across several rounds (see the security review under §14). Those rounds confirmed the escape defences held but also found that the in-process grading channel could be forged to fake a pass, and — because staging shares a personal server with unrelated personal data — the residual risk of executing arbitrary student code was judged not worth the marks a freeform editor earned. The team therefore dropped freeform code writing and removed the runner (decision §15.3, 3 November). The runner's code is preserved in git history (tag `archive/code-runner`) should the decision be revisited with a stronger sandbox (gVisor or a per-submission microVM — §15.4).
-- **NFR-S8** **Privacy (POPIA [8]).** The app stores only what it needs: email (to log in), a display name, and learning data. It shows no student's data to another student, and exports only internal IDs (FR-10.3). Staff do see students' emails and display names: the accounts pages (FR-1.8) list and search them. Those pages show whether an answer was right but never the answer. Test and demo data never uses real students' details.
+- **NFR-S8** **Privacy (POPIA [8]).** The app stores only what it needs: email (to log in), a display name, and learning data. It shows no student's data to another student, and exports only internal IDs (FR-10.3). Staff do see students' display names, and the accounts list (FR-1.8) masks each email (`a•••@domain`); the full email appears only on one account's page, where staff need it (#146). Those pages show whether an answer was right but never the answer. Test and demo data never uses real students' details.
 
 ## Maintainability
 - **NFR-M1** Layered backend (routers → services → data) with the BFS engine (`run_bfs`), the answer checkers and the mastery rules isolated from web concerns and unit-testable in isolation.
@@ -549,7 +549,7 @@ Figure: Entities and relationships.
 
 **Attempt** (append-only): `id`, `user_id`, `activity_id`, `submitted` (JSON: the answer — for a code activity, the chosen line order or filled-in tokens), `correct`, `score` (0 to 1, for partial results such as trace tables), `hint_level` (highest level shown before this attempt), `detail` (JSON: per-line or per-blank results for a code activity), `created_at`.
 
-**Event** (append-only): `id`, `user_id`, `type`, `ref` (what it was about: `video:3`, `checkpoint:12`, `segment:301`, `activity:301`, `objective:5`), `payload` (JSON: a hint's level, a result's old and new state), `created_at`. The server logs `hint_shown`, `result_changed` and `module_completed` itself; the browser reports `video_started`, `video_completed`, `checkpoint_reached` and `segment_viewed` through `POST /api/events`, which takes only those types, each about a video, checkpoint or segment that exists, and no free text (`app/services/events.py`). The module page reports `segment_viewed` for each segment it shows, so the log gives time per segment and per module. Answers and hints shown also have their own tables, `Attempt` and `HintView`.
+**Event** (append-only): `id`, `user_id`, `type`, `ref` (what it was about: `video:3`, `checkpoint:12`, `segment:301`, `activity:301`, `objective:5`), `payload` (JSON: a hint's level, a result's old and new state), `created_at`. The server logs `hint_shown`, `result_changed` and `module_completed` itself; the browser reports `video_started`, `video_completed`, `checkpoint_reached`, `segment_viewed` and `prediction_made` (with whether the prediction was right, for each prediction in the visualiser's prediction mode, #146) through `POST /api/events`, which takes only those types, each about a video, checkpoint, segment or graph that exists, and no free text (`app/services/events.py`). The module page reports `segment_viewed` for each segment it shows, so the log gives time per segment and per module. Answers and hints shown also have their own tables, `Attempt` and `HintView`.
 
 **ModuleProgress**: `user_id`, `module_id`, `status` (`open` | `in_progress` | `complete`), `current_segment_position` (the furthest segment reached), `completed_at`. When a module's segments change (the seed or the staff editor), each student's position is moved so that it stays on the segment they had reached.
 
@@ -587,6 +587,7 @@ Base path: `/api`. JSON over HTTPS. Auth via the session cookie set by `/api/aut
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
 | GET | `/api/modules` | user | All modules with this student's state (locked, open, in progress, complete). |
+| GET | `/api/modules/length` | public | The course's estimated length in minutes, the sum of every module's estimate; the register page shows it (FR-2.6, #146). |
 | GET | `/api/modules/{module_id}` | user | The module's segments, in order, with this student's position, which segments are done, and the module's retrieval questions (FR-2.4). 403 while the module is locked. Activities come without answers. Every refresher is listed: the diagnostic does not filter them yet (FR-8.1, §15.5). Every segment is listed. Support the student doesn't need has `shown: false` and `done: true` (FR-8.4), and `shownSegmentCount` counts only what is shown. |
 | POST | `/api/modules/{module_id}/position` | user | Save the segment the student is on (`segmentPosition`, FR-2.5) and return the module as above. Refuses (409) to move past a segment that isn't done (FR-2.7), more than one segment past the furthest reached, or into the module before its retrieval questions are answered. The next segment is the next one shown, so a save may jump over support the student doesn't need, but never lands on it (FR-8.4). |
 | GET | `/api/videos/{video_id}` | user | The video's title, duration, media and captions paths, the transcript as text, and its checkpoints in order, each with its activity and whether this student has passed it (FR-3.5). The media itself comes from `/media/`. 403 while the module that plays it is locked (FR-2.1); staff are let through. |
@@ -650,12 +651,12 @@ Example `GET /api/graphs/{scenario_id}/bfs` response:
 }
 ```
 
-Each step is one vertex taken from the queue, with the state after it. The visualiser receives the steps and animates them; its next-vertex predictions are checked in the browser and are not recorded (FR-6.4, §15.5). A trace-table activity carries its own graph in its config, gets no steps, and is checked against the engine on the server when it is submitted (FR-6.6).
+Each step is one vertex taken from the queue, with the state after it. The visualiser receives the steps and animates them; its next-vertex predictions are checked in the browser, and each is logged as a `prediction_made` event (FR-6.4, FR-10.1, #146), but they give no evidence for an objective (§15.5). A trace-table activity carries its own graph in its config, gets no steps, and is checked against the engine on the server when it is submitted (FR-6.6).
 
 ## Progress, results and events
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| POST | `/api/events` | user | Report something only the browser sees (`video_started`, `video_completed`, `checkpoint_reached`, `segment_viewed`) for the event log (FR-10.1); 120 a minute per student. |
+| POST | `/api/events` | user | Report something only the browser sees (`video_started`, `video_completed`, `checkpoint_reached`, `segment_viewed`, and `prediction_made` with whether the prediction was right) for the event log (FR-10.1); 120 a minute per student. |
 | GET | `/api/rewards` | user | This student's points total and badges, and whether they are hidden (FR-9). |
 | POST | `/api/rewards/seen` | user | The app has announced every new badge, so none is announced twice. |
 | PUT | `/api/rewards/settings` | user | Hide or show points and badges (FR-9.5). |
@@ -706,7 +707,7 @@ The engine is one function, `run_bfs` in `api/app/services/bfs.py`, independent 
 2. Produces the BFS traversal **order** and a list of **steps** rich enough for the frontend to animate without re-deriving the algorithm.
 3. Is the reference that trace-table attempts are checked against (FR-6.6) and that choose-tests fixtures are validated with (§10.5).
 
-Next-vertex predictions in the visualiser are compared in the browser with the steps the engine sent; they are not checked or recorded on the server (FR-6.4, §15.5).
+Next-vertex predictions in the visualiser are compared in the browser with the steps the engine sent; the server only logs each one as a `prediction_made` event (FR-10.1, #146), and they give no evidence for an objective (FR-6.4, §15.5).
 
 ## Graph representation
 - Input (`GraphScenario`, or the graph inside a trace-table or choose-tests activity): `vertices` as a list of labels; `edges` as `{source, target}`, unweighted; a `directed` flag.
@@ -748,7 +749,7 @@ The components as they are on `staging`, organised by feature as in `web/src/fea
 - **App shell**
   - `App`: the route definitions. `SignedInLayout` wraps every signed-in page in the header (`AppShell`, the account menu, the light and dark toggle `ThemeToggle`, and a "Staff portal" link for team members) and announces new badges (`BadgeAnnouncer`).
   - `useCurrentUser`, `useLogin`, `useRegister`, `useLogout`: the session, held in the TanStack Query cache (no separate context); logging out clears the cache.
-  - `api` (`web/src/api/client.ts`): a small fetch wrapper that sends JSON on the same origin and turns errors into `ApiError` with a student-friendly message; the request and response types are generated from the OpenAPI schema (`schema.d.ts`, NFR-M2).
+  - `api` (`web/src/api/client.ts`): a small fetch wrapper that sends JSON on the same origin and turns errors into `ApiError` with a student-friendly message; the request and response types are generated from the OpenAPI schema (`schema.d.ts`, NFR-M2). No page retries a refused (4xx) request, so a 403 or 404 shows its message at once (#146).
 - **Auth**
   - `LoginPage`, `RegisterPage` (with `PasswordChecklist`, NFR-S1), `RequireAuth` (sends visitors to log in, then back), `GuestOnly` (sends logged-in students past the log-in page), `RequireStaff` (the staff portal).
 - **Modules**
@@ -764,11 +765,11 @@ The components as they are on `staging`, organised by feature as in `web/src/fea
   - `ActivityPage`: one activity on its own page, at `/activities/{id}`.
   - `VideoPage`: one video on its own page, at `/videos/{id}`.
 - **BFS visualiser** (`BfsPage`, at `/graphs/{scenarioId}`)
-  - `BfsVisualizer`: the step controls (forward, back, play and pause, reset, speed), the state panel (current vertex, queue, visited, order) and prediction mode, driven by `bfsPlayback.ts` from the engine's steps.
+  - `BfsVisualizer`: the step controls (forward, back, play and pause, reset, speed), the state panel (current vertex, queue, visited, order) and prediction mode (each prediction logged as a `prediction_made` event), driven by `bfsPlayback.ts` from the engine's steps. Opened from module 3 it links back to the module, opened directly to the module map (#146).
   - `GraphCanvas`: draws vertices and edges as **SVG via D3**; marks current, queued and visited vertices with a glyph as well as colour, and gives a text alternative (NFR-A2).
 - **Mastery**
   - `ReportPage`: each objective's result in plain words, "ready for the lecture" or not, and next steps (FR-7.3).
-  - `ReviewPage`: one objective's review path, its worked example, practice and fresh mastery items (FR-7.5).
+  - `ReviewPage`: one objective's review path, its worked example, practice and fresh mastery items (FR-7.5); each step links back to the path (#146).
 - **Points, badges and profile**
   - `BadgesPage`: the student's own points and badges, with the switch to hide them (FR-9.4, FR-9.5). `ProfilePage`: display name, picture, objectives met, points and the password change (FR-1.5 to FR-1.7). There is no leaderboard.
 - **Staff portal** (`/staff`, inside `StaffLayout`; `StaffPortalPage` is its index)
@@ -784,14 +785,14 @@ Low-fidelity wireframes of the main screens, drawn from the requirements and the
 
 - The header holds Modules, Report, the light and dark toggle and the account menu, and the "Staff portal" link for team members. Points and badges are on the Badges and Profile pages, reached from the account menu, not in the header or on the module map.
 - Code activities have **Submit** only. The ungraded **Check** is not built (FR-5.2).
-- The visualiser is its own page (`/graphs/{scenarioId}`), opened from a link in a module 3 text segment. It has no hint button, and its predictions are not recorded (FR-6.4).
+- The visualiser is its own page (`/graphs/{scenarioId}`), opened from a link in a module 3 text segment, with a link back to it. It has no hint button, and its predictions are logged as events but not graded (FR-6.4).
 - A video's checkpoint question appears below the video rather than beside it.
 
 ```
 +----------------------------------------------------------------------------------------+
 | Ctrl Academy    Modules · Report                       * 240 points   Account v        |
 +----------------------------------------------------------------------------------------+
-| Graphs and breadth-first search                            About 75 minutes in total   |
+| Graphs and breadth-first search                            About 74 minutes in total   |
 |                                                                                        |
 |   + 0  Warm-up and queue refresher            5 min    complete                        |
 |   + 1  What is a graph?                      12 min    complete                        |
@@ -1365,7 +1366,7 @@ Table: Risk register.
 
 ## Known limitations
 
-What `staging` (commit `5668d77`, 11 November) does not yet do, or does only in part, against the requirements above. Each row names its card, marked in progress (on the board's In progress column) or planned (not started); none of it is counted as done here. Work merged since the first version of this table is no longer listed: the module locks on activities (#162), concurrent saves (#163), every correct Parsons order (#157), the trace, fix-the-bug and choose-tests screens (#164), the content pass (#170), the rendering and accessibility fixes (#169), and the staff content editor (#128).
+What `staging` (commit `5668d77`, 11 November) does not yet do, or does only in part, against the requirements above. Each row names its card, marked in progress (on the board's In progress column) or planned (not started); none of it is counted as done here. Work merged since the first version of this table is no longer listed: the module locks on activities (#162), concurrent saves (#163), every correct Parsons order (#157), the trace, fix-the-bug and choose-tests screens (#164), the content pass (#170), the rendering and accessibility fixes (#169), and the staff content editor (#128). Navigation (#146) is listed as done here too: no page retries a refused (4xx) request, a review path's steps link back to the path, module 5 reads "coming soon", the staff accounts list masks emails, and every page shows the same course length.
 
 | Area | Limitation on `staging` | Requirement | Work |
 |---|---|---|---|
@@ -1379,11 +1380,9 @@ What `staging` (commit `5668d77`, 11 November) does not yet do, or does only in 
 | Mastery check | Feedback and hints 3–4 are available on mastery items, and the result shows at once. Finishing module 6 returns to the module map, not the report. | FR‑7.1, FR‑7.2 | In progress (#144) |
 | Review paths | Each path's one practice item is multiple choice, also for objectives 5 to 7, whose mastery items are a trace table, code, and fix the bug or choose tests. | FR‑7.5, ID §7.6 | In progress (#148) |
 | Badges | The bonus-quest badges can't be earned yet. | FR‑9.3 | Follows #87 |
-| Visualiser | Predictions are checked in the browser and not recorded, so they give no evidence for an objective. The visualiser is reached only from a link in module 3, and has no way back to it. | FR‑6.4 | In progress (#146: the way back, and predictions logged as events) |
+| Visualiser | Predictions are checked in the browser and logged as events, but not graded, so they give no evidence for an objective. The visualiser is reached only from a link in module 3. | FR‑6.4 | Not scheduled |
 | Videos | No video is recorded yet, and the fixtures hold none: staff upload each video on each site and place it in a module segment in the content editor. A video segment without a video shows its narration as text instead (#149). | FR‑3, NFR‑A4 | #37; text version in review (#149) |
-| Navigation | Some dead ends: review-path steps have no way back to the path, module 5 stays "open" with nothing in it, and a page that gets a 403 or 404 retries for several seconds. | NFR‑U3 | In progress (#146) |
-| Staff view of students | The staff accounts pages list every student's email and display name (FR-1.8), more than the evaluation needs. | NFR‑S8 | In progress (#146) |
-| Timing | The app shows the planned minutes (ID Table 4, `estimated_minutes` in the fixtures): about 75 on the register page, 64 on the module map (module 5, with no content, is left out) and 74 in the map's rows. The content as written is estimated at 130 to 140 minutes (ID §4.4), so the app tells students about half the real time. | FR‑2.6 | Figures made to agree in progress (#146); the minutes follow the pilot's timings (#76) |
+| Timing | The app shows the planned minutes (ID Table 4, `estimated_minutes` in the fixtures): 74 in total, on the register page and the module map alike. The content as written is estimated at 130 to 140 minutes (ID §4.4), so the app tells students about half the real time. | FR‑2.6 | The minutes follow the pilot's timings (#76) |
 | Content | Evidence-based improvements (subgoals, self-explanation, misconceptions) are not in the content yet. Two component kits are in use (§11). | FR‑4.2, NFR‑U2 | In progress (#150); the kits not scheduled |
 | Tests | No end-to-end or automated accessibility (axe) tests on `staging` (§14.1); they are being written on the end-to-end card. No timing test for NFR-P1 to NFR-P3, which are met by design (no execution, small graphs) but not measured. Definition of Done item 2 asks for an end-to-end test for each user-facing flow; no item has met it yet. | §14.1, NFR‑P | In progress (#35) |
 | Responsive layout | The Parsons page and worked-example tables reflow at 320 px (#169), but 360 px (NFR-U1) is not yet checked on every page. | NFR‑U1 | With the end-to-end tests (#35) |

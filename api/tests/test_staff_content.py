@@ -384,7 +384,9 @@ def test_a_committed_export_hands_the_edits_back_to_the_repository(
     body["title"] = "Edited, then exported"
     assert staff.put(f"{BASE}/activities/{EDITED}", json=body).status_code == 200
     module = module_body(staff, 3)
-    module["segments"].reverse()
+    # The opening segment moved to the end: a real reorder that keeps any support segment after
+    # its objective's practice (FR-8.4).
+    module["segments"] = module["segments"][1:] + module["segments"][:1]
     assert staff.put(f"{BASE}/modules/3", json=module).status_code == 200
     path = staff.get(f"{BASE}/review-paths/1").json()["segments"]
     path[0]["title"] = "Worked example, retitled"
@@ -441,8 +443,11 @@ def test_the_seed_reports_content_that_only_breaks_with_a_staff_edit(
     folder = copy_fixtures(tmp_path)
 
     def take_313(data: dict[str, Any]) -> None:
+        # With it goes any support for its objective (4) in module 3, which needs it before it.
         data["modules"][0]["segments"] = [
-            s for s in data["modules"][0]["segments"] if s.get("activity_id") != 313
+            s
+            for s in data["modules"][0]["segments"]
+            if s.get("activity_id") != 313 and s.get("support_for") != 4
         ]
         moved.append(next(a for a in data["activities"] if a["id"] == 313))
         data["activities"] = [a for a in data["activities"] if a["id"] != 313]

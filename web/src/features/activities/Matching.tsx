@@ -24,8 +24,10 @@ export function Matching({ activity, result, submitting, onSubmit }: MatchingPro
       className="grid gap-4"
       onSubmit={(event) => {
         event.preventDefault()
-        setChecked(pairs)
-        void onSubmit(pairs)
+        // A select set back to its placeholder ("") is a pair not made, as the API counts it.
+        const chosen = Object.fromEntries(Object.entries(pairs).filter(([, right]) => right !== ''))
+        setChecked(chosen)
+        void onSubmit(chosen)
       }}
     >
       <p className="m-0 font-medium">{activity.config.prompt}</p>

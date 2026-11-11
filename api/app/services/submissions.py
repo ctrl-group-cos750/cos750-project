@@ -2,10 +2,15 @@
 
 A submission in the right shape can still answer nothing: an empty one (no option, no pairs, no
 lines, no blanks, no rows), or one that names ids the activity doesn't have (a line, blank,
-token, option, test case or vertex that isn't in its config). The browser's screens can't send
-either. Grading one would store it as a real attempt, and on a mastery item only the first
-attempt counts (FR-7.2), so a stray request would spend the student's one try. The activity
-routes refuse both with 422 instead, before anything is recorded.
+token, option, test case or vertex that isn't in its config). Grading one would store it as a
+real attempt, and on a mastery item only the first attempt counts (FR-7.2), so a stray request
+would spend the student's one try. The activity routes refuse both with 422 instead, before
+anything is recorded.
+
+The screens can send an empty matching or fill-in answer (Check with nothing chosen); the
+student then reads "This answer is empty" and nothing is recorded. A select the student touched
+and then reset sends "" for that pair or blank: `clean` drops those first, so they count as left
+unanswered, exactly like a select never touched, and the rest is graded.
 
 A choice that is in the config but wrong (a wrong option, a line out of place, a vertex visited
 too early) is an answer, and is graded as before.
@@ -35,6 +40,18 @@ Problem = Literal["empty", "foreign"]
 
 def _foreign(chosen: set[Any], offered: set[Any]) -> bool:
     return not chosen <= offered
+
+
+def clean(kind: str, submitted: dict[str, Any]) -> dict[str, Any]:
+    """`submitted` with every "" choice in a matching pair or fill-in blank left out: a select the
+    student reset is a choice not made. Anything else is returned unchanged."""
+    field = {"matching": "pairs", "fill_in": "answers"}.get(kind)
+    if field is None:
+        return submitted
+    chosen = submitted.get(field)
+    if not isinstance(chosen, dict):
+        return submitted
+    return {**submitted, field: {k: v for k, v in chosen.items() if v != ""}}
 
 
 def submission_problem(

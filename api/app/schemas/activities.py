@@ -20,12 +20,17 @@ from app.schemas.graphs import VERTEX, GraphEdge
 
 Vertex = Annotated[str, Field(pattern=VERTEX)]
 
-# No C0 control characters or DEL (NUL among them) in an id or token, on either side: content may
-# not hold one (configs and solutions), so a student is never refused for choosing what they were
-# shown, and a submission may not carry one into the evaluation export (FR-10).
-NO_CONTROL = r"^[^\x00-\x1f\x7f]*$"
+# No control or format characters in an id or token, on either side: Unicode categories Cc (C0 and
+# C1 controls, NUL among them) and Cf (bidi overrides and isolates, zero-width characters, U+FEFF,
+# tag characters, the soft hyphen). They are invisible, can make two tokens look alike or
+# reorder what an export shows, and would reach the evaluation export (FR-10). Letters with
+# combining marks are ordinary text and pass. Content may not hold one (configs and solutions),
+# so a student is never refused for choosing what they were shown.
+NO_CONTROL = r"^[^\p{Cc}\p{Cf}]*$"
 ID_LENGTH = 50  # option, matching item and test case ids
-TOKEN_LENGTH = 200  # a fill-in token
+# A fill-in token: twice the longest in the content (30 characters, on content/pass), and small
+# enough that the largest valid fill-in answer fits MAX_SUBMISSION_BYTES even in 4-byte UTF-8.
+TOKEN_LENGTH = 60
 
 # An id or token as content defines it (config and solution) and as a student sends it back.
 ContentId = Annotated[str, Field(min_length=1, max_length=ID_LENGTH, pattern=NO_CONTROL)]
@@ -41,10 +46,11 @@ SubmittedInt = Annotated[int, Field(ge=-(2**31), le=2**31 - 1)]
 TRACE_VERTICES = 20
 TRACE_LABEL = 12
 
-# The whole submission, in bytes of compact ASCII JSON: a backstop to the per-field bounds, which
-# already keep every valid submission below it. The largest right answer they allow is a trace of
-# a complete 20-vertex graph with 12-character labels, about 10.5 kB, and the largest valid
-# submission of any kind about 20 kB (tests/test_submission_limits.py computes both).
+# The attempt's request body, in bytes as it arrives (UTF-8 JSON): a backstop to the per-field
+# bounds. Every submission the route would accept fits below it: the largest is a 100-blank
+# fill-in answer whose tokens are 60 four-byte characters, about 26 kB; the largest right trace
+# answer (a complete 20-vertex graph, 12-character labels) is about 10.5 kB
+# (tests/test_submission_limits.py computes both). Above it is padding (413).
 MAX_SUBMISSION_BYTES = 32_768
 
 CodeActivityKind = Literal["parsons", "fill_in", "fix_the_bug", "choose_tests"]

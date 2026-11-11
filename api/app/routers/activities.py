@@ -6,9 +6,9 @@ for one that is no longer part of the course. Staff may open every activity, to 
 Answers and hint requests are rate-limited per student (NFR-S6, #139).
 """
 
-import json
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import ValidationError
 from sqlalchemy import select
 
@@ -27,7 +27,7 @@ from app.schemas.ids import RowId
 from app.services.access import activity_refusal
 from app.services.attempts import hint_level_seen, record_attempt, reveal_next_hint
 from app.services.locking import ActivityGone
-from app.services.submissions import submission_problem
+from app.services.submissions import clean, submission_problem
 
 router = APIRouter(prefix="/api/activities", tags=["activities"])
 
@@ -54,6 +54,15 @@ attempts_limiter = RateLimiter(
 hints_limiter = RateLimiter(
     limit=30, window=60, message="That's a lot of hints at once. Wait a moment and try again."
 )
+
+
+async def _body_bytes(request: Request) -> int:
+    """The size of the request body as it arrived, in bytes (UTF-8 JSON as the browser sends it).
+    FastAPI has already read the body to parse it, so this costs nothing more."""
+    return len(await request.body())
+
+
+BodyBytes = Annotated[int, Depends(_body_bytes)]
 
 
 def _activity_or_404(session: DbSession, activity_id: int, user: User) -> Activity:
@@ -84,7 +93,11 @@ def get_activity(activity_id: RowId, session: DbSession, user: CurrentUser) -> A
 
 @router.post("/{activity_id}/attempts", status_code=status.HTTP_201_CREATED)
 def submit_attempt(
-    activity_id: RowId, body: AttemptIn, user: CurrentUser, session: DbSession
+    activity_id: RowId,
+    body: AttemptIn,
+    user: CurrentUser,
+    session: DbSession,
+    body_bytes: BodyBytes,
 ) -> AttemptOut:
     """Grade a submission by comparison with the stored solution and record the attempt (FR-4.2,
     FR-4.5, FR-5.3).
@@ -96,21 +109,24 @@ def submit_attempt(
     wrong shape is 422. No student code is executed: `check_activity` compares the submission with
     the solution, which stays in this process (NFR-S7).
 
-    Each kind's shape bounds its lengths, and the whole submission is at most
-    `MAX_SUBMISSION_BYTES` (413 past it). An empty submission, or one naming an option, line,
-    blank, token, test case or vertex the activity doesn't have, is 422 and not recorded. 403 and 404 as for GET. 429 with `Retry-After` past 60
-    answers a minute from one student. Two answers sent at once are recorded one after the other
-    (app/services/locking.py)."""
+    Each kind's shape bounds its lengths, and the request body is at most `MAX_SUBMISSION_BYTES`
+    bytes (413 past it). A matching pair or fill-in blank sent as "" (a reset select) counts as
+    unanswered. An empty submission, or one naming an option, line, blank, token, test case or
+    vertex the activity doesn't have, is 422 and not recorded. 403 and 404 as for GET. 429 with
+    `Retry-After` past 60 answers a minute from one student. Two answers sent at once are
+    recorded one after the other (app/services/locking.py)."""
     attempts_limiter.check(f"user:{user.id}")
     activity = _activity_or_404(session, activity_id, user)
-    if len(json.dumps(body.submitted, separators=(",", ":"))) > MAX_SUBMISSION_BYTES:
+    if body_bytes > MAX_SUBMISSION_BYTES:
         raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, detail=TOO_LARGE)
     try:
         # Not an answer at all: refused before it can spend a first (counted) attempt (#139).
-        problem = submission_problem(activity.kind, activity.config, body.submitted)
+        # A reset select ("") is a choice not made; what is stored is what was chosen.
+        submitted = clean(activity.kind, body.submitted)
+        problem = submission_problem(activity.kind, activity.config, submitted)
         if problem is not None:
             raise HTTPException(422, detail=EMPTY if problem == "empty" else FOREIGN)
-        attempt, result = record_attempt(session, user.id, activity, body.submitted)
+        attempt, result = record_attempt(session, user.id, activity, submitted)
     except ValidationError as exc:  # the submission didn't match the kind's shape
         raise HTTPException(422, detail=BAD_SUBMISSION) from exc  # constant is deprecated upstream
     except ActivityGone:  # the seed deleted it while this answer waited

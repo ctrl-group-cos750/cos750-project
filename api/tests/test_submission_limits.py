@@ -87,7 +87,12 @@ CONTROL = "x\x00y"
         (MC, {"selected": 1}),
         (MC, {"selected": ["a"]}),
         (FILL, {"answers": {str(n): "1" for n in range(101)}}),  # more blanks than any config
-        (FILL, {"answers": {"1": "x" * 201}}),  # longer than any token may be
+        (FILL, {"answers": {"1": "x" * 61}}),  # longer than any token may be
+        (MC, {"selected": "a\u202e"}),  # a bidi override (Cf)
+        (MC, {"selected": "a\u200b"}),  # a zero-width space (Cf)
+        (MATCHING, {"pairs": {"l": "\ufeffr"}}),  # a byte-order mark (Cf)
+        (FILL, {"answers": {"1": "a\u0085"}}),  # a C1 control (Cc)
+        (FILL, {"answers": {"1": "a\U000e0041"}}),  # a tag character (Cf)
         (FILL, {"answers": {"1": CONTROL}}),
         (FILL, {"answers": {"1": "a\nb"}}),
         (FILL, {"answers": {str(BIG): "1"}}),
@@ -162,28 +167,38 @@ def test_padding_past_the_cap_is_413_and_not_stored(student: TestClient, db: Ses
     assert attempts(db) == 0
 
 
+WIDE = "\U0001d538"  # a four-byte UTF-8 character
+
+
 def largest_valid(kind: str) -> dict[str, Any]:
-    """The biggest submission each kind's shape accepts (compact JSON)."""
+    """The biggest submission each kind's shape accepts, in UTF-8 bytes: ids and tokens of
+    four-byte characters at their longest. Trace labels stay ASCII, because the route only takes
+    labels that are in the graph, and graph labels are ASCII (VERTEX)."""
     big_int = -(2**31)
     match kind:
         case "multiple_choice":
-            return {"selected": "x" * 50}
+            return {"selected": WIDE * 50}
         case "parsons":
             return {"order": [big_int] * 100}
         case "fix_the_bug":
             return {"order": [big_int] * 150}
         case "fill_in":
-            return {"answers": {str(big_int + n): "x" * 200 for n in range(100)}}
+            return {"answers": {str(big_int + n): WIDE * 60 for n in range(100)}}
         case "matching":
-            return {"pairs": {f"{n:02d}" + "l" * 48: "r" * 50 for n in range(20)}}
+            return {"pairs": {f"{n:02d}" + WIDE * 48: WIDE * 50 for n in range(20)}}
         case "choose_tests":
-            return {"selected": ["t" * 50] * 8}
+            return {"selected": [WIDE * 50] * 8}
         case "trace":
             label = "V" * 12
             row = {"visitedVertex": label, "queue": [label] * 20, "visited": [label] * 20,
                    "order": [label] * 20}  # fmt: skip
             return {"rows": [row] * 20}
     raise AssertionError(kind)
+
+
+def body_bytes(submitted: Any) -> int:
+    """The request body as a browser sends it: JSON in UTF-8, not escaped."""
+    return len(json.dumps({"submitted": submitted}, ensure_ascii=False).encode())
 
 
 @pytest.mark.parametrize(
@@ -205,7 +220,48 @@ def test_the_cap_never_refuses_a_submission_its_shape_accepts(kind: str) -> None
     }
     submitted = largest_valid(kind)
     shapes[kind].model_validate(submitted)  # it is valid
-    assert len(json.dumps(submitted, separators=(",", ":"))) < MAX_SUBMISSION_BYTES
+    assert body_bytes(submitted) < MAX_SUBMISSION_BYTES, body_bytes(submitted)
+
+
+def test_the_largest_non_ascii_fill_in_answer_is_graded_not_refused(
+    student: TestClient, db: Session
+) -> None:
+    """100 blanks, each answered with a 60-character token of four-byte characters, sent as raw
+    UTF-8: about 26 kB of body, under the cap, so it is graded (#139)."""
+    token = WIDE * 60
+    blanks = list(range(1, 101))
+    activity_id = make(
+        db,
+        "fill_in",
+        {"code": " ".join(f"__{b}__" for b in blanks), "blanks": blanks, "options": [token, "x"]},
+        {"answers": {str(b): "x" for b in blanks}},
+    )
+    submitted = {"answers": {str(b): token for b in blanks}}
+    body = json.dumps({"submitted": submitted}, ensure_ascii=False).encode()
+    assert 20_000 < len(body) < MAX_SUBMISSION_BYTES
+    response = student.post(
+        f"/api/activities/{activity_id}/attempts",
+        content=body,
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["correct"] is False
+
+
+def test_the_cap_counts_the_bytes_that_arrive(student: TestClient, db: Session) -> None:
+    """The same padding escaped as \\uXXXX (6 bytes a character) or raw (4 bytes) is measured as
+    sent; past MAX_SUBMISSION_BYTES either way it is 413."""
+    activity_id = make(db, *MC)
+    padded = {"selected": "a", "note": WIDE * 9_000}
+    for ensure_ascii in (True, False):
+        body = json.dumps({"submitted": padded}, ensure_ascii=ensure_ascii).encode()
+        assert len(body) > MAX_SUBMISSION_BYTES
+        response = student.post(
+            f"/api/activities/{activity_id}/attempts",
+            content=body,
+            headers={"Content-Type": "application/json"},
+        )
+        assert response.status_code == 413
 
 
 def test_the_worst_right_trace_answer_fits_the_cap_with_room() -> None:
@@ -254,6 +310,8 @@ def test_a_trace_graph_too_big_to_trace_by_hand_is_refused_in_content(
     ("model", "data"),
     [
         ("ChoiceOption", {"id": "a\x00", "label": "A"}),
+        ("ChoiceOption", {"id": "a\u2066", "label": "A"}),
+        ("MatchingItem", {"id": "\u200dl", "label": "L"}),
         ("MatchingItem", {"id": "l\n", "label": "L"}),
         ("FillInConfig", {"code": "__1__", "blanks": [1], "options": ["ok", "tab\there"]}),
         ("MultipleChoiceSolution", {"correct": "a\x7f"}),
@@ -284,7 +342,7 @@ def test_content_cannot_hold_a_choice_a_student_would_be_refused_for(
         (CHOOSE, {"selected": []}, EMPTY),
         (TRACE, {"rows": []}, EMPTY),
         (MC, {"selected": "a" * 50}, FOREIGN),  # the longest an option id may be
-        (FILL, {"answers": {"1": "x" * 200}}, FOREIGN),  # a token the blank doesn't offer
+        (FILL, {"answers": {"1": "x" * 60}}, FOREIGN),  # a token the blank doesn't offer
         (FILL, {"answers": {"7": "1"}}, FOREIGN),  # a blank the code doesn't have
         (MATCHING, {"pairs": {"l": "elsewhere"}}, FOREIGN),
         (MATCHING, {"pairs": {"nowhere": "r"}}, FOREIGN),
@@ -316,6 +374,42 @@ def test_an_empty_or_foreign_answer_is_422_and_spends_no_attempt(
     )
     assert response.status_code == 422, response.text
     assert response.json() == {"detail": detail}
+    assert attempts(db) == 0
+
+
+def test_a_reset_select_counts_as_unanswered(student: TestClient, db: Session) -> None:
+    """A select the student set back to its placeholder sends "". It is a choice not made, as if
+    never touched: the rest of the answer is graded, and the stored answer leaves it out."""
+    two_left = {"prompt": "Q", "left": [{"id": "l", "label": "L"}, {"id": "m", "label": "M"}],
+                "right": [{"id": "r", "label": "R"}, {"id": "r2", "label": "R2"}]}  # fmt: skip
+    matching = make(db, "matching", two_left, {"pairs": {"l": "r", "m": "r2"}})
+    response = student.post(
+        f"/api/activities/{matching}/attempts", json={"submitted": {"pairs": {"l": "r", "m": ""}}}
+    )
+    assert response.status_code == 201, response.text
+    assert [p["correct"] for p in response.json()["parts"]] == [True, False]
+    two_blanks = {"code": "__1__ __2__", "blanks": [1, 2], "options": ["1", "2"]}
+    fill = make(db, "fill_in", two_blanks, {"answers": {"1": "1", "2": "2"}})
+    response = student.post(
+        f"/api/activities/{fill}/attempts", json={"submitted": {"answers": {"1": "1", "2": ""}}}
+    )
+    assert response.status_code == 201, response.text
+    db.expire_all()
+    stored = db.scalars(select(Attempt.submitted).order_by(Attempt.id)).all()
+    assert stored == [{"pairs": {"l": "r"}}, {"answers": {"1": "1"}}]
+
+
+@pytest.mark.parametrize(
+    ("activity", "submitted"),
+    [(MATCHING, {"pairs": {"l": ""}}), (FILL, {"answers": {"1": ""}})],
+)
+def test_only_reset_selects_is_an_empty_answer(
+    student: TestClient, db: Session, activity: tuple[str, Any, Any], submitted: Any
+) -> None:
+    response = student.post(
+        f"/api/activities/{make(db, *activity)}/attempts", json={"submitted": submitted}
+    )
+    assert (response.status_code, response.json()) == (422, {"detail": EMPTY})
     assert attempts(db) == 0
 
 
@@ -359,13 +453,13 @@ def test_every_committed_activitys_answer_fits_well_under_the_cap() -> None:
     assert max(sizes.values()) * 30 < MAX_SUBMISSION_BYTES, max(sizes.values())
 
 
-def test_a_fill_in_token_longer_than_200_is_refused_in_content() -> None:
+def test_a_fill_in_token_longer_than_60_is_refused_in_content() -> None:
     from pydantic import ValidationError
 
     from app.schemas.activities import FillInConfig
 
     with pytest.raises(ValidationError):
-        FillInConfig(code="__1__", blanks=[1], options=["x" * 201])
+        FillInConfig(code="__1__", blanks=[1], options=["x" * 61])
 
 
 # --- Rate limits (NFR-S6) -----------------------------------------------------------------------
@@ -550,3 +644,11 @@ def test_a_conflict_logs_the_constraint_that_refused_it(
         )
     assert response.status_code == 409
     assert "points_entries_user_id_ref_key" in caplog.text
+
+
+@pytest.mark.parametrize("token", ["caf\u00e9", "e\u0301", "na\u00efve", "\U0001d538\U0001d539"])
+def test_ordinary_non_ascii_text_with_combining_marks_is_allowed(token: str) -> None:
+    """Letters with accents or combining marks are text, not control characters."""
+    from app.schemas.activities import FillInConfig
+
+    FillInConfig(code="__1__", blanks=[1], options=[token])

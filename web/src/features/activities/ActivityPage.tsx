@@ -55,10 +55,12 @@ export function ActivityView({ activityId, heading, showTitle, onResult }: Activ
       const nextResult = await submitActivityAttempt(activityId, submitted)
       setResult(nextResult)
       onResult?.(nextResult)
-      if (nextResult.correct) {
+      // A withheld (mastery check) answer may be the one that finishes the check, and earns the
+      // check's points and badges at once (#144).
+      if (nextResult.correct || nextResult.withheld) {
         refreshRewards()
-        // It is solved now: the next time it is shown (Back, a refresh), the server says so, and
-        // no hints are offered (#158).
+        // It is solved, or answered for good, now: the next time it is shown (Back, a refresh),
+        // the server says so, and no hints are offered (#158, #144).
         void queryClient.invalidateQueries({ queryKey: ['activities', activityId] })
       }
     } catch (error) {

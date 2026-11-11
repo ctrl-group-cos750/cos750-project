@@ -14,7 +14,7 @@ from app.schemas.activities import CheckResult
 from app.services.checking import check_activity, is_blank
 from app.services.events import log_event
 from app.services.locks import lock_student
-from app.services.mastery import counts, recompute
+from app.services.mastery import counts, in_check, recompute
 from app.services.modules import reward_completed_modules
 from app.services.rewards import SUPPORT_LEVEL, on_attempt
 
@@ -54,13 +54,26 @@ def record_attempt(
     )
     session.add(attempt)
     session.flush()
-    on_attempt(session, attempt)  # points for a first correct answer (FR-9.1, FR-9.2)
+    if not in_check(activity):  # a module 6 item's points wait for the end of the check (#144)
+        on_attempt(session, attempt)  # points for a first correct answer (FR-9.1, FR-9.2)
     if result.correct and attempt.hint_level < SUPPORT_LEVEL:
         # Real work in a module already complete earns its reward now (#166 review).
         reward_completed_modules(session, user_id, activity)
     if counts(activity):
         recompute(session, user_id)  # the objective results, and what they earn (FR-7)
     return attempt, result
+
+
+def answered(session: Session, user_id: int, activity_id: int) -> bool:
+    """Whether this student has any attempt at the activity."""
+    return (
+        session.scalar(
+            select(Attempt.id)
+            .where(Attempt.user_id == user_id, Attempt.activity_id == activity_id)
+            .limit(1)
+        )
+        is not None
+    )
 
 
 def answered_correctly(session: Session, user_id: int, activity_id: int) -> bool:
@@ -80,17 +93,19 @@ def answered_correctly(session: Session, user_id: int, activity_id: int) -> bool
 
 
 def reveal_next_hint(
-    session: Session, user_id: int, activity: Activity
+    session: Session, user_id: int, activity: Activity, *, limit: int | None = None
 ) -> tuple[Hint, Hint | None] | None:
     """Record that this student was shown their next hint level (not committed). Returns that hint
-    and the one after it (None if it was the last), or None if every level has been shown."""
+    and the one after it (None if it was the last), or None if every level has been shown, or
+    every level up to `limit` (the mastery check's, #144). The limit is checked under the
+    student's lock, so two requests at once can't pass it either."""
     lock_student(session, user_id)  # two requests at once must not reveal one level twice (#138)
     hints = session.scalars(
         select(Hint).where(Hint.activity_id == activity.id).order_by(Hint.level)
     ).all()
     seen = hint_level_seen(session, user_id, activity.id)
     hint = next((h for h in hints if h.level > seen), None)
-    if hint is None:
+    if hint is None or (limit is not None and hint.level > limit):
         return None
     session.add(HintView(user_id=user_id, activity_id=activity.id, level=hint.level))
     log_event(session, user_id, "hint_shown", f"activity:{activity.id}", {"level": hint.level})

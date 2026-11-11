@@ -252,17 +252,26 @@ def test_answering_every_item_makes_the_student_ready(client: TestClient, course
     log_in(client)
     for item in (601, 602):
         answer(client, item)
-    assert states(client) == {1: "met_independently", 2: "not_attempted"}
+    # Objective 1's items are answered, but nothing is marked until the whole check is (#144).
+    assert states(client) == {1: "not_attempted", 2: "not_attempted"}
     answer(client, 603)
     report = client.get("/api/me/report").json()
     assert report["ready"] is True
     assert states(client) == {1: "met_independently", 2: "met_independently"}
 
 
-def test_only_the_first_attempt_at_an_item_counts(client: TestClient, course: Path) -> None:
-    log_in(client)
+def test_only_the_first_attempt_at_an_item_counts(
+    client: TestClient, course: Path, db: Session
+) -> None:
+    user = log_in(client)
     answer(client, 603, WRONG)
-    answer(client, 603, RIGHT)
+    # A student can't answer again (#144) ...
+    assert client.post("/api/activities/603/attempts", json=RIGHT).status_code == 409
+    # ... and a second attempt that got in anyway (two at once, or staff) still doesn't count.
+    record_attempt(db, user, db.get_one(Activity, 603), RIGHT["submitted"])
+    db.commit()
+    answer(client, 601)
+    answer(client, 602)
     assert states(client)[2] == "not_yet"
 
 
@@ -277,9 +286,10 @@ def test_hint_3_before_an_answer_makes_it_met_with_support(
     client: TestClient, course: Path, db: Session
 ) -> None:
     user = log_in(client)
-    db.add(HintView(user_id=user, activity_id=603, level=3))
+    db.add(HintView(user_id=user, activity_id=603, level=3))  # as before the hint limit (#144)
     db.commit()
-    answer(client, 603)
+    for item in (601, 602, 603):
+        answer(client, item)
     assert states(client)[2] == "met_with_support"
 
 
@@ -299,15 +309,23 @@ def test_results_are_stored_with_their_evidence(
     user = log_in(client)
     answer(client, 601)
     answer(client, 602, WRONG)
-    answer(client, 602)  # not evidence: only the first attempt counts
-    rows = {
-        r.objective_id: r
-        for r in db.scalars(select(ObjectiveResult).where(ObjectiveResult.user_id == user))
-    }
-    assert rows[1].state == "not_yet"
-    assert len(rows[1].evidence) == 2
-    assert rows[2].state == "not_attempted"
-    assert rows[2].evidence == []
+
+    def rows() -> dict[int, ObjectiveResult]:
+        db.expire_all()
+        return {
+            r.objective_id: r
+            for r in db.scalars(select(ObjectiveResult).where(ObjectiveResult.user_id == user))
+        }
+
+    # The check isn't finished, so nothing is marked yet, but the evidence is kept (#144).
+    assert rows()[1].state == "not_attempted"
+    assert len(rows()[1].evidence) == 2
+    assert rows()[2].evidence == []
+    answer(client, 603)
+    assert rows()[1].state == "not_yet"
+    assert len(rows()[1].evidence) == 2
+    assert rows()[2].state == "met_independently"
+    assert len(rows()[2].evidence) == 1
 
 
 def test_meeting_objectives_earns_badges_and_ready_for_the_lecture(
@@ -331,6 +349,7 @@ def test_a_rule_change_is_applied_on_the_next_seed_and_keeps_badges(
     user = log_in(client)
     answer(client, 601)
     answer(client, 602, WRONG)
+    answer(client, 603)
     assert states(client)[1] == "not_yet"
 
     # Loosen objective 1 to "at least half right": the reseed recomputes everyone (FR-7.6).
@@ -369,17 +388,18 @@ def test_an_attempt_without_graded_parts_counts_as_one_part(course: Path, db: Se
     student = User(email="y@example.com", display_name="Y", password_hash="x")  # noqa: S106
     db.add(student)
     db.flush()
-    db.add(
-        Attempt(
-            user_id=student.id,
-            activity_id=603,
-            submitted={},
-            correct=True,
-            score=1.0,
-            detail={},
-            hint_level=0,
+    for item in (601, 602, 603):  # the whole check, so it is marked (#144)
+        db.add(
+            Attempt(
+                user_id=student.id,
+                activity_id=item,
+                submitted={},
+                correct=True,
+                score=1.0,
+                detail={},
+                hint_level=0,
+            )
         )
-    )
     db.flush()
     outcomes = {o.objective.id: o.state for o in mastery.evaluate(db, student.id)}
     assert outcomes[2] == "met_independently"
@@ -654,6 +674,9 @@ def test_a_reseed_reorders_and_removes_review_segments(course: Path, db: Session
 
 
 def fail_objective_2(client: TestClient) -> None:
+    """Finish the check with objective 1 met and objective 2 not yet."""
+    answer(client, 601)
+    answer(client, 602)
     answer(client, 603, WRONG)
 
 
@@ -673,7 +696,8 @@ def test_an_objective_met_in_module_6_never_opens_its_path(
     client: TestClient, course: Path
 ) -> None:
     log_in(client)
-    answer(client, 603)
+    for item in (601, 602, 603):
+        answer(client, item)
     assert client.get("/api/me/review/2").status_code == 403
     assert client.get("/api/me/report").json()["objectives"][1]["review"] is None
 
@@ -714,8 +738,6 @@ def test_the_fresh_items_decide_the_result_and_the_student_comes_back_stronger(
     client: TestClient, course: Path, db: Session
 ) -> None:
     user = log_in(client)
-    answer(client, 601)
-    answer(client, 602)
     fail_objective_2(client)
     assert client.get("/api/me/report").json()["ready"] is False
     answer(client, 1201, WRONG)  # practice: getting it wrong costs nothing
@@ -743,6 +765,7 @@ def test_all_fresh_items_must_be_answered_before_they_decide(
     log_in(client)
     answer(client, 601)
     answer(client, 602, WRONG)
+    answer(client, 603)
     answer(client, 1102)
     assert states(client)[1] == "not_yet"  # module 6's result stands until 1103 is answered
     assert client.get("/api/me/report").json()["objectives"][0]["review"] == {
@@ -822,3 +845,124 @@ def test_the_committed_review_paths_can_take_a_student_to_ready(
     report = client.get("/api/me/report").json()
     assert set(states(client).values()) == {"met_independently"}
     assert report["ready"] is True
+
+
+# --- The mastery check's own rules (#144) ----------------------------------------------------------
+
+
+@pytest.fixture
+def hinted_course(tmp_path: Path, db: Session) -> Path:
+    """The small course, with the full hint ladder on mastery item 601."""
+    course = small_course()
+    for activity in course["activities"]:
+        if activity["id"] == 601:
+            activity["hints"] = ladder()
+    (tmp_path / "course.json").write_text(json.dumps(course), encoding="utf-8")
+    load(db, tmp_path)
+    return tmp_path
+
+
+def test_a_mastery_answer_says_nothing_about_being_right(client: TestClient, course: Path) -> None:
+    log_in(client)
+    right = client.post("/api/activities/601/attempts", json=RIGHT).json()
+    wrong = client.post("/api/activities/603/attempts", json=WRONG).json()
+    for body in (right, wrong):
+        assert body["correct"] is None
+        assert body["score"] is None
+        assert body["parts"] == []
+        assert body["withheld"] is True
+    # Apart from their ids, a right and a wrong answer get the same response: the browser's
+    # network tab gives nothing away.
+    assert {k: v for k, v in right.items() if k not in ("id", "activityId")} == {
+        k: v for k, v in wrong.items() if k not in ("id", "activityId")
+    }
+
+
+def test_a_mastery_item_takes_one_answer(client: TestClient, course: Path) -> None:
+    log_in(client)
+    before = client.get("/api/activities/601").json()
+    assert (before["masteryCheck"], before["answered"], before["solved"]) == (True, False, False)
+    answer(client, 601)
+    after = client.get("/api/activities/601").json()
+    # Answered, but never "solved": that would say the answer was right.
+    assert (after["masteryCheck"], after["answered"], after["solved"]) == (True, True, False)
+    again = client.post("/api/activities/601/attempts", json=WRONG)
+    assert again.status_code == 409
+    assert "first answer counts" in again.json()["detail"]
+
+
+def test_practice_and_review_items_are_not_in_the_check(client: TestClient, course: Path) -> None:
+    log_in(client)
+    practice = client.post("/api/activities/301/attempts", json=RIGHT).json()
+    assert (practice["correct"], practice["withheld"]) == (True, False)
+    assert client.get("/api/activities/301").json()["masteryCheck"] is False
+    fail_objective_2(client)
+    fresh = client.post("/api/activities/1202/attempts", json=WRONG).json()
+    assert (fresh["correct"], fresh["withheld"]) == (False, False)
+
+
+def test_staff_still_see_each_result(client: TestClient, course: Path, db: Session) -> None:
+    user = log_in(client)
+    db.get_one(User, user).is_staff = True
+    db.commit()
+    assert client.get("/api/activities/601").json()["masteryCheck"] is False
+    assert client.post("/api/activities/601/attempts", json=WRONG).json()["correct"] is False
+    assert client.post("/api/activities/601/attempts", json=RIGHT).json()["correct"] is True
+
+
+def test_a_mastery_item_gives_two_hints_at_most(client: TestClient, hinted_course: Path) -> None:
+    log_in(client)
+    first = client.post("/api/activities/601/hints").json()
+    assert (first["level"], first["hasMore"], first["limitReached"]) == (1, True, False)
+    assert first["nextCountsAsSupport"] is False
+    second = client.post("/api/activities/601/hints").json()
+    assert (second["level"], second["hasMore"], second["limitReached"]) == (2, False, True)
+    third = client.post("/api/activities/601/hints")
+    assert third.status_code == 409
+    assert "review path" in third.json()["detail"]
+    shown = client.get("/api/activities/601/hints").json()
+    assert [(h["level"], h["hasMore"], h["limitReached"]) for h in shown] == [
+        (1, True, False),
+        (2, False, True),
+    ]
+
+
+def test_no_hints_after_a_mastery_answer_right_or_wrong(
+    client: TestClient, hinted_course: Path
+) -> None:
+    log_in(client)
+    answer(client, 601, WRONG)
+    refused = client.post("/api/activities/601/hints")
+    assert refused.status_code == 409
+    assert "correctly" not in refused.json()["detail"]  # #158's message would give it away
+
+
+def test_the_check_gives_no_points_or_badges_until_it_is_finished(
+    client: TestClient, course: Path, db: Session
+) -> None:
+    user = log_in(client)
+    answer(client, 601)
+    answer(client, 602)  # objective 1 is met, but nothing says so yet
+    assert rewards.total_points(db, user) == 0
+    assert rewards.badges_of(db, user) == []
+    assert not mastery.check_finished(db, user)
+    answer(client, 603)
+    assert mastery.check_finished(db, user)
+    assert {b.badge for b in rewards.badges_of(db, user)} >= {"lo1", "lo2"}
+    assert rewards.total_points(db, user) == 10 + 10 + 10 + 30 + 30  # items, then gold twice
+
+
+def test_trace_618_names_no_wrong_column_in_the_check(client: TestClient, db: Session) -> None:
+    """#136's per-column trace feedback would say which column is wrong: not on the mastery
+    check's trace item (#144)."""
+    load(db)
+    open_module_6(db, log_in(client))
+    trace = db.get_one(Activity, 618)
+    body = client.post(
+        "/api/activities/618/attempts", json={"submitted": wrong_submission(trace)}
+    ).json()
+    assert (body["correct"], body["parts"], body["withheld"]) == (None, [], True)
+    assert "column" not in body["feedback"].lower()
+    # Its segment is done all the same, so the student can go on (FR-2.7, #165).
+    detail = client.get("/api/modules/6").json()
+    assert next(s for s in detail["segments"] if s["activityId"] == 618)["done"] is True

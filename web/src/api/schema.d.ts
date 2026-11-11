@@ -122,6 +122,10 @@ export interface paths {
      *     wrong shape, or one that answers nothing (no option, line, token, pair, test or row), is 422
      *     and isn't recorded. No student code is executed: `check_activity` compares the submission with
      *     the solution, which stays in this process (NFR-S7).
+     *
+     *     A module 6 mastery item takes one answer only (409 after it), and its response is `withheld`:
+     *     no `correct`, `score` or `parts`, so the network tab gives nothing away either (#144). The
+     *     mastery report shows the results once every item is answered.
      */
     post: operations['submit_attempt_api_activities__activity_id__attempts_post']
     delete?: never
@@ -153,6 +157,10 @@ export interface paths {
      *     or once the student has answered correctly, it is 409. When `nextCountsAsSupport` is true,
      *     warn the student before calling again: a correct answer after hint 3 or 4 counts as "met
      *     with support" (ID document §7.4).
+     *
+     *     A module 6 mastery item gives hints 1 and 2 only (#144): asking for a third is 409, and the
+     *     second says `limitReached`. Once the item is answered it is 409 too, with a message that
+     *     doesn't say whether the answer was right.
      */
     post: operations['reveal_hint_api_activities__activity_id__hints_post']
     delete?: never
@@ -1118,6 +1126,16 @@ export interface components {
        * @default false
        */
       solved: boolean
+      /**
+       * Masterycheck
+       * @default false
+       */
+      masteryCheck: boolean
+      /**
+       * Answered
+       * @default false
+       */
+      answered: boolean
     }
     /**
      * AttemptIn
@@ -1132,6 +1150,10 @@ export interface components {
     /**
      * AttemptOut
      * @description The graded result sent back. Carries per-part correctness and messages, never the solution.
+     *
+     *     On a mastery check item (#144) the result is `withheld`: `correct` and `score` are null,
+     *     `parts` is empty and `feedback` only says the answer was recorded. The mastery report shows
+     *     the results once every module 6 item is answered.
      */
     AttemptOut: {
       /** Id */
@@ -1139,13 +1161,18 @@ export interface components {
       /** Activityid */
       activityId: number
       /** Correct */
-      correct: boolean
+      correct: boolean | null
       /** Score */
-      score: number
+      score: number | null
       /** Parts */
       parts: components['schemas']['PartResult'][]
       /** Feedback */
       feedback: string
+      /**
+       * Withheld
+       * @default false
+       */
+      withheld: boolean
       /** Hintlevel */
       hintLevel: number
     }
@@ -1696,6 +1723,11 @@ export interface components {
       hasMore: boolean
       /** Nextcountsassupport */
       nextCountsAsSupport: boolean
+      /**
+       * Limitreached
+       * @default false
+       */
+      limitReached: boolean
     }
     /** Insights */
     Insights: {

@@ -263,7 +263,7 @@ def test_the_right_option_is_not_always_in_the_same_place() -> None:
         for a in EVERY
         if a.kind == "multiple_choice"
     )
-    assert len(places) == 3
+    assert len(places) >= 3  # objective 3's items have four options
     assert max(places.values()) <= 0.5 * sum(places.values())
 
 
@@ -324,24 +324,55 @@ NAMED = re.compile(r"(?:are|,|and|:)\s+(?:the\s+)?([^,():.]+?) \(([A-Z])\)")
 
 
 def named_part(prompt: str, marker: str) -> str:
-    """The part a marker names, worked out from the names and edges the prompt lists. A marker
-    names a thing ("the shed tap"), or what joins two things ("what joins the pool tap and the
-    quince-tree tap", "what takes you one way from X to Y"), as practice item 104 does."""
+    """The part a marker describes, worked out from the names and edges the prompt lists. A marker
+    names a thing or what joins two things, as practice item 104 does, but how many places it
+    names doesn't say whether the answer is a vertex or an edge (#147): "the tap between the
+    kitchen tap and the lawn tap" is a vertex, "what carries water to the shed tap" an edge."""
     letters = {name.lower(): letter for name, letter in NAMED.findall(prompt)}
     edges = {(u, arrow, v) for u, arrow, v in EDGE.findall(prompt)}
+    directed = any(arrow == "→" for _, arrow, _ in edges)
 
     def letter(name: str) -> str:
         return str(letters[name.lower().removeprefix("the ").strip()])
 
+    def touching(x: str) -> set[tuple[str, str, str]]:
+        return {e for e in edges if x in (e[0], e[2])}
+
+    def neighbours(x: str) -> set[str]:
+        return {v if u == x else u for u, _, v in touching(x)}
+
+    def edge(e: tuple[str, str, str]) -> str:
+        u, arrow, v = e
+        return f"Edge {u} → {v}" if arrow == "→" else f"Edge {u}{DASH}{v}"
+
+    def only(found: set[Any]) -> Any:
+        assert len(found) == 1, (marker, found)  # the marker picks out exactly one part
+        return next(iter(found))
+
     text = marker.split(": ", 1)[1]
-    if one_way := re.fullmatch(r"what takes you one way from (.+) to (.+)", text):
-        u, v = (letter(x) for x in one_way.groups())
+    if m := re.fullmatch(r"what takes you one way from (.+) to (.+)", text):
+        u, v = (letter(x) for x in m.groups())
         assert (u, "→", v) in edges, marker
         return f"Edge {u} → {v}"
-    if joins := re.fullmatch(r"what joins (.+) and (.+)", text):
-        u, v = (letter(x) for x in joins.groups())
+    if m := re.fullmatch(r"what joins (.+) and (.+)", text):
+        u, v = (letter(x) for x in m.groups())
         assert (u, DASH, v) in edges or (v, DASH, u) in edges, marker
         return f"Edge {u}{DASH}{v}"
+    if m := re.fullmatch(r"the \w+ between (.+) and (.+)", text):
+        u, v = (letter(x) for x in m.groups())
+        return f"Vertex {only(neighbours(u) & neighbours(v))}"
+    if m := re.fullmatch(r"what (?:carries water to|buses drive along to reach) (.+)", text):
+        return edge(only(touching(letter(m.group(1)))))
+    if m := re.fullmatch(r"what you drive along to leave (.+)", text):
+        x = letter(m.group(1))
+        assert directed
+        return edge(only({e for e in edges if e[0] == x}))
+    if m := re.fullmatch(r"where you end up after driving on from (.+)", text):
+        x = letter(m.group(1))
+        return f"Vertex {only({e[2] for e in edges if e[0] == x})}"
+    if m := re.fullmatch(r"the \w+ you can reach only from (.+)", text):
+        x = letter(m.group(1))
+        return f"Vertex {only({y for y in set(letters.values()) if neighbours(y) == {x}})}"
     return f"Vertex {letter(text)}"
 
 
@@ -490,9 +521,11 @@ def test_each_wrong_correction_leaves_bfs_broken(a: ActivityFixture) -> None:
 
 
 @pytest.mark.parametrize("a", FIXES, ids=lambda a: str(a.id))
-def test_a_wrong_correction_breaks_bfs_wherever_it_goes(a: ActivityFixture) -> None:
-    """A wrong correction is a real mistake, not a harmless extra: put in place of any line of the
-    fixed program, BFS fails a hidden test (1703's "and n != v" passed them all, #147)."""
+def test_a_wrong_correction_in_place_of_any_one_line_breaks_bfs(a: ActivityFixture) -> None:
+    """A wrong correction is a real mistake: put in place of any one line of the fixed program, BFS
+    fails a hidden test (1703's "and n != v" passed them all, #147). It is not true of every
+    arrangement: a wrong line added as a dead assignment, or with other lines moved, can still run
+    like BFS. The grader marks those wrong because they aren't the fix the item asks for."""
     order = [i for x in a.solution["order"] for i in (x if isinstance(x, list) else [x])]
     for wrong in (c for c in a.config["corrections"] if c["id"] not in order):
         for place in range(len(order)):

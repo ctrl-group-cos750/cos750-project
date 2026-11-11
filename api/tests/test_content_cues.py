@@ -359,15 +359,26 @@ def test_no_simple_strategy_meets_any_objective(where: str, strategy: str) -> No
         assert not rule.met(right, total), (where, strategy, objective, right, total)
 
 
-# Option ids whose text changed meaning in #147. They are retired, never reused: an old attempt's
-# `selected` must not be read as the new text (the lesson of #117 and #133).
-RETIRED = {614: "b", 615: "c", 616: "c", 617: "b", 1402: "c", 1403: "c", 1404: "b", 1405: "c"}
+# Option ids from staging whose text changed meaning in #147, or that left an item. They are
+# retired, never reused: an old attempt's `selected` must not be read as new text (the lesson of
+# #117 and #133). Ids made on this branch were never deployed, so they aren't listed.
+RETIRED = {
+    614: {"a", "b", "c"},  # a new question: every staging id is retired
+    615: {"c"},
+    616: {"c"},
+    617: {"b", "c"},
+    1402: {"a", "b", "c"},
+    1403: {"c"},
+    1404: {"a", "b", "c"},  # a new question: every staging id is retired
+    1405: {"c"},
+    1601: {"a", "b"},
+}
 
 
 def test_a_retired_option_id_is_never_reused() -> None:
-    for activity_id, option_id in RETIRED.items():
+    for activity_id, retired in RETIRED.items():
         options = {o["id"] for o in ACTIVITIES[activity_id].config["options"]}
-        assert option_id not in options, activity_id
+        assert not retired & options, activity_id
 
 
 # --- Items don't answer each other (#136 review) -------------------------------------------------
@@ -450,3 +461,174 @@ def test_a_retired_correction_id_is_never_reused() -> None:
     """1703's correction 22 was a harmless extra condition; its replacement breaks BFS, a different
     meaning, so it has a new id (23) and 22 is retired."""
     assert 22 not in {c["id"] for c in ACTIVITIES[1703].config["corrections"]}
+
+
+# --- The round-2 review's strategy search (#147) --------------------------------------------------
+# Each ranker scores an option from what a student sees: its label, its id, where it is, the
+# prompt and hints 1-2. A strategy is one ranker, or two or three applied in turn to break ties
+# (then the earlier option). About 3,000 strategies; none may meet an objective's rule in module 6
+# or in a review path's fresh items. Haladyna, Downing & Rodriguez (2002): keep the key's position,
+# length and wording from cueing it, and avoid option pairs that point at the key.
+
+RSQUO = "\N{RIGHT SINGLE QUOTATION MARK}"
+DASH = "\N{EN DASH}"
+WORDS = re.compile(rf"[a-z{RSQUO}'-]+")
+ABSOLUTES = {
+    "always",
+    "never",
+    "only",
+    "every",
+    "all",
+    f"can{RSQUO}t",
+    "can't",
+    "cannot",
+    "any",
+    "everyone",
+    "none",
+}
+JARGON = {
+    "vertex",
+    "vertices",
+    "edge",
+    "edges",
+    "fewest",
+    "ring",
+    "queue",
+    "reach",
+    "reaches",
+    "connections",
+    "traversal",
+    "path",
+    "graph",
+    "directed",
+    "undirected",
+}
+
+
+def _words(text: str) -> list[str]:
+    return WORDS.findall(text.lower())
+
+
+def _jaccard(x: str, y: str) -> float:
+    a, b = set(_words(x)), set(_words(y))
+    return len(a & b) / max(1, len(a | b))
+
+
+def _first(label: str) -> str:
+    return (_words(label) or [""])[0]
+
+
+def _rank_table(a: ActivityFixture) -> dict[str, list[float]]:
+    opts = a.config["options"]
+    n = len(opts)
+    labels = [o["label"] for o in opts]
+    firsts = [_first(t) for t in labels]
+    prompt = set(_words(a.config["prompt"]))
+    hints = set(_words(" ".join(h.body for h in a.hints if h.level <= 2)))
+    near = [
+        sum(_jaccard(t, u) for j, u in enumerate(labels) if j != i) for i, t in enumerate(labels)
+    ]
+    rows: dict[str, list[float]] = {
+        "pos0": [-i for i in range(n)],
+        "pos1": [-abs(i - 1) for i in range(n)],
+        "pos2": [-abs(i - 2) for i in range(n)],
+        "last": list(range(n)),
+        "middle": [-abs(i - (n - 1) / 2) for i in range(n)],
+        "longest": [len(t) for t in labels],
+        "shortest": [-len(t) for t in labels],
+        "most words": [len(_words(t)) for t in labels],
+        "odd first word": [-firsts.count(f) for f in firsts],
+        "majority first word": [firsts.count(f) for f in firsts],
+        "nearest": near,
+        "farthest": [-x for x in near],
+        "prompt overlap": [len(set(_words(t)) & prompt) for t in labels],
+        "prompt jaccard": [_jaccard(t, a.config["prompt"]) for t in labels],
+        "hint overlap": [len(set(_words(t)) & hints) for t in labels],
+        "fewest absolutes": [-sum(w in ABSOLUTES for w in _words(t)) for t in labels],
+        "most absolutes": [sum(w in ABSOLUTES for w in _words(t)) for t in labels],
+        "jargon": [sum(w in JARGON for w in _words(t)) for t in labels],
+        "no because": [float("because" not in t) for t in labels],
+        "has comma": [float("," in t) for t in labels],
+        "yes": [float(f == "yes") for f in firsts],
+        "no": [float(f == "no") for f in firsts],
+        "short first sentence": [-len(t.split(".")[0]) for t in labels],
+    }
+    for letter in "abcd":
+        rows[f"id {letter}"] = [float(o["id"] == letter) for o in opts]
+    rows["not id d"] = [float(o["id"] != "d") for o in opts]
+    return rows
+
+
+RANKERS = list(_rank_table(next(a for a in CONTENT.activities if a.kind == "multiple_choice")))
+GATES = [
+    "majority first word",
+    "odd first word",
+    "yes",
+    "no",
+    "not id d",
+    "fewest absolutes",
+    "jargon",
+    "no because",
+]
+LAST = ["longest", "shortest", "pos0", "last", "nearest", "farthest", "prompt overlap"]
+SEARCH = (
+    [(r,) for r in RANKERS]
+    + [(x, y) for x in RANKERS for y in RANKERS if x != y]
+    + [(x, y, z) for x in GATES for y in RANKERS for z in LAST if len({x, y, z}) == 3]
+)
+
+
+@pytest.mark.parametrize("where", CHECK_SETS)
+def test_no_ranking_strategy_meets_any_objective(where: str) -> None:
+    tables = {a.id: _rank_table(a) for a in CHECK_SETS[where] if a.kind == "multiple_choice"}
+    met = []
+    for strategy in SEARCH:
+        for objective, o in OBJECTIVES.items():
+            items = [a for a in CHECK_SETS[where] if a.objective_id == objective]
+            mc = [a for a in items if a.kind == "multiple_choice"]
+            if not mc:
+                continue
+            right = 0
+            for a in mc:
+                t = tables[a.id]
+                n = len(a.config["options"])
+                best = max(range(n), key=lambda i: (*(t[r][i] for r in strategy), -i))
+                right += a.config["options"][best]["id"] == a.solution["correct"]
+            rule = Rule(pass_fraction=o.pass_fraction, max_wrong=o.max_wrong)
+            if rule.met(right, sum(parts(a) for a in items)):
+                met.append((" + ".join(strategy), objective, right))
+    assert not met, met[:10]
+
+
+def test_counting_the_places_a_marker_names_does_not_meet_objective_2() -> None:
+    """One place named: a vertex; two: the edge between them; letters from the prompt's names. It
+    scored every objective 2 marker on staging and in round 1 (#147)."""
+    named = re.compile(r"(?:are|,|and|:)\s+(?:the\s+)?([^,():.]+?) \(([A-Z])\)")
+    for where, items in CHECK_SETS.items():
+        mine = [a for a in items if a.objective_id == 2]
+        right = 0
+        for a in (a for a in mine if a.kind == "matching" and "Marker" in str(a.config["left"])):
+            names = {n.lower(): letter for n, letter in named.findall(a.config["prompt"])}
+            labels = {r["id"]: r["label"] for r in a.config["right"]}
+            for item in a.config["left"]:
+                text = item["label"].lower()
+                found = sorted((text.index(n), letter) for n, letter in names.items() if n in text)
+                letters = [letter for _, letter in found]
+                guess = f"Vertex {letters[0]}" if len(letters) == 1 else None
+                if len(letters) == 2:
+                    u, v = letters
+                    guess = next(
+                        (
+                            lab
+                            for lab in labels.values()
+                            if lab
+                            in (f"Edge {u}{DASH}{v}", f"Edge {v}{DASH}{u}", f"Edge {u} → {v}")
+                        ),
+                        None,
+                    )
+                right += guess == labels[a.solution["pairs"][item["id"]]]
+        o = OBJECTIVES[2]
+        rule = Rule(pass_fraction=o.pass_fraction, max_wrong=o.max_wrong)
+        # The classifying item (609, 1205) is given to the strategy as all right.
+        right += sum(len(a.config["left"]) for a in mine if "Marker" not in str(a.config["left"]))
+        assert not rule.met(right, sum(parts(a) for a in mine)), (where, right)

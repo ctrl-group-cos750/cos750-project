@@ -730,7 +730,7 @@ def retire_dropped_activities(session: Session, listed: set[int]) -> list[int]:
         if shown is not None:
             continue
         # Wait for any answer or hint on it still in flight (they hold FOR KEY SHARE on the row,
-        # app/services/locking.py), so "used" below sees their rows: otherwise an uncommitted
+        # app/services/locks.py), so "used" below sees their rows: otherwise an uncommitted
         # attempt looked unused, the delete waited for it and then failed on the foreign key.
         if (
             session.scalar(select(Activity.id).where(Activity.id == activity.id).with_for_update())

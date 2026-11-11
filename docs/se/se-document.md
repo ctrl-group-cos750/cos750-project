@@ -349,13 +349,13 @@ Figure: Use cases. The student takes part in every use case in the first two gro
 - **FR-1.9** Staff can make another registered account a team member, or take staff access away. It takes effect on the next request. Nobody can remove their own access, so the portal always keeps at least one team member.
 
 ## Modules and progress (FR-2)
-- **FR-2.1** Present the seven modules of the ID document (0 to 6) in order. A module opens once the one before it is complete; module 0 is always open. A module with no segments yet (its content not written) is passed over, so it never locks the modules after it. A locked module's activities can't be opened, answered or hinted at either (403), and nor can a video placed in it or its checkpoint questions; staff may open any activity to preview it (#137).
+- **FR-2.1** Present the seven modules of the ID document (0 to 6) in order. A module opens once the one before it is complete; module 0 is always open. A module with no segments yet (its content not written) is passed over, so it never locks the modules after it. A locked module's activities, hints and videos (with their checkpoint questions) can't be opened or answered either, so the mastery check stays unseen until module 6 opens (FR-7.1). Staff are let through, so the content and video editors' "Open as a student" works on any item.
 - **FR-2.2** Each module is an ordered sequence of segments: narrated video, text, worked example, refresher, or activity (a code activity is one kind of activity).
 - **FR-2.3** Each module starts by stating its objectives in plain words ("By the end of this module you can …"), taken from the content.
 - **FR-2.4** Each module from module 2 onwards opens with one or two retrieval questions on earlier modules.
-- **FR-2.5** Save progress after every segment. A student who returns resumes at the segment they left, or, if they moved past a segment without doing it (possible only before its activity could be answered), at the first such segment; a complete module opens at its first segment that isn't done.
+- **FR-2.5** Save progress after every segment. A student who returns resumes at the segment they left, or, if they moved past an activity without ever answering it (possible only before its activity could be answered), at the first such activity, with a note saying why; a complete module opens at its first such activity. An activity they answered, even wrongly under an earlier rule, never pulls them back.
 - **FR-2.6** Show a module map with each module's state (locked, open, in progress, complete) and estimated duration.
-- **FR-2.7** A student moves past a segment only once it is done: an activity segment once its activity has been answered at least once (a wrong answer counts; an empty one, or one naming something the activity doesn't offer, is refused and doesn't count), a video segment once every checkpoint in the video is passed. Other segments are done when shown. An activity whose kind has no student UI yet counts as done until its UI exists, so it never strands a student; since #136 every kind has one, so none is let through unanswered. A module is complete once its last segment is done. A complete module can be reread freely.
+- **FR-2.7** A student moves past a segment only once it is done: a practice activity once it has been answered correctly, or answered after its last hint was shown (the last hint gives the answer away, so no student is kept there); a mastery or diagnostic item once it has been answered at all, because only the first answer counts there (FR-7.1) and the diagnostic finds gaps rather than gating; a video segment once every checkpoint in the video is passed. Other segments are done when shown. An activity whose kind has no student UI yet counts as done until its UI exists, so it never strands a student; since #136 every kind has one, so none is let through unanswered. A module is complete once its last segment is done. A complete module can be reread freely. A blank answer (no option, line, token, pair, test or row) is refused and not recorded, so it never counts as an attempt.
 
 ## Narrated video with checkpoints (FR-3)
 - **FR-3.1** Play narrated videos (screen recordings with a voice-over, no presenter) with play, pause and seek.
@@ -369,9 +369,9 @@ Figure: Use cases. The student takes part in every use case in the first two gro
 ## Activities, feedback and hints (FR-4)
 - **FR-4.1** Support these activity kinds, each defined entirely by content data:
   multiple choice; matching; labelling vertices and edges on a diagram; classifying graphs (directed or undirected); building a graph by adding vertices and edges; predicting the next BFS vertex; filling in a BFS trace table, one row each time a vertex leaves the queue (current vertex, queue after the step, visited set, order so far), the columns of module 3's worked example; Parsons problems (ordering shuffled lines of code); completing code by choosing a token for each blank; fixing a faulty BFS; choosing the test cases that expose a bug.
-- **FR-4.2** Check every answer on the server and return feedback straight away. Feedback says why an answer is wrong, not only that it is wrong.
+- **FR-4.2** Check every answer on the server and return feedback straight away. Feedback says why an answer is wrong, not only that it is wrong. A right answer can say why it is right too: the content gives an optional `explanation`, shown in place of the plain "Correct."
 - **FR-4.3** Tag every activity with the learning objective it gives evidence for (1 to 7) and its purpose: practice, diagnostic, retrieval, mastery, review or bonus.
-- **FR-4.4** Offer a four-level hint ladder on every activity, one level at a time. Level 4 is the worked solution. Two requests at once reveal two levels in turn, never the same level twice.
+- **FR-4.4** Offer a four-level hint ladder on every activity, one level at a time. Level 4 is the worked solution.
 - **FR-4.5** Record every attempt with the answer, the result and the highest hint level used. Hint levels 3 and 4 make a later correct answer count as "with support" (FR-7.2).
 
 ## Code activities (FR-5)
@@ -394,7 +394,7 @@ Code activities never execute student-written code. The student constructs code 
 - **FR-6.6** Trace-table activities are checked step by step against the engine's steps. A wrong step's feedback names each column that is wrong and what to check in it, never the right value.
 
 ## Mastery check and scaffolding (FR-7)
-- **FR-7.1** Module 6 is a mastery check: unseen activities on every objective, checked against the success criteria in the ID document's Table 1. Its items stay unseen until module 6 opens: the server refuses them before then (FR-2.1).
+- **FR-7.1** Module 6 is a mastery check: unseen activities on every objective, checked against the success criteria in the ID document's Table 1.
 - **FR-7.2** Give each objective one of three results: **met independently** (criterion met without hint level 3 or 4), **met with support** (met after using level 3 or 4), or **not yet** (criterion not met).
 - **FR-7.3** Show a mastery report: each objective's result in plain words, with next steps.
 - **FR-7.4** A student is **ready for the lecture** when no objective is "not yet". An objective whose mastery items are not all answered yet isn't met either, so in practice every objective must be met, with or without support.
@@ -407,7 +407,7 @@ Code activities never execute student-written code. The student constructs code 
 - **FR-8.3** Offer optional bonus quests after modules for students who want more challenge. They give points but never affect mastery.
 
 ## Points and badges (FR-9)
-- **FR-9.1** Award points for completed modules, correct activities and objectives met, from a server-side rules table.
+- **FR-9.1** Award points for completed modules, correct activities and objectives met, from a server-side rules table. A completed module earns its points, and the first one the First Module badge, only with real work in it: at least one of its activities answered correctly without hint 3 or 4. A module walked through by opening every hint earns nothing until then (FR-9.6). Modules completed before these points existed get them, if earned, when the seed next runs.
 - **FR-9.2** Award fewer points for a correct answer reached after hint level 3 or 4, matching "met with support".
 - **FR-9.3** Award badges for milestones (first module, every objective met, all bonus quests).
 - **FR-9.4** Points and badges are **private**: each student sees only their own. There is no public leaderboard, because public ranking discourages the students who most need the app (those motivated by avoiding failure, L05 [4]).
@@ -481,7 +481,7 @@ Table: Which part of the ID document each functional requirement delivers.
 - **NFR-S3** All traffic over HTTPS in deployed environments.
 - **NFR-S4** Server-side validation of all inputs (Pydantic schemas); answers, results and points are never accepted from the client.
 - **NFR-S5** No secrets in the repository; configuration via environment variables.
-- **NFR-S6** Standard protections: the session cookie is httpOnly, Secure and SameSite=Lax; state-changing requests require JSON bodies (blocking cross-site form posts); parameterised queries via the ORM; rate limiting on login (per address and account, and per address) and registration, keyed on the student's real address (Cloudflare's `CF-Connecting-IP`, believed only from Cloudflare's own servers), and per student on password changes, on the events the browser reports, on answer submissions (60 a minute) and on hint reveals (30 a minute); an answer's request body is at most 32 kB (413), each kind's fields are bounded and may not hold control or format characters, and an empty answer or one naming what the activity doesn't offer is refused (422) and not recorded; security headers on every page (a Content Security Policy allowing only our own scripts, styles and fonts, no framing, HSTS, `nosniff`). The app and the API share one origin, so no CORS is configured.
+- **NFR-S6** Standard protections: the session cookie is httpOnly, Secure and SameSite=Lax; state-changing requests require JSON bodies (blocking cross-site form posts); parameterised queries via the ORM; rate limiting on login (per address and account, and per address) and registration, keyed on the student's real address (Cloudflare's `CF-Connecting-IP`, believed only from Cloudflare's own servers), and per student on password changes and on the events the browser reports; security headers on every page (a Content Security Policy allowing only our own scripts, styles and fonts, no framing, HSTS, `nosniff`). The app and the API share one origin, so no CORS is configured. Answer submissions and hint requests are not rate limited yet: that limit, with size limits on submissions, is in progress (#139).
 - **NFR-S7** **No untrusted code execution.** Code activities run no student-written code anywhere in the system. The student constructs code by ordering shuffled lines (Parsons) or filling in tokens from a given set, and the server checks the submission by comparison with the solution (FR-5). This removes the untrusted-code-execution attack surface entirely, rather than trying to contain it.
 
   An isolated code runner was built and hardened earlier (a network-less container running each submission as a separate seccomp-confined process) and was pentested on staging across several rounds (see the security review under §14). Those rounds confirmed the escape defences held but also found that the in-process grading channel could be forged to fake a pass, and — because staging shares a personal server with unrelated personal data — the residual risk of executing arbitrary student code was judged not worth the marks a freeform editor earned. The team therefore dropped freeform code writing and removed the runner (decision §15.3, 3 November). The runner's code is preserved in git history (tag `archive/code-runner`) should the decision be revisited with a stronger sandbox (gVisor or a per-submission microVM — §15.4).
@@ -547,7 +547,7 @@ Figure: Entities and relationships.
 
 **Attempt** (append-only): `id`, `user_id`, `activity_id`, `submitted` (JSON: the answer — for a code activity, the chosen line order or filled-in tokens), `correct`, `score` (0 to 1, for partial results such as trace tables), `hint_level` (highest level shown before this attempt), `detail` (JSON: per-line or per-blank results for a code activity), `created_at`.
 
-**Event** (append-only): `id`, `user_id`, `type`, `ref` (what it was about: `video:3`, `checkpoint:12`, `segment:301`, `activity:301`, `objective:5`), `payload` (JSON: a hint's level, a result's old and new state), `created_at`. The server logs `hint_shown` and `result_changed` itself; the browser reports `video_started`, `video_completed`, `checkpoint_reached` and `segment_viewed` through `POST /api/events`, which takes only those types, each about a video, checkpoint or segment that exists, and no free text (`app/services/events.py`). On `staging` the web app sends only the video events; `segment_viewed` and a server-side `module_completed` are planned (#141). Answers and hints shown also have their own tables, `Attempt` and `HintView`.
+**Event** (append-only): `id`, `user_id`, `type`, `ref` (what it was about: `video:3`, `checkpoint:12`, `segment:301`, `activity:301`, `objective:5`), `payload` (JSON: a hint's level, a result's old and new state), `created_at`. The server logs `hint_shown`, `result_changed` and `module_completed` itself; the browser reports `video_started`, `video_completed`, `checkpoint_reached` and `segment_viewed` through `POST /api/events`, which takes only those types, each about a video, checkpoint or segment that exists, and no free text (`app/services/events.py`). The module page reports `segment_viewed` for each segment it shows, so the log gives time per segment and per module. Answers and hints shown also have their own tables, `Attempt` and `HintView`.
 
 **ModuleProgress**: `user_id`, `module_id`, `status` (`open` | `in_progress` | `complete`), `current_segment_position` (the furthest segment reached), `completed_at`.
 
@@ -585,15 +585,15 @@ Base path: `/api`. JSON over HTTPS. Auth via the session cookie set by `/api/aut
 | GET | `/api/modules` | user | All modules with this student's state (locked, open, in progress, complete). |
 | GET | `/api/modules/{module_id}` | user | The module's segments, in order, with this student's position, which segments are done, and the module's retrieval questions (FR-2.4). 403 while the module is locked. Activities come without answers. Every refresher is listed: the diagnostic does not filter them yet (FR-8.1, §15.5). |
 | POST | `/api/modules/{module_id}/position` | user | Save the segment the student is on (FR-2.5). Refuses (409) to move past a segment that isn't done (FR-2.7). |
-| GET | `/api/videos/{video_id}` | user | The video's title, duration, media and captions paths, the transcript as text, and its checkpoints in order, each with its activity and whether this student has passed it (FR-3.5). The media itself comes from `/media/`. 403 while the segment that plays it is in a locked module or a closed review path; a video on no segment is open; staff get 200. |
+| GET | `/api/videos/{video_id}` | user | The video's title, duration, media and captions paths, the transcript as text, and its checkpoints in order, each with its activity and whether this student has passed it (FR-3.5). The media itself comes from `/media/`. 403 while the module that plays it is locked (FR-2.1). |
 
 ## Activities, hints and code
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/api/activities/{activity_id}` | user | The activity to show: kind, title and config, never the solution. 403 while its module is locked (FR-2.1) or, on a review path, until the path is open (FR-7.5); 404 if it doesn't exist or is no longer in the course. Staff get 200 for any activity, to preview it. |
-| GET | `/api/activities/{activity_id}/hints` | user | The hint levels this student has already seen, so a reload shows them again. 403 and 404 as for the activity. |
-| POST | `/api/activities/{activity_id}/hints` | user | Reveal the next hint level and record it. Returns the hint, whether there are more, and whether the next one counts as support (FR-7.2). 409 once every level is shown; 403 and 404 as for the activity; 429 past 30 a minute per student. Two requests at once reveal two levels in turn. |
-| POST | `/api/activities/{activity_id}/attempts` | user | Submit an answer. The server checks it (a code activity is compared against its stored solution), records the attempt, updates results and points, and returns the outcome. 403 and 404 as for the activity. 422 for a submission in the wrong shape for the kind, an empty one, or one naming something the activity doesn't offer (a select reset to its placeholder counts as unanswered); 413 past 32 kB; 429 past 60 a minute per student. None of these is recorded. |
+| GET | `/api/activities/{activity_id}` | user | The activity to show: kind, title and config, never the solution, and `solved` (this student has answered it correctly, so no more hints are offered). 403 while every module it belongs to is locked (FR-2.1), and for an item on a review path that isn't open yet (FR-7.5); staff are let through. The same applies to its attempts and hints. |
+| GET | `/api/activities/{activity_id}/hints` | user | The hint levels this student has already seen, so a reload shows them again. |
+| POST | `/api/activities/{activity_id}/hints` | user | Reveal the next hint level and record it. Returns the hint, whether there are more, and whether the next one counts as support (FR-7.2). 409 once every level is shown, or once the student has answered correctly: a hint then helps with nothing and would count in the pilot's hint use. |
+| POST | `/api/activities/{activity_id}/attempts` | user | Submit an answer. The server checks it (a code activity is compared against its stored solution), records the attempt, updates results and points, and returns the outcome. A submission in the wrong shape for the kind is 422. |
 
 The ungraded **Check** of FR-5.2 has no endpoint yet: every submission is graded and recorded (§15.5).
 
@@ -656,7 +656,7 @@ Each step is one vertex taken from the queue, with the state after it. The visua
 | POST | `/api/rewards/seen` | user | The app has announced every new badge, so none is announced twice. |
 | PUT | `/api/rewards/settings` | user | Hide or show points and badges (FR-9.5). |
 | GET | `/api/me/report` | user | The mastery report: each objective's result, whether the student is ready for the lecture, and the review path's progress for each "not yet" objective. |
-| GET | `/api/me/review/{objective_id}` | user | That objective's review path: its steps in order and which the student has answered. 403 until the mastery check marks the objective "not yet"; the activities on it are 403 until then too. Staff get 200, to preview it. |
+| GET | `/api/me/review/{objective_id}` | user | That objective's review path: its steps in order and which the student has answered. 403 until the mastery check marks the objective "not yet"; the activities on it are 403 until then too. |
 
 Progress, results and points change only as a side effect of attempts and segment completion. There is no endpoint for a client to set them.
 
@@ -684,7 +684,7 @@ Progress, results and points change only as a side effect of attempts and segmen
 | GET | `/api/staff/content/export` | staff | The content as fixture files, zipped as `api/app/seed/` is laid out (FR-11.5). |
 
 ## Conventions **[PROVISIONAL]**
-- Standard HTTP status codes; error bodies `{ "detail": "..." }`. `429` with a retry hint when a rate limit is reached. Integer ids are at most 2^31 - 1 (422 past it). Database errors are JSON too: 409 for a conflict, 422 for a value out of range, 503 with `Retry-After` when busy.
+- Standard HTTP status codes; error bodies `{ "detail": "..." }`. `429` with a retry hint when a rate limit is reached.
 - OpenAPI/Swagger auto-published at `/api/docs` (FastAPI) and used as the frontend contract.
 - `GET /api/health` (public) answers Docker's health check, and is exempt from the busy limit (NFR-P6).
 
@@ -1368,11 +1368,9 @@ What `staging` (commit `e8973c5`) does not yet do, or does only in part, against
 | Module locks on activities | An activity can be opened and answered by id before its module is open, so a module 6 item can be seen early. | FR‑7.1 | In progress (#137) |
 | Concurrency | Two saves at once can fail: a deadlock on module 6 answers on Postgres, and a server error on a double-click. | NFR‑U3 | In progress (#138) |
 | Answer rate limit | No rate limit or size limit on answers and hints. | NFR‑S6 | In progress (#139) |
-| Segment done rule | A wrong answer counts as done, by design (FR-2.7); requiring a real answer is planned. | FR‑2.7 | Planned (#143) |
 | Mastery check | Feedback and hints 3–4 are available on mastery items, and the result shows at once. | FR‑7.1, FR‑7.2 | Planned (#144) |
 | Parsons | Only the one stored line order is accepted, though some lines could validly swap. | FR‑5.4 | In progress (#145) |
-| Points and events | Module completion earns no points (the 25-point rule is never applied). The web app does not send `segment_viewed`, and no `module_completed` event is logged, so neither time per module nor module completion can be measured from the log. | FR‑9.1, FR‑10.1 | Planned (#141) |
-| Badges | No "first module" badge; the bonus-quest badges can't be earned. | FR‑9.3 | Follows #87 |
+| Badges | The bonus-quest badges can't be earned yet. | FR‑9.3 | Follows #87 |
 | Visualiser | Predictions are checked in the browser and not recorded, so they give no evidence for an objective. The visualiser is reached only from a link in module 3. | FR‑6.4 | Not scheduled |
 | Videos | The fixtures hold no videos: staff upload them on each site. Placing a video in a module segment needs a database change on `staging`; the content editor adds it (#128). A video segment without a video shows "Video not available" and counts as done. | FR‑3, NFR‑A4 | #37; #128 (open pull request); text fallback planned (#149) |
 | Rendering and accessibility | Tables in worked examples and code indentation render wrongly in places; several issues from a browser walk-through (focus, contrast, labels). Two component kits are in use. | NFR‑U2, NFR‑A1–A3 | In progress (#140, #142) |

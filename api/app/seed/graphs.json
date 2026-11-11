@@ -2,7 +2,7 @@
   "graphs": [
     {
       "id": 1,
-      "name": "Placeholder: six towns (undirected)",
+      "name": "Six towns (undirected)",
       "directed": false,
       "vertices": ["A", "B", "C", "D", "E", "F"],
       "edges": [
@@ -18,7 +18,7 @@
     },
     {
       "id": 2,
-      "name": "Placeholder: one-way streets (directed)",
+      "name": "One-way streets (directed)",
       "directed": true,
       "vertices": ["A", "B", "C", "D", "E"],
       "edges": [
@@ -33,7 +33,7 @@
     },
     {
       "id": 3,
-      "name": "Placeholder: two islands (disconnected)",
+      "name": "Two islands (disconnected)",
       "directed": false,
       "vertices": ["A", "B", "C", "D", "E"],
       "edges": [

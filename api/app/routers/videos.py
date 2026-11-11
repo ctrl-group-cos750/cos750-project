@@ -12,6 +12,9 @@ from app.services.access import video_refusal
 router = APIRouter(prefix="/api/videos", tags=["videos"])
 
 NOT_FOUND = "This video does not exist."
+MODULE_LOCKED = (
+    "This video is in a module that isn't open yet. Complete the module before it to unlock it."
+)
 LOCKED = "This video is in a part of the course that isn't open yet."
 
 
@@ -26,8 +29,12 @@ def get_video(video_id: RowId, user: CurrentUser, session: DbSession) -> VideoOu
     video = session.get(Video, video_id)
     if video is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NOT_FOUND)
-    if video_refusal(session, user, video) is not None:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=LOCKED)
+    # Its checkpoints stay unseen too (FR-2.1). Staff are let through, so the video editor's
+    # "Open as a student" works on any video.
+    refusal = video_refusal(session, user, video)
+    if refusal is not None:
+        detail = MODULE_LOCKED if refusal == "module_locked" else LOCKED
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=detail)
     rows = session.execute(
         select(Checkpoint, Activity)
         .join(Activity, Activity.id == Checkpoint.activity_id)

@@ -33,7 +33,7 @@ from app.seed import read_fixtures
 STUDENT = {"email": "ada@example.com", "password": "Correct horse 1", "displayName": "Ada"}
 OTHER = {"email": "bo@example.com", "password": "Correct horse 2", "displayName": "Bo"}
 BIG = 2**31
-EMPTY = "This answer is empty. Choose an answer before checking it."
+EMPTY = "Answer the activity before checking it."  # the blank answer refusal (#143)
 FOREIGN = "This answer names something that isn't in this activity."
 
 
@@ -346,6 +346,7 @@ def test_content_cannot_hold_a_choice_a_student_would_be_refused_for(
         (FIX, {"order": []}, EMPTY),
         (CHOOSE, {"selected": []}, EMPTY),
         (TRACE, {"rows": []}, EMPTY),
+        (MC, {"selected": ""}, EMPTY),  # blank, not "foreign": #143's refusal says what to do
         (MC, {"selected": "a" * 50}, FOREIGN),  # the longest an option id may be
         (FILL, {"answers": {"1": "x" * 60}}, FOREIGN),  # a token the blank doesn't offer
         (FILL, {"answers": {"7": "1"}}, FOREIGN),  # a blank the code doesn't have

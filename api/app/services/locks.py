@@ -6,7 +6,7 @@ student at once, a double-click or two tabs, used to interleave: both inserted t
 or points row and one failed on the unique constraint (500), both revealed the same hint level,
 or, in the mastery check, both inserted an attempt and then deadlocked on the student's row.
 
-`lock_student` is the first statement of each of those writes. It takes `FOR NO KEY UPDATE` on
+`lock_student` is the first statement of each of those writes (#163 put it there). It takes `FOR NO KEY UPDATE` on
 the student's `users` row and holds it until the transaction ends, so a second write by the same
 student waits for the first to commit and then sees its rows. It is the weaker row lock on
 purpose: inserting a row that references the student takes `FOR KEY SHARE` on the same row, which

@@ -37,6 +37,7 @@
         ]
       },
       "solution": {
+        "explanation": "Marking a vertex as found the moment it joins the queue means no other vertex can add it again while it waits.",
         "correct": "enqueue",
         "feedback": {
           "dequeue": "Not quite. Until it leaves the queue, another vertex could find it again and add it a second time. Count it as found the moment it joins.",

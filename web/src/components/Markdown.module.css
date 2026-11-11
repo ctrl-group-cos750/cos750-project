@@ -5,6 +5,10 @@
 .prose {
   line-height: 1.6;
   color: inherit;
+  /* A long unbroken run (a URL, inline code such as sorted(graph.adjacency[v])) breaks rather
+     than widening the page at 320 px (WCAG 1.4.10). Tables and code blocks scroll instead. */
+  overflow-wrap: anywhere;
+  min-width: 0;
 }
 
 .prose :is(h1, h2, h3, h4, h5, h6) {
@@ -55,6 +59,22 @@
   margin-block: 0.75em;
 }
 
+/* A fenced code block's scroll box (a ScrollRegion: a named tab stop only while a line is too
+   long). The pre inside grows to its longest line, so the box, not the pre, scrolls. */
+.codeScroll {
+  margin-block: 0.75em;
+  border-radius: 0.375rem;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.codeScroll > pre {
+  margin: 0;
+  overflow: visible;
+  background: transparent;
+  width: max-content;
+  min-width: 100%;
+}
+
 .prose pre code {
   background: transparent;
   padding: 0;
@@ -71,4 +91,53 @@
 .prose a {
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+
+/* GFM tables (the table extension only, Markdown.tsx). The table's scroll box is a ScrollRegion:
+   it scrolls sideways when the table is wider than the column, so the page never does (WCAG
+   1.4.10), and it is a named tab stop, with the focus ring and a scroll cue, only while it does. */
+.tableScroll {
+  margin-block: 0.75em;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+}
+
+.prose table {
+  border-collapse: collapse;
+  min-width: 100%;
+  font-size: var(--text-sm);
+  /* Prose in a cell wraps at spaces; code in a cell may break anywhere (below). A table that still
+     doesn't fit scrolls in its region. */
+  overflow-wrap: normal;
+}
+
+.prose td code {
+  /* Code in a cell may break anywhere, so a cell holding {"A": ["C", "E"]} wraps inside its
+     column instead of forcing the table wider than a 320 px screen. */
+  overflow-wrap: anywhere;
+}
+
+.prose th,
+.prose td {
+  /* No column narrower than about nine characters: code breaks inside it, but not one or two
+     letters to a line. A table that can't fit then scrolls in its region. */
+  min-width: 4.5rem;
+  padding: var(--space-2) var(--space-3);
+  border-block-end: 1px solid var(--color-line);
+  text-align: start;
+  vertical-align: top;
+}
+
+.prose th {
+  background: var(--color-surface-sunken);
+  font-weight: 600;
+}
+
+.prose tbody tr:last-child td {
+  border-block-end: none;
+}
+
+.prose pre {
+  /* Keeps a code block's indentation; it scrolls rather than wraps (see .prose above). */
+  overflow-wrap: normal;
 }

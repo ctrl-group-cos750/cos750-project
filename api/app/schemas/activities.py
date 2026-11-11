@@ -78,7 +78,15 @@ class MultipleChoiceConfig(ApiModel):
     options: list[ChoiceOption] = Field(min_length=2, max_length=10)
 
 
-class MultipleChoiceSolution(ApiModel):
+class Explained(ApiModel):
+    """Server-only, on every kind with a stored solution: an optional explanation shown when the
+    answer is right, saying why it is right (FR-4.2, ID document §7.4). Without one, a right
+    answer gets the plain summary ("Correct.", "All correct.")."""
+
+    explanation: str | None = Field(default=None, min_length=1, max_length=1_000)
+
+
+class MultipleChoiceSolution(Explained):
     """Server-only: the correct option, and why each wrong one is wrong (FR-4.2), keyed by option
     id. A wrong option without a message gets a generic one."""
 
@@ -140,7 +148,7 @@ def _strict(info: ValidationInfo) -> bool:
     return bool(info.context and info.context.get("strict_ids"))
 
 
-class OrderedSolution(ApiModel):
+class OrderedSolution(Explained):
     """Server-only: the accepted orders of line ids, for a kind graded by order (Parsons, fix the
     bug; FR-5.4, FR-5.5). Any line not used is a distractor (or, in fix the bug, a faulty line or
     an unused correction).
@@ -207,7 +215,7 @@ class FillInConfig(ApiModel):
     options: list[ContentToken] = Field(min_length=1, max_length=200)
 
 
-class FillInSolution(ApiModel):
+class FillInSolution(Explained):
     """Server-only: the correct token for each blank, keyed by blank id, and why a wrong token is
     wrong (FR-4.2): a message per blank and token, e.g. `{1: {"in": "Not quite. With in, …"}}`.
     A wrong token without a message gets a generic one."""
@@ -248,7 +256,7 @@ class MatchingConfig(ApiModel):
         return self
 
 
-class MatchingSolution(ApiModel):
+class MatchingSolution(Explained):
     """Server-only: the right item for each left item, and why a wrong pairing is wrong, keyed by
     left item id (FR-4.2)."""
 
@@ -327,7 +335,7 @@ class ChooseTestsConfig(ApiModel):
         return self
 
 
-class ChooseTestsSolution(ApiModel):
+class ChooseTestsSolution(Explained):
     """Server-only: the test cases the faulty version fails, and a message per test case for a
     wrong choice: why it does, or doesn't, expose the bug."""
 
@@ -409,6 +417,9 @@ class ActivityOut(ApiModel):
     title: str
     visible: bool
     config: dict[str, Any]
+    # This student has answered it correctly: no more hints are offered or given (#158). False
+    # where the response isn't about one student's answers (a video's checkpoints).
+    solved: bool = False
 
 
 class AttemptIn(ApiModel):

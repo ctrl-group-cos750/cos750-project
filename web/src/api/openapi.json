@@ -186,7 +186,7 @@
           "activities"
         ],
         "summary": "Get Activity",
-        "description": "The activity to render. `ActivityOut` has no `solution`, so the answer never reaches the\nbrowser (FR-5.3, NFR-S2). 403 while the activity's module is locked or its review path is\nclosed, 404 if it doesn't exist or is no longer part of the course.",
+        "description": "The activity to render. `ActivityOut` has no `solution`, so the answer never reaches the\nbrowser (FR-5.3, NFR-S2). `solved` says whether this student has already answered it\ncorrectly, so the page stops offering hints after a refresh too (#158). 403 while the\nactivity's module is locked or its review path is closed, 404 if it doesn't exist or is no\nlonger part of the course.",
         "operationId": "get_activity_api_activities__activity_id__get",
         "parameters": [
           {
@@ -247,7 +247,7 @@
           "activities"
         ],
         "summary": "Submit Attempt",
-        "description": "Grade a submission by comparison with the stored solution and record the attempt (FR-4.2,\nFR-4.5, FR-5.3).\n\nSend `{\"submitted\": {...}}` in the kind's shape: `{\"selected\": \"<option id>\"}` for multiple\nchoice, `{\"order\": [...]}` for Parsons, `{\"answers\": {...}}` for fill-in, and\n`{\"rows\": [{\"visitedVertex\", \"queue\", \"visited\", \"order\"}, ...]}` for a trace table, one row\nper BFS step (graded against the engine, so a trace has no stored solution). A submission in the\nwrong shape is 422. No student code is executed: `check_activity` compares the submission with\nthe solution, which stays in this process (NFR-S7).\n\nEach kind's shape bounds its lengths, and the request body is at most `MAX_SUBMISSION_BYTES`\nbytes (413 past it). A matching pair or fill-in blank sent as \"\" (a reset select) counts as\nunanswered. An empty submission, or one naming an option, line, blank, token, test case or\nvertex the activity doesn't have, is 422 and not recorded. 403 and 404 as for GET. 429 with\n`Retry-After` past 60 answers a minute from one student. Two answers sent at once are\nrecorded one after the other (app/services/locking.py).",
+        "description": "Grade a submission by comparison with the stored solution and record the attempt (FR-4.2,\nFR-4.5, FR-5.3).\n\nSend `{\"submitted\": {...}}` in the kind's shape: `{\"selected\": \"<option id>\"}` for multiple\nchoice, `{\"order\": [...]}` for Parsons, `{\"answers\": {...}}` for fill-in, and\n`{\"rows\": [{\"visitedVertex\", \"queue\", \"visited\", \"order\"}, ...]}` for a trace table, one row\nper BFS step (graded against the engine, so a trace has no stored solution). A submission in the\nwrong shape is 422. No student code is executed: `check_activity` compares the submission with\nthe solution, which stays in this process (NFR-S7).\n\nEach kind's shape bounds its lengths, and the request body is at most `MAX_SUBMISSION_BYTES`\nbytes (413 past it). A matching pair or fill-in blank sent as \"\" (a reset select) counts as\nunanswered. A submission that answers nothing (no option, line, token, pair, test or row), or\none naming an option, line, blank, token, test case or vertex the activity doesn't have, is\n422 and not recorded. 403 and 404 as for GET. 429 with `Retry-After` past 60 answers a minute\nfrom one student. Two answers sent at once are recorded one after the other\n(app/services/locks.py).",
         "operationId": "submit_attempt_api_activities__activity_id__attempts_post",
         "parameters": [
           {
@@ -381,7 +381,7 @@
           "activities"
         ],
         "summary": "Reveal Hint",
-        "description": "Reveal this student's next hint level, one at a time, and record it (FR-4.4, FR-4.5).\n\nNo body. Each call returns the next level (1, then 2, …); once every level has been shown it\nis 409. When `nextCountsAsSupport` is true, warn the student before calling again: a correct\nanswer after hint 3 or 4 counts as \"met with support\" (ID document §7.4).\n\n403 and 404 as for GET. 429 with `Retry-After` past 30 reveals a minute from one student. Two\nrequests sent at once reveal two levels in turn, never the same level twice.",
+        "description": "Reveal this student's next hint level, one at a time, and record it (FR-4.4, FR-4.5).\n\nNo body. Each call returns the next level (1, then 2, …); once every level has been shown,\nor once the student has answered correctly, it is 409. When `nextCountsAsSupport` is true,\nwarn the student before calling again: a correct answer after hint 3 or 4 counts as \"met\nwith support\" (ID document §7.4).\n\n403 and 404 as for GET. 429 with `Retry-After` past 30 reveals a minute from one student. Two\nrequests sent at once reveal two levels in turn, never the same level twice.",
         "operationId": "reveal_hint_api_activities__activity_id__hints_post",
         "parameters": [
           {
@@ -442,7 +442,7 @@
           "events"
         ],
         "summary": "Report Event",
-        "description": "Log something only the browser sees, for the pilot's evaluation (FR-10.1). The server adds\nwho and when. 404 if the video, checkpoint or segment doesn't exist; 429 past 120 a minute.",
+        "description": "Log something only the browser sees, for the pilot's evaluation (FR-10.1). The server adds\nwho and when. 404 if the video, checkpoint or segment doesn't exist; 429 past 120 a minute. A\nsegment viewed in a module still locked for the student is accepted but not logged.",
         "operationId": "report_event_api_events_post",
         "parameters": [
           {
@@ -1906,7 +1906,7 @@
           "staff"
         ],
         "summary": "Export Csv",
-        "description": "Download one table as CSV for every real student (FR-10.2), oldest first:\n\n- `attempts`: each answer; `submitted` and `detail` are what was answered and the per-part\n  result, as JSON.\n- `hints`: each hint shown.\n- `events`: the timeline (app/services/events.py): videos started and finished, checkpoints\n  reached, segments viewed, hints shown, results changing; `payload` as JSON.\n- `objective_results`: each student's current result per objective, with the attempts it was\n  decided from (`evidence`).",
+        "description": "Download one table as CSV for every real student (FR-10.2), oldest first:\n\n- `attempts`: each answer; `submitted` and `detail` are what was answered and the per-part\n  result, as JSON.\n- `hints`: each hint shown.\n- `events`: the timeline (app/services/events.py): videos started and finished, checkpoints\n  reached, segments viewed, hints shown, results changing, modules completed; `payload` as JSON.\n  Segment views and module completions give time per segment and per module.\n- `objective_results`: each student's current result per objective, with the attempts it was\n  decided from (`evidence`).",
         "operationId": "export_csv_api_staff_export__table__csv_get",
         "parameters": [
           {
@@ -3512,6 +3512,11 @@
             "additionalProperties": true,
             "type": "object",
             "title": "Config"
+          },
+          "solved": {
+            "type": "boolean",
+            "title": "Solved",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -5675,6 +5680,11 @@
             "type": "boolean",
             "title": "Done",
             "default": true
+          },
+          "attempted": {
+            "type": "boolean",
+            "title": "Attempted",
+            "default": false
           }
         },
         "additionalProperties": false,

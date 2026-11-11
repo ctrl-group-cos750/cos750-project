@@ -771,3 +771,94 @@ describe('the renderer and the activity page', () => {
     })
   })
 })
+
+// #142 follow-up to #164: Check answer on these three screens keeps focus while the answer is
+// checked (Button's keepFocusWhileLoading), so focus never drops to <body>: it stays on the busy
+// button, moves to the result when it arrives, and stays on the button when the check fails.
+describe('focus while checking (WCAG 2.4.3)', () => {
+  const screens: {
+    name: string
+    activity: Activity
+    fillIn: (user: ReturnType<typeof userEvent.setup>) => Promise<void>
+  }[] = [
+    {
+      name: 'trace table',
+      activity: trace,
+      fillIn: async (user) => {
+        await user.selectOptions(
+          await screen.findByRole('combobox', { name: 'Step 1, current vertex' }),
+          'B',
+        )
+        await user.type(
+          screen.getByRole('textbox', { name: 'Step 1, visited (has left the queue)' }),
+          'B',
+        )
+        await user.type(screen.getByRole('textbox', { name: 'Step 1, order so far' }), 'B')
+      },
+    },
+    { name: 'fix the bug', activity: fix, fillIn: async () => {} },
+    {
+      name: 'choose tests',
+      activity: choose,
+      fillIn: async (user) => {
+        await user.click(await screen.findByRole('checkbox', { name: 'Test 1: start at A' }))
+      },
+    },
+  ]
+
+  function page(activity: Activity, attemptResponse: () => Response | Promise<Response>) {
+    const api = fakeApi({
+      user: ada,
+      overrides: {
+        [`GET /api/activities/${activity.id}`]: () => Response.json(activity),
+        [`GET /api/activities/${activity.id}/hints`]: () => Response.json([]),
+        [`POST /api/activities/${activity.id}/attempts`]: attemptResponse,
+      },
+    })
+    renderApp(`/activities/${activity.id}`)
+    return api
+  }
+
+  it.each(screens)(
+    '$name: stays on a busy Check answer, then focuses the result',
+    async ({ activity, fillIn }) => {
+      let release: (response: Response) => void = () => {}
+      const api = page(activity, () => new Promise<Response>((resolve) => (release = resolve)))
+      const user = userEvent.setup()
+      await fillIn(user)
+      const button = await screen.findByRole('button', { name: 'Check answer' })
+      button.focus()
+      await user.keyboard('{Enter}')
+
+      await waitFor(() => expect(button).toHaveAttribute('aria-busy', 'true'))
+      expect(button).toHaveAttribute('aria-disabled', 'true')
+      expect(button).toBeEnabled()
+      expect(button).toHaveFocus()
+      await user.keyboard('{Enter}') // ignored while busy
+      expect(api.callsTo(`POST /api/activities/${activity.id}/attempts`)).toHaveLength(1)
+
+      release(
+        Response.json(attempt({ activityId: activity.id, feedback: 'Not quite, 0 of 2 correct.' })),
+      )
+      const result = await screen.findByRole('group', { name: 'Not quite, 0 of 2 correct.' })
+      await waitFor(() => expect(result).toHaveFocus())
+    },
+  )
+
+  it.each(screens)(
+    '$name: keeps focus on Check answer when the check fails, with the error announced',
+    async ({ activity, fillIn }) => {
+      page(activity, () => Response.json({ detail: 'Internal Server Error' }, { status: 500 }))
+      const user = userEvent.setup()
+      await fillIn(user)
+      const button = await screen.findByRole('button', { name: 'Check answer' })
+      button.focus()
+      await user.keyboard('{Enter}')
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('Try again')
+      expect(button).toHaveFocus()
+      expect(button).not.toHaveAttribute('aria-busy')
+      expect(document.activeElement).not.toBe(document.body)
+    },
+  )
+})

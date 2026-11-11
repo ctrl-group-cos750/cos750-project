@@ -12,9 +12,18 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from support import complete_modules_before, wrong_answer
+from support import wrong_answer
 
-from app.models import Activity, Attempt, HintView, ObjectiveResult, Segment, User
+from app.models import (
+    Activity,
+    Attempt,
+    HintView,
+    Module,
+    ModuleProgress,
+    ObjectiveResult,
+    Segment,
+    User,
+)
 from app.schemas.activities import FixTheBugSolution, ParsonsSolution
 from app.schemas.graphs import GraphScenarioOut
 from app.seed import FixtureFile, ObjectiveFixture, check_references, load, read_fixtures
@@ -202,6 +211,13 @@ def course(tmp_path: Path, db: Session) -> Path:
 def log_in(client: TestClient) -> int:
     assert client.post("/api/auth/register", json=STUDENT).status_code == 201
     return int(client.get("/api/auth/me").json()["id"])
+
+
+def open_module_6(db: Session, user_id: int) -> None:
+    """Mark every module before module 6 complete, so its mastery items open (FR-2.1, #137)."""
+    for module in db.scalars(select(Module).where(Module.position < 6)):
+        db.add(ModuleProgress(user_id=user_id, module_id=module.id, status="complete"))
+    db.commit()
 
 
 def answer(client: TestClient, activity: int, body: dict[str, Any] = RIGHT) -> None:
@@ -420,8 +436,7 @@ def test_module_6_has_mastery_items_for_every_objective() -> None:
 
 def test_the_committed_mastery_check_can_be_passed(client: TestClient, db: Session) -> None:
     load(db)
-    log_in(client)
-    complete_modules_before(db, STUDENT["email"], mastery.MASTERY_MODULE)
+    open_module_6(db, log_in(client))
     items = db.scalars(
         select(Activity).where(Activity.module_id == 6, Activity.purpose == "mastery")
     ).all()
@@ -455,8 +470,7 @@ def test_objective_6_is_met_by_any_accepted_bfs_order(client: TestClient, db: Se
     """Objective 6 needs every part right (pass_fraction 1.0): an order that is correct but not
     the worked example's must not decide it (FR-5.4, #145)."""
     load(db)
-    log_in(client)
-    complete_modules_before(db, STUDENT["email"], mastery.MASTERY_MODULE)
+    open_module_6(db, log_in(client))
     parsons = answer_module_6(client, db, EQUIVALENT_BFS)
     assert parsons.objective_id == 6
     stored = db.scalars(select(Attempt).where(Attempt.activity_id == parsons.id)).one()
@@ -472,8 +486,7 @@ def test_one_misplaced_line_in_objective_6_is_not_yet(client: TestClient, db: Se
     """One line out of place is one wrong part of 13, not every line after it: still "not yet"
     on objective 6, which needs all of them, and nothing else changes."""
     load(db)
-    log_in(client)
-    complete_modules_before(db, STUDENT["email"], mastery.MASTERY_MODULE)
+    open_module_6(db, log_in(client))
     misplaced = [1, 2, 3, 4, 5, 6, 7, 8, 13, 9, 10, 11, 12]  # return order inside the loop's place
     parsons = answer_module_6(client, db, misplaced)
     stored = db.scalars(select(Attempt).where(Attempt.activity_id == parsons.id)).one()
@@ -763,7 +776,9 @@ def test_hint_3_on_a_fresh_item_makes_it_met_with_support(
 
 
 def wrong_submission(activity: Activity) -> dict[str, Any]:
-    """An answer to any committed item that gets it wrong (tests/support.py)."""
+    """An answer to any committed item that gets it wrong, made only of what the item offers
+    (tests/support.py). Never blank: the server refuses a blank answer without recording it
+    (#143), and one naming what the item doesn't offer too (#139)."""
     return wrong_answer(activity)
 
 
@@ -785,8 +800,7 @@ def test_the_committed_review_paths_can_take_a_student_to_ready(
     client: TestClient, db: Session
 ) -> None:
     load(db)
-    log_in(client)
-    complete_modules_before(db, STUDENT["email"], mastery.MASTERY_MODULE)
+    open_module_6(db, log_in(client))
     check = db.scalars(
         select(Activity).where(Activity.module_id == 6, Activity.purpose == "mastery")
     ).all()

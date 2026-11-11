@@ -2,6 +2,7 @@ import * as d3 from 'd3'
 import { useEffect, useRef } from 'react'
 import type { BfsFrame, BfsScenario, VertexState } from './bfs.types.ts'
 import { stateForVertex } from './bfs.types.ts'
+import { routeEdge, VERTEX_RADIUS } from './edgeRouting.ts'
 
 type GraphCanvasProps = {
   scenario: BfsScenario
@@ -57,16 +58,21 @@ function renderGraph(input: { svgElement: SVGSVGElement; scenario: BfsScenario; 
     return vertices.has(edge.from) && vertices.has(edge.to)
   })
 
+  // An edge that would pass beside a vertex it doesn't join is curved around it (edgeRouting.ts),
+  // so A–C is never read as A–B plus B–C.
   svg
     .append('g')
     .attr('aria-hidden', 'true')
-    .selectAll('line')
+    .selectAll('path')
     .data(edges)
-    .join('line')
-    .attr('x1', (edge) => vertices.get(edge.from)!.x)
-    .attr('y1', (edge) => vertices.get(edge.from)!.y)
-    .attr('x2', (edge) => vertices.get(edge.to)!.x)
-    .attr('y2', (edge) => vertices.get(edge.to)!.y)
+    .join('path')
+    .attr('d', (edge) => {
+      const from = vertices.get(edge.from)!
+      const to = vertices.get(edge.to)!
+      const others = input.scenario.vertices.filter((v) => v.id !== edge.from && v.id !== edge.to)
+      return routeEdge({ from, to, others, bounds: { width, height } }).d
+    })
+    .attr('fill', 'none')
     .attr('stroke', 'var(--bfs-edge)')
     .attr('stroke-width', 2)
     .attr('marker-end', () => {
@@ -86,7 +92,7 @@ function renderGraph(input: { svgElement: SVGSVGElement; scenario: BfsScenario; 
 
   nodes
     .append('circle')
-    .attr('r', 23)
+    .attr('r', VERTEX_RADIUS)
     .attr('fill', (vertex) => {
       const state = stateForVertex({ vertexId: vertex.id, frame: input.frame })
       return `var(--bfs-${state}-fill)`

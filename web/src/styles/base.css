@@ -64,6 +64,14 @@ body {
     text-underline-offset: 0.2em;
   }
 
+  /* A plain link in running text ("Already have an account? Log in") is underlined, so it isn't
+   * told apart by colour alone: the brand blue is only 2.8:1 against body text (WCAG 1.4.1, #142).
+   * Tailwind's reset removes the browser's underline. Links styled as buttons, nav items or
+   * cards carry a class and keep their own look. */
+  a:not([class]) {
+    text-decoration-line: underline;
+  }
+
   button:not(:disabled),
   [role='button']:not([aria-disabled='true']) {
     cursor: pointer;

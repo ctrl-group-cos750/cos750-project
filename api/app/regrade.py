@@ -10,7 +10,7 @@ updates `correct`, `score` and `detail`, then recomputes the results of each stu
 
 - **One student at a time, locked.** Students are taken in id order. Each is locked with the
   student write lock every answer, hint and position save takes (`lock_student`,
-  app/services/locking.py: `FOR NO KEY UPDATE` on their user row) before any of their rows is read
+  app/services/locks.py: `FOR NO KEY UPDATE` on their user row) before any of their rows is read
   or written, so a student answering at the same moment waits for the re-grade of their attempts,
   or the re-grade waits for them, and neither deadlocks. A student deleted since the list was read
   is passed over. With `--apply` each student is committed on their own, so a lock is held only
@@ -43,7 +43,7 @@ from sqlalchemy.orm import Session
 from app.models import Activity, Attempt, ObjectiveResult
 from app.services import mastery, rewards
 from app.services.checking import check_activity
-from app.services.locking import StudentGone, lock_student
+from app.services.locks import StudentGone, lock_student
 
 KINDS = ("parsons", "fix_the_bug")
 
@@ -99,7 +99,7 @@ def _states(session: Session, user_id: int) -> dict[int, str]:
 
 def _regrade_student(session: Session, user_id: int, report: Report) -> None:
     """Re-grade one student's attempts and recompute their results, under their lock (the one
-    answers take, app/services/locking.py). Raises `StudentGone` if they were deleted."""
+    answers take, app/services/locks.py). Raises `StudentGone` if they were deleted."""
     lock_student(session, user_id)
     rows = session.execute(
         select(Attempt, Activity)

@@ -1,8 +1,9 @@
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useRef, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 import { buttonVariants } from '@/components/ui/button-variants'
-import { ApiError, retryUnlessRefused } from '../../api/client.ts'
+import { ApiError } from '../../api/client.ts'
+import { retryUnlessRefused } from '../../api/retry.ts'
 import { Alert, Spinner } from '../../components'
 import { useRefreshRewards } from '../rewards/hooks.ts'
 import {
@@ -32,25 +33,36 @@ type ActivityViewProps = {
 export function ActivityView({ activityId, heading, showTitle, onResult }: ActivityViewProps) {
   const [result, setResult] = useState<AttemptResult>()
   const [submitting, setSubmitting] = useState(false)
+  // Set synchronously, so a second Enter that lands before React re-renders the busy button
+  // doesn't send the same answer twice.
+  const inFlight = useRef(false)
   const [submitError, setSubmitError] = useState('')
   const refreshRewards = useRefreshRewards()
+  const queryClient = useQueryClient()
   const query = useQuery({
     queryKey: ['activities', activityId],
     queryFn: () => fetchActivity(activityId),
-    retry: retryUnlessRefused,
+    retry: retryUnlessRefused, // a locked or missing activity says so at once
   })
 
   if (query.isPending) return <Spinner label="Loading activity" />
   if (query.isError) return <NotAvailable error={query.error} heading={heading} />
 
   async function submit(submitted: Submission) {
+    if (inFlight.current) return
+    inFlight.current = true
     setSubmitting(true)
     setSubmitError('')
     try {
       const nextResult = await submitActivityAttempt(activityId, submitted)
       setResult(nextResult)
       onResult?.(nextResult)
-      if (nextResult.correct) refreshRewards()
+      if (nextResult.correct) {
+        refreshRewards()
+        // It is solved now: the next time it is shown (Back, a refresh), the server says so, and
+        // no hints are offered (#158).
+        void queryClient.invalidateQueries({ queryKey: ['activities', activityId] })
+      }
     } catch (error) {
       setSubmitError(
         error instanceof Error
@@ -58,6 +70,7 @@ export function ActivityView({ activityId, heading, showTitle, onResult }: Activ
           : 'We could not check your answer. Please try again.',
       )
     } finally {
+      inFlight.current = false
       setSubmitting(false)
     }
   }

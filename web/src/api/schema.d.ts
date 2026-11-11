@@ -89,8 +89,10 @@ export interface paths {
     /**
      * Get Activity
      * @description The activity to render. `ActivityOut` has no `solution`, so the answer never reaches the
-     *     browser (FR-5.3, NFR-S2). 403 while the activity's module is locked or its review path is
-     *     closed, 404 if it doesn't exist or is no longer part of the course.
+     *     browser (FR-5.3, NFR-S2). `solved` says whether this student has already answered it
+     *     correctly, so the page stops offering hints after a refresh too (#158). 403 while the
+     *     activity's module is locked or its review path is closed, 404 if it doesn't exist or is no
+     *     longer part of the course.
      */
     get: operations['get_activity_api_activities__activity_id__get']
     put?: never
@@ -124,10 +126,11 @@ export interface paths {
      *
      *     Each kind's shape bounds its lengths, and the request body is at most `MAX_SUBMISSION_BYTES`
      *     bytes (413 past it). A matching pair or fill-in blank sent as "" (a reset select) counts as
-     *     unanswered. An empty submission, or one naming an option, line, blank, token, test case or
-     *     vertex the activity doesn't have, is 422 and not recorded. 403 and 404 as for GET. 429 with
-     *     `Retry-After` past 60 answers a minute from one student. Two answers sent at once are
-     *     recorded one after the other (app/services/locking.py).
+     *     unanswered. A submission that answers nothing (no option, line, token, pair, test or row), or
+     *     one naming an option, line, blank, token, test case or vertex the activity doesn't have, is
+     *     422 and not recorded. 403 and 404 as for GET. 429 with `Retry-After` past 60 answers a minute
+     *     from one student. Two answers sent at once are recorded one after the other
+     *     (app/services/locks.py).
      */
     post: operations['submit_attempt_api_activities__activity_id__attempts_post']
     delete?: never
@@ -155,9 +158,10 @@ export interface paths {
      * Reveal Hint
      * @description Reveal this student's next hint level, one at a time, and record it (FR-4.4, FR-4.5).
      *
-     *     No body. Each call returns the next level (1, then 2, …); once every level has been shown it
-     *     is 409. When `nextCountsAsSupport` is true, warn the student before calling again: a correct
-     *     answer after hint 3 or 4 counts as "met with support" (ID document §7.4).
+     *     No body. Each call returns the next level (1, then 2, …); once every level has been shown,
+     *     or once the student has answered correctly, it is 409. When `nextCountsAsSupport` is true,
+     *     warn the student before calling again: a correct answer after hint 3 or 4 counts as "met
+     *     with support" (ID document §7.4).
      *
      *     403 and 404 as for GET. 429 with `Retry-After` past 30 reveals a minute from one student. Two
      *     requests sent at once reveal two levels in turn, never the same level twice.
@@ -181,7 +185,8 @@ export interface paths {
     /**
      * Report Event
      * @description Log something only the browser sees, for the pilot's evaluation (FR-10.1). The server adds
-     *     who and when. 404 if the video, checkpoint or segment doesn't exist; 429 past 120 a minute.
+     *     who and when. 404 if the video, checkpoint or segment doesn't exist; 429 past 120 a minute. A
+     *     segment viewed in a module still locked for the student is accepted but not logged.
      */
     post: operations['report_event_api_events_post']
     delete?: never
@@ -678,7 +683,8 @@ export interface paths {
      *       result, as JSON.
      *     - `hints`: each hint shown.
      *     - `events`: the timeline (app/services/events.py): videos started and finished, checkpoints
-     *       reached, segments viewed, hints shown, results changing; `payload` as JSON.
+     *       reached, segments viewed, hints shown, results changing, modules completed; `payload` as JSON.
+     *       Segment views and module completions give time per segment and per module.
      *     - `objective_results`: each student's current result per objective, with the attempts it was
      *       decided from (`evidence`).
      */
@@ -1122,6 +1128,11 @@ export interface components {
       config: {
         [key: string]: unknown
       }
+      /**
+       * Solved
+       * @default false
+       */
+      solved: boolean
     }
     /**
      * AttemptIn
@@ -2009,6 +2020,11 @@ export interface components {
        * @default true
        */
       done: boolean
+      /**
+       * Attempted
+       * @default false
+       */
+      attempted: boolean
     }
     /**
      * StaffCheckpointIn

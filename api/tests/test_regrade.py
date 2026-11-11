@@ -175,7 +175,7 @@ def test_an_attempt_on_an_activity_staff_edited_is_left_alone_and_listed(db: Ses
 def test_a_student_deleted_before_their_turn_is_passed_over(
     db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from app.services.locking import StudentGone, lock_student
+    from app.services.locks import StudentGone, lock_student
 
     load(db)
     one, two = student(db, 1), student(db, 2)

@@ -342,55 +342,44 @@ def _trace_rows(activity: Activity) -> dict[str, Any]:
 
 
 def _wrong_pairs(activity: Activity) -> dict[str, Any]:
-    """Every left item matched with a right item other than its own."""
-    config = MatchingConfig.model_validate(activity.config)
+    """Every left item paired with a right item that isn't its match."""
     pairs = MatchingSolution.model_validate(activity.solution).pairs
-    rights = [r.id for r in config.right]
+    right = [item.id for item in MatchingConfig.model_validate(activity.config).right]
     return {
         "pairs": {
-            left.id: next((r for r in rights if r != pairs.get(left.id)), rights[0])
-            for left in config.left
+            left: next((r for r in right if r != match), match) for left, match in pairs.items()
         }
     }
-
-
-def _rotated_lines(activity: Activity) -> dict[str, Any]:
-    """The solution's lines, each moved one place on: every line out of place."""
-    order = ParsonsSolution.model_validate(activity.solution).first_order()
-    return {"order": order[1:] + order[:1]}
 
 
 def _wrong_tokens(activity: Activity) -> dict[str, Any]:
-    """For every blank, a token it offers other than the right one."""
-    config = FillInConfig.model_validate(activity.config)
+    """Every blank filled with a token that isn't its answer."""
     answers = FillInSolution.model_validate(activity.solution).answers
+    options = FillInConfig.model_validate(activity.config).options
     return {
         "answers": {
-            blank: next(o for o in config.options if o != answers.get(blank))
-            for blank in config.blanks
+            blank: next((o for o in options if o != token), token)
+            for blank, token in answers.items()
         }
     }
 
 
-def _harmless_tests(activity: Activity) -> dict[str, Any]:
-    """The test cases that don't expose the bug (the seed refuses a set where every one does)."""
-    exposing = set(ChooseTestsSolution.model_validate(activity.solution).exposing)
-    tests = ChooseTestsConfig.model_validate(activity.config).tests
-    return {"selected": [t.id for t in tests if t.id not in exposing]}
+def _wrong_tests(activity: Activity) -> dict[str, Any]:
+    """The test cases that don't expose the bug, or, if every one does, only the first."""
+    exposing = ChooseTestsSolution.model_validate(activity.solution).exposing
+    tests = [test.id for test in ChooseTestsConfig.model_validate(activity.config).tests]
+    return {"selected": [t for t in tests if t not in exposing] or exposing[:1]}
 
 
-def _wrong_first_step(activity: Activity) -> dict[str, Any]:
-    """One row that visits a vertex other than the start first."""
-    config = TraceConfig.model_validate(activity.config)
-    other = next(v for v in config.vertices if v != config.start_vertex)
-    return {"rows": [{"visitedVertex": other, "queue": [], "visited": [other], "order": [other]}]}
+def _first_trace_row(activity: Activity) -> dict[str, Any]:
+    """Only the first step of the trace: stopped too early."""
+    return {"rows": _trace_rows(activity)["rows"][:1]}
 
 
-# For each kind: how to build a right answer, and a wrong one. A wrong answer is one a student
-# could send through the screens, made only of what the activity offers: the activity routes
-# refuse an empty answer, or one naming anything else, with 422 (app/services/submissions.py), so
-# every stage's results come from answers a real student could have given. It is the obvious
-# mistake where there is one (a wrong option, leaving the bug in), and every part wrong otherwise.
+# For each kind: how to build a right answer, and a wrong one. A wrong answer is a real attempt,
+# never a blank one (the server refuses those, #143): the mistake a student would make where there
+# is an obvious one (a wrong option, leaving the bug in), and a partial answer otherwise (a line
+# left out, a wrong pairing or token, the wrong tests, a trace stopped early).
 Build = Callable[[Activity], dict[str, Any]]
 _BUILDERS: dict[str, tuple[Build, Build]] = {
     "multiple_choice": (
@@ -403,7 +392,7 @@ _BUILDERS: dict[str, tuple[Build, Build]] = {
     ),
     "parsons": (
         lambda a: {"order": ParsonsSolution.model_validate(a.solution).first_order()},
-        _rotated_lines,
+        lambda a: {"order": ParsonsSolution.model_validate(a.solution).first_order()[:-1]},
     ),
     "fill_in": (
         lambda a: {"answers": FillInSolution.model_validate(a.solution).answers},
@@ -415,7 +404,7 @@ _BUILDERS: dict[str, tuple[Build, Build]] = {
     ),
     "choose_tests": (
         lambda a: {"selected": ChooseTestsSolution.model_validate(a.solution).exposing},
-        _harmless_tests,
+        _wrong_tests,
     ),
-    "trace": (_trace_rows, _wrong_first_step),
+    "trace": (_trace_rows, _first_trace_row),
 }

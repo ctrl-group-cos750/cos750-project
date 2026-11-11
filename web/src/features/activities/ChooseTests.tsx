@@ -130,7 +130,14 @@ export function ChooseTests({ activity, result, submitting, onSubmit }: ChooseTe
         </p>
       )}
       <div>
-        <Button type="submit" loading={submitting} disabled={disabled}>
+        {/* Focusable while the answer is checked, so a failed check leaves focus here and a
+            result can take it from here (WCAG 2.4.3). */}
+        <Button
+          type="submit"
+          loading={submitting}
+          keepFocusWhileLoading
+          disabled={result?.correct === true}
+        >
           Check answer
         </Button>
       </div>

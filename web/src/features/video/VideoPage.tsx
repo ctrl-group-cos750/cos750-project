@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useParams } from 'react-router'
-import { retryUnlessRefused } from '../../api/client.ts'
+import { retryUnlessRefused } from '../../api/retry.ts'
 import { Spinner } from '../../components'
 import { NotAvailable } from '../activities/ActivityPage.tsx'
 import { useRefreshRewards } from '../rewards/hooks.ts'
@@ -27,7 +27,7 @@ export function VideoView({
   const query = useQuery({
     queryKey: ['video', id],
     queryFn: () => fetchVideo(id),
-    retry: retryUnlessRefused, // a video that isn't open yet (403) won't open on a retry
+    retry: retryUnlessRefused, // a video in a locked module says so at once
   })
   const refreshRewards = useRefreshRewards()
   if (query.isPending) return <Spinner label="Loading the video" />

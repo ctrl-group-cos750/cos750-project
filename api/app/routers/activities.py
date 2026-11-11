@@ -25,23 +25,30 @@ from app.schemas.activities import (
 )
 from app.schemas.ids import RowId
 from app.services.access import activity_refusal
-from app.services.attempts import hint_level_seen, record_attempt, reveal_next_hint
-from app.services.locking import ActivityGone
+from app.services.attempts import (
+    BlankAnswer,
+    answered_correctly,
+    hint_level_seen,
+    record_attempt,
+    reveal_next_hint,
+)
+from app.services.locks import ActivityGone
 from app.services.submissions import clean, submission_problem
 
 router = APIRouter(prefix="/api/activities", tags=["activities"])
 
 NOT_FOUND = "This activity does not exist."
 RETIRED = "This activity is no longer part of the course."
-MODULE_LOCKED = (
-    "This activity is in a module that isn't open yet. Finish the modules before it first."
-)
 BAD_SUBMISSION = "This submission is not in the expected shape."
 TOO_LARGE = "This answer is too long to check."
-EMPTY = "This answer is empty. Choose an answer before checking it."
+BLANK = "Answer the activity before checking it."
 FOREIGN = "This answer names something that isn't in this activity."
 NO_MORE_HINTS = "You have seen every hint for this activity."
+SOLVED = "You have already answered this correctly, so no more hints are given."
 REVIEW_CLOSED = "This activity is on a review path, which opens when the mastery check marks its objective 'not yet'."
+MODULE_LOCKED = (
+    "This activity is in a module that isn't open yet. Complete the module before it to unlock it."
+)
 SUPPORT_LEVEL = 3  # hint levels 3 and 4 make a correct answer count as "with support" (FR-7.2)
 
 # Per student (not per address: a campus or residence shares one). A student answering as fast as
@@ -69,7 +76,8 @@ def _activity_or_404(session: DbSession, activity_id: int, user: User) -> Activi
     """The activity, if this student may open it where the course shows it (#137): 404 if there is
     no such activity or it was retired, 403 while its module is locked (FR-2.1) or, on a review
     path, until the path is open (FR-7.5), so module 6's and the review paths' fresh items stay
-    unseen until the student gets there (FR-7.1)."""
+    unseen until the student gets there (FR-7.1). Staff are let through, so the content editor's
+    "Open as a student" works on any item (the team checks content that way)."""
     activity = session.get(Activity, activity_id)
     if activity is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NOT_FOUND)
@@ -83,12 +91,17 @@ def _activity_or_404(session: DbSession, activity_id: int, user: User) -> Activi
     return activity
 
 
-@router.get("/{activity_id}", response_model=ActivityOut)
-def get_activity(activity_id: RowId, session: DbSession, user: CurrentUser) -> Activity:
+@router.get("/{activity_id}")
+def get_activity(activity_id: RowId, session: DbSession, user: CurrentUser) -> ActivityOut:
     """The activity to render. `ActivityOut` has no `solution`, so the answer never reaches the
-    browser (FR-5.3, NFR-S2). 403 while the activity's module is locked or its review path is
-    closed, 404 if it doesn't exist or is no longer part of the course."""
-    return _activity_or_404(session, activity_id, user)
+    browser (FR-5.3, NFR-S2). `solved` says whether this student has already answered it
+    correctly, so the page stops offering hints after a refresh too (#158). 403 while the
+    activity's module is locked or its review path is closed, 404 if it doesn't exist or is no
+    longer part of the course."""
+    activity = _activity_or_404(session, activity_id, user)
+    out = ActivityOut.model_validate(activity)
+    out.solved = answered_correctly(session, user.id, activity.id)
+    return out
 
 
 @router.post("/{activity_id}/attempts", status_code=status.HTTP_201_CREATED)
@@ -111,10 +124,11 @@ def submit_attempt(
 
     Each kind's shape bounds its lengths, and the request body is at most `MAX_SUBMISSION_BYTES`
     bytes (413 past it). A matching pair or fill-in blank sent as "" (a reset select) counts as
-    unanswered. An empty submission, or one naming an option, line, blank, token, test case or
-    vertex the activity doesn't have, is 422 and not recorded. 403 and 404 as for GET. 429 with
-    `Retry-After` past 60 answers a minute from one student. Two answers sent at once are
-    recorded one after the other (app/services/locking.py)."""
+    unanswered. A submission that answers nothing (no option, line, token, pair, test or row), or
+    one naming an option, line, blank, token, test case or vertex the activity doesn't have, is
+    422 and not recorded. 403 and 404 as for GET. 429 with `Retry-After` past 60 answers a minute
+    from one student. Two answers sent at once are recorded one after the other
+    (app/services/locks.py)."""
     attempts_limiter.check(f"user:{user.id}")
     activity = _activity_or_404(session, activity_id, user)
     if body_bytes > MAX_SUBMISSION_BYTES:
@@ -123,12 +137,13 @@ def submit_attempt(
         # Not an answer at all: refused before it can spend a first (counted) attempt (#139).
         # A reset select ("") is a choice not made; what is stored is what was chosen.
         submitted = clean(activity.kind, body.submitted)
-        problem = submission_problem(activity.kind, activity.config, submitted)
-        if problem is not None:
-            raise HTTPException(422, detail=EMPTY if problem == "empty" else FOREIGN)
+        if submission_problem(activity.kind, activity.config, submitted) is not None:
+            raise HTTPException(422, detail=FOREIGN)
         attempt, result = record_attempt(session, user.id, activity, submitted)
     except ValidationError as exc:  # the submission didn't match the kind's shape
         raise HTTPException(422, detail=BAD_SUBMISSION) from exc  # constant is deprecated upstream
+    except BlankAnswer as exc:  # nothing chosen: not an attempt (#143)
+        raise HTTPException(422, detail=BLANK) from exc
     except ActivityGone:  # the seed deleted it while this answer waited
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NOT_FOUND) from None
     session.commit()
@@ -173,14 +188,19 @@ def get_revealed_hints(activity_id: RowId, user: CurrentUser, session: DbSession
 def reveal_hint(activity_id: RowId, user: CurrentUser, session: DbSession) -> HintOut:
     """Reveal this student's next hint level, one at a time, and record it (FR-4.4, FR-4.5).
 
-    No body. Each call returns the next level (1, then 2, …); once every level has been shown it
-    is 409. When `nextCountsAsSupport` is true, warn the student before calling again: a correct
-    answer after hint 3 or 4 counts as "met with support" (ID document §7.4).
+    No body. Each call returns the next level (1, then 2, …); once every level has been shown,
+    or once the student has answered correctly, it is 409. When `nextCountsAsSupport` is true,
+    warn the student before calling again: a correct answer after hint 3 or 4 counts as "met
+    with support" (ID document §7.4).
 
     403 and 404 as for GET. 429 with `Retry-After` past 30 reveals a minute from one student. Two
     requests sent at once reveal two levels in turn, never the same level twice."""
     hints_limiter.check(f"user:{user.id}")
     activity = _activity_or_404(session, activity_id, user)
+    # A hint after a right answer helps with nothing, and would count in the pilot's hint use as
+    # help the student needed (#158).
+    if answered_correctly(session, user.id, activity.id):
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=SOLVED)
     try:
         revealed = reveal_next_hint(session, user.id, activity)
     except ActivityGone:

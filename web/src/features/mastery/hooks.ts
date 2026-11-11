@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { retryUnlessRefused } from '../../api/client.ts'
+import { retryUnlessRefused } from '../../api/retry.ts'
 import { fetchReport, fetchReviewPath } from './mastery.api.ts'
 
 export const reportKey = ['mastery-report'] as const

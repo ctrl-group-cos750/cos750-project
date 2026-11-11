@@ -27,6 +27,7 @@ from app.models import (
 )
 from app.routers.activities import MODULE_LOCKED, RETIRED, REVIEW_CLOSED
 from app.routers.videos import LOCKED as VIDEO_LOCKED
+from app.routers.videos import MODULE_LOCKED as VIDEO_MODULE_LOCKED
 from app.seed import load
 
 STUDENT = {"email": "ada@example.com", "password": "Correct horse 1", "displayName": "Ada"}
@@ -347,7 +348,7 @@ def test_a_checkpoint_question_opens_with_its_videos_module(
     video_id, question = video_with_checkpoint(db, segment.first().id)  # type: ignore[union-attr]
     register(client)
     response = client.get(f"/api/videos/{video_id}")
-    assert (response.status_code, response.json()["detail"]) == (403, VIDEO_LOCKED)
+    assert (response.status_code, response.json()["detail"]) == (403, VIDEO_MODULE_LOCKED)
     all_refused(client, db, question, 403, MODULE_LOCKED)
 
     complete_modules_before(db, STUDENT["email"], 2)
@@ -377,7 +378,8 @@ def test_a_video_on_a_review_path_opens_with_the_path(
     video_id, question = video_with_checkpoint(db, first_step.id)
     register(client)
     complete_modules_before(db, STUDENT["email"], 6)
-    assert client.get(f"/api/videos/{video_id}").status_code == 403
+    response = client.get(f"/api/videos/{video_id}")
+    assert (response.status_code, response.json()["detail"]) == (403, VIDEO_LOCKED)
     all_refused(client, db, question, 403, REVIEW_CLOSED)
 
 
@@ -416,8 +418,9 @@ def test_staff_may_open_any_activity_and_video_to_preview_it(
     video_id, question = video_with_checkpoint(db, segment.first().id)  # type: ignore[union-attr]
     for activity in [601, retired(db), *review_items(db, 3), question]:
         assert client.get(f"/api/activities/{activity}").status_code == 200, activity
-    assert client.post("/api/activities/601/attempts", json=MC_RIGHT).status_code == 201
+    # The hint first: once answered right, no more hints are given, to staff too (#158).
     assert client.post("/api/activities/601/hints").status_code == 201
+    assert client.post("/api/activities/601/attempts", json=MC_RIGHT).status_code == 201
     assert client.get(f"/api/videos/{video_id}").status_code == 200
 
 

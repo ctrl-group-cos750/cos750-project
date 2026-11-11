@@ -27,7 +27,7 @@ from app.routers import (
     staff_evaluation,
     videos,
 )
-from app.services.locking import StudentGone
+from app.services.locks import StudentGone
 
 # Every route lives under /api: nginx in the web container forwards that prefix here unchanged.
 
@@ -133,7 +133,7 @@ SERVER_ERROR = "Something went wrong on our side. Try again in a moment."
 
 @app.exception_handler(StudentGone)
 async def student_gone(_request: Request, _exc: StudentGone) -> JSONResponse:
-    """The account was deleted while this request waited (app/services/locking.py): as for any
+    """The account was deleted while this request waited (app/services/locks.py): as for any
     request after the deletion, the session no longer belongs to anyone."""
     return JSONResponse(status_code=401, content={"detail": "Log in to continue."})
 

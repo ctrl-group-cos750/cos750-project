@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { ApiError, refusalMessage, retryUnlessRefused } from '../../api/client.ts'
+import { ApiError, refusalMessage } from '../../api/client.ts'
 import { ada, fakeApi, renderApp } from '../../test/app.tsx'
 import { HintLadder } from './HintLadder.tsx'
 import type { Hint } from './activities.types.ts'
@@ -11,7 +11,7 @@ import type { Hint } from './activities.types.ts'
 // spinner, and offers the way back.
 
 const LOCKED =
-  "This activity is in a module that isn't open yet. Finish the modules before it first."
+  "This activity is in a module that isn't open yet. Complete the module before it to unlock it."
 const RETIRED = 'This activity is no longer part of the course.'
 
 describe('an activity the student may not open', () => {
@@ -95,18 +95,7 @@ describe('the hint ladder when the API refuses', () => {
   })
 })
 
-describe('retryUnlessRefused and refusalMessage', () => {
-  it('never retries a refusal, and retries other failures up to three times', () => {
-    for (const status of [400, 403, 404, 409, 413, 422, 429]) {
-      expect(retryUnlessRefused(0, new ApiError(status, 'no'))).toBe(false)
-    }
-    for (const error of [new ApiError(0, 'offline'), new ApiError(503, 'busy'), new Error('x')]) {
-      expect(retryUnlessRefused(0, error)).toBe(true)
-      expect(retryUnlessRefused(2, error)).toBe(true)
-      expect(retryUnlessRefused(3, error)).toBe(false)
-    }
-  })
-
+describe('refusalMessage', () => {
   it('uses the API’s words only for a refusal', () => {
     expect(refusalMessage(new ApiError(429, 'Slow down.'), 'fallback')).toBe('Slow down.')
     expect(refusalMessage(new ApiError(500, 'Boom.'), 'fallback')).toBe('fallback')

@@ -85,6 +85,13 @@ class HintView(Base):
     the `hint_level` stored on their next attempt, both come from these rows."""
 
     __tablename__ = "hint_views"
+    # Each level once per student and activity (#138): the lock in app/services/locks.py stops two
+    # requests from both revealing it; this is the database's guarantee.
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "activity_id", "level", name="hint_views_user_id_activity_id_level_key"
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)

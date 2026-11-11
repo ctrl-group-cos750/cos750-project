@@ -180,9 +180,9 @@ def test_each_bonus_quest_earns_its_own_badge_then_all_quests(db: Session, user:
     assert rewards.on_bonus_quest(db, user.id, 2, all_quests_done=True) == rewards.Earned()
 
 
-def test_the_hidden_badge_is_earned_once(db: Session, user: User) -> None:
-    assert len(rewards.on_exploration(db, user.id).badges) == 1
-    assert rewards.on_exploration(db, user.id) == rewards.Earned()
+def test_the_first_module_badge_comes_with_the_first_module_only(db: Session, user: User) -> None:
+    assert [b.badge for b in rewards.on_module_completed(db, user.id, 0).badges] == ["first-module"]
+    assert rewards.on_module_completed(db, user.id, 1).badges == ()
 
 
 def test_every_awarded_badge_is_in_the_catalogue() -> None:

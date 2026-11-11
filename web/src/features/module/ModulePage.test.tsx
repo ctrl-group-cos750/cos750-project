@@ -686,3 +686,20 @@ describe('ModulePage — loading and error states', () => {
     expect(api.callsTo('POST /api/activities/201/attempts')).toHaveLength(1)
   })
 })
+
+describe('ModulePage — events', () => {
+  it('reports each segment it shows, for the pilot timeline', async () => {
+    const api = setupModuleApi(twoSegmentDetail, twoSegmentDetail, {
+      'POST /api/events': () => new Response(null, { status: 204 }),
+    })
+    renderApp('/modules/1')
+
+    expect(await screen.findByRole('heading', { name: 'Introduction to graphs' })).toBeVisible()
+    await waitFor(() =>
+      expect(api.callsTo('POST /api/events').map((c) => c.body)).toContainEqual({
+        type: 'segment_viewed',
+        targetId: textSegment.id,
+      }),
+    )
+  })
+})

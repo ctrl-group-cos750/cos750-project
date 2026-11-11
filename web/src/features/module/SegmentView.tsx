@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+import { reportEvent } from '../../api/events.ts'
 import { Alert, Markdown } from '../../components'
 import { ActivityView } from '../activities/ActivityPage.tsx'
 import { VideoView } from '../video/VideoPage.tsx'
@@ -12,6 +14,9 @@ export type SegmentViewProps = {
 /** Dispatches on segment.kind and renders the appropriate view. Videos and activities are shown
  * here, inside the module, so its Previous and Next buttons stay on screen. */
 export function SegmentView({ segment, onAnswered }: SegmentViewProps) {
+  // The pilot's timeline of what each student saw (FR-10.1, #141): one event per segment shown.
+  useEffect(() => reportEvent('segment_viewed', segment.id), [segment.id])
+
   switch (segment.kind) {
     case 'text':
     case 'worked_example':

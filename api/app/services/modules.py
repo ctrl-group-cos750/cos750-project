@@ -33,6 +33,8 @@ from app.schemas.modules import (
     RetrievalActivityOut,
     SegmentOut,
 )
+from app.services import rewards
+from app.services.events import log_event
 from app.services.locks import lock_student
 
 # Activity kinds the web can't show a student yet: it says "This activity kind is not available
@@ -390,5 +392,8 @@ def save_position(
     ):
         row.status = "complete"
         row.completed_at = datetime.now(tz=UTC)
+        # Once per module: a complete module stays complete (FR-9.1, FR-10.1, #141).
+        rewards.on_module_completed(session, user_id, module_id)
+        log_event(session, user_id, "module_completed", f"module:{module_id}")
     session.flush()
     return row

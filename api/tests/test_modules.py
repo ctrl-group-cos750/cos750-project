@@ -14,7 +14,17 @@ from fastapi.testclient import TestClient
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, Checkpoint, Hint, Module, Objective, Segment, Video
+from app.models import (
+    Activity,
+    Attempt,
+    Checkpoint,
+    Event,
+    Hint,
+    Module,
+    Objective,
+    Segment,
+    Video,
+)
 from app.services.mastery import counts
 
 # ---------------------------------------------------------------------------
@@ -814,3 +824,29 @@ def test_a_complete_module_can_be_stepped_through_freely(client: TestClient, db:
         assert _move(client, position) == 200
     assert _move(client, 0) == 200
     assert client.get("/api/modules/0").json()["status"] == "complete"
+
+
+# ---------------------------------------------------------------------------
+# 13. Completing a module: points, badge and event (FR-9.1, FR-9.3, FR-10.1, #141)
+# ---------------------------------------------------------------------------
+
+
+def test_completing_a_module_earns_its_points_and_badge_and_is_logged_once(
+    client: TestClient, db: Session
+) -> None:
+    m0_id, _, _ = _make_modules(db)
+    _register_and_login(client, ALICE)
+    assert client.post(f"/api/modules/{m0_id}/position", json={"segmentPosition": 1}).status_code
+    assert client.get(f"/api/modules/{m0_id}").json()["status"] == "complete"
+
+    rewards = client.get("/api/rewards").json()
+    assert rewards["points"] == 25
+    assert [b["badge"] for b in rewards["badges"]] == ["first-module"]
+    completed = db.scalars(select(Event).where(Event.type == "module_completed")).all()
+    assert [e.ref for e in completed] == [f"module:{m0_id}"]
+
+    # Rereading and finishing again changes nothing.
+    client.post(f"/api/modules/{m0_id}/position", json={"segmentPosition": 0})
+    client.post(f"/api/modules/{m0_id}/position", json={"segmentPosition": 1})
+    assert client.get("/api/rewards").json()["points"] == 25
+    assert len(db.scalars(select(Event).where(Event.type == "module_completed")).all()) == 1

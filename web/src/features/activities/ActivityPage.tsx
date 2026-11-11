@@ -80,22 +80,25 @@ export function ActivityView({ activityId, heading, onResult }: ActivityViewProp
   )
 }
 
-/** Why an activity can't be shown, in the API's words: not open yet (403, its module is locked or
- * its review path closed), no longer in the course (404), or a failure. Offers the way back to the
- * module map rather than a spinner that never ends. */
+/** Why an activity or video can't be shown, in the API's words: not open yet (403, its module is
+ * locked or its review path closed), no longer in the course (404), or a failure. Offers the way
+ * back to the module map rather than a spinner that never ends. */
 export function NotAvailable({
   error,
   heading: Heading = 'h1',
+  title = 'This activity isn’t available',
 }: {
   error: Error
   /** The level of the "isn't available" heading, as for the activity's own title. */
   heading?: 'h1' | 'h2' | 'h3'
+  /** The heading's words, e.g. "This video isn't available". */
+  title?: string
 }) {
   const refused = error instanceof ApiError && (error.status === 403 || error.status === 404)
   if (!refused) return <Alert tone="danger">{error.message}</Alert>
   return (
     <div className="grid justify-items-start gap-3">
-      <Heading className="text-xl font-semibold">This activity isn’t available</Heading>
+      <Heading className="text-xl font-semibold">{title}</Heading>
       <Alert tone="info">{error.message}</Alert>
       <Link to="/" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
         Back to your modules

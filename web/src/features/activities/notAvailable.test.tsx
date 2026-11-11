@@ -46,6 +46,10 @@ describe('an activity the student may not open', () => {
     })
     renderApp('/videos/3')
     expect(await screen.findByText(detail)).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'This video isn’t available' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Back to your modules' })).toHaveAttribute('href', '/')
     await new Promise((resolve) => setTimeout(resolve, 50))
     expect(api.callsTo('GET /api/videos/3')).toHaveLength(1)
   })

@@ -524,7 +524,7 @@ The lecture plans assessment in a table with five columns: the learning activity
 | Module 4: build BFS | 6 | Table 1, objective 6 | Formative: Parsons problem and fill-in code checked against the solution. | Worked example, then Parsons, then three blanks, then nine blanks (fading). |
 | Module 5: test and debug | 7 | Table 1, objective 7 | Formative: fix-the-bug and choose-tests. Designed, and both kinds have student screens; the module itself is still empty on staging. | Planned: a worked debugging example on a graph with a cycle and a disconnected graph, then faded practice. |
 | Module 6: mastery check | 1 to 7 | Table 1, all criteria. Only the first attempt at each item counts. | Summative within the application and criterion-referenced: one state per objective. | Unseen items; a report with the next step for each objective. |
-| Review path | The objective marked "Not yet" | The same criterion as in Table 1, on fresh items | Formative practice, then re-assessment of that objective only. | Teach again with a new worked example, practice with the full hint ladder, fresh items (Section 7.6). On staging the re-teaching is a short summary (#148). |
+| Review path | The objective marked "Not yet" | The same criterion as in Table 1, on fresh items | Formative practice, then re-assessment of that objective only. | Teach again with a new worked example, practice of the same kind as the assessed items with the full hint ladder, then fresh items (Section 7.6). |
 
 Table: Assessment plan in the lecturer's format [52].
 
@@ -597,8 +597,8 @@ Support also fades through the lesson [26]. Modules 1 to 3 start with worked exa
 
 The examination specification requires an assessment that gives struggling students extra scaffolding. The review path meets this requirement. When the mastery check marks an objective “Not yet”, the report names that objective and opens its review path. The path has three parts:
 
-1. A short review segment that teaches the objective again with a new worked example.
-2. Practice activities on that objective, with the full hint ladder.
+1. A worked example, different from the module's, that teaches the objective again step by step.
+2. Practice activities on that objective, of the same kinds as its mastery items (a trace for objective 5, a Parsons problem and a fill-in for objective 6, fix-the-bug and choose-tests for objective 7), with the full hint ladder (#148).
 3. Fresh mastery items for that objective only.
 
 The objective’s result updates when the student finishes the path. The student does not repeat the whole application, and objectives already met are not tested again. Figure 1 shows the path.

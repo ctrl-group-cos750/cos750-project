@@ -36,6 +36,20 @@
           "activity_id": 102
         },
         {
+          "id": 190,
+          "kind": "text",
+          "title": "Worked example: telling the four terms apart",
+          "body": "Let's sort four examples. Ask two questions about each one.\n\n**Question 1. Does it store something, or does it do something?** Something that stores and organises data is a **data structure**. A list of steps that does something is an **algorithm**.\n\n**Question 2. Is it about vertices joined by edges?** A data structure made of vertices and edges is a **graph**. An algorithm that visits the vertices by following the edges is a **graph traversal**. When the special name fits, use it.\n\n| Example | Stores or does? | Vertices and edges? | Term |\n|---|---|---|---|\n| A shopping list on your phone | Stores | No | Data structure |\n| The steps for making a cup of tea | Does | No | Algorithm |\n| Islands joined by ferry routes | Stores | Yes: the islands and the ferry routes | Graph |\n| An inspector visiting every island by taking the ferries | Does | Yes: it follows the ferry routes | Graph traversal |\n\n**Explain it to yourself before you go on:** the ferry map and the inspector's trip use the same islands and ferry routes. Why is one a graph and the other a graph traversal?",
+          "support_for": 1
+        },
+        {
+          "id": 191,
+          "kind": "activity",
+          "title": "Try another: name the term",
+          "activity_id": 190,
+          "support_for": 1
+        },
+        {
           "id": 105,
           "kind": "worked_example",
           "title": "Worked example: reading a graph",
@@ -67,10 +81,45 @@
           "activity_id": 106
         },
         {
+          "id": 192,
+          "kind": "text",
+          "title": "Worked example: vertices, edges and arrows",
+          "body": "Here is the same reading on a new graph. Sports day uses four places: the field (F), the hall (H), the pool (P) and the tuck shop (T). Paths join F–H, F–P, H–T and P–T, and you can walk every path both ways.\n\n**Step 1. The places are the vertices.** Name each one by its letter: F, H, P and T.\n\n**Step 2. The paths are the edges.** Name each one by the letters at its two ends. The path between the field and the pool is the edge F–P. There are 4 edges: F–H, F–P, H–T and P–T.\n\n**Step 3. Check the direction.** Every path can be walked both ways, so the edges are plain lines and the graph is **undirected**. If the path from the tuck shop to the pool were one-way, that edge would be an arrow, T → P, and the graph would be **directed**. One arrow is enough.\n\n**Explain it to yourself before you go on:** is the pool a vertex or an edge, and why? What about the path between the hall and the tuck shop?",
+          "support_for": 2
+        },
+        {
+          "id": 193,
+          "kind": "activity",
+          "title": "Try another: label the farm graph",
+          "activity_id": 191,
+          "support_for": 2
+        },
+        {
+          "id": 194,
+          "kind": "activity",
+          "title": "Try another: arrows or plain lines?",
+          "activity_id": 192,
+          "support_for": 2
+        },
+        {
           "id": 110,
           "kind": "activity",
           "title": "Closing task: graphs in real life",
           "activity_id": 107
+        },
+        {
+          "id": 195,
+          "kind": "text",
+          "title": "Worked example: from a situation to a graph",
+          "body": "Turning a situation into a graph takes three questions. Here they are on two situations.\n\n| Question | Libraries, and the bus routes between them, which run both ways | Learners, and who has saved whose phone number |\n|---|---|---|\n| 1. What are the things? They are the vertices. | Libraries | Learners |\n| 2. What connects them? Those are the edges. | Bus routes | Saved numbers |\n| 3. Does each connection work both ways? | Yes: a bus runs both ways | No: Ayanda can save Bongani's number without Bongani saving hers |\n| The graph | Undirected | Directed |\n\nWatch out for two traps. The things are the vertices, not the connections, so don't swap them. And decide the direction from the situation: ask whether the connection really works both ways.\n\n**Explain it to yourself before you go on:** why does saving a phone number give an arrow, when a bus route gives a plain line?",
+          "support_for": 3
+        },
+        {
+          "id": 196,
+          "kind": "activity",
+          "title": "Try another: which graph models it?",
+          "activity_id": 193,
+          "support_for": 3
         }
       ]
     }
@@ -637,6 +686,350 @@
         {
           "level": 4,
           "body": "Answer: Gautrain → stations/tracks/undirected; Instagram → accounts/follows/directed; web → pages/links/directed; handshakes → classmates/handshakes/undirected."
+        }
+      ]
+    },
+    {
+      "id": 190,
+      "kind": "matching",
+      "title": "Try another: name the term",
+      "module_id": 1,
+      "purpose": "practice",
+      "objective_id": 1,
+      "config": {
+        "prompt": "Match each example to the term that describes it best. A term can be used more than once. A graph is a special kind of data structure, and a graph traversal is a special kind of algorithm, so use the special name when it fits.",
+        "left": [
+          {
+            "id": "e1",
+            "label": "The steps for working out how much change to give someone"
+          },
+          {
+            "id": "e2",
+            "label": "Hiking huts joined by the trails between them"
+          },
+          {
+            "id": "e3",
+            "label": "A contact list that stores each friend's name with their phone number"
+          },
+          {
+            "id": "e4",
+            "label": "A ranger checking every hiking hut by walking the trails from hut to hut"
+          },
+          {
+            "id": "e5",
+            "label": "The steps for turning a temperature in degrees Celsius into degrees Fahrenheit"
+          }
+        ],
+        "right": [
+          {
+            "id": "graph",
+            "label": "Graph"
+          },
+          {
+            "id": "alg",
+            "label": "Algorithm"
+          },
+          {
+            "id": "trav",
+            "label": "Graph traversal"
+          },
+          {
+            "id": "ds",
+            "label": "Data structure"
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "e1": "alg",
+          "e2": "graph",
+          "e3": "ds",
+          "e4": "trav",
+          "e5": "alg"
+        },
+        "feedback": {
+          "e1": "Not quite. Working out change is a list of steps that does something, and it has no vertices or edges. Ask the worked example's first question again: does it store data, or does it do something?",
+          "e2": "Not quite. The huts and trails are stored as things joined by connections: the huts are vertices and the trails are edges. Ask the second question: is it about vertices joined by edges? Then use the special name for that kind of data structure.",
+          "e3": "Not quite. A contact list stores names and numbers. It doesn't do anything, and nothing in it is joined by edges. Ask the first question: does it store data, or does it do something?",
+          "e4": "Not quite. The ranger does something: they visit every hut by following the trails, so this is an algorithm that follows edges. Use the special name for an algorithm that visits vertices along edges.",
+          "e5": "Not quite. Turning Celsius into Fahrenheit is a list of steps that does something, with no vertices or edges. Ask the first question: does it store data, or does it do something?"
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "For each example, ask: does it store something, or does it do something?"
+        },
+        {
+          "level": 2,
+          "body": "Then ask: is it about vertices joined by edges? If it is, use the special name: graph or graph traversal."
+        },
+        {
+          "level": 3,
+          "body": "The huts and trails are a graph, and the ranger's walk along the trails is a graph traversal. Now sort the other three by storing or doing."
+        },
+        {
+          "level": 4,
+          "body": "Answer: working out change → algorithm; huts and trails → graph; contact list → data structure; the ranger's walk → graph traversal; Celsius to Fahrenheit → algorithm."
+        }
+      ]
+    },
+    {
+      "id": 191,
+      "kind": "matching",
+      "title": "Try another: label the farm graph",
+      "module_id": 1,
+      "purpose": "practice",
+      "objective_id": 2,
+      "config": {
+        "prompt": "A farm has four places: the barn (B), the dam (D), the gate (G) and the windmill (W). There are four farm roads, B–D, B–G, D–W and G–W, and a tractor can use each road in either direction. Which vertex or edge is each part of the farm below?",
+        "left": [
+          {
+            "id": "1",
+            "label": "The dam"
+          },
+          {
+            "id": "2",
+            "label": "The farm road that links the barn with the gate"
+          },
+          {
+            "id": "3",
+            "label": "The windmill"
+          },
+          {
+            "id": "4",
+            "label": "The farm road that links the dam with the windmill"
+          },
+          {
+            "id": "5",
+            "label": "The road the tractor takes from the gate straight to the windmill"
+          }
+        ],
+        "right": [
+          {
+            "id": "vB",
+            "label": "Vertex B"
+          },
+          {
+            "id": "vD",
+            "label": "Vertex D"
+          },
+          {
+            "id": "vG",
+            "label": "Vertex G"
+          },
+          {
+            "id": "vW",
+            "label": "Vertex W"
+          },
+          {
+            "id": "eBD",
+            "label": "Edge B–D"
+          },
+          {
+            "id": "eBG",
+            "label": "Edge B–G"
+          },
+          {
+            "id": "eDW",
+            "label": "Edge D–W"
+          },
+          {
+            "id": "eGW",
+            "label": "Edge G–W"
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "1": "vD",
+          "2": "eBG",
+          "3": "vW",
+          "4": "eDW",
+          "5": "eGW"
+        },
+        "feedback": {
+          "1": "Not quite. The dam is a place, so it is a vertex, named by its letter. Ask: is this a place, or a road between two places? Then use the dam's letter.",
+          "2": "Not quite. A road is an edge, named by the letters of the two places at its ends. Find the letters of the barn and the gate, then find that edge.",
+          "3": "Not quite. The windmill is a place, so it is a vertex, named by its letter. Ask: is this a place, or a road between two places? Then use the windmill's letter.",
+          "4": "Not quite. A road is an edge, named by the letters of the two places at its ends. Find the letters of the dam and the windmill, then find that edge.",
+          "5": "Not quite. A road is an edge, named by the letters of the two places at its ends. Find the letters of the gate and the windmill, then find that edge."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Places are vertices. Roads are edges."
+        },
+        {
+          "level": 2,
+          "body": "Name a vertex by its letter. Name an edge by the letters at its two ends."
+        },
+        {
+          "level": 3,
+          "body": "Parts 1 and 3 are places, and parts 2, 4 and 5 are roads. The barn is B, the dam D, the gate G and the windmill W."
+        },
+        {
+          "level": 4,
+          "body": "Answer: 1 = Vertex D, 2 = Edge B–G, 3 = Vertex W, 4 = Edge D–W, 5 = Edge G–W."
+        }
+      ]
+    },
+    {
+      "id": 192,
+      "kind": "matching",
+      "title": "Try another: arrows or plain lines?",
+      "module_id": 1,
+      "purpose": "practice",
+      "objective_id": 2,
+      "config": {
+        "prompt": "Look at how each graph's edges are written. An arrow, like K → M, goes one way only; a plain line, like K–M, goes both ways. Sort the four graphs below into directed and undirected.",
+        "left": [
+          {
+            "id": "cousins",
+            "label": "Cousins in a family. Vertices: Sizwe (S), Tumi (T), Vuyo (V). Edges: S–T, T–V."
+          },
+          {
+            "id": "lend",
+            "label": "Who has lent a book to whom. Vertices: Kabelo (K), Mpho (M), Naledi (N). Edges: K → M, N → M."
+          },
+          {
+            "id": "borders",
+            "label": "Countries that share a border. Vertices: Botswana (B), Namibia (N), Zambia (Z). Edges: B–N, B–Z, N–Z."
+          },
+          {
+            "id": "dams",
+            "label": "Water flowing down a river from dam to dam. Vertices: the upper dam (U), the middle dam (M), the lower dam (L). Edges: U → M, M → L."
+          }
+        ],
+        "right": [
+          {
+            "id": "directed",
+            "label": "Directed"
+          },
+          {
+            "id": "undirected",
+            "label": "Undirected"
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "cousins": "undirected",
+          "lend": "directed",
+          "borders": "undirected",
+          "dams": "directed"
+        },
+        "feedback": {
+          "cousins": "Not quite. Being cousins goes both ways: if Sizwe is Tumi's cousin, Tumi is Sizwe's cousin, so the edges are plain lines with no arrows. Check how each edge is written before you choose.",
+          "lend": "Not quite. Lending goes one way: Kabelo lent a book to Mpho, but Mpho didn't lend one back, so the edges are arrows. Look at how each edge is written: any arrow makes the graph directed.",
+          "borders": "Not quite. A shared border belongs to both countries, so it goes both ways and the edges are plain lines. Check how each edge is written: no arrows means undirected.",
+          "dams": "Not quite. Water only flows downhill, from the upper dam to the middle dam and on to the lower dam, so the edges are arrows. Ask: can you travel each edge both ways?"
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Look at how each edge is written: an arrow (→) or a plain line (–)?"
+        },
+        {
+          "level": 2,
+          "body": "An arrow means the connection only goes one way. One arrow is enough to make a graph directed."
+        },
+        {
+          "level": 3,
+          "body": "Lending a book and water flowing downhill each go one way. Being cousins and sharing a border go both ways."
+        },
+        {
+          "level": 4,
+          "body": "Answer: cousins = undirected, lending = directed, borders = undirected, dams = directed."
+        }
+      ]
+    },
+    {
+      "id": 193,
+      "kind": "matching",
+      "title": "Try another: which graph models it?",
+      "module_id": 1,
+      "purpose": "practice",
+      "objective_id": 3,
+      "config": {
+        "prompt": "Match each situation to the graph that models it: what the vertices are, what the edges are, and whether it is directed.",
+        "left": [
+          {
+            "id": "s1",
+            "label": "Taxi ranks and the taxi routes between them. Taxis drive every route both ways."
+          },
+          {
+            "id": "s2",
+            "label": "Children in a class, and who has invited whom to a birthday party."
+          },
+          {
+            "id": "s3",
+            "label": "Songs in a playlist, and which song plays straight after which."
+          },
+          {
+            "id": "s4",
+            "label": "The pieces of a jigsaw puzzle, and which ones slot into each other."
+          }
+        ],
+        "right": [
+          {
+            "id": "r6",
+            "label": "Vertices: children. Edges: invitations. Undirected."
+          },
+          {
+            "id": "r3",
+            "label": "Vertices: songs. Edges: “plays next” links. Directed."
+          },
+          {
+            "id": "r1",
+            "label": "Vertices: taxi ranks. Edges: taxi routes. Undirected."
+          },
+          {
+            "id": "r5",
+            "label": "Vertices: taxi routes. Edges: taxi ranks. Undirected."
+          },
+          {
+            "id": "r2",
+            "label": "Vertices: children. Edges: invitations. Directed."
+          },
+          {
+            "id": "r4",
+            "label": "Vertices: puzzle pieces. Edges: pairs that fit. Undirected."
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "s1": "r1",
+          "s2": "r2",
+          "s3": "r3",
+          "s4": "r4"
+        },
+        "feedback": {
+          "s1": "Not quite. The taxi ranks are the things, so they are the vertices, and the routes joining them are the edges. Taxis drive each route both ways, so it is undirected. Watch out for the option that swaps ranks and routes.",
+          "s2": "Not quite. The children are the vertices and the invitations are the edges. One child can invite another without being invited back, so it is directed. Check the direction of each option that has children as vertices.",
+          "s3": "Not quite. The songs are the things, so they are the vertices, and each link from a song to the next is an edge. One song playing after another doesn't mean the other plays after it, so it is directed. Look for the option with songs as vertices and arrows.",
+          "s4": "Not quite. The pieces are the vertices, and each pair that fits is an edge. If one piece fits another, the other fits it too, so it is undirected. Look for the option with pieces as vertices and no arrows."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "For each situation, ask: what are the things, and what connects them?"
+        },
+        {
+          "level": 2,
+          "body": "The things are the vertices. The connections are the edges."
+        },
+        {
+          "level": 3,
+          "body": "Then ask whether each connection works both ways. An invitation and a song playing next each go one way only."
+        },
+        {
+          "level": 4,
+          "body": "Answer: taxis → ranks, routes, undirected; birthday party → children, invitations, directed; playlist → songs, “plays next” links, directed; puzzle → pieces, pairs that fit, undirected."
         }
       ]
     }

@@ -46,6 +46,27 @@
           "kind": "activity",
           "title": "Closing task: BFS on the shuttle",
           "activity_id": 407
+        },
+        {
+          "id": 490,
+          "kind": "text",
+          "title": "Worked example: the four jobs of BFS",
+          "body": "BFS does four jobs, always in this order. Learn the jobs, and the lines follow from them.\n\n```python\nfrom collections import deque\n\n\ndef bfs(graph, start):\n    # Job 1. Set up: the start is found, and it waits in the queue.\n    visited = {start}\n    queue = deque([start])\n    order = []\n    # Job 2. While a vertex is waiting, take the one at the front: it is visited now.\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        # Job 3. Each neighbour not found yet is found, and joins the back.\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                visited.add(n)\n                queue.append(n)\n    # Job 4. The queue is empty, so the order is complete.\n    return order\n```\n\n| Job | Lines | Where they go |\n|---|---|---|\n| 1. Set up | `visited`, `queue` and `order` | Before the loop, in any order |\n| 2. Take the front vertex | `while queue:`, then `popleft()`, then `order.append(v)` | The loop, then the first two lines inside it |\n| 3. Find new neighbours | `for`, then `if n not in visited:`, then `visited.add(n)` and `queue.append(n)` | Inside the loop, after job 2 |\n| 4. Finish | `return order` | After the loop, not inside it |\n\nThe names don't matter; the jobs do. The set could be called `seen` and the vertex `current`, and the four jobs and their order would stay the same.\n\n**Explain it to yourself before you go on:** why must `return order` sit outside the `while` loop? What would `bfs` return if it were inside?",
+          "support_for": 6
+        },
+        {
+          "id": 491,
+          "kind": "activity",
+          "title": "Try another: put BFS in order",
+          "activity_id": 490,
+          "support_for": 6
+        },
+        {
+          "id": 492,
+          "kind": "activity",
+          "title": "Try another: what does bfs return?",
+          "activity_id": 491,
+          "support_for": 6
         }
       ]
     }
@@ -518,6 +539,164 @@
         {
           "level": 4,
           "body": "Answer: [\"D\", \"G\", \"A\"]."
+        }
+      ]
+    },
+    {
+      "id": 490,
+      "kind": "parsons",
+      "title": "Try another: put BFS in order, with new names",
+      "module_id": 4,
+      "purpose": "practice",
+      "objective_id": 6,
+      "config": {
+        "lines": [
+          {
+            "id": 9,
+            "text": "        for neighbour in sorted(graph.adjacency[current]):"
+          },
+          {
+            "id": 5,
+            "text": "    order = []"
+          },
+          {
+            "id": 12,
+            "text": "                queue.append(neighbour)"
+          },
+          {
+            "id": 2,
+            "text": "def bfs(graph, start):"
+          },
+          {
+            "id": 7,
+            "text": "        current = queue.popleft()"
+          },
+          {
+            "id": 13,
+            "text": "    return order"
+          },
+          {
+            "id": 3,
+            "text": "    seen = {start}"
+          },
+          {
+            "id": 10,
+            "text": "            if neighbour not in seen:"
+          },
+          {
+            "id": 1,
+            "text": "from collections import deque"
+          },
+          {
+            "id": 8,
+            "text": "        order.append(current)"
+          },
+          {
+            "id": 4,
+            "text": "    queue = deque([start])"
+          },
+          {
+            "id": 11,
+            "text": "                seen.add(neighbour)"
+          },
+          {
+            "id": 6,
+            "text": "    while queue:"
+          }
+        ]
+      },
+      "solution": {
+        "order": [
+          1,
+          2,
+          [
+            3,
+            4,
+            5
+          ],
+          6,
+          7,
+          8,
+          9,
+          10,
+          [
+            11,
+            12
+          ],
+          13
+        ]
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Start with the import and the def line. Then think of the worked example's four jobs."
+        },
+        {
+          "level": 2,
+          "body": "Job 1, before the loop: seen, queue and order, in any order. Job 2: while queue:, then take the front vertex, then add it to the order."
+        },
+        {
+          "level": 3,
+          "body": "Job 3, inside the loop: the for line, then if neighbour not in seen:, then seen.add(neighbour) and queue.append(neighbour), in either order. Job 4, return order, comes last, outside the loop."
+        },
+        {
+          "level": 4,
+          "body": "Answer: the import, def bfs(graph, start):, seen = {start}, queue = deque([start]), order = [], while queue:, current = queue.popleft(), order.append(current), for neighbour in sorted(graph.adjacency[current]):, if neighbour not in seen:, seen.add(neighbour), queue.append(neighbour), and last return order. The three starting values can go in any order, and so can seen.add(neighbour) and queue.append(neighbour)."
+        }
+      ]
+    },
+    {
+      "id": 491,
+      "kind": "multiple_choice",
+      "title": "Try another: what does bfs return?",
+      "module_id": 4,
+      "purpose": "practice",
+      "objective_id": 6,
+      "config": {
+        "prompt": "You build a graph with your Graph class: g = Graph(), then g.add_edge(\"K\", \"N\"), g.add_edge(\"K\", \"L\"), g.add_edge(\"L\", \"M\"), g.add_edge(\"N\", \"M\") and g.add_edge(\"M\", \"P\"). That is the undirected graph with vertices K, L, M, N and P and edges K–N, K–L, L–M, N–M and M–P. What does bfs(g, \"K\") return?",
+        "options": [
+          {
+            "id": "a",
+            "label": "[\"K\", \"N\", \"L\", \"M\", \"P\"]"
+          },
+          {
+            "id": "b",
+            "label": "[\"K\", \"L\", \"M\", \"N\", \"P\"]"
+          },
+          {
+            "id": "c",
+            "label": "[\"K\", \"L\", \"N\", \"M\", \"P\"]"
+          },
+          {
+            "id": "d",
+            "label": "[\"K\", \"L\", \"N\", \"M\", \"M\", \"P\"]"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "c",
+        "feedback": {
+          "a": "Not quite. That takes K's neighbours in the order their edges were added, N first. bfs loops over sorted(graph.adjacency[v]), so L joins the queue before N. Sort each vertex's neighbours, then follow the queue.",
+          "b": "Not quite. That goes deep: after L it goes on to M, two edges from K, before N, which is only one edge away. BFS takes the vertex at the front of the queue, and N joined before M. Follow the queue one vertex at a time.",
+          "d": "Not quite. M appears twice. L finds M and adds it to visited, so when N's neighbours are checked, M is skipped. Check the if line: a vertex in visited never joins the queue again."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Start with K in the queue and in visited. Its neighbours join in alphabetical order."
+        },
+        {
+          "level": 2,
+          "body": "K's neighbours are L and N. Sorted, L joins first, then N."
+        },
+        {
+          "level": 3,
+          "body": "L leaves and finds M. When N leaves, M is already in visited, so nothing joins. Then M leaves and finds P."
+        },
+        {
+          "level": 4,
+          "body": "Answer: [\"K\", \"L\", \"N\", \"M\", \"P\"]."
         }
       ]
     }

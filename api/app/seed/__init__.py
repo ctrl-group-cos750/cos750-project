@@ -150,6 +150,10 @@ class SegmentFixture(BaseModel, extra="forbid"):
     activity_id: int | None = None
     skip_check_activity_id: int | None = None
     refresher_for: str | None = Field(default=None, min_length=1, max_length=100)
+    # A support segment (#172, #173): shown only to a student struggling on this objective in
+    # this module. Fixture only here, so the support content (#173) validates; #172 stores it,
+    # decides who sees it and checks where it may go, and supersedes this line.
+    support_for: int | None = Field(default=None, ge=1, le=8)
 
     @model_validator(mode="after")
     def check_kind(self) -> "SegmentFixture":

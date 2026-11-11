@@ -434,7 +434,7 @@
           "events"
         ],
         "summary": "Report Event",
-        "description": "Log something only the browser sees, for the pilot's evaluation (FR-10.1). The server adds\nwho and when. 404 if the video, checkpoint or segment doesn't exist; 429 past 120 a minute. A\nsegment viewed in a module still locked for the student is accepted but not logged.",
+        "description": "Log something only the browser sees, for the pilot's evaluation (FR-10.1). The server adds\nwho and when. 404 if the video, checkpoint, segment or graph doesn't exist; 429 past 120 a minute. A\nsegment viewed in a module still locked for the student is accepted but not logged.",
         "operationId": "report_event_api_events_post",
         "parameters": [
           {
@@ -1048,6 +1048,28 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/modules/length": {
+      "get": {
+        "tags": [
+          "modules"
+        ],
+        "summary": "Course Length",
+        "description": "The course's estimated length in minutes, the sum of every module's estimate. Public, so\nthe register page can say how long the course takes with the same number the map shows.",
+        "operationId": "course_length_api_modules_length_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseLengthOut"
                 }
               }
             }
@@ -1713,7 +1735,7 @@
           "staff"
         ],
         "summary": "List Accounts",
-        "description": "Every account, newest first. The portal searches this list as you type.",
+        "description": "Every account, newest first. The portal searches this list as you type.\n\nStudents' emails are masked here (NFR-S8, data minimisation, #146): a list of every student's\naddress is more than staff need to find an account, and it would all leak at once from one\nstaff session. Staff accounts keep their full email (the team's own). One account's page\n(below) still shows the full email, which staff need to act on it.",
         "operationId": "list_accounts_api_staff_accounts_get",
         "parameters": [
           {
@@ -3763,6 +3785,21 @@
         ],
         "title": "ChoiceOption"
       },
+      "CourseLengthOut": {
+        "properties": {
+          "minutes": {
+            "type": "integer",
+            "title": "Minutes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "minutes"
+        ],
+        "title": "CourseLengthOut",
+        "description": "How long the whole course takes, in minutes: the sum of the modules' estimates."
+      },
       "EarnedBadgeOut": {
         "properties": {
           "badge": {
@@ -4852,7 +4889,8 @@
               "video_started",
               "video_completed",
               "checkpoint_reached",
-              "segment_viewed"
+              "segment_viewed",
+              "prediction_made"
             ],
             "title": "Type"
           },
@@ -4860,6 +4898,17 @@
             "type": "integer",
             "exclusiveMinimum": 0.0,
             "title": "Targetid"
+          },
+          "correct": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correct"
           }
         },
         "additionalProperties": false,
@@ -4869,7 +4918,7 @@
           "targetId"
         ],
         "title": "EventIn",
-        "description": "What the browser saw: `video_started` or `video_completed` (`targetId` is the video),\n`checkpoint_reached` (the checkpoint) or `segment_viewed` (the segment)."
+        "description": "What the browser saw: `video_started` or `video_completed` (`targetId` is the video),\n`checkpoint_reached` (the checkpoint), `segment_viewed` (the segment) or `prediction_made`\n(the graph, with `correct`: whether the predicted vertex was the one BFS takes next)."
       },
       "GraphEdge": {
         "properties": {

@@ -45,6 +45,12 @@ class ModuleOut(ApiModel):
     current_segment_position: int
 
 
+class CourseLengthOut(ApiModel):
+    """How long the whole course takes, in minutes: the sum of the modules' estimates."""
+
+    minutes: int
+
+
 class SegmentOut(ApiModel):
     """One segment of a module, in display order.
 

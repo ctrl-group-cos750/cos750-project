@@ -11,6 +11,7 @@ import { useCurrentUser } from '../../auth/hooks.ts'
 import { Spinner } from '../../components'
 import {
   addMember,
+  getAccount,
   listAccounts,
   listMembers,
   matchesSearch,
@@ -26,8 +27,9 @@ function AddMemberForm() {
   const queryClient = useQueryClient()
   const [query, setQuery] = useState('')
   const accounts = useQuery({ queryKey: ['staff', 'accounts'], queryFn: listAccounts })
+  // The list masks students' emails (NFR-S8, #146), so the full one comes from their account.
   const add = useMutation({
-    mutationFn: addMember,
+    mutationFn: (id: number) => getAccount(id).then((account) => addMember(account.email)),
     onSuccess: () => {
       setQuery('')
       void queryClient.invalidateQueries({ queryKey: ['staff'] })
@@ -88,7 +90,7 @@ function AddMemberForm() {
                     </div>
                     <Button
                       disabled={add.isPending}
-                      onClick={() => add.mutate(a.email)}
+                      onClick={() => add.mutate(a.id)}
                       aria-label={`Make ${a.displayName} staff`}
                     >
                       <UserPlus aria-hidden />

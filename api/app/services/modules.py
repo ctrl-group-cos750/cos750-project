@@ -199,7 +199,11 @@ def _summary(
         estimated_minutes=module.estimated_minutes,
         status=status,
         segment_count=segment_count,
-        current_segment_position=row.current_segment_position if row else 0,
+        # Clamped to the last segment: staff can shorten a module (#128) below where a student
+        # had got to, and the page must still open on a segment that exists (#146).
+        current_segment_position=(
+            min(row.current_segment_position, max(segment_count - 1, 0)) if row else 0
+        ),
     )
 
 
@@ -294,6 +298,12 @@ def done_segments(session: Session, user_id: int, segments: Sequence[Segment]) -
         else:
             done.add(segment.id)
     return done
+
+
+def course_minutes(session: Session) -> int:
+    """The whole course's estimated length: the sum of every module's `estimated_minutes`, from
+    the fixtures. The one number the register page and the module map both show (#146)."""
+    return int(session.scalar(select(func.coalesce(func.sum(Module.estimated_minutes), 0))) or 0)
 
 
 def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleDetailOut:
@@ -412,7 +422,9 @@ def save_position(
     row.current_segment_position = max(reached, segment_position)
     if (
         row.status != "complete"
-        and row.current_segment_position == last
+        # >=, not ==: a module shortened below the student's position (#128) must still complete
+        # once its new last segment is done, or the student is stranded in it (#146).
+        and row.current_segment_position >= last
         and segments[last].id in done
     ):
         row.status = "complete"

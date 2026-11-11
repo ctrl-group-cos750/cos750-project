@@ -238,7 +238,6 @@ export function ModulePage() {
           label={`Module ${module.number} progress`}
           value={currentIndex + 1}
           max={segments.length}
-          showCount
         />
         <p className="text-sm text-muted-foreground" aria-live="polite">
           Segment {currentIndex + 1} of {segments.length}

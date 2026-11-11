@@ -665,8 +665,10 @@ describe('ModulePage — activity segment', () => {
     renderApp('/modules/1')
 
     expect(
-      await screen.findByRole('heading', { level: 3, name: 'Which vertex is next?' }),
+      await screen.findByText('BFS has just visited A. Which vertex comes next?'),
     ).toBeInTheDocument()
+    // The segment's heading names the question; the activity's own title isn't repeated (#159).
+    expect(screen.queryByRole('heading', { name: 'Which vertex is next?' })).toBeNull()
     expect(screen.queryByRole('link', { name: 'Start the activity' })).toBeNull()
     const next = screen.getByRole('button', { name: 'Next →' })
     expect(next).toHaveAttribute('aria-disabled', 'true')

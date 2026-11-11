@@ -18,6 +18,8 @@ type ActivityRendererProps = {
   requestHint: (activityId: number) => Promise<Hint>
   loadHints?: (activityId: number) => Promise<readonly Hint[]>
   heading?: 'h1' | 'h2' | 'h3'
+  /** False inside a module segment, whose own heading already names the question. */
+  showTitle?: boolean
 }
 
 // The kinds a student can answer: today every kind the API has (FR-4.1, FR-5.5). The API's
@@ -41,7 +43,7 @@ export function ActivityRenderer(props: ActivityRendererProps) {
 
   return (
     <Card>
-      <Title>{props.activity.title}</Title>
+      {props.showTitle !== false && <Title>{props.activity.title}</Title>}
       {props.activity.kind === 'parsons' ? (
         <ParsonsProblem
           activity={props.activity}

@@ -4,10 +4,11 @@ end-to-end tests can show any stage without working through 75 minutes of conten
 Each account is in demo/accounts.json: who it is, the steps that put it at its stage, and what that
 stage must look like. A step names questions by where they are, never by id: "answer module 6's
 mastery items right, except objective 6's". The seed finds those questions in the order a student
-meets them, builds a right or wrong answer from each one's stored solution (a wrong one only from what the
-question offers, as a student's would be: never an empty answer, which the API refuses), and
-submits it through the same code a student's answers go through (app/services/attempts.py). So new or replaced content
-never breaks an account, and every result is the one the real mastery rules work out.
+meets them, builds a right or wrong answer from each one's stored solution (a wrong one only from
+what the question offers, as a student's would be: never an empty answer, which the API refuses),
+and submits it through the same code a student's answers go through (app/services/attempts.py).
+So new or replaced content never breaks an account, and every result is the one the real mastery
+rules work out.
 
 `progress` says how far the account got through each module. The seed walks it through the module
 service (app/services/modules.py) one segment at a time, as a student would, so the module map

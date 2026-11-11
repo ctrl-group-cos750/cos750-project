@@ -106,6 +106,11 @@ CONTROL = "x\x00y"
         (PARSONS, {"order": [-BIG - 1]}),
         (PARSONS, {"order": list(range(101))}),
         (PARSONS, {"order": ["one"]}),
+        (PARSONS, {"order": [True]}),  # a boolean is not a line id
+        (PARSONS, {"order": ["1"]}),  # nor is a string of digits
+        (PARSONS, {"order": [1.0]}),  # nor a float
+        (FIX, {"order": [1, "2"]}),
+        (FIX, {"order": [False, 1]}),
         (TRACE, {"rows": [{"visitedVertex": "A\x00", "queue": [], "visited": [], "order": []}]}),
         (MC, {"selected": "a", "note": "x"}),  # unknown fields are refused, not stored
         (MC, {}),
@@ -652,3 +657,36 @@ def test_ordinary_non_ascii_text_with_combining_marks_is_allowed(token: str) -> 
     from app.schemas.activities import FillInConfig
 
     FillInConfig(code="__1__", blanks=[1], options=[token])
+
+
+def test_a_stored_answer_holds_only_integer_line_ids(student: TestClient, db: Session) -> None:
+    """What is stored, and exported to the ID team (FR-10), is exactly the integers sent."""
+    response = student.post(
+        f"/api/activities/{make(db, *PARSONS)}/attempts", json={"submitted": {"order": [2, 1]}}
+    )
+    assert response.status_code == 201
+    db.expire_all()
+    stored = db.scalars(select(Attempt.submitted)).one()
+    assert stored == {"order": [2, 1]}
+    assert all(type(i) is int for i in stored["order"])
+
+
+def test_fill_in_blank_ids_are_still_the_digit_strings_json_keys_are(
+    student: TestClient, db: Session
+) -> None:
+    response = student.post(
+        f"/api/activities/{make(db, *FILL)}/attempts", json={"submitted": {"answers": {"1": "1"}}}
+    )
+    assert response.status_code == 201
+    assert response.json()["correct"] is True
+
+
+def test_a_stored_solution_with_string_ids_still_grades(student: TestClient, db: Session) -> None:
+    """Stored solutions stay lax (#157): a "2" an older seed or edit stored still grades."""
+    lines = {"lines": [{"id": 1, "text": "a"}, {"id": 2, "text": "b"}]}
+    activity_id = make(db, "parsons", lines, {"order": ["1", "2"]})
+    response = student.post(
+        f"/api/activities/{activity_id}/attempts", json={"submitted": {"order": [1, 2]}}
+    )
+    assert response.status_code == 201
+    assert response.json()["correct"] is True

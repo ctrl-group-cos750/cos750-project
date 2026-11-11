@@ -13,7 +13,7 @@ is what the student sent, so these bounds are what keeps it small.
 
 from typing import Annotated, Any, Literal
 
-from pydantic import Field, ValidationInfo, field_validator, model_validator
+from pydantic import Field, StrictInt, ValidationInfo, field_validator, model_validator
 
 from app.schemas.base import ApiModel
 from app.schemas.graphs import VERTEX, GraphEdge
@@ -39,6 +39,10 @@ ChosenId = Annotated[str, Field(max_length=ID_LENGTH, pattern=NO_CONTROL)]
 ChosenToken = ContentToken
 # A line or blank id. Fixture ids are small; anything past a Postgres integer is never one.
 SubmittedInt = Annotated[int, Field(ge=-(2**31), le=2**31 - 1)]
+# A line id in a Parsons or fix-the-bug order: a JSON integer and nothing else, so `true` or "1"
+# is a 422 and the evaluation export only ever holds integers. (Fill-in blank ids are JSON object
+# keys, always strings, so they stay SubmittedInt; stored solutions are parsed laxly, #157.)
+SubmittedLineId = Annotated[StrictInt, Field(ge=-(2**31), le=2**31 - 1)]
 
 # A trace table is filled in by hand, one row per vertex, so its graph is small: at most 20
 # vertices with labels of at most 12 characters (VERTEX allows 32 for scenarios). The committed
@@ -189,7 +193,7 @@ class ParsonsSolution(OrderedSolution):
 
 
 class ParsonsSubmission(ApiModel):
-    order: list[SubmittedInt] = Field(max_length=100)
+    order: list[SubmittedLineId] = Field(max_length=100)
 
 
 # --- Fill in the blank: choose a token for each blank ------------------------------------------
@@ -288,7 +292,7 @@ class FixTheBugSolution(OrderedSolution):
 
 
 class FixTheBugSubmission(ApiModel):
-    order: list[SubmittedInt] = Field(max_length=150)
+    order: list[SubmittedLineId] = Field(max_length=150)
 
 
 # --- Choose tests: select the test cases that expose the bug (FR-5.5; objective 7) -------------

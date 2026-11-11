@@ -2,7 +2,12 @@ import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
 import { Link } from 'react-router'
 import { Button, Card, TextField } from '../../../components'
 import styles from '../staff.module.css'
-import { SEGMENT_KINDS, type ContentOverview, type SegmentIn } from './content.api.ts'
+import {
+  SEGMENT_KINDS,
+  type ContentOverview,
+  type SegmentIn,
+  type SegmentKind,
+} from './content.api.ts'
 import { Select, TextArea } from './ContentFields.tsx'
 
 /**
@@ -19,6 +24,9 @@ export function SegmentsEditor(props: {
   allowRefreshers: boolean
   /** Nothing on a review path can be skipped. */
   allowSkipping: boolean
+  /** Support for an objective (FR-8.4) belongs in modules 0 to 5: not in the mastery check or on
+   * a review path. */
+  allowSupport?: boolean
   onChange: (segments: SegmentIn[]) => void
 }) {
   const { segments, onChange } = props
@@ -30,6 +38,10 @@ export function SegmentsEditor(props: {
       label: `#${a.id} ${a.title}${(a.moduleId ?? null) !== null ? ` (module ${a.moduleId})` : ''}`,
     }))
   const videoOptions = props.overview.videos.map((v) => ({ value: v.id, label: v.title }))
+  const objectiveOptions = props.overview.objectives.map((o) => ({
+    value: o.id,
+    label: `Objective ${o.id}: ${o.text}`,
+  }))
 
   function set(index: number, next: Partial<SegmentIn>) {
     onChange(segments.map((s, i) => (i === index ? { ...s, ...next } : s)))
@@ -97,6 +109,7 @@ export function SegmentsEditor(props: {
                     activityId: kind === 'activity' ? seg.activityId : null,
                     videoId: kind === 'video' ? seg.videoId : null,
                     refresherFor: kind === 'refresher' ? seg.refresherFor : null,
+                    supportFor: SUPPORT_KINDS.includes(kind) ? seg.supportFor : null,
                   })
                 }
               />
@@ -149,6 +162,16 @@ export function SegmentsEditor(props: {
                 onChange={(body) => set(index, { body })}
               />
             )}
+            {props.allowSupport && SUPPORT_KINDS.includes(seg.kind) && (
+              <Select
+                label="Support for (optional)"
+                hint="Shown only to a student struggling with this objective in this module: 2 of 3 first answers on its practice items wrong, or one after hint 3 or 4. Place it right after that practice. A support activity is a practice item on the same objective."
+                value={seg.supportFor ?? null}
+                options={objectiveOptions}
+                none="Everyone sees this segment"
+                onChange={(supportFor) => set(index, { supportFor })}
+              />
+            )}
             {props.allowSkipping && seg.kind !== 'video' && (
               <Select
                 label="Skippable by passing (optional)"
@@ -171,3 +194,6 @@ export function SegmentsEditor(props: {
     </div>
   )
 }
+
+/** The kinds a support segment can be (SUPPORT_KINDS in api/app/seed). */
+const SUPPORT_KINDS: readonly SegmentKind[] = ['text', 'worked_example', 'activity']

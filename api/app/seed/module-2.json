@@ -36,6 +36,20 @@
           "activity_id": 204
         },
         {
+          "id": 290,
+          "kind": "text",
+          "title": "Worked example: from a graph to a dictionary",
+          "body": "Here is how to write any graph as a dictionary, step by step. The graph has vertices H, J, K and M, and edges H–J, H–M and J–K, added in that order.\n\n**Step 1. Give every vertex a key.** Each vertex maps to a list of its neighbours, so each one starts with an empty list: H, J, K and M.\n\n**Step 2. Store each edge in both lists.** With no arrows you can go both ways, so H–J puts J in H's list and H in J's list.\n\n| Vertex | Edges that touch it | Its list |\n|---|---|---|\n| H | H–J, H–M | `[\"J\", \"M\"]` |\n| J | H–J, J–K | `[\"H\", \"K\"]` |\n| K | J–K | `[\"J\"]` |\n| M | H–M | `[\"H\"]` |\n\nSo the dictionary is `{\"H\": [\"J\", \"M\"], \"J\": [\"H\", \"K\"], \"K\": [\"J\"], \"M\": [\"H\"]}`.\n\n**Step 3. With arrows, store each edge once.** If the edges were H → J, H → M and J → K, each one goes only in the list of the vertex it leaves: `{\"H\": [\"J\", \"M\"], \"J\": [\"K\"], \"K\": [], \"M\": []}`. K and M still get a key, with an empty list.\n\n**Explain it to yourself before you go on:** why does K have an empty list in the directed version, but not in the undirected one?",
+          "support_for": 2
+        },
+        {
+          "id": 291,
+          "kind": "activity",
+          "title": "Try another: graphs and dictionaries",
+          "activity_id": 290,
+          "support_for": 2
+        },
+        {
           "id": 206,
           "kind": "activity",
           "title": "Code: add_vertex",
@@ -58,6 +72,27 @@
           "kind": "activity",
           "title": "Code: directed or undirected",
           "activity_id": 207
+        },
+        {
+          "id": 292,
+          "kind": "text",
+          "title": "Worked example: why each line of the Graph class is there",
+          "body": "Here is why each piece of the `Graph` class is there. Then we run two calls on a new graph and watch `adjacency`.\n\n```python\nclass Graph:\n    def __init__(self, directed=False):\n        self.directed = directed\n        self.adjacency = {}  # vertex -> list of neighbours\n\n    def add_vertex(self, v):\n        if v not in self.adjacency:\n            self.adjacency[v] = []\n\n    def add_edge(self, a, b):\n        self.add_vertex(a)\n        self.add_vertex(b)\n        self.adjacency[a].append(b)\n        if not self.directed:\n            self.adjacency[b].append(a)\n```\n\n| Line | Why it is there |\n|---|---|\n| `if v not in self.adjacency:` | A vertex already in the graph keeps its list, and its edges with it. |\n| `self.adjacency[v] = []` | A new vertex starts with an empty list, ready for `append`. |\n| `self.add_vertex(a)` and `self.add_vertex(b)` | Both ends need a list before the edge goes in. |\n| `self.adjacency[a].append(b)` | The edge always goes from `a` to `b`, so it goes in `a`'s list. |\n| `if not self.directed:` and `self.adjacency[b].append(a)` | Only with no arrows does it go back from `b` to `a`. |\n\n**Running it.** `g = Graph()`, then `g.add_edge(\"P\", \"R\")`, then `g.add_edge(\"R\", \"T\")`. After the first call, `adjacency` is `{\"P\": [\"R\"], \"R\": [\"P\"]}`. After the second it is `{\"P\": [\"R\"], \"R\": [\"P\", \"T\"], \"T\": [\"R\"]}`: R keeps P, and T is appended after it. With `Graph(directed=True)`, the same two calls give `{\"P\": [\"R\"], \"R\": [\"T\"], \"T\": []}`.\n\n**Explain it to yourself before you go on:** what would `g.adjacency[\"R\"]` be after the second call if `add_vertex` had no `if` line?",
+          "support_for": 6
+        },
+        {
+          "id": 293,
+          "kind": "activity",
+          "title": "Try another: the Graph class",
+          "activity_id": 291,
+          "support_for": 6
+        },
+        {
+          "id": 294,
+          "kind": "activity",
+          "title": "Try another: predict the list",
+          "activity_id": 292,
+          "support_for": 6
         },
         {
           "id": 209,
@@ -586,6 +621,200 @@
         {
           "level": 4,
           "body": "Answer: [\"G\"], from add_edge(\"D\", \"G\")."
+        }
+      ]
+    },
+    {
+      "id": 290,
+      "kind": "matching",
+      "title": "Try another: graphs and dictionaries",
+      "module_id": 2,
+      "purpose": "practice",
+      "objective_id": 2,
+      "config": {
+        "prompt": "Match each graph to the dictionary that stores it. The edges were added in the order listed. Arrows, like S → T, go one way only; plain lines, like S–T, go both ways.",
+        "left": [
+          {
+            "id": "g1",
+            "label": "Graph 1. Vertices S, T, U. Edges: S–T, S–U."
+          },
+          {
+            "id": "g2",
+            "label": "Graph 2 (directed). Vertices S, T, U. Edges: S → T, S → U."
+          },
+          {
+            "id": "g3",
+            "label": "Graph 3 (directed). Vertices S, T, U. Edges: T → S, U → S."
+          }
+        ],
+        "right": [
+          {
+            "id": "r1",
+            "label": "{\"S\": [\"T\", \"U\"], \"T\": [], \"U\": []}"
+          },
+          {
+            "id": "r2",
+            "label": "{\"S\": [], \"T\": [\"S\"], \"U\": [\"S\"]}"
+          },
+          {
+            "id": "r3",
+            "label": "{\"S\": [\"T\", \"U\"], \"T\": [\"S\"], \"U\": []}"
+          },
+          {
+            "id": "r4",
+            "label": "{\"S\": [\"T\", \"U\"], \"T\": [\"S\"], \"U\": [\"S\"]}"
+          },
+          {
+            "id": "r5",
+            "label": "{\"S\": [\"T\", \"U\"]}"
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "g1": "r4",
+          "g2": "r1",
+          "g3": "r2"
+        },
+        "feedback": {
+          "g1": "Not quite. Graph 1 has no arrows, so each edge is stored in both lists: T and U each list S as well. Find the dictionary where S lists two vertices and T and U each list S.",
+          "g2": "Not quite. Both of graph 2's arrows leave S, so they are stored in S's list only, and T and U still get a key with an empty list. Find the dictionary where only S has neighbours and every vertex has a key.",
+          "g3": "Not quite. Graph 3's arrows point into S, and an arrow is stored in the list of the vertex it leaves, so S's own list is empty. Find the dictionary where S maps to an empty list."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "First look for arrows. An edge with no arrow is stored in two lists; an arrow in one."
+        },
+        {
+          "level": 2,
+          "body": "An arrow is stored in the list of the vertex it leaves. Every vertex gets a key, even if its list is empty."
+        },
+        {
+          "level": 3,
+          "body": "In graph 3 both arrows point into S, so S's list is empty. Two of the dictionaries match none of the graphs."
+        },
+        {
+          "level": 4,
+          "body": "Answer: graph 1 → {\"S\": [\"T\", \"U\"], \"T\": [\"S\"], \"U\": [\"S\"]}; graph 2 → {\"S\": [\"T\", \"U\"], \"T\": [], \"U\": []}; graph 3 → {\"S\": [], \"T\": [\"S\"], \"U\": [\"S\"]}."
+        }
+      ]
+    },
+    {
+      "id": 291,
+      "kind": "fill_in",
+      "title": "Try another: the Graph class",
+      "module_id": 2,
+      "purpose": "practice",
+      "objective_id": 6,
+      "config": {
+        "code": "class Graph:\n    def __init__(self, directed=False):\n        self.directed = directed\n        self.adjacency = {}  # vertex -> list of neighbours\n\n    def add_vertex(self, v):\n        # A new vertex gets an empty list. A vertex already in the graph keeps its list.\n        if v not in self.adjacency:\n            self.adjacency[v] = __1__\n\n    def add_edge(self, a, b):\n        self.add_vertex(a)\n        self.add_vertex(b)\n        # The edge goes from a to b.\n        self.adjacency[__2__].append(__3__)\n        # With no arrows, it goes back from b to a as well.\n        if __4__:\n            self.adjacency[b].append(a)",
+        "blanks": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "options": [
+          "{}",
+          "a",
+          "not self.directed",
+          "[]",
+          "b",
+          "None",
+          "self.directed"
+        ]
+      },
+      "solution": {
+        "answers": {
+          "1": "[]",
+          "2": "a",
+          "3": "b",
+          "4": "not self.directed"
+        },
+        "feedback": {
+          "1": {
+            "{}": "Not quite. {} is an empty dictionary, not a list, so the new vertex has no append for its neighbours. Give a new vertex an empty list.",
+            "None": "Not quite. None has no append, so the first edge to this vertex stops with an error. Give a new vertex an empty list."
+          },
+          "2": {
+            "b": "Not quite. That stores the edge in b's list, as if it went from b. The edge goes from a to b, and an edge is stored in the list of the vertex it leaves."
+          },
+          "3": {
+            "a": "Not quite. That puts a in its own list, so the edge would loop from a back to a. a's list should hold the vertex at the other end of the edge."
+          },
+          "4": {
+            "self.directed": "Not quite. That adds the way back only when the graph has arrows, which is the wrong way round: Graph() would store each edge in one list only. Add the way back only when the graph is undirected."
+          }
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "A new vertex has no neighbours yet. The edge goes from a to b."
+        },
+        {
+          "level": 2,
+          "body": "An edge is stored in the list of the vertex it leaves, so it goes in a's list."
+        },
+        {
+          "level": 3,
+          "body": "Blank 1 is an empty list. The way back, from b to a, is only for a graph with no arrows."
+        },
+        {
+          "level": 4,
+          "body": "Answer: blank 1 is [], blank 2 is a, blank 3 is b, and blank 4 is not self.directed."
+        }
+      ]
+    },
+    {
+      "id": 292,
+      "kind": "multiple_choice",
+      "title": "Try another: predict the list",
+      "module_id": 2,
+      "purpose": "practice",
+      "objective_id": 6,
+      "config": {
+        "prompt": "Using the finished Graph class, what does the last line print? g = Graph(), then g.add_edge(\"K\", \"L\"), then g.add_vertex(\"L\"), then g.add_edge(\"L\", \"M\"), then print(g.adjacency[\"L\"]).",
+        "options": [
+          {
+            "id": "a",
+            "label": "[\"M\"]"
+          },
+          {
+            "id": "b",
+            "label": "[\"K\", \"M\"]"
+          },
+          {
+            "id": "c",
+            "label": "[\"M\", \"K\"]"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "b",
+        "feedback": {
+          "a": "Not quite. add_vertex(\"L\") doesn't empty L's list, because L is already in the graph, so L keeps K. Check the if line in add_vertex, then follow both edges into L's list.",
+          "c": "Not quite. append adds to the end of a list, so the neighbours stay in the order their edges were added. Find which edge with L was added first."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Follow L's list after each of the three calls."
+        },
+        {
+          "level": 2,
+          "body": "g is undirected, so add_edge(\"K\", \"L\") puts K in L's list."
+        },
+        {
+          "level": 3,
+          "body": "L is already in the graph when add_vertex(\"L\") runs, so nothing changes. Then add_edge(\"L\", \"M\") appends M."
+        },
+        {
+          "level": 4,
+          "body": "Answer: [\"K\", \"M\"]."
         }
       ]
     }

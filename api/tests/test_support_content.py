@@ -259,6 +259,7 @@ def test_students_part_way_keep_their_place_when_support_is_put_in(
     assert _on(db, confident) == 209
 
     # Taking the support out again (or staff removing it) keeps places too, and its records go.
+    _attempt(db, struggling_before, 206, True)  # segment 207's item, right now: done either way
     save_position(db, struggling_before, 2, [s.id for s in detail.segments].index(208))
     db.commit()
     assert db.scalar(select(func.count(ShownSegment.id))) == 2

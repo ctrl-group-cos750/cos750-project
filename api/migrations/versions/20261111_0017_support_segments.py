@@ -25,9 +25,7 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     with op.batch_alter_table("segments") as batch:
         batch.add_column(sa.Column("support_for", sa.Integer(), nullable=True))
-        batch.create_foreign_key(
-            "segments_support_for_fkey", "objectives", ["support_for"], ["id"]
-        )
+        batch.create_foreign_key("segments_support_for_fkey", "objectives", ["support_for"], ["id"])
     op.create_table(
         "shown_segments",
         sa.Column("id", sa.Integer(), primary_key=True),

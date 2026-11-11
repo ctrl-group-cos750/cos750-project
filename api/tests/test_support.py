@@ -153,6 +153,14 @@ def _answer(client: TestClient, activity_id: int, right: bool) -> None:
     assert res.status_code in (200, 201), res.text
 
 
+def _first(client: TestClient, activity_id: int, right: bool) -> None:
+    """A first attempt, right or wrong; after a wrong one, a right one too, so the segment is done
+    whether a wrong answer counts as done (FR-2.7 today) or not (#165)."""
+    _answer(client, activity_id, right)
+    if not right:
+        _answer(client, activity_id, True)
+
+
 def _hints(client: TestClient, activity_id: int, levels: int) -> None:
     for _ in range(levels):
         assert client.post(f"/api/activities/{activity_id}/hints").status_code == 201
@@ -181,7 +189,7 @@ def _walk_base(client: TestClient, answers: tuple[bool, bool, bool]) -> None:
     """Answer the three base items in order, moving onto each, and end on the third."""
     for position, (activity_id, right) in enumerate(zip((11, 12, 13), answers, strict=True), 1):
         assert _move(client, position) == 200
-        _answer(client, activity_id, right)
+        _first(client, activity_id, right)
 
 
 def test_a_confident_student_never_sees_the_support(client: TestClient, db: Session) -> None:
@@ -211,10 +219,10 @@ def test_a_struggling_student_gets_the_support_next(client: TestClient, db: Sess
     _make_module(db)
     _register(client, ADA)
     assert _move(client, BASE_1) == 200
-    _answer(client, 11, False)
+    _first(client, 11, False)
     assert _shown(client)[SUPPORT_TEXT] is False  # one wrong answer: not yet
     assert _move(client, BASE_2) == 200
-    _answer(client, 12, False)
+    _first(client, 12, False)
     # 2 of the last 3 wrong: the support is shown, ahead of them, before they get there.
     assert _shown(client) == [True] * 7
     assert _detail(client)["shownSegmentCount"] == 7
@@ -294,9 +302,9 @@ def test_support_shown_ahead_is_recorded_by_the_next_save(client: TestClient, db
     _make_module(db)
     _register(client, ADA)
     assert _move(client, BASE_1) == 200
-    _answer(client, 11, False)
+    _first(client, 11, False)
     assert _move(client, BASE_2) == 200
-    _answer(client, 12, False)
+    _first(client, 12, False)
     assert _move(client, BASE_3) == 200  # support shown at this save: recorded
     assert {r.segment_id for r in db.scalars(select(ShownSegment))} == {90, 91}
     db.execute(update(Attempt).values(correct=True))  # re-graded before they reach it
@@ -471,7 +479,8 @@ def test_saves_at_once_record_the_support_once(db: Session) -> None:
     _make_module(db)
     user_id = _student(db)
     for activity_id in (11, 12, 13):
-        record_attempt(db, user_id, db.get_one(Activity, activity_id), {"selected": "b"})
+        for choice in ("b", "a"):  # wrong first, then right, so the item is done either way
+            record_attempt(db, user_id, db.get_one(Activity, activity_id), {"selected": choice})
     db.execute(
         update(ModuleProgress)
         .where(ModuleProgress.user_id == user_id)

@@ -123,7 +123,8 @@ export interface paths {
      *     the solution, which stays in this process (NFR-S7).
      *
      *     Each kind's shape bounds its lengths, and the whole submission is at most
-     *     `MAX_SUBMISSION_BYTES` (413 past it). 403 and 404 as for GET. 429 with `Retry-After` past 60
+     *     `MAX_SUBMISSION_BYTES` (413 past it). An empty submission, or one naming an option, line,
+     *     blank, token, test case or vertex the activity doesn't have, is 422 and not recorded. 403 and 404 as for GET. 429 with `Retry-After` past 60
      *     answers a minute from one student. Two answers sent at once are recorded one after the other
      *     (app/services/locking.py).
      */

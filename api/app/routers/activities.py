@@ -27,6 +27,7 @@ from app.schemas.ids import RowId
 from app.services.access import activity_refusal
 from app.services.attempts import hint_level_seen, record_attempt, reveal_next_hint
 from app.services.locking import ActivityGone
+from app.services.submissions import submission_problem
 
 router = APIRouter(prefix="/api/activities", tags=["activities"])
 
@@ -37,6 +38,8 @@ MODULE_LOCKED = (
 )
 BAD_SUBMISSION = "This submission is not in the expected shape."
 TOO_LARGE = "This answer is too long to check."
+EMPTY = "This answer is empty. Choose an answer before checking it."
+FOREIGN = "This answer names something that isn't in this activity."
 NO_MORE_HINTS = "You have seen every hint for this activity."
 REVIEW_CLOSED = "This activity is on a review path, which opens when the mastery check marks its objective 'not yet'."
 SUPPORT_LEVEL = 3  # hint levels 3 and 4 make a correct answer count as "with support" (FR-7.2)
@@ -94,7 +97,8 @@ def submit_attempt(
     the solution, which stays in this process (NFR-S7).
 
     Each kind's shape bounds its lengths, and the whole submission is at most
-    `MAX_SUBMISSION_BYTES` (413 past it). 403 and 404 as for GET. 429 with `Retry-After` past 60
+    `MAX_SUBMISSION_BYTES` (413 past it). An empty submission, or one naming an option, line,
+    blank, token, test case or vertex the activity doesn't have, is 422 and not recorded. 403 and 404 as for GET. 429 with `Retry-After` past 60
     answers a minute from one student. Two answers sent at once are recorded one after the other
     (app/services/locking.py)."""
     attempts_limiter.check(f"user:{user.id}")
@@ -102,6 +106,10 @@ def submit_attempt(
     if len(json.dumps(body.submitted, separators=(",", ":"))) > MAX_SUBMISSION_BYTES:
         raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, detail=TOO_LARGE)
     try:
+        # Not an answer at all: refused before it can spend a first (counted) attempt (#139).
+        problem = submission_problem(activity.kind, activity.config, body.submitted)
+        if problem is not None:
+            raise HTTPException(422, detail=EMPTY if problem == "empty" else FOREIGN)
         attempt, result = record_attempt(session, user.id, activity, body.submitted)
     except ValidationError as exc:  # the submission didn't match the kind's shape
         raise HTTPException(422, detail=BAD_SUBMISSION) from exc  # constant is deprecated upstream

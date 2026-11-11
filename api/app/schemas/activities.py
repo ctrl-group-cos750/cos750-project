@@ -266,8 +266,8 @@ class TraceConfig(ApiModel):
     start_vertex: str
 
 
-# A vertex label as the student types it. Only the length is bounded (a trace graph's labels are
-# at most TRACE_LABEL characters): a label that is not in the graph is a wrong answer, not a 422.
+# A vertex label as the student types it, at most TRACE_LABEL characters. The activity routes also
+# refuse a label that isn't in the graph (app/services/submissions.py).
 TracedVertex = Annotated[str, Field(max_length=TRACE_LABEL, pattern=NO_CONTROL)]
 
 

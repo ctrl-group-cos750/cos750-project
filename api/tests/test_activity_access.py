@@ -11,7 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
-from support import complete_modules_before
+from support import complete_modules_before, wrong_answer
 
 from app.models import (
     Activity,
@@ -52,22 +52,8 @@ def make_staff(db: Session, user_id: int) -> None:
 
 
 def first_submission(db: Session, activity_id: int) -> dict[str, Any]:
-    """A submission in the right shape for the activity (not necessarily right)."""
-    activity = db.get_one(Activity, activity_id)
-    match activity.kind:
-        case "multiple_choice":
-            return {"selected": activity.config["options"][0]["id"]}
-        case "parsons" | "fix_the_bug":
-            return {"order": []}
-        case "fill_in":
-            return {"answers": {}}
-        case "matching":
-            return {"pairs": {}}
-        case "choose_tests":
-            return {"selected": []}
-        case "trace":
-            return {"rows": []}
-    raise AssertionError(activity.kind)
+    """A real answer to the activity (wrong): an empty one would be refused with 422."""
+    return wrong_answer(db.get_one(Activity, activity_id))
 
 
 def every_route(client: TestClient, db: Session, activity_id: int) -> list[tuple[str, int, Any]]:
@@ -287,11 +273,6 @@ def test_a_review_path_opens_when_module_6_says_not_yet(
     ).all()
     for item in objective_1:  # every one wrong
         body = {"submitted": first_submission(db, item.id)}
-        if item.kind == "multiple_choice":
-            options = [o["id"] for o in item.config["options"]]
-            body["submitted"]["selected"] = next(
-                o for o in options if o != item.solution["correct"]
-            )
         assert client.post(f"/api/activities/{item.id}/attempts", json=body).status_code == 201
     states = {o["id"]: o["state"] for o in client.get("/api/me/report").json()["objectives"]}
     assert states[1] == "not_yet"

@@ -33,6 +33,8 @@ from app.seed import read_fixtures
 STUDENT = {"email": "ada@example.com", "password": "Correct horse 1", "displayName": "Ada"}
 OTHER = {"email": "bo@example.com", "password": "Correct horse 2", "displayName": "Bo"}
 BIG = 2**31
+EMPTY = "This answer is empty. Choose an answer before checking it."
+FOREIGN = "This answer names something that isn't in this activity."
 
 
 def make(db: Session, kind: str, config: dict[str, Any], solution: dict[str, Any]) -> int:
@@ -53,7 +55,10 @@ def make(db: Session, kind: str, config: dict[str, Any], solution: dict[str, Any
 
 MC = ("multiple_choice", {"prompt": "Q", "options": [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}]}, {"correct": "a"})  # fmt: skip
 FILL = ("fill_in", {"code": "x = __1__", "blanks": [1], "options": ["1", "2"]}, {"answers": {"1": "1"}})  # fmt: skip
-MATCHING = ("matching", {"prompt": "Q", "left": [{"id": "l", "label": "L"}], "right": [{"id": "r", "label": "R"}]}, {"pairs": {"l": "r"}})  # fmt: skip
+MATCHING = ("matching", {"prompt": "Q", "left": [{"id": "l", "label": "L"}], "right": [{"id": "r", "label": "R"}, {"id": "r2", "label": "R2"}]}, {"pairs": {"l": "r"}})  # fmt: skip
+FIX = ("fix_the_bug", {"prompt": "Fix", "lines": [{"id": 1, "text": "a"}, {"id": 2, "text": "b"}], "corrections": [{"id": 3, "text": "c"}]}, {"order": [1, 3]})  # fmt: skip
+TEST_GRAPH = {"vertices": ["A", "B"], "edges": [{"source": "A", "target": "B"}], "startVertex": "A", "expected": ["A", "B"]}  # fmt: skip
+CHOOSE = ("choose_tests", {"prompt": "Q", "code": "x", "tests": [{"id": "cycle", **TEST_GRAPH}, {"id": "path", **TEST_GRAPH}]}, {"exposing": ["cycle"]})  # fmt: skip
 PARSONS = ("parsons", {"lines": [{"id": 1, "text": "a"}, {"id": 2, "text": "b"}]}, {"order": [1, 2]})  # fmt: skip
 TRACE: tuple[str, dict[str, Any], dict[str, Any]] = ("trace", {"directed": False, "vertices": ["A", "B"], "edges": [{"source": "A", "target": "B"}], "startVertex": "A"}, {})  # fmt: skip
 
@@ -138,12 +143,14 @@ def test_a_trace_table_larger_than_its_graph_could_need_is_422(
             f"/api/activities/{activity_id}/attempts", json={"submitted": submitted}
         )
         assert response.status_code == 422
-    # The largest table the shape allows is still graded (wrong), not refused for its size.
+    # The largest table the shape allows fits the cap: it is refused for naming vertices the
+    # graph doesn't have, not for its size.
     largest = {"rows": [row] * 20}
     assert len(json.dumps(largest, separators=(",", ":"))) < MAX_SUBMISSION_BYTES
     response = student.post(f"/api/activities/{activity_id}/attempts", json={"submitted": largest})
-    assert response.status_code == 201
-    assert attempts(db) == 1
+    assert response.status_code == 422
+    assert response.json() == {"detail": FOREIGN}
+    assert attempts(db) == 0
 
 
 def test_padding_past_the_cap_is_413_and_not_stored(student: TestClient, db: Session) -> None:
@@ -268,21 +275,66 @@ def test_content_cannot_hold_a_choice_a_student_would_be_refused_for(
 
 
 @pytest.mark.parametrize(
-    ("activity", "submitted"),
+    ("activity", "submitted", "detail"),
     [
-        (MC, {"selected": "a" * 50}),  # the longest an option id may be: a wrong answer
-        (FILL, {"answers": {"1": "x" * 200}}),
-        (FILL, {"answers": {}}),
-        (MATCHING, {"pairs": {}}),
-        (PARSONS, {"order": []}),
-        (PARSONS, {"order": [BIG - 1, -BIG]}),
-        (TRACE, {"rows": [{"visitedVertex": "Z", "queue": [], "visited": [], "order": []}]}),
+        (FILL, {"answers": {}}, EMPTY),
+        (MATCHING, {"pairs": {}}, EMPTY),
+        (PARSONS, {"order": []}, EMPTY),
+        (FIX, {"order": []}, EMPTY),
+        (CHOOSE, {"selected": []}, EMPTY),
+        (TRACE, {"rows": []}, EMPTY),
+        (MC, {"selected": "a" * 50}, FOREIGN),  # the longest an option id may be
+        (FILL, {"answers": {"1": "x" * 200}}, FOREIGN),  # a token the blank doesn't offer
+        (FILL, {"answers": {"7": "1"}}, FOREIGN),  # a blank the code doesn't have
+        (MATCHING, {"pairs": {"l": "elsewhere"}}, FOREIGN),
+        (MATCHING, {"pairs": {"nowhere": "r"}}, FOREIGN),
+        (PARSONS, {"order": [BIG - 1, -BIG]}, FOREIGN),
+        (PARSONS, {"order": [1, 2, 9]}, FOREIGN),
+        (FIX, {"order": [1, 2, 99]}, FOREIGN),
+        (CHOOSE, {"selected": ["cycle", "made-up"]}, FOREIGN),
+        (
+            TRACE,
+            {"rows": [{"visitedVertex": "Z", "queue": [], "visited": [], "order": []}]},
+            FOREIGN,
+        ),
+        (
+            TRACE,
+            {"rows": [{"visitedVertex": "A", "queue": ["Q"], "visited": ["A"], "order": ["A"]}]},
+            FOREIGN,
+        ),
     ],
 )
-def test_bounded_and_empty_submissions_are_graded_as_wrong(
+def test_an_empty_or_foreign_answer_is_422_and_spends_no_attempt(
+    student: TestClient, db: Session, activity: tuple[str, Any, Any], submitted: Any, detail: str
+) -> None:
+    """An answer that chooses nothing, or names what the activity doesn't offer, isn't graded:
+    on a mastery item it would have spent the student's one counted attempt (FR-7.2). The
+    screens can't send one, so only direct API use meets this."""
+    activity_id = make(db, *activity)
+    response = student.post(
+        f"/api/activities/{activity_id}/attempts", json={"submitted": submitted}
+    )
+    assert response.status_code == 422, response.text
+    assert response.json() == {"detail": detail}
+    assert attempts(db) == 0
+
+
+@pytest.mark.parametrize(
+    ("activity", "submitted"),
+    [
+        (MC, {"selected": "b"}),
+        (FILL, {"answers": {"1": "2"}}),
+        (MATCHING, {"pairs": {"l": "r2"}}),
+        (PARSONS, {"order": [2, 1]}),
+        (PARSONS, {"order": [1, 1]}),  # a line twice: offered, so an answer, and wrong
+        (FIX, {"order": [1, 2]}),  # the faulty program as given
+        (CHOOSE, {"selected": ["path"]}),
+        (TRACE, {"rows": [{"visitedVertex": "B", "queue": [], "visited": ["B"], "order": ["B"]}]}),
+    ],
+)
+def test_a_wrong_answer_made_of_what_the_activity_offers_is_graded(
     student: TestClient, db: Session, activity: tuple[str, Any, Any], submitted: Any
 ) -> None:
-    """At the limits, or empty, an answer is still an answer (FR-2.7): graded, wrong, stored."""
     activity_id = make(db, *activity)
     response = student.post(
         f"/api/activities/{activity_id}/attempts", json={"submitted": submitted}

@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from support import complete_modules_before
+from support import complete_modules_before, wrong_answer
 
 from app.models import Activity, Attempt, HintView, ObjectiveResult, Segment, User
 from app.schemas.graphs import GraphScenarioOut
@@ -709,17 +709,8 @@ def test_hint_3_on_a_fresh_item_makes_it_met_with_support(
 
 
 def wrong_submission(activity: Activity) -> dict[str, Any]:
-    """An answer to any committed item that gets every part wrong."""
-    wrong: dict[str, dict[str, Any]] = {
-        "multiple_choice": {"selected": "not-an-option"},
-        "matching": {"pairs": {}},
-        "parsons": {"order": []},
-        "fix_the_bug": {"order": []},
-        "fill_in": {"answers": {}},
-        "choose_tests": {"selected": []},
-        "trace": {"rows": []},
-    }
-    return wrong[activity.kind]
+    """An answer to any committed item that gets it wrong (tests/support.py)."""
+    return wrong_answer(activity)
 
 
 def test_every_committed_objective_has_a_review_path_that_teaches_then_tests() -> None:

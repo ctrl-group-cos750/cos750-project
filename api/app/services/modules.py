@@ -33,6 +33,7 @@ from app.schemas.modules import (
     RetrievalActivityOut,
     SegmentOut,
 )
+from app.services.locks import lock_student
 
 # Activity kinds the web can't show a student yet: it says "This activity kind is not available
 # yet" instead (SUPPORTED in web/src/features/activities/ActivityRenderer.tsx is the mirror of
@@ -334,6 +335,7 @@ def save_position(
     (FR-2.4), unless the module is already complete: a student who finished it before its
     questions were added can still go back over it.
     """
+    lock_student(session, user_id)  # a double-clicked Next must not insert progress twice (#138)
     status = _status(session, user_id, module_id)
     if status == "locked":
         raise ModuleLocked(module_id)

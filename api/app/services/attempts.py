@@ -13,6 +13,7 @@ from app.models import Activity, Attempt, Hint, HintView
 from app.schemas.activities import CheckResult
 from app.services.checking import check_activity
 from app.services.events import log_event
+from app.services.locks import lock_student
 from app.services.mastery import counts, recompute
 from app.services.rewards import on_attempt
 
@@ -33,6 +34,7 @@ def record_attempt(
     """Grade `submitted` by comparison with the stored solution and add the attempt, any points it
     earns and, for a mastery item, the student's objective results to the session (not committed). Raises pydantic's ValidationError if `submitted` is not in the kind's shape."""
     result = check_activity(activity.kind, activity.config, activity.solution, submitted)
+    lock_student(session, user_id)  # before any insert: see app/services/locks.py (#138)
     attempt = Attempt(
         user_id=user_id,
         activity_id=activity.id,
@@ -55,6 +57,7 @@ def reveal_next_hint(
 ) -> tuple[Hint, Hint | None] | None:
     """Record that this student was shown their next hint level (not committed). Returns that hint
     and the one after it (None if it was the last), or None if every level has been shown."""
+    lock_student(session, user_id)  # two requests at once must not reveal one level twice (#138)
     hints = session.scalars(
         select(Hint).where(Hint.activity_id == activity.id).order_by(Hint.level)
     ).all()

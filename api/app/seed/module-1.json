@@ -39,7 +39,7 @@
           "id": 105,
           "kind": "worked_example",
           "title": "Worked example: reading a graph",
-          "body": "Here is how to read any graph. We'll use the campus graph.\n\n**Step 1. List the vertices.** Every circle is a vertex. The campus has 7: A, B, C, D, E, F, G.\n\n**Step 2. List the edges.** Every line is one edge, named by the two vertices it joins. Count each line once, even though it touches two vertices.\n\n| Edge | Joins |\n|---|---|\n| A–C | Admin block and Computer Science |\n| A–E | Admin block and Engineering |\n| B–C | Bookshop and Computer Science |\n| B–G | Bookshop and Green |\n| C–F | Computer Science and Fountain |\n| D–E | Dining hall and Engineering |\n| E–F | Engineering and Fountain |\n\n**Step 3. Find neighbours.** Two vertices are neighbours if an edge joins them. E's neighbours are A, D and F. D has only one neighbour: E.\n\n**Step 4. Check the direction.** These edges are plain lines, so you can walk them both ways. The graph is **undirected**. If the edges had arrows, it would be **directed**.\n\n**Result:** 7 vertices, 7 edges, undirected.",
+          "body": "Here is how to read any graph. We'll use the campus graph.\n\n**Step 1. List the vertices.** Every circle is a vertex. The campus has 7: A, B, C, D, E, F, G.\n\n**Step 2. List the edges.** Every line is one edge, named by the letters of the two vertices it joins. Count each line once, even though it touches two vertices. For example, the walkway between the Admin block (A) and Computer Science (C) is the edge A–C. The campus has 7 edges.\n\n**Step 3. Find neighbours.** Two vertices are neighbours if an edge joins them. E's neighbours are A, D and F. D has only one neighbour: E.\n\n**Step 4. Check the direction.** These edges are plain lines, so you can walk them both ways. The graph is **undirected**. If the edges had arrows, it would be **directed**.\n\n**Result:** 7 vertices, 7 edges, undirected. Next, you name every walkway's edge yourself.",
           "skip_check_activity_id": 103
         },
         {
@@ -160,20 +160,20 @@
         ],
         "right": [
           {
-            "id": "d1",
-            "label": "A way to organise and store data so it can be used. Example: a queue."
-          },
-          {
-            "id": "d2",
-            "label": "A finite list of steps that solves a problem. Example: the steps for finding the largest number in a list."
-          },
-          {
             "id": "d3",
             "label": "A set of vertices joined by edges. Example: buildings joined by walkways."
           },
           {
+            "id": "d1",
+            "label": "A way to organise and store data so it can be used. Example: a queue."
+          },
+          {
             "id": "d4",
             "label": "Visiting the vertices of a graph by following its edges. Example: walking to every building along walkways."
+          },
+          {
+            "id": "d2",
+            "label": "A finite list of steps that solves a problem. Example: the steps for finding the largest number in a list."
           }
         ]
       },
@@ -221,16 +221,16 @@
         "prompt": "Already confident? This graph has vertices P, Q, R, S and edges P–Q, Q–R and Q–S. How many edges does it have, and which vertex has the most neighbours?",
         "options": [
           {
-            "id": "a",
-            "label": "3 edges; Q has the most neighbours"
-          },
-          {
             "id": "b",
             "label": "6 edges; Q has the most neighbours"
           },
           {
             "id": "c",
             "label": "3 edges; P has the most neighbours"
+          },
+          {
+            "id": "a",
+            "label": "3 edges; Q has the most neighbours"
           }
         ]
       },
@@ -372,8 +372,24 @@
         "prompt": "Now build the campus graph from the campus guide. Each building is a vertex: A Admin block, B Bookshop, C Computer Science, D Dining hall, E Engineering, F Fountain, G Green. Turn each walkway on the guide's list into its edge.",
         "left": [
           {
+            "id": "DE",
+            "label": "Walkway: Dining hall – Engineering"
+          },
+          {
+            "id": "BG",
+            "label": "Walkway: Bookshop – Green"
+          },
+          {
             "id": "AC",
             "label": "Walkway: Admin block – Computer Science"
+          },
+          {
+            "id": "EF",
+            "label": "Walkway: Engineering – Fountain"
+          },
+          {
+            "id": "CF",
+            "label": "Walkway: Computer Science – Fountain"
           },
           {
             "id": "AE",
@@ -382,22 +398,6 @@
           {
             "id": "BC",
             "label": "Walkway: Bookshop – Computer Science"
-          },
-          {
-            "id": "BG",
-            "label": "Walkway: Bookshop – Green"
-          },
-          {
-            "id": "CF",
-            "label": "Walkway: Computer Science – Fountain"
-          },
-          {
-            "id": "DE",
-            "label": "Walkway: Dining hall – Engineering"
-          },
-          {
-            "id": "EF",
-            "label": "Walkway: Engineering – Fountain"
           }
         ],
         "right": [
@@ -458,13 +458,13 @@
           "EF": "EF"
         },
         "feedback": {
-          "AC": "Check the walkway between the Admin block and the Computer Science. A walkway is one edge, named by the letters of the two buildings it joins: the Admin block is A and the Computer Science is C. Look up both letters, then find that edge.",
-          "AE": "Check the walkway between the Admin block and the Engineering. A walkway is one edge, named by the letters of the two buildings it joins: the Admin block is A and the Engineering is E. Look up both letters, then find that edge.",
-          "BC": "Check the walkway between the Bookshop and the Computer Science. A walkway is one edge, named by the letters of the two buildings it joins: the Bookshop is B and the Computer Science is C. Look up both letters, then find that edge.",
-          "BG": "Check the walkway between the Bookshop and the Green. A walkway is one edge, named by the letters of the two buildings it joins: the Bookshop is B and the Green is G. Look up both letters, then find that edge.",
-          "CF": "Check the walkway between the Computer Science and the Fountain. A walkway is one edge, named by the letters of the two buildings it joins: the Computer Science is C and the Fountain is F. Look up both letters, then find that edge.",
-          "DE": "Check the walkway between the Dining hall and the Engineering. A walkway is one edge, named by the letters of the two buildings it joins: the Dining hall is D and the Engineering is E. Look up both letters, then find that edge.",
-          "EF": "Check the walkway between the Engineering and the Fountain. A walkway is one edge, named by the letters of the two buildings it joins: the Engineering is E and the Fountain is F. Look up both letters, then find that edge."
+          "AC": "Check the walkway between the Admin block and Computer Science. A walkway is one edge, named by the letters of the two buildings it joins. Look up both buildings' letters in the campus key, then find that edge.",
+          "AE": "Check the walkway between the Admin block and Engineering. A walkway is one edge, named by the letters of the two buildings it joins. Look up both buildings' letters in the campus key, then find that edge.",
+          "BC": "Check the walkway between the Bookshop and Computer Science. A walkway is one edge, named by the letters of the two buildings it joins. Look up both buildings' letters in the campus key, then find that edge.",
+          "BG": "Check the walkway between the Bookshop and the Green. A walkway is one edge, named by the letters of the two buildings it joins. Look up both buildings' letters in the campus key, then find that edge.",
+          "CF": "Check the walkway between Computer Science and the Fountain. A walkway is one edge, named by the letters of the two buildings it joins. Look up both buildings' letters in the campus key, then find that edge.",
+          "DE": "Check the walkway between the Dining hall and Engineering. A walkway is one edge, named by the letters of the two buildings it joins. Look up both buildings' letters in the campus key, then find that edge.",
+          "EF": "Check the walkway between Engineering and the Fountain. A walkway is one edge, named by the letters of the two buildings it joins. Look up both buildings' letters in the campus key, then find that edge."
         }
       },
       "hints": [
@@ -586,24 +586,24 @@
         ],
         "right": [
           {
-            "id": "r1",
-            "label": "Vertices: stations. Edges: tracks. Undirected."
-          },
-          {
-            "id": "r2",
-            "label": "Vertices: accounts. Edges: follows. Directed."
-          },
-          {
             "id": "r3",
             "label": "Vertices: pages. Edges: links. Directed."
+          },
+          {
+            "id": "r5",
+            "label": "Vertices: tracks. Edges: stations. Undirected."
+          },
+          {
+            "id": "r1",
+            "label": "Vertices: stations. Edges: tracks. Undirected."
           },
           {
             "id": "r4",
             "label": "Vertices: classmates. Edges: handshakes. Undirected."
           },
           {
-            "id": "r5",
-            "label": "Vertices: tracks. Edges: stations. Undirected."
+            "id": "r2",
+            "label": "Vertices: accounts. Edges: follows. Directed."
           }
         ]
       },

@@ -39,6 +39,11 @@ export type Achievement = {
   objective?: number
   /** What the badge means, in words that praise the skill or the strategy, not the student. */
   description: string
+  /**
+   * False while the course has nothing that earns it, so the shelf doesn't ask for it. Shortcut
+   * Finder waits on objective 8, which the course doesn't assess yet (#70).
+   */
+  offered?: boolean
 }
 
 export const ACHIEVEMENTS: readonly Achievement[] = [
@@ -107,6 +112,7 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     glyph: 'shortcut-finder',
     objective: 8,
     description: 'You used BFS to find the shortest route, and can say why it is the shortest.',
+    offered: false,
   },
   {
     id: 'ready-for-lecture',

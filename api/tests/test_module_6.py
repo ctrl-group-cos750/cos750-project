@@ -274,7 +274,7 @@ def test_the_right_option_is_not_always_in_the_same_place() -> None:
         for a in EVERY
         if a.kind == "multiple_choice"
     )
-    assert len(places) == 3
+    assert len(places) >= 3  # objective 3's items have four options
     assert max(places.values()) <= 0.5 * sum(places.values())
 
 
@@ -331,22 +331,85 @@ def test_objective_2_has_three_labelling_items_and_one_classifying_item_in_each_
     assert len(CLASSIFYING) == 2
 
 
+NAMED = re.compile(r"(?:are|,|and|:)\s+(?:the\s+)?([^,():.]+?) \(([A-Z])\)")
+
+
+def named_part(prompt: str, marker: str) -> str:
+    """The part a marker describes, worked out from the names and edges the prompt lists. A marker
+    names a thing or what joins two things, as practice item 104 does, but how many places it
+    names doesn't say whether the answer is a vertex or an edge (#147): "the tap between the
+    kitchen tap and the lawn tap" is a vertex, "what carries water to the shed tap" an edge."""
+    letters = {name.lower(): letter for name, letter in NAMED.findall(prompt)}
+    edges = {(u, arrow, v) for u, arrow, v in EDGE.findall(prompt)}
+    directed = any(arrow == "→" for _, arrow, _ in edges)
+
+    def letter(name: str) -> str:
+        return str(letters[name.lower().removeprefix("the ").strip()])
+
+    def touching(x: str) -> set[tuple[str, str, str]]:
+        return {e for e in edges if x in (e[0], e[2])}
+
+    def neighbours(x: str) -> set[str]:
+        return {v if u == x else u for u, _, v in touching(x)}
+
+    def edge(e: tuple[str, str, str]) -> str:
+        u, arrow, v = e
+        return f"Edge {u} → {v}" if arrow == "→" else f"Edge {u}{DASH}{v}"
+
+    def only(found: set[Any]) -> Any:
+        assert len(found) == 1, (marker, found)  # the marker picks out exactly one part
+        return next(iter(found))
+
+    text = marker.split(": ", 1)[1]
+    if m := re.fullmatch(r"(?:what takes you one way|the road) from (.+) to (.+)", text):
+        u, v = (letter(x) for x in m.groups())
+        assert (u, "→", v) in edges, marker
+        return f"Edge {u} → {v}"
+    if m := re.fullmatch(
+        r"(?:what joins|the \w+ between|the \w+ from) (.+?) (?:and|to) (.+)", text
+    ):
+        u, v = (letter(x) for x in m.groups())
+        if (u, DASH, v) in edges or (v, DASH, u) in edges:
+            return f"Edge {u}{DASH}{v}"
+        return f"Vertex {only(neighbours(u) & neighbours(v))}"  # the tap between two taps
+    if m := re.fullmatch(r"what the (.+)'s and the (.+)'s \w+ both lead to", text):
+        u, v = (letter(x) for x in m.groups())
+        return f"Vertex {only(neighbours(u) & neighbours(v))}"
+    if m := re.fullmatch(r"what (?:carries water to|buses drive along to reach) (.+)", text):
+        return edge(only(touching(letter(m.group(1)))))
+    if m := re.fullmatch(r"(?:what you|the \w+ you) drive along to leave (.+)", text):
+        x = letter(m.group(1))
+        assert directed
+        return edge(only({e for e in edges if e[0] == x}))
+    if m := re.fullmatch(r"what you reach after driving on from (.+)", text):
+        x = letter(m.group(1))
+        return f"Vertex {only({e[2] for e in edges if e[0] == x})}"
+    if m := re.fullmatch(r"the \w+ with a single \w+, which goes to (.+)", text):
+        x = letter(m.group(1))
+        return f"Vertex {only({y for y in set(letters.values()) if neighbours(y) == {x}})}"
+    return f"Vertex {letter(text)}"
+
+
+def same_part(a: str, b: str) -> bool:
+    """An undirected edge is the same edge whichever end is named first."""
+    if DASH in a and DASH in b:
+        return set(a.removeprefix("Edge ").split(DASH)) == set(b.removeprefix("Edge ").split(DASH))
+    return a == b
+
+
 @pytest.mark.parametrize("a", LABELLING, ids=lambda a: str(a.id))
-def test_each_label_names_a_part_of_the_graph_the_prompt_describes(a: ActivityFixture) -> None:
-    edges = {(u, arrow, v) for u, arrow, v in EDGE.findall(a.config["prompt"])}
-    directed = {arrow for _, arrow, _ in edges} == {"→"}
+def test_each_marker_names_the_part_its_answer_names(a: ActivityFixture) -> None:
+    prompt = a.config["prompt"]
+    assert {arrow for _, arrow, _ in EDGE.findall(prompt)} in ({DASH}, {"→"})
     for item in a.config["left"]:
-        label = right_label(a, item["id"])
-        letters = re.findall(r"\b[A-Z]\b", item["label"].split(": ", 1)[1])
-        if label.startswith("Vertex"):
-            assert letters == [label.split()[-1]], item["label"]
-        else:
-            u, v = re.findall(r"[A-Z]", label.split(" ", 1)[1])
-            assert letters == [u, v], item["label"]  # named the way the marker reads
-            if directed:
-                assert (u, "→", v) in edges  # in the arrow's direction
-            else:
-                assert (u, DASH, v) in edges or (v, DASH, u) in edges
+        answer = right_label(a, item["id"])
+        assert same_part(answer, named_part(prompt, item["label"])), item["label"]
+        # A marker gives no letter, and no "vertex"/"edge" word: the student works both out (#147).
+        marker = item["label"].split(": ", 1)[1]
+        assert not re.search(r"\b[A-Z]\b", marker), marker
+        assert not re.search(r"vertex|edge", marker), marker
+        assert "n't" not in marker  # no negation puzzles
+        assert " not " not in marker
     # The answer hint says the same.
     for item in a.config["left"]:
         assert f"{item['id']} = {right_label(a, item['id'])}" in a.hints[-1].body
@@ -443,7 +506,9 @@ def test_an_ordered_item_accepts_exactly_the_working_orders(a: ActivityFixture) 
 
 # A correction that is harmless once the real bug is fixed: the program runs, but the line it
 # replaces was never faulty, so fix the bug marks it "did not need a correction" (flagged on #145).
-HARMLESS = {1703: [(1, 2, 20, 4, 5, 6, 7, 8, 9, 22, 11, 12, 13)]}
+# None is left: 1703's correction 22 (`and n != v`) is retired and replaced by one that breaks BFS
+# (#147).
+HARMLESS: dict[int, list[tuple[int, ...]]] = {}
 
 
 @pytest.mark.parametrize(
@@ -534,6 +599,19 @@ def test_each_wrong_correction_leaves_bfs_broken(a: ActivityFixture) -> None:
         for right in used:
             swapped = [wrong["id"] if i == right["id"] else i for i in order]
             assert not passes_hidden(lines_text(a, swapped)), (wrong["text"], right["text"])
+
+
+@pytest.mark.parametrize("a", FIXES, ids=lambda a: str(a.id))
+def test_a_wrong_correction_in_place_of_any_one_line_breaks_bfs(a: ActivityFixture) -> None:
+    """A wrong correction is a real mistake: put in place of any one line of the fixed program, BFS
+    fails a hidden test (1703's "and n != v" passed them all, #147). It is not true of every
+    arrangement: a wrong line added as a dead assignment, or with other lines moved, can still run
+    like BFS. The grader marks those wrong because they aren't the fix the item asks for."""
+    order = [i for x in a.solution["order"] for i in (x if isinstance(x, list) else [x])]
+    for wrong in (c for c in a.config["corrections"] if c["id"] not in order):
+        for place in range(len(order)):
+            changed = [*order[:place], wrong["id"], *order[place + 1 :]]
+            assert not passes_hidden(lines_text(a, changed)), (wrong["text"], place)
 
 
 @pytest.mark.parametrize("a", CHOICES, ids=lambda a: str(a.id))

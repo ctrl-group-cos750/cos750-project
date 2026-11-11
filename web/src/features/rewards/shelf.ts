@@ -54,6 +54,7 @@ function item(achievement: Achievement, earned?: EarnedBadge): ShelfItem {
  * Every badge the student can see, earned or not, grouped for the shelf. Unearned badges show how
  * to earn them, so the shelf doubles as a map of the objectives; the hidden one stays a "?".
  * Quests get one badge each, so there is one card per quest finished, or a single locked one.
+ * A badge the course can't award yet (`offered: false`) is left off unless the student has it.
  */
 export function buildShelf(earned: EarnedBadge[]) {
   const held = (id: string) => earned.filter((e) => e.badge === id)
@@ -65,6 +66,7 @@ export function buildShelf(earned: EarnedBadge[]) {
   }
   for (const achievement of ACHIEVEMENTS) {
     const mine = held(achievement.id)
+    if (achievement.offered === false && mine.length === 0) continue
     const items = mine.length > 0 ? mine.map((e) => item(achievement, e)) : [item(achievement)]
     groups[achievement.kind].push(...items)
   }

@@ -1,0 +1,503 @@
+{
+ "note": "Staging's texts (fe0d6ab) per activity and id: multiple-choice options and fix-the-bug corrections (options), and matching items' left and right entries. tests/test_content_cues.py compares today's text with these, so a same-id change of meaning fails unless the id is retired or the change is listed as wording-only.",
+ "options": {
+  "1": {
+   "a": "Ama",
+   "b": "Cebo",
+   "c": "Ben"
+  },
+  "2": {
+   "a": "\"C\"",
+   "b": "\"B\"",
+   "c": "[\"B\", \"C\"]"
+  },
+  "3": {
+   "a": "B then C then D, one per line",
+   "b": "x three times",
+   "c": "[\"B\", \"C\", \"D\"] on one line"
+  },
+  "101": {
+   "2": "2",
+   "3": "3",
+   "4": "4",
+   "7": "7"
+  },
+  "103": {
+   "a": "3 edges; Q has the most neighbours",
+   "b": "6 edges; Q has the most neighbours",
+   "c": "3 edges; P has the most neighbours"
+  },
+  "201": {
+   "a": "B, C",
+   "b": "A, B",
+   "c": "A, B, C",
+   "d": "C"
+  },
+  "202": {
+   "a": "A, D and F",
+   "b": "D only",
+   "c": "A, C, D and F"
+  },
+  "203": {
+   "a": "{\"P\": [\"Q\"], \"Q\": [\"P\", \"R\"], \"R\": [\"Q\"]}",
+   "b": "{\"P\": [\"Q\"], \"Q\": [\"R\"], \"R\": []}",
+   "c": "{\"P\": [\"Q\"], \"Q\": [\"R\"]}"
+  },
+  "208": {
+   "a": "[\"G\"]",
+   "b": "[\"A\", \"G\"]",
+   "c": "[]",
+   "d": "[\"A\"]"
+  },
+  "311": {
+   "a": "An undirected graph",
+   "b": "A directed graph",
+   "c": "It is not a graph, because walkways have different lengths"
+  },
+  "312": {
+   "a": "`{\"A\": [\"C\"], \"C\": [\"A\"]}`",
+   "b": "`{\"A\": [\"C\"], \"C\": []}`",
+   "c": "`{\"A\": \"C\"}`"
+  },
+  "314": {
+   "a": "E, B, F",
+   "b": "B, F, E",
+   "c": "B, E, F"
+  },
+  "316": {
+   "a": "3",
+   "b": "6",
+   "c": "2"
+  },
+  "401": {
+   "a": "A, C, E, B, F, D, G",
+   "b": "A, B, C, D, E, F, G",
+   "c": "A, C, B, G, F, E, D"
+  },
+  "402": {
+   "a": "[\"A\", \"B\", \"F\"]",
+   "b": "[\"F\"]",
+   "c": "[\"A\", \"B\", \"E\", \"F\"]"
+  },
+  "403": {
+   "a": "[\"W\", \"X\", \"Z\", \"Y\"]",
+   "b": "[\"W\", \"X\", \"Y\", \"Z\"]",
+   "c": "[\"W\", \"X\", \"Z\", \"Y\", \"Y\"]"
+  },
+  "407": {
+   "a": "[\"D\", \"G\", \"A\"]",
+   "b": "[\"D\", \"A\", \"G\"]",
+   "c": "[\"D\", \"G\"]"
+  },
+  "501": {
+   "enqueue": "When it joins the queue",
+   "dequeue": "Only when it leaves the queue",
+   "finish": "After the whole traversal finishes"
+  },
+  "601": {
+   "a": "A Python dictionary that maps each vertex to its neighbours",
+   "b": "The steps BFS follows to visit every vertex",
+   "c": "Visiting every page of a website by following links"
+  },
+  "602": {
+   "a": "A queue of students waiting at the library desk",
+   "b": "A list of steps for finding the largest mark in a class list",
+   "c": "A map of the stations on a train line"
+  },
+  "604": {
+   "a": "Drawing a graph on paper",
+   "b": "Adding vertices and edges to a graph",
+   "c": "Visiting the vertices of a graph by following its edges"
+  },
+  "605": {
+   "a": "BFS is an algorithm that traverses a graph, which is a data structure.",
+   "b": "BFS is a data structure that stores a graph.",
+   "c": "A graph is an algorithm, and BFS is the data it uses."
+  },
+  "610": {
+   "a": "Vertices: airports. Edges: flight routes. Undirected.",
+   "b": "Vertices: airports. Edges: flight routes. Directed.",
+   "c": "Vertices: flight routes. Edges: airports. Directed."
+  },
+  "611": {
+   "a": "Vertices: substations. Edges: power lines. Directed.",
+   "b": "Vertices: power lines. Edges: substations. Undirected.",
+   "c": "Vertices: substations. Edges: power lines. Undirected."
+  },
+  "612": {
+   "a": "Vertices: modules. Edges: “must pass first” links. Directed.",
+   "b": "Vertices: modules. Edges: “must pass first” links. Undirected.",
+   "c": "Vertices: “must pass first” links. Edges: modules. Directed."
+  },
+  "613": {
+   "a": "Vertices: students. Edges: shared desks. Directed.",
+   "b": "Vertices: students. Edges: shared desks. Undirected.",
+   "c": "Vertices: shared desks. Edges: students. Undirected."
+  },
+  "614": {
+   "a": "Yes. BFS sorts the stations alphabetically.",
+   "b": "No. BFS can only be used on maps of buildings.",
+   "c": "Yes. BFS reaches each vertex by the fewest edges from the start."
+  },
+  "615": {
+   "a": "No. BFS counts edges, not prices. The fewest flights isn't always the cheapest.",
+   "b": "Yes. BFS finds the fewest flights, which is always the cheapest.",
+   "c": "No. BFS can't be used on flights at all."
+  },
+  "616": {
+   "a": "No. BFS only finds one path.",
+   "b": "Yes. A traversal visits everything reachable from the start, so any computer it misses can't be reached.",
+   "c": "Yes. BFS counts how many computers there are."
+  },
+  "617": {
+   "a": "Yes. BFS visits every student.",
+   "b": "Yes. BFS uses a queue, which can hold marks.",
+   "c": "No. There are no connections to follow, so it isn't a graph problem."
+  },
+  "621": {
+   "20": "    visited = {start}",
+   "21": "                visited.add(n)",
+   "22": "    visited = []",
+   "23": "                order.append(n)"
+  },
+  "622": {
+   "20": "        v = queue.popleft()",
+   "21": "        v = queue.pop(0)",
+   "22": "        v = queue[0]"
+  },
+  "625": {
+   "cycle": "A graph containing a cycle",
+   "single": "A graph with one vertex and no edges",
+   "line": "A straight path with no branches"
+  },
+  "1101": {
+   "a": "The queue is the data structure; removing finished tasks one by one is the algorithm.",
+   "b": "The function is the data structure; the queue is the algorithm.",
+   "c": "They're both algorithms."
+  },
+  "1102": {
+   "a": "The steps for sorting names alphabetically",
+   "b": "A list of the names of everyone in a tutorial group",
+   "c": "Walking to every shop in a mall along its corridors"
+  },
+  "1103": {
+   "a": "A dictionary mapping words to meanings",
+   "b": "A network of roads between towns",
+   "c": "The steps for checking whether a word is in a dictionary"
+  },
+  "1105": {
+   "a": "A set of vertices joined by edges",
+   "b": "A list of steps for visiting places",
+   "c": "A chart with an x-axis and a y-axis"
+  },
+  "1106": {
+   "a": "A queue is an algorithm; BFS is a data structure.",
+   "b": "A queue is a data structure; BFS is an algorithm that uses it.",
+   "c": "Both a queue and BFS are data structures."
+  },
+  "1201": {
+   "a": "Undirected: you can go both ways between A and B.",
+   "b": "Neither: a graph needs at least three vertices.",
+   "c": "Directed: it has two separate one-way edges."
+  },
+  "1301": {
+   "a": "Vertices: students. Edges: emails. Directed, because an email goes from one student to another.",
+   "b": "Vertices: emails. Edges: students. Directed.",
+   "c": "Vertices: students. Edges: emails. Undirected."
+  },
+  "1302": {
+   "a": "Vertices: intersections. Edges: one-way streets. Undirected.",
+   "b": "Vertices: intersections. Edges: one-way streets. Directed.",
+   "c": "Vertices: one-way streets. Edges: intersections. Directed."
+  },
+  "1303": {
+   "a": "Vertices: cities. Edges: highways. Directed.",
+   "b": "Vertices: highways. Edges: cities. Undirected.",
+   "c": "Vertices: cities. Edges: highways. Undirected."
+  },
+  "1304": {
+   "a": "Vertices: steps. Edges: “comes before” links. Directed.",
+   "b": "Vertices: steps. Edges: “comes before” links. Undirected.",
+   "c": "Vertices: “comes before” links. Edges: steps. Directed."
+  },
+  "1305": {
+   "a": "Vertices: players. Edges: matches. Directed.",
+   "b": "Vertices: players. Edges: matches. Undirected.",
+   "c": "Vertices: matches. Edges: players. Undirected."
+  },
+  "1401": {
+   "a": "Finding the shortest route in kilometres, where roads have different lengths",
+   "b": "Adding up the prices on a till slip",
+   "c": "Finding the fewest bus changes between two stops"
+  },
+  "1402": {
+   "a": "Yes. BFS explores positions ring by ring, so the first time it reaches the solution, it has used the fewest moves.",
+   "b": "No. Puzzles can't be graphs.",
+   "c": "Yes. BFS tries the moves in alphabetical order."
+  },
+  "1403": {
+   "a": "Yes. BFS visits every town, so it finds the longest trip.",
+   "b": "No. BFS finds the fewest edges, not the most.",
+   "c": "No. BFS can't handle roads."
+  },
+  "1404": {
+   "a": "No. BFS only finds direct friends.",
+   "b": "Yes. BFS lists people alphabetically.",
+   "c": "Yes. BFS finds everyone one link away, then two links away, before going further."
+  },
+  "1405": {
+   "a": "No. Sorting a list has no edges to follow, so it isn't a traversal problem.",
+   "b": "Yes. BFS puts things in order.",
+   "c": "Yes. BFS uses a queue, which is ordered."
+  },
+  "1501": {
+   "a": "D, A, E",
+   "b": "D, E",
+   "c": "E, D"
+  },
+  "1601": {
+   "a": "order.append(n)",
+   "b": "v = queue.popleft()",
+   "c": "visited.add(n) and queue.append(n)"
+  },
+  "1701": {
+   "a": "On a triangle A–B, B–C, C–A: assert bfs(g, \"A\") == [\"A\", \"B\", \"C\"]",
+   "b": "On a single vertex A: assert bfs(g, \"A\") == [\"A\"]",
+   "c": "On a triangle: assert len(bfs(g, \"A\")) > 0"
+  },
+  "1702": {
+   "20": "            if n not in visited:",
+   "21": "            if n not in queue:",
+   "22": "            if n != v:"
+  },
+  "1703": {
+   "20": "    visited = {start}",
+   "21": "    visited = []",
+   "22": "            if n not in visited and n != v:"
+  }
+ },
+ "matching_left": {
+  "102": {
+   "t1": "Data structure",
+   "t2": "Algorithm",
+   "t3": "Graph",
+   "t4": "Graph traversal"
+  },
+  "104": {
+   "1": "The Park bus stop",
+   "2": "The road between the Quad and the Residence",
+   "3": "The Station bus stop",
+   "4": "The road between the Park and the Quad",
+   "5": "The road between the Residence and the Station"
+  },
+  "105": {
+   "AC": "Walkway: Admin block – Computer Science",
+   "AE": "Walkway: Admin block – Engineering",
+   "BC": "Walkway: Bookshop – Computer Science",
+   "BG": "Walkway: Bookshop – Green",
+   "CF": "Walkway: Computer Science – Fountain",
+   "DE": "Walkway: Dining hall – Engineering",
+   "EF": "Walkway: Engineering – Fountain"
+  },
+  "106": {
+   "friends": "Friendships at a residence. Vertices: Thandi (T), Sipho (S), Lerato (L). Edges: L–S, S–T, T–L.",
+   "follows": "Who follows whom online. Vertices: Ana (A), Ben (B), Cara (C). Edges: A → B, B → A, B → C.",
+   "route": "A delivery route. Vertices: the Warehouse (W), Shop X (X), Shop Y (Y). Edges: W → X, X → Y, Y → W.",
+   "roads": "Roads between towns. Vertices: Johannesburg (J), Pretoria (P), Soweto (S). Edges: J–P, J–S."
+  },
+  "107": {
+   "s1": "Gautrain stations and the tracks between them. Trains run both ways.",
+   "s2": "Instagram accounts and who follows whom.",
+   "s3": "Web pages and the links from one page to another.",
+   "s4": "Classmates and who has shaken hands with whom."
+  },
+  "204": {
+   "g1": "Graph 1. Vertices A, B, C. Edges: A–B, B–C.",
+   "g2": "Graph 2 (directed). Vertices A, B, C. Edges: A → B, B → C.",
+   "g3": "Graph 3. Vertices A, B, C. Edges: A–B, A–C, B–C."
+  },
+  "313": {
+   "s1": "Find the route between two stations on the Gautrain map with the fewest stops.",
+   "s2": "List everyone who is a friend, or a friend of a friend, of Thandi on a social network.",
+   "s3": "Add up the prices of all items in a shopping list."
+  },
+  "603": {
+   "t1": "Graph",
+   "t2": "Graph traversal"
+  },
+  "606": {
+   "1": "Marker 1: tap Q",
+   "2": "Marker 2: the hose between taps P and Q",
+   "3": "Marker 3: the hose between taps R and S"
+  },
+  "607": {
+   "1": "Marker 1: the doorway between rooms K and M",
+   "2": "Marker 2: room N",
+   "3": "Marker 3: the doorway between rooms L and N"
+  },
+  "608": {
+   "1": "Marker 1: the one-way road from stop X to stop Y",
+   "2": "Marker 2: stop Z",
+   "3": "Marker 3: the one-way road from stop Y to stop Z"
+  },
+  "609": {
+   "phone-calls": "Phone calls (who called whom). Vertices: Amo (A), Bongi (B), Chris (C). Edges: A → B, C → B.",
+   "shared-walls-between-houses": "Shared walls between houses. Vertices: House 1 (H), House 2 (I), House 3 (J). Edges: H–I, I–J.",
+   "module-prerequisites": "Module prerequisites. Vertices: COS132 (P), COS110 (Q), COS212 (R). Edges: P → Q, Q → R.",
+   "two-way-radio-links": "Two-way radio links. Vertices: Tower (T), Unit 1 (U), Unit 2 (V). Edges: T–U, T–V, U–V."
+  },
+  "1104": {
+   "t1": "Data structure",
+   "t2": "Graph traversal"
+  },
+  "1202": {
+   "1": "Marker 1: the road between stops A and C",
+   "2": "Marker 2: bus stop B",
+   "3": "Marker 3: the road between stops C and D"
+  },
+  "1203": {
+   "1": "Marker 1: computer E",
+   "2": "Marker 2: the cable between computers F and G",
+   "3": "Marker 3: the cable between computers E and G"
+  },
+  "1204": {
+   "1": "Marker 1: the one-way street from corner S to corner T",
+   "2": "Marker 2: corner U",
+   "3": "Marker 3: the one-way street from corner R to corner S"
+  },
+  "1205": {
+   "emails": "Emails (who sent to whom). Vertices: Dineo (D), Ethan (E), Fatima (F). Edges: D → E, E → F, F → D.",
+   "train-tracks-between-stations": "Train tracks between stations. Vertices: Kempton (K), Marlboro (M), Sandton (S). Edges: K–M, M–S.",
+   "teammates-in-a-project": "Teammates in a project. Vertices: Lindi (L), Neo (N), Omar (O). Edges: L–N, N–O, L–O.",
+   "a-tournament": "A tournament (who beat whom). Vertices: Wits (W), Tuks (X), UJ (Y). Edges: X → W, W → Y, X → Y."
+  }
+ },
+ "matching_right": {
+  "102": {
+   "d1": "A way to organise and store data so it can be used. Example: a queue.",
+   "d2": "A finite list of steps that solves a problem. Example: the steps for finding the largest number in a list.",
+   "d3": "A set of vertices joined by edges. Example: buildings joined by walkways.",
+   "d4": "Visiting the vertices of a graph by following its edges. Example: walking to every building along walkways."
+  },
+  "104": {
+   "vP": "Vertex P",
+   "vQ": "Vertex Q",
+   "vR": "Vertex R",
+   "vS": "Vertex S",
+   "ePQ": "Edge P–Q",
+   "eQR": "Edge Q–R",
+   "eQS": "Edge Q–S",
+   "eRS": "Edge R–S"
+  },
+  "105": {
+   "AB": "Edge A–B",
+   "AC": "Edge A–C",
+   "AE": "Edge A–E",
+   "BC": "Edge B–C",
+   "BG": "Edge B–G",
+   "CE": "Edge C–E",
+   "CF": "Edge C–F",
+   "DE": "Edge D–E",
+   "DF": "Edge D–F",
+   "EF": "Edge E–F",
+   "FG": "Edge F–G"
+  },
+  "106": {
+   "directed": "Directed",
+   "undirected": "Undirected"
+  },
+  "107": {
+   "r1": "Vertices: stations. Edges: tracks. Undirected.",
+   "r2": "Vertices: accounts. Edges: follows. Directed.",
+   "r3": "Vertices: pages. Edges: links. Directed.",
+   "r4": "Vertices: classmates. Edges: handshakes. Undirected.",
+   "r5": "Vertices: tracks. Edges: stations. Undirected."
+  },
+  "204": {
+   "r1": "{\"A\": [\"B\"], \"B\": [\"A\", \"C\"], \"C\": [\"B\"]}",
+   "r2": "{\"A\": [\"B\"], \"B\": [\"C\"], \"C\": []}",
+   "r3": "{\"A\": [\"B\", \"C\"], \"B\": [\"A\", \"C\"], \"C\": [\"A\", \"B\"]}",
+   "r4": "{\"A\": [\"B\"], \"B\": [\"C\"], \"C\": [\"A\"]}"
+  },
+  "313": {
+   "r1": "Good fit: BFS reaches vertices in order of the fewest edges from the start.",
+   "r2": "Good fit: BFS explores one ring of neighbours at a time, so it finds everyone within two steps first.",
+   "r3": "Not a fit: there are no connections to follow, so this is not a graph problem."
+  },
+  "603": {
+   "e1": "A family tree showing who is a parent of whom",
+   "e2": "Checking every room in a building by walking through its doors",
+   "e3": "A stack of plates"
+  },
+  "606": {
+   "vP": "Vertex P",
+   "vQ": "Vertex Q",
+   "vR": "Vertex R",
+   "vS": "Vertex S",
+   "ePQ": "Edge P–Q",
+   "eQR": "Edge Q–R",
+   "eRS": "Edge R–S"
+  },
+  "607": {
+   "vK": "Vertex K",
+   "vL": "Vertex L",
+   "vM": "Vertex M",
+   "vN": "Vertex N",
+   "eKL": "Edge K–L",
+   "eKM": "Edge K–M",
+   "eLN": "Edge L–N",
+   "eMN": "Edge M–N"
+  },
+  "608": {
+   "vX": "Vertex X",
+   "vY": "Vertex Y",
+   "vZ": "Vertex Z",
+   "eXY": "Edge X → Y",
+   "eYZ": "Edge Y → Z",
+   "eYX": "Edge Y → X",
+   "eZY": "Edge Z → Y"
+  },
+  "609": {
+   "directed": "Directed",
+   "undirected": "Undirected"
+  },
+  "1104": {
+   "e1": "A queue of print jobs",
+   "e2": "Finding every friend-of-a-friend by following friend links",
+   "e3": "A recipe for pancakes"
+  },
+  "1202": {
+   "vA": "Vertex A",
+   "vB": "Vertex B",
+   "vC": "Vertex C",
+   "vD": "Vertex D",
+   "eAB": "Edge A–B",
+   "eAC": "Edge A–C",
+   "eCD": "Edge C–D"
+  },
+  "1203": {
+   "vE": "Vertex E",
+   "vF": "Vertex F",
+   "vG": "Vertex G",
+   "eEF": "Edge E–F",
+   "eFG": "Edge F–G",
+   "eEG": "Edge E–G"
+  },
+  "1204": {
+   "vR": "Vertex R",
+   "vS": "Vertex S",
+   "vT": "Vertex T",
+   "vU": "Vertex U",
+   "eRS": "Edge R → S",
+   "eST": "Edge S → T",
+   "eTU": "Edge T → U",
+   "eSR": "Edge S → R",
+   "eTS": "Edge T → S",
+   "eUT": "Edge U → T"
+  },
+  "1205": {
+   "directed": "Directed",
+   "undirected": "Undirected"
+  }
+ }
+}

@@ -506,7 +506,9 @@ def test_an_ordered_item_accepts_exactly_the_working_orders(a: ActivityFixture) 
 
 # A correction that is harmless once the real bug is fixed: the program runs, but the line it
 # replaces was never faulty, so fix the bug marks it "did not need a correction" (flagged on #145).
-HARMLESS = {1703: [(1, 2, 20, 4, 5, 6, 7, 8, 9, 22, 11, 12, 13)]}
+# None is left: 1703's correction 22 (`and n != v`) is retired and replaced by one that breaks BFS
+# (#147).
+HARMLESS: dict[int, list[tuple[int, ...]]] = {}
 
 
 @pytest.mark.parametrize(

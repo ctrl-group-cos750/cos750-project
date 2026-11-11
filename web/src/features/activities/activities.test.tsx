@@ -685,6 +685,24 @@ describe('focus in the hint ladder (WCAG 2.4.3, #142 review)', () => {
     expect(document.activeElement).not.toBe(document.body)
   })
 
+  it('stays in the tab order while an answer is checked, but ignores presses', async () => {
+    const user = userEvent.setup()
+    const requestHint = vi.fn<(id: number) => Promise<Hint>>()
+    render(
+      <HintLadder
+        activityId={7}
+        disabled
+        loadHints={vi.fn<(id: number) => Promise<readonly Hint[]>>().mockResolvedValue([])}
+        requestHint={requestHint}
+      />,
+    )
+    const button = await screen.findByRole('button', { name: 'Show next hint' })
+    expect(button).toBeEnabled()
+    expect(button).toHaveAttribute('aria-disabled', 'true')
+    await user.click(button)
+    expect(requestHint).not.toHaveBeenCalled()
+  })
+
   it('keeps focus on the button when a hint can’t be loaded', async () => {
     const user = userEvent.setup()
     render(

@@ -67,7 +67,8 @@ export function HintLadder({
   const hasMore = !loadFailed && !loadingInitial && (lastHint?.hasMore ?? true)
 
   async function showNextHint() {
-    if (loading) return // aria-disabled while loading: the button can be pressed, but does nothing
+    // aria-disabled while a hint loads or an answer is checked: the press does nothing
+    if (loading || disabled) return
     if (lastHint?.nextCountsAsSupport && lastHint.level < 3 && !confirmingSupport) {
       setConfirmingSupport(true)
       return
@@ -111,7 +112,9 @@ export function HintLadder({
           <Button
             variant="secondary"
             onClick={() => void showNextHint()}
-            disabled={disabled}
+            // aria-disabled, not disabled, while an answer is checked: it stays in the tab order,
+            // so Tab from a busy "Check answer" still lands here, not off the end of the page.
+            aria-disabled={disabled || undefined}
             // Spinner and aria-busy while the hint loads, but still focusable (not disabled), so
             // focus isn't dropped on the page; presses are ignored meanwhile.
             loading={loading}

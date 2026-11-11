@@ -638,7 +638,7 @@
           },
           {
             "id": "2",
-            "label": "Marker 2: the stop whose one road goes directly to the library"
+            "label": "Marker 2: the stop with a single road, which goes to the library"
           },
           {
             "id": "3",
@@ -719,7 +719,7 @@
         "left": [
           {
             "id": "1",
-            "label": "Marker 1: what the laptop's and the printer's cables both lead to"
+            "label": "Marker 1: the server"
           },
           {
             "id": "2",
@@ -1238,7 +1238,7 @@
         "options": [
           {
             "id": "a",
-            "label": "Finding the fewest kilometres between two bus stops"
+            "label": "Finding the shortest road distance between two stops"
           },
           {
             "id": "b",
@@ -1292,7 +1292,7 @@
           },
           {
             "id": "a",
-            "label": "Yes. BFS explores all positions in rings, so it finds the fewest moves."
+            "label": "Yes. BFS explores the positions in rings, so it finds the fewest moves."
           },
           {
             "id": "e",
@@ -1322,7 +1322,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: Yes. BFS explores all positions in rings, so it finds the fewest moves."
+          "body": "Answer: Yes. BFS explores the positions in rings, so it finds the fewest moves."
         }
       ]
     },
@@ -1338,7 +1338,7 @@
         "options": [
           {
             "id": "a",
-            "label": "Yes. BFS reaches every town once, and that path is the longest trip between them."
+            "label": "Yes. BFS reaches every town once, so its path through them is the longest trip."
           },
           {
             "id": "e",
@@ -1391,20 +1391,20 @@
             "label": "Yes. BFS will follow one path of contacts to its end first, then the next one."
           },
           {
-            "id": "a",
+            "id": "f",
             "label": "No. BFS stops after the first ring of neighbours, so it never gets any further."
           },
           {
-            "id": "c",
-            "label": "Yes. BFS finds everyone in the first ring, then the second ring, before any further."
+            "id": "g",
+            "label": "Yes. BFS finds everyone in the first ring, then the second ring, before any further ring."
           }
         ]
       },
       "solution": {
-        "correct": "c",
+        "correct": "g",
         "feedback": {
           "h": "Not quite. That is depth-first: following one chain to its end can reach someone three contacts away before a contact of a contact. BFS finishes each ring first. Ask: does BFS go wide or deep?",
-          "a": "Not quite. BFS keeps going after the first ring: each contact who leaves the queue adds their own contacts to the back. Ask: what happens after the first ring?"
+          "f": "Not quite. BFS keeps going after the first ring: each contact who leaves the queue adds their own contacts to the back. Ask: what happens after the first ring?"
         }
       },
       "hints": [
@@ -1422,7 +1422,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: Yes. BFS finds everyone in the first ring, then the second ring, before any further."
+          "body": "Answer: Yes. BFS finds everyone in the first ring, then the second ring, before any further ring."
         }
       ]
     },
@@ -1442,11 +1442,11 @@
           },
           {
             "id": "b",
-            "label": "Yes. BFS returns each vertex it has visited in order, so it sorts the numbers."
+            "label": "Yes. BFS returns each visited vertex in order, so it automatically sorts the numbers."
           },
           {
             "id": "e",
-            "label": "Yes. A queue maintains every vertex in sequence, so BFS automatically sorts them."
+            "label": "Yes. A queue keeps its vertices in order, so BFS automatically sorts them."
           }
         ]
       },

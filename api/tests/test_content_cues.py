@@ -366,13 +366,13 @@ def test_no_simple_strategy_meets_any_objective(where: str, strategy: str) -> No
 # retired, never reused: an old attempt's `selected` must not be read as new text (the lesson of
 # #117 and #133). Ids made on this branch were never deployed, so they aren't listed.
 RETIRED = {
-    614: {"b"},
+    614: {"a", "b", "c"},  # a new question: every staging id, the key's included
     615: {"c"},
     616: {"c"},
     617: {"b"},
     1402: {"b", "c"},
     1403: {"c"},
-    1404: {"b"},
+    1404: {"a", "b", "c"},  # a new question: every staging id, the key's included
     1405: {"c"},
     1601: {"a", "b"},
 }
@@ -701,66 +701,76 @@ def test_a_markers_first_word_does_not_predict_vertex_or_edge() -> None:
 
 # --- Same id, same meaning: staging's text, kept or listed -----------------------------------------
 
-STAGING = json.loads((Path(__file__).parent / "data" / "staging_options.json").read_text("utf-8"))[
-    "options"
-]
-# Same-id rewordings that keep the option's meaning (lengthened, shortened, or restated for a new
-# situation with the same claim). Every other change of text needs a new id. Reviewed item by
-# item in the PR body.
+SNAPSHOT = json.loads((Path(__file__).parent / "data" / "staging_options.json").read_text("utf-8"))
+# Same-id rewordings that keep the meaning (lengthened, shortened, or restated with the same claim),
+# reviewed item by item in the PR body. Every other change of text needs a new id.
 WORDING_ONLY = {
-    (3, "b"),
-    (312, "a"),
-    (312, "b"),
-    (312, "c"),
-    (601, "b"),
-    (602, "a"),
-    (602, "b"),
-    (602, "c"),
-    (604, "a"),
-    (604, "b"),
-    (605, "b"),
-    (614, "a"),
-    (614, "c"),
-    (615, "a"),
-    (615, "b"),
-    (616, "a"),
-    (616, "b"),
-    (617, "a"),
-    (617, "c"),
-    (1101, "a"),
-    (1102, "a"),
-    (1103, "a"),
-    (1103, "b"),
-    (1105, "b"),
-    (1106, "c"),
-    (1301, "a"),
-    (1401, "a"),
-    (1401, "b"),
-    (1402, "a"),
-    (1403, "a"),
-    (1403, "b"),
-    (1404, "a"),
-    (1404, "c"),
-    (1405, "a"),
-    (1405, "b"),
-    (1701, "b"),
-    (1701, "c"),
+    "options": {
+        (3, "b"),
+        (312, "a"),
+        (312, "b"),
+        (312, "c"),
+        (601, "b"),
+        (602, "a"),
+        (602, "b"),
+        (602, "c"),
+        (604, "a"),
+        (604, "b"),
+        (605, "b"),
+        (615, "a"),
+        (615, "b"),
+        (616, "a"),
+        (616, "b"),
+        (617, "a"),
+        (617, "c"),
+        (1101, "a"),
+        (1102, "a"),
+        (1103, "a"),
+        (1103, "b"),
+        (1105, "b"),
+        (1106, "c"),
+        (1301, "a"),
+        (1401, "a"),
+        (1401, "b"),
+        (1402, "a"),
+        (1403, "a"),
+        (1403, "b"),
+        (1405, "a"),
+        (1405, "b"),
+        (1701, "b"),
+        (1701, "c"),
+    },
+    # An objective 2 marker now describes its part instead of naming it; it is the same part,
+    # with the same answer, so an earlier pair means what it meant.
+    "matching_left": {(a, m) for a in (606, 607, 608, 1202, 1203, 1204) for m in ("1", "2", "3")},
+    "matching_right": set(),
 }
+# Ids that left an item; they must never come back (the same as RETIRED, plus 1703's correction).
+GONE = {(a, i) for a, ids in RETIRED.items() for i in ids} | {(1703, "22")}
 
 
-def test_an_option_id_from_staging_keeps_its_text_or_is_listed_as_wording_only() -> None:
-    changed = []
-    for activity_id, staged in STAGING.items():
-        a = ACTIVITIES[int(activity_id)]
-        if a.kind == "multiple_choice":
-            now = {o["id"]: o["label"] for o in a.config["options"]}
-        else:
-            now = {str(c["id"]): c["text"] for c in a.config["corrections"]}
-        for option_id, text in staged.items():
-            if option_id in now and now[option_id] != text:
-                changed.append((int(activity_id), option_id))
-    assert sorted(set(changed) - WORDING_ONLY) == []
-    assert sorted(WORDING_ONLY - set(changed)) == []  # the list says only what is true
+def _now(a: ActivityFixture, kind: str) -> dict[str, str]:
+    if kind == "options" and a.kind == "multiple_choice":
+        return {o["id"]: o["label"] for o in a.config["options"]}
+    if kind == "options":
+        return {str(c["id"]): c["text"] for c in a.config["corrections"]}
+    side = "left" if kind == "matching_left" else "right"
+    return {o["id"]: o["label"] for o in a.config[side]}
+
+
+@pytest.mark.parametrize("kind", ["options", "matching_left", "matching_right"])
+def test_an_id_from_staging_keeps_its_text_unless_retired_or_listed(kind: str) -> None:
+    changed, gone = set(), set()
+    for activity_id, staged in SNAPSHOT[kind].items():
+        now = _now(ACTIVITIES[int(activity_id)], kind)
+        for item_id, text in staged.items():
+            if item_id not in now:
+                gone.add((int(activity_id), item_id))
+            elif now[item_id] != text:
+                changed.add((int(activity_id), item_id))
+    assert sorted(changed - WORDING_ONLY[kind]) == []
+    assert sorted(WORDING_ONLY[kind] - changed) == []  # the list says only what is true
+    assert gone == (GONE if kind == "options" else set())
 
 
 def test_counting_the_places_a_marker_names_does_not_meet_objective_2() -> None:

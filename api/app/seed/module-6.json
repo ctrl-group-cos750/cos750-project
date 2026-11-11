@@ -988,23 +988,23 @@
         "prompt": "A word game: turn COLD into WARM by changing one letter at a time, and every step must be a real word (COLD, CORD, CARD, WARD, WARM). You want the fewest changes. Is BFS a good fit? Choose the answer with the right reason.",
         "options": [
           {
-            "id": "a",
+            "id": "g",
             "label": "Yes. BFS orders the neighbours of a vertex alphabetically, and that keeps the ladder short."
           },
           {
             "id": "h",
-            "label": "No. BFS will follow one path of changes to its end, so its first chain may be long."
+            "label": "No. BFS will follow one path of word changes to its end, so its first chain may be long."
           },
           {
-            "id": "c",
-            "label": "Yes. BFS treats every word as a vertex, then finds WARM with the fewest changes."
+            "id": "f",
+            "label": "Yes. BFS treats each word as a vertex, so it finds a shortest ladder to the goal."
           }
         ]
       },
       "solution": {
-        "correct": "c",
+        "correct": "f",
         "feedback": {
-          "a": "Not quite. Alphabetical order only decides which neighbour joins the queue first. The chain is short because BFS reaches words ring by ring: every word one change away, then two. Ask: what makes BFS find the fewest edges?",
+          "g": "Not quite. Alphabetical order only decides which neighbour joins the queue first. The chain is short because BFS reaches words ring by ring: every word one change away, then two. Ask: what makes BFS find the fewest edges?",
           "h": "Not quite. That describes depth-first search. BFS finishes every word one change away before any word two changes away, so the first time it reaches WARM it has used the fewest changes. Ask: does BFS go wide or deep?"
         }
       },
@@ -1023,7 +1023,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: Yes. BFS treats every word as a vertex, then finds WARM with the fewest changes."
+          "body": "Answer: Yes. BFS treats each word as a vertex, so it finds a shortest ladder to the goal."
         }
       ]
     },
@@ -1093,7 +1093,7 @@
           },
           {
             "id": "b",
-            "label": "Yes. BFS reaches only the computers that a path joins to the server; others are cut off."
+            "label": "Yes. BFS reaches only the computers with a path from the server; the rest are cut off."
           },
           {
             "id": "e",
@@ -1123,7 +1123,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: Yes. BFS reaches only the computers that a path joins to the server; others are cut off."
+          "body": "Answer: Yes. BFS reaches only the computers with a path from the server; the rest are cut off."
         }
       ]
     },
@@ -1143,7 +1143,7 @@
           },
           {
             "id": "a",
-            "label": "Yes. BFS will reach every student vertex once, adding up all the marks as it goes."
+            "label": "Yes. BFS will reach every student, adding up all the marks along each path it takes."
           },
           {
             "id": "h",

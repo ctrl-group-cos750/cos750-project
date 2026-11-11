@@ -384,7 +384,7 @@ def named_part(prompt: str, marker: str) -> str:
     if m := re.fullmatch(r"what you reach after driving on from (.+)", text):
         x = letter(m.group(1))
         return f"Vertex {only({e[2] for e in edges if e[0] == x})}"
-    if m := re.fullmatch(r"the \w+ whose one \w+ goes directly to (.+)", text):
+    if m := re.fullmatch(r"the \w+ with a single \w+, which goes to (.+)", text):
         x = letter(m.group(1))
         return f"Vertex {only({y for y in set(letters.values()) if neighbours(y) == {x}})}"
     return f"Vertex {letter(text)}"

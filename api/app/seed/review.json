@@ -634,11 +634,11 @@
         "left": [
           {
             "id": "1",
-            "label": "Marker 1: what joins the library and the hostel"
+            "label": "Marker 1: the road between the library and the hostel"
           },
           {
             "id": "2",
-            "label": "Marker 2: the stop you can reach only from the library"
+            "label": "Marker 2: the stop whose one road goes directly to the library"
           },
           {
             "id": "3",
@@ -719,11 +719,11 @@
         "left": [
           {
             "id": "1",
-            "label": "Marker 1: the server"
+            "label": "Marker 1: what the laptop's and the printer's cables both lead to"
           },
           {
             "id": "2",
-            "label": "Marker 2: what joins the laptop and the printer"
+            "label": "Marker 2: the cable between the laptop and the printer"
           },
           {
             "id": "3",
@@ -800,11 +800,11 @@
         "left": [
           {
             "id": "1",
-            "label": "Marker 1: what you drive along to leave the school corner"
+            "label": "Marker 1: the street you drive along to leave the school corner"
           },
           {
             "id": "2",
-            "label": "Marker 2: where you end up after driving on from the tower corner"
+            "label": "Marker 2: what you reach after driving on from the tower corner"
           },
           {
             "id": "3",
@@ -968,7 +968,7 @@
         "options": [
           {
             "id": "b",
-            "label": "Vertices: emails. Edges: students. Directed, because emails go one way."
+            "label": "Vertices: emails. Edges: students. Directed."
           },
           {
             "id": "c",
@@ -976,7 +976,7 @@
           },
           {
             "id": "a",
-            "label": "Vertices: students. Edges: emails. Directed, because each email goes one way."
+            "label": "Vertices: students. Edges: emails. Directed."
           }
         ]
       },
@@ -1076,16 +1076,16 @@
             "label": "Vertices: cities. Edges: highways. Directed."
           },
           {
+            "id": "c",
+            "label": "Vertices: cities. Edges: highways. Undirected."
+          },
+          {
             "id": "b",
             "label": "Vertices: highways. Edges: cities. Undirected."
           },
           {
             "id": "d",
             "label": "Vertices: highways. Edges: cities. Directed."
-          },
-          {
-            "id": "c",
-            "label": "Vertices: cities. Edges: highways. Undirected."
           }
         ]
       },
@@ -1186,12 +1186,12 @@
             "label": "Vertices: matches. Edges: players. Undirected."
           },
           {
-            "id": "b",
-            "label": "Vertices: players. Edges: matches. Undirected."
-          },
-          {
             "id": "a",
             "label": "Vertices: players. Edges: matches. Directed."
+          },
+          {
+            "id": "b",
+            "label": "Vertices: players. Edges: matches. Undirected."
           },
           {
             "id": "d",
@@ -1238,11 +1238,11 @@
         "options": [
           {
             "id": "a",
-            "label": "Finding the shortest route in kilometres, where roads have different lengths"
+            "label": "Finding the fewest kilometres between two bus stops"
           },
           {
             "id": "b",
-            "label": "Adding up the prices on a till slip"
+            "label": "Adding up the prices on a till slip at the shop"
           },
           {
             "id": "c",
@@ -1287,24 +1287,24 @@
         "prompt": "Find the fewest moves to solve a sliding-tile puzzle, where each position is a vertex and each move is an edge. Is BFS a good fit? Choose the answer with the right reason.",
         "options": [
           {
-            "id": "f",
-            "label": "Yes. BFS checks every position one move away before any position two away."
+            "id": "d",
+            "label": "Yes. BFS always takes the neighbour whose path looks closest to the solution."
+          },
+          {
+            "id": "a",
+            "label": "Yes. BFS explores all positions in rings, so it finds the fewest moves."
           },
           {
             "id": "e",
-            "label": "No. BFS can't stop until it has visited every position, and there are too many."
-          },
-          {
-            "id": "d",
-            "label": "Yes. BFS always takes the move that looks closest to the solved puzzle."
+            "label": "No. BFS has to reach every vertex before it can answer, and there are too many."
           }
         ]
       },
       "solution": {
-        "correct": "f",
+        "correct": "a",
         "feedback": {
-          "e": "Not quite. BFS can stop the first time it reaches the solved position: every position one move away comes before any two moves away, so nothing it hasn't looked at yet can be closer. Ask: when has BFS found the fewest moves?",
-          "d": "Not quite. BFS doesn't guess which move looks best: it takes positions in the order it found them, ring by ring. That is why the first time it reaches the solution, it has used the fewest moves. Ask: in what order does BFS take vertices?"
+          "d": "Not quite. BFS doesn't guess which move looks best: it takes positions in the order it found them, ring by ring. That is why the first time it reaches the solution, it has used the fewest moves. Ask: in what order does BFS take vertices?",
+          "e": "Not quite. BFS can stop the first time it reaches the solved position: every position one move away comes before any two moves away, so nothing it hasn't looked at yet can be closer. Ask: when has BFS found the fewest moves?"
         }
       },
       "hints": [
@@ -1322,7 +1322,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: Yes. BFS checks every position one move away before any position two away."
+          "body": "Answer: Yes. BFS explores all positions in rings, so it finds the fewest moves."
         }
       ]
     },
@@ -1337,16 +1337,16 @@
         "prompt": "Find the longest road trip between two towns without repeating a town. Is BFS a good fit? Choose the answer with the right reason.",
         "options": [
           {
-            "id": "b",
-            "label": "No. BFS reaches each town by its shortest route, and this asks for the longest."
-          },
-          {
             "id": "a",
-            "label": "Yes. BFS visits every town once, and that is the longest trip there is."
+            "label": "Yes. BFS reaches every town once, and that path is the longest trip between them."
           },
           {
             "id": "e",
-            "label": "Yes. The last ring BFS reaches is the furthest, so its route is the longest trip."
+            "label": "Yes. The last ring BFS gets to is the furthest, so its path is the longest trip."
+          },
+          {
+            "id": "b",
+            "label": "No. BFS finds each town's shortest path, and this question asks for the longest one."
           }
         ]
       },
@@ -1372,7 +1372,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: No. BFS reaches each town by its shortest route, and this asks for the longest."
+          "body": "Answer: No. BFS finds each town's shortest path, and this question asks for the longest one."
         }
       ]
     },
@@ -1387,24 +1387,24 @@
         "prompt": "A clinic wants to find everyone who was in contact with a patient, and everyone in contact with one of those contacts. Is BFS a good fit? Choose the answer with the right reason.",
         "options": [
           {
-            "id": "i",
-            "label": "No. BFS stops after the patient's direct contacts, so it never reaches their contacts."
-          },
-          {
             "id": "h",
-            "label": "Yes. BFS follows one chain of contacts to its end first."
+            "label": "Yes. BFS will follow one path of contacts to its end first, then the next one."
           },
           {
-            "id": "g",
-            "label": "Yes. BFS finds everyone one contact away, then two away, before going further."
+            "id": "a",
+            "label": "No. BFS stops after the first ring of neighbours, so it never gets any further."
+          },
+          {
+            "id": "c",
+            "label": "Yes. BFS finds everyone in the first ring, then the second ring, before any further."
           }
         ]
       },
       "solution": {
-        "correct": "g",
+        "correct": "c",
         "feedback": {
           "h": "Not quite. That is depth-first: following one chain to its end can reach someone three contacts away before a contact of a contact. BFS finishes each ring first. Ask: does BFS go wide or deep?",
-          "i": "Not quite. BFS keeps going after the first ring: each contact who leaves the queue adds their own contacts to the back. Ask: what happens after the first ring?"
+          "a": "Not quite. BFS keeps going after the first ring: each contact who leaves the queue adds their own contacts to the back. Ask: what happens after the first ring?"
         }
       },
       "hints": [
@@ -1422,7 +1422,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: Yes. BFS finds everyone one contact away, then two away, before going further."
+          "body": "Answer: Yes. BFS finds everyone in the first ring, then the second ring, before any further."
         }
       ]
     },
@@ -1437,16 +1437,16 @@
         "prompt": "Sort a list of student numbers from smallest to largest. Is BFS a good fit? Choose the answer with the right reason.",
         "options": [
           {
-            "id": "b",
-            "label": "Yes. BFS returns the vertices in order, so it sorts the student numbers."
+            "id": "a",
+            "label": "No. Student numbers aren't joined by edges, so there is nothing for BFS to do."
           },
           {
-            "id": "a",
-            "label": "No. Sorting a list has no edges to follow, so it isn't a traversal problem."
+            "id": "b",
+            "label": "Yes. BFS returns each vertex it has visited in order, so it sorts the numbers."
           },
           {
             "id": "e",
-            "label": "Yes. A queue keeps items in order, so BFS sorts them as they pass through it."
+            "label": "Yes. A queue maintains every vertex in sequence, so BFS automatically sorts them."
           }
         ]
       },
@@ -1472,7 +1472,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: No. Sorting a list has no edges to follow, so it isn't a traversal problem."
+          "body": "Answer: No. Student numbers aren't joined by edges, so there is nothing for BFS to do."
         }
       ]
     },

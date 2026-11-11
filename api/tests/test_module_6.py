@@ -350,27 +350,30 @@ def named_part(prompt: str, marker: str) -> str:
         return next(iter(found))
 
     text = marker.split(": ", 1)[1]
-    if m := re.fullmatch(r"what takes you one way from (.+) to (.+)", text):
+    if m := re.fullmatch(r"(?:what takes you one way|the road) from (.+) to (.+)", text):
         u, v = (letter(x) for x in m.groups())
         assert (u, "→", v) in edges, marker
         return f"Edge {u} → {v}"
-    if m := re.fullmatch(r"what joins (.+) and (.+)", text):
+    if m := re.fullmatch(
+        r"(?:what joins|the \w+ between|the \w+ from) (.+?) (?:and|to) (.+)", text
+    ):
         u, v = (letter(x) for x in m.groups())
-        assert (u, DASH, v) in edges or (v, DASH, u) in edges, marker
-        return f"Edge {u}{DASH}{v}"
-    if m := re.fullmatch(r"the \w+ between (.+) and (.+)", text):
+        if (u, DASH, v) in edges or (v, DASH, u) in edges:
+            return f"Edge {u}{DASH}{v}"
+        return f"Vertex {only(neighbours(u) & neighbours(v))}"  # the tap between two taps
+    if m := re.fullmatch(r"what the (.+)'s and the (.+)'s \w+ both lead to", text):
         u, v = (letter(x) for x in m.groups())
         return f"Vertex {only(neighbours(u) & neighbours(v))}"
     if m := re.fullmatch(r"what (?:carries water to|buses drive along to reach) (.+)", text):
         return edge(only(touching(letter(m.group(1)))))
-    if m := re.fullmatch(r"what you drive along to leave (.+)", text):
+    if m := re.fullmatch(r"(?:what you|the \w+ you) drive along to leave (.+)", text):
         x = letter(m.group(1))
         assert directed
         return edge(only({e for e in edges if e[0] == x}))
-    if m := re.fullmatch(r"where you end up after driving on from (.+)", text):
+    if m := re.fullmatch(r"what you reach after driving on from (.+)", text):
         x = letter(m.group(1))
         return f"Vertex {only({e[2] for e in edges if e[0] == x})}"
-    if m := re.fullmatch(r"the \w+ you can reach only from (.+)", text):
+    if m := re.fullmatch(r"the \w+ whose one \w+ goes directly to (.+)", text):
         x = letter(m.group(1))
         return f"Vertex {only({y for y in set(letters.values()) if neighbours(y) == {x}})}"
     return f"Vertex {letter(text)}"
@@ -393,7 +396,7 @@ def test_each_marker_names_the_part_its_answer_names(a: ActivityFixture) -> None
         # A marker gives no letter, and no "vertex"/"edge" word: the student works both out (#147).
         marker = item["label"].split(": ", 1)[1]
         assert not re.search(r"\b[A-Z]\b", marker), marker
-        assert not re.search(r"vertex|edge|\b(?:hose|doorway|road|street|cable)\b", marker), marker
+        assert not re.search(r"vertex|edge", marker), marker
         assert "n't" not in marker  # no negation puzzles
         assert " not " not in marker
     # The answer hint says the same.

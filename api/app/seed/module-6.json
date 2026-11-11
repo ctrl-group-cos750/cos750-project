@@ -443,7 +443,7 @@
           },
           {
             "id": "2",
-            "label": "Marker 2: what joins the kitchen tap and the fountain tap"
+            "label": "Marker 2: the hose from the kitchen tap to the fountain tap"
           },
           {
             "id": "3",
@@ -524,7 +524,7 @@
         "left": [
           {
             "id": "1",
-            "label": "Marker 1: what joins the kitchen and the music room"
+            "label": "Marker 1: the doorway between the kitchen and the music room"
           },
           {
             "id": "2",
@@ -613,11 +613,11 @@
         "left": [
           {
             "id": "1",
-            "label": "Marker 1: what takes you one way from the market to the bridge"
+            "label": "Marker 1: the road from the market to the bridge"
           },
           {
             "id": "2",
-            "label": "Marker 2: where you end up after driving on from the bridge"
+            "label": "Marker 2: what you reach after driving on from the bridge"
           },
           {
             "id": "3",
@@ -988,24 +988,24 @@
         "prompt": "A word game: turn COLD into WARM by changing one letter at a time, and every step must be a real word (COLD, CORD, CARD, WARD, WARM). You want the fewest changes. Is BFS a good fit? Choose the answer with the right reason.",
         "options": [
           {
-            "id": "i",
-            "label": "Yes. BFS tries the words in alphabetical order, so its chain of changes is the short one."
-          },
-          {
-            "id": "f",
-            "label": "Yes. It finds the fewest changes, because it works through the words ring by ring."
+            "id": "a",
+            "label": "Yes. BFS takes the neighbours of a vertex alphabetically, and that is why it is short."
           },
           {
             "id": "h",
-            "label": "No. BFS goes deep down one chain first, so it may find a long one."
+            "label": "No. BFS will follow one path of changes to its end, so its first chain may be long."
+          },
+          {
+            "id": "c",
+            "label": "Yes. BFS treats every word as a vertex, then finds WARM with the fewest changes."
           }
         ]
       },
       "solution": {
-        "correct": "f",
+        "correct": "c",
         "feedback": {
-          "h": "Not quite. That describes depth-first search. BFS finishes every word one change away before any word two changes away, so the first time it reaches WARM it has used the fewest changes. Ask: does BFS go wide or deep?",
-          "i": "Not quite. Alphabetical order only decides which neighbour joins the queue first. The chain is short because BFS reaches words ring by ring: every word one change away, then two. Ask: what makes BFS find the fewest edges?"
+          "a": "Not quite. Alphabetical order only decides which neighbour joins the queue first. The chain is short because BFS reaches words ring by ring: every word one change away, then two. Ask: what makes BFS find the fewest edges?",
+          "h": "Not quite. That describes depth-first search. BFS finishes every word one change away before any word two changes away, so the first time it reaches WARM it has used the fewest changes. Ask: does BFS go wide or deep?"
         }
       },
       "hints": [
@@ -1023,7 +1023,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: Yes. It finds the fewest changes, because it works through the words ring by ring."
+          "body": "Answer: Yes. BFS treats every word as a vertex, then finds WARM with the fewest changes."
         }
       ]
     },
@@ -1038,16 +1038,16 @@
         "prompt": "Find the cheapest flight route, where every flight has a different price. Is BFS a good fit? Choose the answer with the right reason.",
         "options": [
           {
-            "id": "e",
-            "label": "Yes. The queue keeps the cheaper flights in front."
+            "id": "b",
+            "label": "Yes. BFS finds the path with the fewest flights, and that path is always the cheapest one."
           },
           {
             "id": "a",
-            "label": "No. BFS counts flights, not prices: the fewest flights isn't always the cheapest."
+            "label": "No. BFS counts the edges on a route, not the prices, so the fewest may cost more."
           },
           {
-            "id": "b",
-            "label": "Yes. BFS finds the fewest flights, and the fewest is always the cheapest."
+            "id": "e",
+            "label": "Yes. The queue lets the cheapest flight out first, so BFS reaches the best price."
           }
         ]
       },
@@ -1073,7 +1073,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: No. BFS counts flights, not prices: the fewest flights isn't always the cheapest."
+          "body": "Answer: No. BFS counts the edges on a route, not the prices, so the fewest may cost more."
         }
       ]
     },
@@ -1088,16 +1088,16 @@
         "prompt": "Check whether every computer in a lab network can be reached from the server. Is BFS a good fit? Choose the answer with the right reason.",
         "options": [
           {
-            "id": "e",
-            "label": "No. BFS visits every vertex, cut off or not."
-          },
-          {
             "id": "a",
-            "label": "No. BFS finds a path to one computer at a time, not everything it can reach."
+            "label": "No. BFS will only follow one path to one computer, and then it stops looking."
           },
           {
             "id": "b",
-            "label": "Yes. BFS reaches every computer it can, and the ones it misses are cut off."
+            "label": "Yes. BFS reaches only the computers that a path joins to the server; others are cut off."
+          },
+          {
+            "id": "e",
+            "label": "No. BFS reaches every vertex from the start, so no computer would ever look cut off."
           }
         ]
       },
@@ -1123,7 +1123,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: Yes. BFS reaches every computer it can, and the ones it misses are cut off."
+          "body": "Answer: Yes. BFS reaches only the computers that a path joins to the server; others are cut off."
         }
       ]
     },
@@ -1138,21 +1138,21 @@
         "prompt": "Work out the average mark of a class. Is BFS a good fit? Choose the answer with the right reason.",
         "options": [
           {
+            "id": "c",
+            "label": "No. The marks aren't joined by edges, so a simple loop works out the average without BFS."
+          },
+          {
             "id": "a",
-            "label": "Yes. BFS visits every student, so it can add up the marks as it goes."
+            "label": "Yes. BFS will reach every student vertex once, adding up all the marks as it goes."
           },
           {
             "id": "h",
-            "label": "No. BFS would take the students in alphabetical order, and that would change the average."
-          },
-          {
-            "id": "g",
-            "label": "No. Marks aren't joined to each other, so there is nothing for BFS to follow."
+            "label": "No. Taking the neighbours of each vertex alphabetically, as BFS does, changes the average."
           }
         ]
       },
       "solution": {
-        "correct": "g",
+        "correct": "c",
         "feedback": {
           "a": "Not quite. BFS visits vertices by following edges, and marks have no edges between them. A loop that adds each mark does the job. Ask: are there connections to follow?",
           "h": "Not quite. The order you add numbers in never changes their average. BFS doesn't fit because there are no connections to follow. Ask: are there connections to follow?"
@@ -1173,7 +1173,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: No. Marks aren't joined to each other, so there is nothing for BFS to follow."
+          "body": "Answer: No. The marks aren't joined by edges, so a simple loop works out the average without BFS."
         }
       ]
     },

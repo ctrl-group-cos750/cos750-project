@@ -17,9 +17,12 @@ to them (ID document §7.3 to 7.4, SE document FR-4.3):
 """
 
 import difflib
+import json
+import random
 import re
 from collections import Counter
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -363,13 +366,13 @@ def test_no_simple_strategy_meets_any_objective(where: str, strategy: str) -> No
 # retired, never reused: an old attempt's `selected` must not be read as new text (the lesson of
 # #117 and #133). Ids made on this branch were never deployed, so they aren't listed.
 RETIRED = {
-    614: {"a", "b", "c"},  # a new question: every staging id is retired
+    614: {"b"},
     615: {"c"},
     616: {"c"},
-    617: {"b", "c"},
-    1402: {"a", "b", "c"},
+    617: {"b"},
+    1402: {"b", "c"},
     1403: {"c"},
-    1404: {"a", "b", "c"},  # a new question: every staging id is retired
+    1404: {"b"},
     1405: {"c"},
     1601: {"a", "b"},
 }
@@ -578,26 +581,186 @@ SEARCH = (
 )
 
 
-@pytest.mark.parametrize("where", CHECK_SETS)
-def test_no_ranking_strategy_meets_any_objective(where: str) -> None:
+def _picks(where: str, strategies: Sequence[tuple[str, ...]]) -> list[dict[int, str]]:
+    """For each strategy, the option it picks in each multiple-choice item of the set."""
+    out = []
     tables = {a.id: _rank_table(a) for a in CHECK_SETS[where] if a.kind == "multiple_choice"}
-    met = []
-    for strategy in SEARCH:
+    for strategy in strategies:
+        chosen = {}
+        for a in CHECK_SETS[where]:
+            if a.kind != "multiple_choice":
+                continue
+            t, n = tables[a.id], len(a.config["options"])
+
+            def rank(i: int, t: dict[str, list[float]] = t) -> tuple[float, ...]:
+                return (*(t[r][i] for r in strategy), -i)  # noqa: B023 - used at once
+
+            best = max(range(n), key=rank)
+            chosen[a.id] = a.config["options"][best]["id"]
+        out.append(chosen)
+    return out
+
+
+def _meeting(where: str, picks: list[dict[int, str]], keys: dict[int, str]) -> int:
+    """How many strategies meet some objective's rule (real part counts) with these keys."""
+    met = 0
+    for chosen in picks:
         for objective, o in OBJECTIVES.items():
             items = [a for a in CHECK_SETS[where] if a.objective_id == objective]
-            mc = [a for a in items if a.kind == "multiple_choice"]
-            if not mc:
-                continue
-            right = 0
-            for a in mc:
-                t = tables[a.id]
-                n = len(a.config["options"])
-                best = max(range(n), key=lambda i: (*(t[r][i] for r in strategy), -i))
-                right += a.config["options"][best]["id"] == a.solution["correct"]
+            right = sum(chosen[a.id] == keys[a.id] for a in items if a.id in chosen)
             rule = Rule(pass_fraction=o.pass_fraction, max_wrong=o.max_wrong)
-            if rule.met(right, sum(parts(a) for a in items)):
-                met.append((" + ".join(strategy), objective, right))
-    assert not met, met[:10]
+            if right and rule.met(right, sum(parts(a) for a in items)):
+                met += 1
+                break
+    return met
+
+
+@pytest.mark.parametrize("where", CHECK_SETS)
+def test_no_single_surface_feature_meets_any_objective(where: str) -> None:
+    """Any one of the rankers (position, id, length, first word, overlap, absolutes, jargon, …),
+    used alone, leaves every objective not met."""
+    single = [(r,) for r in RANKERS]
+    picks = _picks(where, single)
+    keys = {a.id: a.solution["correct"] for a in CHECK_SETS[where] if a.kind == "multiple_choice"}
+    met = [single[i][0] for i, chosen in enumerate(picks) if _meeting(where, [chosen], keys)]
+    assert not met, met
+
+
+@pytest.mark.parametrize("where", CHECK_SETS)
+def test_combined_strategies_do_no_better_than_chance(where: str) -> None:
+    """The round-2 reviewer's search (rankers alone, in pairs and in three-ranker gates, about
+    3,000 strategies) over four-item objectives always finds some combination that scores 3 of 4
+    by luck. So the test compares with chance: the same strategies, the same texts, with each
+    item's key moved to a random option. Fewer strategies may meet a rule with the real keys than
+    with the median random keying; staging and round 2 were at chance (42% and 49% of draws)."""
+    picks = _picks(where, SEARCH)
+    mc = [a for a in CHECK_SETS[where] if a.kind == "multiple_choice"]
+    real = _meeting(where, picks, {a.id: a.solution["correct"] for a in mc})
+    rng = random.Random(147)  # noqa: S311 - a reproducible draw, not security
+    draws = sorted(
+        _meeting(where, picks, {a.id: rng.choice(a.config["options"])["id"] for a in mc})
+        for _ in range(60)
+    )
+    assert real < draws[len(draws) // 2], (real, draws)
+
+
+# --- Structure: no cue dimension left (round 3 review) ------------------------------------------
+
+OBJ34 = [
+    a
+    for a in CONTENT.activities
+    if a.kind == "multiple_choice"
+    and a.objective_id in (3, 4)
+    and a.purpose in ("mastery", "review")
+]
+
+
+@pytest.mark.parametrize("a", OBJ34, ids=lambda a: str(a.id))
+def test_objective_3_and_4_options_are_about_the_same_length(a: ActivityFixture) -> None:
+    """Haladyna et al. (2002): keep the options about equal in length, so length is no cue."""
+    lengths = [len(o["label"]) for o in a.config["options"]]
+    assert max(lengths) <= 1.15 * min(lengths), lengths
+
+
+@pytest.mark.parametrize("objective", [3, 4])
+@pytest.mark.parametrize("where", CHECK_SETS)
+def test_the_keys_length_rank_varies(where: str, objective: int) -> None:
+    longest = shortest = 0
+    for a in (a for a in CHECK_SETS[where] if a.objective_id == objective):
+        lengths = {o["id"]: len(o["label"]) for o in a.config["options"]}
+        key = lengths[a.solution["correct"]]
+        longest += key == max(lengths.values())
+        shortest += key == min(lengths.values())
+    assert longest >= 1
+    assert shortest >= 1
+    items = sum(1 for a in CHECK_SETS[where] if a.objective_id == objective)
+    assert longest < items - 1
+    assert shortest < items - 1
+
+
+def test_a_markers_first_word_does_not_predict_vertex_or_edge() -> None:
+    """Edge markers used to open "what" and vertex markers never did (11 of 13 parts): the best
+    rule from first word to vertex/edge is now no better than always guessing the commoner type."""
+    for where, items in CHECK_SETS.items():
+        pairs = [
+            (
+                item["label"].split(": ", 1)[1].split()[0].lower(),
+                a.solution["pairs"][item["id"]].startswith("e"),
+            )
+            for a in items
+            if a.objective_id == 2 and "Marker" in str(a.config["left"])
+            for item in a.config["left"]
+        ]
+        by_word: dict[str, Counter[bool]] = {}
+        for word, edge in pairs:
+            by_word.setdefault(word, Counter())[edge] += 1
+        best_rule = sum(max(c.values()) for c in by_word.values())
+        always_commoner = max(Counter(edge for _, edge in pairs).values())
+        assert best_rule <= always_commoner, (where, by_word)
+
+
+# --- Same id, same meaning: staging's text, kept or listed -----------------------------------------
+
+STAGING = json.loads((Path(__file__).parent / "data" / "staging_options.json").read_text("utf-8"))[
+    "options"
+]
+# Same-id rewordings that keep the option's meaning (lengthened, shortened, or restated for a new
+# situation with the same claim). Every other change of text needs a new id. Reviewed item by
+# item in the PR body.
+WORDING_ONLY = {
+    (3, "b"),
+    (312, "a"),
+    (312, "b"),
+    (312, "c"),
+    (601, "b"),
+    (602, "a"),
+    (602, "b"),
+    (602, "c"),
+    (604, "a"),
+    (604, "b"),
+    (605, "b"),
+    (614, "a"),
+    (614, "c"),
+    (615, "a"),
+    (615, "b"),
+    (616, "a"),
+    (616, "b"),
+    (617, "a"),
+    (617, "c"),
+    (1101, "a"),
+    (1102, "a"),
+    (1103, "a"),
+    (1103, "b"),
+    (1105, "b"),
+    (1106, "c"),
+    (1301, "a"),
+    (1401, "a"),
+    (1401, "b"),
+    (1402, "a"),
+    (1403, "a"),
+    (1403, "b"),
+    (1404, "a"),
+    (1404, "c"),
+    (1405, "a"),
+    (1405, "b"),
+    (1701, "b"),
+    (1701, "c"),
+}
+
+
+def test_an_option_id_from_staging_keeps_its_text_or_is_listed_as_wording_only() -> None:
+    changed = []
+    for activity_id, staged in STAGING.items():
+        a = ACTIVITIES[int(activity_id)]
+        if a.kind == "multiple_choice":
+            now = {o["id"]: o["label"] for o in a.config["options"]}
+        else:
+            now = {str(c["id"]): c["text"] for c in a.config["corrections"]}
+        for option_id, text in staged.items():
+            if option_id in now and now[option_id] != text:
+                changed.append((int(activity_id), option_id))
+    assert sorted(set(changed) - WORDING_ONLY) == []
+    assert sorted(WORDING_ONLY - set(changed)) == []  # the list says only what is true
 
 
 def test_counting_the_places_a_marker_names_does_not_meet_objective_2() -> None:

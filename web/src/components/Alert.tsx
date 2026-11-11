@@ -21,7 +21,7 @@ export function Alert({ tone = 'info', title, children }: AlertProps) {
       <span className={styles.icon} aria-hidden="true">
         {icons[tone]}
       </span>
-      <div>
+      <div className={styles.content}>
         {title && <p className={styles.title}>{title}</p>}
         <div className={styles.body}>{children}</div>
       </div>

@@ -20,6 +20,14 @@
   color: var(--color-bg);
 }
 
+/* The text column may shrink below its longest word: a long run with no spaces (a hint quoting
+   code such as sorted(graph.adjacency[v]):) breaks instead of widening the page at 320 px
+   (WCAG 1.4.10, #142). */
+.content {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .title {
   margin: 0 0 var(--space-1);
   font-weight: 600;

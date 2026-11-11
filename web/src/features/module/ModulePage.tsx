@@ -247,7 +247,7 @@ export function ModulePage() {
   return (
     <section
       ref={contentRef}
-      className="grid min-w-0 max-w-3xl gap-6"
+      className="grid min-w-0 max-w-3xl gap-6 has-[[data-two-column]]:max-w-[70rem]"
       aria-label={`Module ${module.number}: ${module.title}`}
     >
       {/* Header */}

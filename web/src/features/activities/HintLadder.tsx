@@ -10,6 +10,9 @@ type HintLadderProps = {
   solved?: boolean
   requestHint: (activityId: number) => Promise<Hint>
   loadHints?: (activityId: number) => Promise<readonly Hint[]>
+  /** Called with the highest hint level shown so far, e.g. so a picture can offer the correct
+   * graph once hint 4 is open (#155). */
+  onLevel?: (level: number) => void
 }
 
 /**
@@ -27,6 +30,7 @@ export function HintLadder({
   solved = false,
   requestHint,
   loadHints = fetchActivityHints,
+  onLevel,
 }: HintLadderProps) {
   const [hints, setHints] = useState<readonly Hint[]>([])
   const [error, setError] = useState('')
@@ -67,6 +71,9 @@ export function HintLadder({
   }, [activityId, loadHints])
 
   const lastHint = hints.at(-1)
+  const level = lastHint?.level ?? 0
+  useEffect(() => onLevel?.(level), [level, onLevel])
+
   const hasMore = !solved && !loadFailed && !loadingInitial && (lastHint?.hasMore ?? true)
 
   async function showNextHint() {

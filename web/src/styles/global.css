@@ -179,3 +179,10 @@
     letter-spacing: var(--tracking-normal);
   }
 }
+
+/* Module 1's map illustrations (#155) get a dark palette in dark mode instead of staying light
+ * pictures on a dark page: lightness inverted, hues kept (the grass stays green, the bus stops
+ * blue). Graph drawings need none of this: they are drawn in the theme's own tokens. */
+:is(.dark, [data-theme='dark']) .situation-map {
+  filter: invert(0.9) hue-rotate(180deg) saturate(0.85);
+}

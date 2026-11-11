@@ -7,13 +7,21 @@ type MatchingProps = {
   result: AttemptResult | undefined
   submitting: boolean
   onSubmit: (pairs: Record<string, string>) => Promise<void>
+  /** False when the prompt is shown beside the question's picture instead (#155). */
+  showPrompt?: boolean
 }
 
 /** Pair each item on the left with one on the right, using a plain select per item so it works
  * with a keyboard, a screen reader and at 360 px. A left item may be left unmatched; the server
  * marks it wrong. Each item's mark from the last check shows only until the student changes that
  * item, so a mark never points at an answer it wasn't about. */
-export function Matching({ activity, result, submitting, onSubmit }: MatchingProps) {
+export function Matching({
+  activity,
+  result,
+  submitting,
+  onSubmit,
+  showPrompt = true,
+}: MatchingProps) {
   const [pairs, setPairs] = useState<Record<string, string>>({})
   const [checked, setChecked] = useState<Record<string, string>>({})
   const disabled = submitting || result?.correct === true
@@ -28,7 +36,7 @@ export function Matching({ activity, result, submitting, onSubmit }: MatchingPro
         void onSubmit(pairs)
       }}
     >
-      <p className="m-0 font-medium">{activity.config.prompt}</p>
+      {showPrompt && <p className="m-0 font-medium">{activity.config.prompt}</p>}
       <ul className="m-0 grid list-none gap-3 p-0">
         {activity.config.left.map((item, index) => {
           const id = `match-${activity.id}-${item.id}`

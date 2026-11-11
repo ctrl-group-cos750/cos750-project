@@ -50,6 +50,22 @@ def record_attempt(
     return attempt, result
 
 
+def answered_correctly(session: Session, user_id: int, activity_id: int) -> bool:
+    """Whether this student has a correct attempt at the activity."""
+    return (
+        session.scalar(
+            select(Attempt.id)
+            .where(
+                Attempt.user_id == user_id,
+                Attempt.activity_id == activity_id,
+                Attempt.correct.is_(True),
+            )
+            .limit(1)
+        )
+        is not None
+    )
+
+
 def reveal_next_hint(
     session: Session, user_id: int, activity: Activity
 ) -> tuple[Hint, Hint | None] | None:

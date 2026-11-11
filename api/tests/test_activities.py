@@ -199,6 +199,30 @@ def test_hints_come_one_level_at_a_time_and_then_run_out(client: TestClient, db:
     assert len(db.scalars(select(HintView)).all()) == 4
 
 
+def test_no_more_hints_once_the_answer_is_right(client: TestClient, db: Session) -> None:
+    """A hint after a right answer helps with nothing and would count in the pilot's hint use, so
+    the server refuses it, and says the activity is solved so the page stops offering one, after a
+    refresh too (#158)."""
+    activity_id = make_choice_with_hints(db)
+    log_in(client)
+    url = f"/api/activities/{activity_id}"
+    assert client.get(url).json()["solved"] is False
+    assert client.post(f"{url}/hints").status_code == 201  # before an answer: fine
+
+    client.post(f"{url}/attempts", json={"submitted": {"selected": "c"}})  # wrong
+    assert client.get(url).json()["solved"] is False
+    assert client.post(f"{url}/hints").status_code == 201  # still fine after a wrong answer
+
+    client.post(f"{url}/attempts", json={"submitted": {"selected": "a"}})  # right
+    assert client.get(url).json()["solved"] is True
+    refused = client.post(f"{url}/hints")
+    assert refused.status_code == 409
+    assert "already answered this correctly" in refused.json()["detail"]
+    assert len(db.scalars(select(HintView)).all()) == 2
+    # The hints already seen are still listed.
+    assert [h["level"] for h in client.get(f"{url}/hints").json()] == [1, 2]
+
+
 def test_hint_progress_is_per_student(client: TestClient, db: Session) -> None:
     activity_id = make_choice_with_hints(db)
     log_in(client)

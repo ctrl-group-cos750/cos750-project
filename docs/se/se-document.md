@@ -355,7 +355,7 @@ Figure: Use cases. The student takes part in every use case in the first two gro
 - **FR-2.4** Each module from module 2 onwards opens with one or two retrieval questions on earlier modules.
 - **FR-2.5** Save progress after every segment. A student who returns resumes at the segment they left.
 - **FR-2.6** Show a module map with each module's state (locked, open, in progress, complete) and estimated duration.
-- **FR-2.7** A student moves past a segment only once it is done: an activity segment once its activity has been answered at least once (a wrong answer counts), a video segment once every checkpoint in the video is passed. Other segments are done when shown. An activity whose kind has no student UI yet (today `trace`, `fix_the_bug` and `choose_tests`) counts as done until its UI exists, so it never strands a student. A module is complete once its last segment is done. A complete module can be reread freely.
+- **FR-2.7** A student moves past a segment only once it is done: an activity segment once its activity has been answered at least once (a wrong answer counts; an empty one, or one naming something the activity doesn't offer, is refused and doesn't count), a video segment once every checkpoint in the video is passed. Other segments are done when shown. An activity whose kind has no student UI yet (today `trace`, `fix_the_bug` and `choose_tests`) counts as done until its UI exists, so it never strands a student. A module is complete once its last segment is done. A complete module can be reread freely.
 
 ## Narrated video with checkpoints (FR-3)
 - **FR-3.1** Play narrated videos (screen recordings with a voice-over, no presenter) with play, pause and seek.
@@ -481,7 +481,7 @@ Table: Which part of the ID document each functional requirement delivers.
 - **NFR-S3** All traffic over HTTPS in deployed environments.
 - **NFR-S4** Server-side validation of all inputs (Pydantic schemas); answers, results and points are never accepted from the client.
 - **NFR-S5** No secrets in the repository; configuration via environment variables.
-- **NFR-S6** Standard protections: the session cookie is httpOnly, Secure and SameSite=Lax; state-changing requests require JSON bodies (blocking cross-site form posts); parameterised queries via the ORM; rate limiting on login (per address and account, and per address) and registration, keyed on the student's real address (Cloudflare's `CF-Connecting-IP`, believed only from Cloudflare's own servers), and per student on password changes and on the events the browser reports; security headers on every page (a Content Security Policy allowing only our own scripts, styles and fonts, no framing, HSTS, `nosniff`). The app and the API share one origin, so no CORS is configured. Answer submissions and hint requests are not rate limited yet: that limit, with size limits on submissions, is in progress (#139).
+- **NFR-S6** Standard protections: the session cookie is httpOnly, Secure and SameSite=Lax; state-changing requests require JSON bodies (blocking cross-site form posts); parameterised queries via the ORM; rate limiting on login (per address and account, and per address) and registration, keyed on the student's real address (Cloudflare's `CF-Connecting-IP`, believed only from Cloudflare's own servers), and per student on password changes, on the events the browser reports, on answer submissions (60 a minute) and on hint reveals (30 a minute); an answer's request body is at most 32 kB (413), each kind's fields are bounded and may not hold control or format characters, and an empty answer or one naming what the activity doesn't offer is refused (422) and not recorded; security headers on every page (a Content Security Policy allowing only our own scripts, styles and fonts, no framing, HSTS, `nosniff`). The app and the API share one origin, so no CORS is configured.
 - **NFR-S7** **No untrusted code execution.** Code activities run no student-written code anywhere in the system. The student constructs code by ordering shuffled lines (Parsons) or filling in tokens from a given set, and the server checks the submission by comparison with the solution (FR-5). This removes the untrusted-code-execution attack surface entirely, rather than trying to contain it.
 
   An isolated code runner was built and hardened earlier (a network-less container running each submission as a separate seccomp-confined process) and was pentested on staging across several rounds (see the security review under §14). Those rounds confirmed the escape defences held but also found that the in-process grading channel could be forged to fake a pass, and — because staging shares a personal server with unrelated personal data — the residual risk of executing arbitrary student code was judged not worth the marks a freeform editor earned. The team therefore dropped freeform code writing and removed the runner (decision §15.3, 3 November). The runner's code is preserved in git history (tag `archive/code-runner`) should the decision be revisited with a stronger sandbox (gVisor or a per-submission microVM — §15.4).
@@ -585,15 +585,15 @@ Base path: `/api`. JSON over HTTPS. Auth via the session cookie set by `/api/aut
 | GET | `/api/modules` | user | All modules with this student's state (locked, open, in progress, complete). |
 | GET | `/api/modules/{module_id}` | user | The module's segments, in order, with this student's position, which segments are done, and the module's retrieval questions (FR-2.4). 403 while the module is locked. Activities come without answers. Every refresher is listed: the diagnostic does not filter them yet (FR-8.1, §15.5). |
 | POST | `/api/modules/{module_id}/position` | user | Save the segment the student is on (FR-2.5). Refuses (409) to move past a segment that isn't done (FR-2.7). |
-| GET | `/api/videos/{video_id}` | user | The video's title, duration, media and captions paths, the transcript as text, and its checkpoints in order, each with its activity and whether this student has passed it (FR-3.5). The media itself comes from `/media/`. |
+| GET | `/api/videos/{video_id}` | user | The video's title, duration, media and captions paths, the transcript as text, and its checkpoints in order, each with its activity and whether this student has passed it (FR-3.5). The media itself comes from `/media/`. 403 while the segment that plays it is in a locked module or a closed review path; a video on no segment is open; staff get 200. |
 
 ## Activities, hints and code
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/api/activities/{activity_id}` | user | The activity to show: kind, title and config, never the solution. 403 for an item on a review path that isn't open yet (FR-7.5). |
-| GET | `/api/activities/{activity_id}/hints` | user | The hint levels this student has already seen, so a reload shows them again. |
-| POST | `/api/activities/{activity_id}/hints` | user | Reveal the next hint level and record it. Returns the hint, whether there are more, and whether the next one counts as support (FR-7.2). 409 once every level is shown. |
-| POST | `/api/activities/{activity_id}/attempts` | user | Submit an answer. The server checks it (a code activity is compared against its stored solution), records the attempt, updates results and points, and returns the outcome. A submission in the wrong shape for the kind is 422. |
+| GET | `/api/activities/{activity_id}` | user | The activity to show: kind, title and config, never the solution. 403 while its module is locked (FR-2.1) or, on a review path, until the path is open (FR-7.5); 404 if it doesn't exist or is no longer in the course. Staff get 200 for any activity, to preview it. |
+| GET | `/api/activities/{activity_id}/hints` | user | The hint levels this student has already seen, so a reload shows them again. 403 and 404 as for the activity. |
+| POST | `/api/activities/{activity_id}/hints` | user | Reveal the next hint level and record it. Returns the hint, whether there are more, and whether the next one counts as support (FR-7.2). 409 once every level is shown; 403 and 404 as for the activity; 429 past 30 a minute per student. Two requests at once reveal two levels in turn. |
+| POST | `/api/activities/{activity_id}/attempts` | user | Submit an answer. The server checks it (a code activity is compared against its stored solution), records the attempt, updates results and points, and returns the outcome. 403 and 404 as for the activity. 422 for a submission in the wrong shape for the kind, an empty one, or one naming something the activity doesn't offer (a select reset to its placeholder counts as unanswered); 413 past 32 kB; 429 past 60 a minute per student. None of these is recorded. |
 
 The ungraded **Check** of FR-5.2 has no endpoint yet: every submission is graded and recorded (§15.5).
 
@@ -656,7 +656,7 @@ Each step is one vertex taken from the queue, with the state after it. The visua
 | POST | `/api/rewards/seen` | user | The app has announced every new badge, so none is announced twice. |
 | PUT | `/api/rewards/settings` | user | Hide or show points and badges (FR-9.5). |
 | GET | `/api/me/report` | user | The mastery report: each objective's result, whether the student is ready for the lecture, and the review path's progress for each "not yet" objective. |
-| GET | `/api/me/review/{objective_id}` | user | That objective's review path: its steps in order and which the student has answered. 403 until the mastery check marks the objective "not yet"; the activities on it are 403 until then too. |
+| GET | `/api/me/review/{objective_id}` | user | That objective's review path: its steps in order and which the student has answered. 403 until the mastery check marks the objective "not yet"; the activities on it are 403 until then too. Staff get 200, to preview it. |
 
 Progress, results and points change only as a side effect of attempts and segment completion. There is no endpoint for a client to set them.
 
@@ -684,7 +684,7 @@ Progress, results and points change only as a side effect of attempts and segmen
 | GET | `/api/staff/content/export` | staff | The content as fixture files, zipped as `api/app/seed/` is laid out (FR-11.5). |
 
 ## Conventions **[PROVISIONAL]**
-- Standard HTTP status codes; error bodies `{ "detail": "..." }`. `429` with a retry hint when a rate limit is reached.
+- Standard HTTP status codes; error bodies `{ "detail": "..." }`. `429` with a retry hint when a rate limit is reached. Integer ids are at most 2^31 - 1 (422 past it). Database errors are JSON too: 409 for a conflict, 422 for a value out of range, 503 with `Retry-After` when busy.
 - OpenAPI/Swagger auto-published at `/api/docs` (FastAPI) and used as the frontend contract.
 - `GET /api/health` (public) answers Docker's health check, and is exempt from the busy limit (NFR-P6).
 

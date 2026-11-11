@@ -8,6 +8,13 @@ const WCAG_21_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
 
 /** Scans the current page and fails with a readable list of any violations. */
 async function expectNoViolations(page: Page) {
+  // Let entrance animations finish first: mid-fade, text is see-through and fails contrast
+  // (seen on CI's slower WebKit). Endless ones, like spinners, are left alone.
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .every((a) => a.playState !== 'running' || a.effect?.getTiming().iterations === Infinity),
+  )
   const { violations } = await new AxeBuilder({ page }).withTags(WCAG_21_AA).analyze()
   const found = violations.map(
     (v) =>

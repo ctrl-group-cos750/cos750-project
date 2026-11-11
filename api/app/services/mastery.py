@@ -40,9 +40,10 @@ from typing import Any, Literal, cast
 from sqlalchemy import ColumnElement, and_, func, or_, select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, Objective, ObjectiveResult, Segment, User
+from app.models import Activity, Attempt, Objective, ObjectiveResult, Segment
 from app.services import rewards
 from app.services.events import log_event
+from app.services.locks import lock_student
 
 State = Literal["not_attempted", "met_independently", "met_with_support", "not_yet"]
 
@@ -223,9 +224,10 @@ def recompute(session: Session, user_id: int) -> list[Outcome]:
     newly met earns its points and badge (app/services/rewards.py), which are never taken back,
     even if a later rule change lowers the result."""
     # One recompute per student at a time: two answers submitted together would otherwise both
-    # insert the first result rows and one would fail on the unique constraint. On Postgres this
-    # row lock holds until the attempt's transaction commits; SQLite (tests) ignores it.
-    session.execute(select(User.id).where(User.id == user_id).with_for_update())
+    # insert the first result rows and one would fail on the unique constraint. An answer takes
+    # this lock before its insert (app/services/attempts.py); taking it here as well covers a
+    # recompute on its own (the seed's, after a rule change).
+    lock_student(session, user_id)
     outcomes = evaluate(session, user_id)
     stored = {
         r.objective_id: r

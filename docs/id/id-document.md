@@ -411,7 +411,8 @@ The application aims to meet WCAG 2.1 at level AA [45], the same target as the S
 | BFS animations use colour to show the current, queued and visited vertices. |	Each state also has a label and a marker, so colour is never the only signal.	| 1.4.1 Use of Colour |
 | Light text or thin lines on graph diagrams.	| Text and controls meet a contrast ratio of at least 4.5:1. |	1.4.3 Contrast (Minimum) |
 | Parsons problems use drag and drop.	| Lines can also be moved with the arrow keys. Every activity works with the keyboard alone. |	2.1.1 Keyboard |
-| Graph diagrams cannot be read by a screen reader.	| Each graph in the content has a short text description, such as its list of vertices and edges.	| 1.1.1 Non-text Content |
+| Graph diagrams cannot be read by a screen reader.	| Each graph in the content has a short text description, such as its list of vertices and edges. A drawn answer's text alternative says what the drawing shows and no more, so it never names a missed edge before a right answer or hint 4 (#155). |	1.1.1 Non-text Content |
+| Drawn answers in module 1 mark wrong and missed edges. |	Wrong edges are red, dashed and labelled "✗"; missed edges green and labelled "✓", so colour is never the only signal. Each picture has a "View full size" view and a dark-mode palette (#155). |	1.4.1 Use of Colour |
 | Narrated videos. |	The player shows captions by default and a transcript below each video. No video is recorded yet (#37). Every video's script is also shown as text in its segment, so a student who cannot hear or watch it, or who meets the segment before its video exists, gets the same teaching (#149). |	1.2.2 Captions (Prerecorded); 1.2.3 Media Alternative |
 | Moving BFS animations.	| Students can pause, step forward and back, reset and change the speed. |	2.2.2 Pause, Stop, Hide |
 | Time pressure. |	No timers on activities, checkpoints or the mastery check. |	2.2.1 Timing Adjustable |
@@ -577,6 +578,8 @@ Example for a trace error: “Not quite. You added C to the queue, but C has alr
 
 Feedback on code is given line by line. The student sees which lines or blanks are wrong and a message for each one, for example: “Vertex B was visited twice. Is it added to the `visited` set, which holds every vertex found so far, when it joins the queue?” A wrong answer at a video checkpoint can be tried again with hints, and the video continues once the answer is correct.
 
+Feedback on a graph question in module 1 is also drawn (#155). Each practice item shows a picture of its situation: the campus map, the bus map, the worked example's graph, the P, Q, R, S graph and the four directed-or-undirected panels; the closing task has none, because a picture would hint at the answer. After a wrong answer the student's own answer is drawn as a graph beside the map, and an edge that is not on the map is marked "✗ no such walkway". After a right answer, or once hint 4 is open, it is drawn beside the correct graph, with the walkways the student missed marked "✓ walkway on the map". Placing the student's graph beside the situation follows Mayer's spatial contiguity principle [15]. The drawing is made in the browser from the student's own answer and the per-row results, so the correct answer is not sent before it is earned.
+
 ## Scaffolding: the four-level hint ladder
 
 Every activity offers a four-level hint ladder. Hints are shown one level at a time and only when the student asks:
@@ -584,7 +587,7 @@ Every activity offers a four-level hint ladder. Hints are shown one level at a t
 1. Nudge: reminds the student of the key idea. Example: “Which vertex has been in the queue the longest?”
 2. Targeted hint: points to the exact step or line. Example: “Look at where a vertex is added to the visited set.”
 3. Partial solution: shows part of the answer, such as the next state of the queue or one key line of code.
-4. Worked solution: shows the full answer with an explanation of each step.
+4. Worked solution: shows the full answer with an explanation of each step. On a graph question in module 1 it also offers the correct graph (#155). Mastery items never show a correct graph.
 
 Before level 3, the application warns the student that using it will mark the objective as “Met with support”. This keeps the student in control and keeps the result honest (Section 3.2). In the mastery check (module 6) hints stop at level 2, because levels 3 and 4 give the answer away. A student who needs the worked solution there goes to the objective's review path, where "Met with support" can still be earned (#144).
 

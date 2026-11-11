@@ -34,19 +34,22 @@ export function answerView(
     }
     const yourTab = { name: graphShaped ? 'Your graph' : 'Your answers', picture: yours }
     if (compare) {
+      const name = graphShaped ? 'Correct graph' : 'Correct answers'
       const correct: Picture = {
         kind: 'drawing',
-        name: 'Correct graph',
+        name,
         drawing: correctDrawing(activity, situation, pairs),
       }
       return {
-        tabs: [yourTab, { name: 'Correct graph', picture: correct }],
-        caption: `${yourTab.name} beside the correct graph. A ${situation.link} you missed is marked in green.`,
+        tabs: [yourTab, { name, picture: correct }],
+        caption: graphShaped
+          ? `Your graph beside the correct graph. A ${situation.link} you missed is marked in green.`
+          : 'Your answers beside the correct ones. Where yours differ, the right part is marked in green.',
       }
     }
     return {
       tabs: [yourTab, situationTab],
-      caption: `${yourTab.name}, drawn from your answer. Switch to the ${situationTab.name.toLowerCase()} to compare.`,
+      caption: `${yourTab.name}, drawn ${graphShaped ? 'from your answer' : 'on the graph'}. Switch to the ${situationTab.name.toLowerCase()} to compare.`,
     }
   }
 

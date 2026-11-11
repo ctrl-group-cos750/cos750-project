@@ -36,7 +36,8 @@ export function GraphDrawing({ drawing, large = false }: GraphDrawingProps) {
       viewBox={`0 0 ${situation.width} ${situation.height}`}
       // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- an inline SVG, so it can use the theme's tokens
       role="img"
-      aria-labelledby={`${id}-title ${id}-desc`}
+      aria-labelledby={`${id}-title`}
+      aria-describedby={`${id}-desc`}
       className="block h-auto w-full"
       data-testid="graph-drawing"
     >

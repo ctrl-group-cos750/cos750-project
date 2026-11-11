@@ -86,6 +86,21 @@ export function answerDrawing(
   const notOnMap: string[] = []
   const misplaced: string[] = []
 
+  const graphShaped = activity.config.left.every(
+    (item) => placesNamed(situation, item.label).length === 2,
+  )
+  // A question about the parts of a given graph (the bus stops) draws the whole graph, and marks
+  // the student's choices on it; a question that builds the graph draws only what they built.
+  if (!graphShaped) {
+    for (const [a, b] of situation.links) {
+      edges.set(linkKey(situation, a, b), {
+        from: a,
+        to: b,
+        mark: 'plain',
+        directed: situation.directed,
+      })
+    }
+  }
   for (const item of activity.config.left) {
     const chosen = pairs[item.id]
     const part = chosen ? parsePart(right.get(chosen) ?? '') : null
@@ -111,7 +126,7 @@ export function answerDrawing(
           label: `✗ no such ${situation.link}`,
           directed: situation.directed,
         })
-      } else if (!existing) {
+      } else if (!existing || existing.mark === 'plain') {
         edges.set(key, { from: a, to: b, mark: 'plain', directed: situation.directed })
       }
     } else {
@@ -133,9 +148,6 @@ export function answerDrawing(
 
   // The map's own links: on the student's graph only once they may see the comparison.
   const missed: string[] = []
-  const graphShaped = activity.config.left.every(
-    (item) => placesNamed(situation, item.label).length === 2,
-  )
   if (compare) {
     for (const [a, b] of situation.links) {
       const key = linkKey(situation, a, b)
@@ -240,6 +252,10 @@ export function correctDrawing(
   situation: Situation,
   pairs: Readonly<Record<string, string>>,
 ): Drawing {
+  const graphShaped = activity.config.left.every(
+    (item) => placesNamed(situation, item.label).length === 2,
+  )
+  if (!graphShaped) return correctParts(activity, situation, pairs)
   const theirs = answerDrawing(activity, situation, pairs, true)
   const missed = theirs.edges.filter((edge) => edge.mark === 'missed')
   const missedKeys = new Set(missed.map((edge) => linkKey(situation, edge.from, edge.to)))
@@ -266,5 +282,47 @@ export function correctDrawing(
         ? `The ${situation.link}s you missed, ${names}, are marked in green.`
         : `You missed none of them.`
     }`,
+  }
+}
+
+/** The bus-stop style: each part the student got wrong, shown where it really is on the map, in
+ * green and labelled with the row ("✓ the Park bus stop"). */
+function correctParts(
+  activity: MatchingActivity,
+  situation: Situation,
+  pairs: Readonly<Record<string, string>>,
+): Drawing {
+  const right = new Map(activity.config.right.map((item) => [item.id, item.label]))
+  const greenEdges = new Map<string, string>()
+  const vertices: DrawnVertex[] = []
+  const sentences: string[] = []
+  for (const item of activity.config.left) {
+    const named = placesNamed(situation, item.label)
+    const part = parsePart(right.get(pairs[item.id] ?? '') ?? '')
+    const what = quote(situation, item.label)
+    if (named.length === 1) {
+      if (part && 'vertex' in part && part.vertex === named[0]) continue
+      vertices.push({ id: named[0], mark: 'missed', label: `✓ the ${what}` })
+      sentences.push(`The ${what} is vertex ${named[0]}.`)
+    } else if (named.length === 2) {
+      const key = linkKey(situation, named[0], named[1])
+      if (part && 'edge' in part && linkKey(situation, ...part.edge) === key) continue
+      greenEdges.set(key, `✓ ${what}`)
+      sentences.push(`The ${what} is edge ${edgeName(named[0], named[1])}.`)
+    }
+  }
+  return {
+    situation,
+    title: 'Correct answers',
+    vertices,
+    edges: situation.links.map(([from, to]) => {
+      const label = greenEdges.get(linkKey(situation, from, to))
+      return label
+        ? { from, to, mark: 'missed', label, directed: situation.directed }
+        : { from, to, mark: 'plain', directed: situation.directed }
+    }),
+    description: sentences.length
+      ? `The correct answers, marked in green where yours differ. ${sentences.join(' ')}`
+      : 'All your answers are right.',
   }
 }

@@ -489,6 +489,17 @@ def test_each_wrong_correction_leaves_bfs_broken(a: ActivityFixture) -> None:
             assert not passes_hidden(lines_text(a, swapped)), (wrong["text"], right["text"])
 
 
+@pytest.mark.parametrize("a", FIXES, ids=lambda a: str(a.id))
+def test_a_wrong_correction_breaks_bfs_wherever_it_goes(a: ActivityFixture) -> None:
+    """A wrong correction is a real mistake, not a harmless extra: put in place of any line of the
+    fixed program, BFS fails a hidden test (1703's "and n != v" passed them all, #147)."""
+    order = [i for x in a.solution["order"] for i in (x if isinstance(x, list) else [x])]
+    for wrong in (c for c in a.config["corrections"] if c["id"] not in order):
+        for place in range(len(order)):
+            changed = [*order[:place], wrong["id"], *order[place + 1 :]]
+            assert not passes_hidden(lines_text(a, changed)), (wrong["text"], place)
+
+
 @pytest.mark.parametrize("a", CHOICES, ids=lambda a: str(a.id))
 def test_the_exposing_tests_are_exactly_the_ones_the_faulty_version_fails(
     a: ActivityFixture,

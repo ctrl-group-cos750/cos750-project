@@ -423,19 +423,30 @@ def test_no_two_choose_tests_items_have_the_same_answer() -> None:
 FIXES = [a for a in CONTENT.activities if a.kind == "fix_the_bug"]
 
 
+def line_ids(order: list[Any]) -> list[int]:
+    """The line ids of an order, flattening any group of interchangeable lines (#145)."""
+    return [i for x in order for i in (x if isinstance(x, list) else [x])]
+
+
 @pytest.mark.parametrize("a", FIXES, ids=lambda a: str(a.id))
 def test_the_first_correction_listed_is_never_a_right_one(a: ActivityFixture) -> None:
     """ "Always take the first correction" got every fix-the-bug item right on staging, and
     objective 7's rule (all parts) with it."""
     first = a.config["corrections"][0]["id"]
-    assert first not in a.solution["order"]
+    assert first not in line_ids(a.solution["order"])
 
 
 def test_right_corrections_are_not_in_one_place() -> None:
     places = {
         [c["id"] for c in a.config["corrections"]].index(i)
         for a in FIXES
-        for i in a.solution["order"]
+        for i in line_ids(a.solution["order"])
         if i in {c["id"] for c in a.config["corrections"]}
     }
     assert len(places) > 1
+
+
+def test_a_retired_correction_id_is_never_reused() -> None:
+    """1703's correction 22 was a harmless extra condition; its replacement breaks BFS, a different
+    meaning, so it has a new id (23) and 22 is retired."""
+    assert 22 not in {c["id"] for c in ACTIVITIES[1703].config["corrections"]}

@@ -1948,8 +1948,8 @@
             "text": "    visited = []"
           },
           {
-            "id": 22,
-            "text": "            if n not in visited and n != v:"
+            "id": 23,
+            "text": "            if n not in order:"
           },
           {
             "id": 20,

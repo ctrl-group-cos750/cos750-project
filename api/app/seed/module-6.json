@@ -1559,7 +1559,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: start with visited = {start}, leave out visited.add(v), and put visited.add(n) just before queue.append(n)."
+          "body": "Answer: start with visited = {start}, leave out visited.add(v), and add visited.add(n) inside the if, next to queue.append(n). Either of those two lines can come first."
         }
       ]
     },

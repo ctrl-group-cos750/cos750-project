@@ -168,7 +168,7 @@ describe('trace table', () => {
     )
     for (const [name, value] of [
       ['queue after the step', row.queue],
-      ['visited', row.visited],
+      ['visited (has left the queue)', row.visited],
       ['order so far', row.order],
     ]) {
       const input = screen.getByRole('textbox', { name: `Step ${step}, ${name}` })
@@ -196,7 +196,15 @@ describe('trace table', () => {
       within(table)
         .getAllByRole('columnheader')
         .map((th) => th.textContent),
-    ).toEqual(['Step', 'Current vertex', 'Queue after the step', 'Visited', 'Order so far'])
+    ).toEqual([
+      'Step',
+      'Current vertex',
+      'Queue after the step',
+      'Visited (has left the queue)',
+      'Order so far',
+    ])
+    // The "…" on the graph is explained in words.
+    expect(screen.getByText(/At the start only B is in the queue/)).toHaveTextContent('“…” marks')
     expect(within(table).getByRole('rowheader', { name: 'start' })).toBeInTheDocument()
     // One empty step to start with: the number of rows gives nothing away.
     expect(screen.getAllByRole('combobox')).toHaveLength(1)
@@ -214,11 +222,14 @@ describe('trace table', () => {
     // The new step's first cell takes focus, so a keyboard user carries straight on.
     expect(screen.getByRole('combobox', { name: 'Step 2, current vertex' })).toHaveFocus()
     await fillRow(user, 2, { current: 'A', queue: 'D C', visited: '[[B, A]', order: 'B, A' })
+    await user.click(screen.getByRole('button', { name: 'Add a step' }))
+    await fillRow(user, 3, { current: 'D', queue: 'empty', visited: 'B A D', order: 'B, A, D' })
     await user.click(screen.getByRole('button', { name: 'Check answer' }))
 
     expect(onSubmit).toHaveBeenCalledWith([
       { visitedVertex: 'B', queue: ['A', 'D'], visited: ['B'], order: ['B'] },
       { visitedVertex: 'A', queue: ['D', 'C'], visited: ['B', 'A'], order: ['B', 'A'] },
+      { visitedVertex: 'D', queue: [], visited: ['B', 'A', 'D'], order: ['B', 'A', 'D'] },
     ])
   })
 
@@ -230,6 +241,11 @@ describe('trace table', () => {
     )
 
     await user.type(screen.getByRole('textbox', { name: 'Step 1, queue after the step' }), 'A, Z')
+    await user.type(
+      screen.getByRole('textbox', { name: 'Step 1, visited (has left the queue)' }),
+      'B',
+    )
+    await user.type(screen.getByRole('textbox', { name: 'Step 1, order so far' }), 'B')
     await user.click(screen.getByRole('button', { name: 'Check answer' }))
 
     expect(onSubmit).not.toHaveBeenCalled()
@@ -247,7 +263,6 @@ describe('trace table', () => {
     // Fixing the cells clears their errors, and the answer goes.
     await user.selectOptions(current, 'B')
     await user.clear(queue)
-    await user.type(queue, 'A, D')
     expect(queue).toBeValid()
     await user.click(screen.getByRole('button', { name: 'Check answer' }))
     expect(onSubmit).toHaveBeenCalledOnce()
@@ -284,8 +299,9 @@ describe('trace table', () => {
     )
     await fillRow(user, 1, { current: 'B', queue: 'A, D', visited: 'B', order: 'B' })
     await user.click(screen.getByRole('button', { name: 'Add a step' }))
-    await fillRow(user, 2, { current: 'A', queue: 'D', visited: 'B, A', order: 'B, A' })
+    await fillRow(user, 2, { current: 'A', queue: '', visited: 'B, A', order: 'B, A' })
     await user.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(onSubmit).toHaveBeenCalledOnce()
 
     rerender(
       <TraceTable
@@ -306,12 +322,74 @@ describe('trace table', () => {
     const step2Queue = screen.getByRole('textbox', { name: 'Step 2, queue after the step' })
     expect(screen.getByText('Step 1: correct')).toBeInTheDocument()
     expect(step2Queue).toHaveAccessibleDescription(/Queue: only new neighbours join\./)
-    expect(screen.getByText(/There are 3 more steps after step 2/)).toBeInTheDocument()
+    // Says the trace isn't finished, never how many steps are left.
+    expect(screen.getByText(/The trace isn’t finished/)).toBeInTheDocument()
+    expect(screen.queryByText(/3 more steps/)).not.toBeInTheDocument()
 
     await user.type(step2Queue, ', C')
     expect(step2Queue).not.toHaveAccessibleDescription(/only new neighbours/)
     expect(screen.queryByText(/only new neighbours/)).not.toBeInTheDocument()
     expect(screen.getByText('Step 1: correct')).toBeInTheDocument()
+  })
+
+  it('moves to the next cell on Enter and never submits on it (#136 review)', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn<(rows: TraceRow[]) => Promise<void>>().mockResolvedValue(undefined)
+    render(
+      <TraceTable activity={trace} result={undefined} submitting={false} onSubmit={onSubmit} />,
+    )
+    const current = screen.getByRole('combobox', { name: 'Step 1, current vertex' })
+    await user.selectOptions(current, 'B')
+    current.focus()
+    await user.keyboard('{Enter}')
+    const queue = screen.getByRole('textbox', { name: 'Step 1, queue after the step' })
+    expect(queue).toHaveFocus()
+    await user.keyboard('A, D{Enter}B{Enter}B{Enter}')
+    // After the last cell of the last step, Enter goes to "Add a step", not to Check.
+    expect(screen.getByRole('button', { name: 'Add a step' })).toHaveFocus()
+    expect(onSubmit).not.toHaveBeenCalled()
+    await user.keyboard('{Enter}')
+    expect(screen.getByRole('combobox', { name: 'Step 2, current vertex' })).toHaveFocus()
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it('refuses a half-filled table: blank visited or order, or a last queue not empty', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn<(rows: TraceRow[]) => Promise<void>>().mockResolvedValue(undefined)
+    render(
+      <TraceTable activity={trace} result={undefined} submitting={false} onSubmit={onSubmit} />,
+    )
+    await fillRow(user, 1, { current: 'B', queue: 'A, D', visited: '', order: '' })
+    await user.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(onSubmit).not.toHaveBeenCalled()
+    const queue = screen.getByRole('textbox', { name: 'Step 1, queue after the step' })
+    expect(queue).toHaveFocus()
+    expect(queue).toHaveAccessibleDescription(/BFS ends only when the queue is empty/)
+    expect(
+      screen.getByRole('textbox', { name: 'Step 1, visited (has left the queue)' }),
+    ).toHaveAccessibleDescription(/Fill in every vertex that has left the queue/)
+    expect(screen.getByRole('textbox', { name: 'Step 1, order so far' })).toBeInvalid()
+    // No confirm dialog: the reason is inline.
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+    // The same queue is fine on a step that isn't the last.
+    await user.click(screen.getByRole('button', { name: 'Add a step' }))
+    await fillRow(user, 1, { current: 'B', queue: 'A, D', visited: 'B', order: 'B' })
+    expect(queue).toBeValid()
+  })
+
+  it('names a list longer than the graph as an input error, not a server error', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn<(rows: TraceRow[]) => Promise<void>>().mockResolvedValue(undefined)
+    render(
+      <TraceTable activity={trace} result={undefined} submitting={false} onSubmit={onSubmit} />,
+    )
+    await fillRow(user, 1, { current: 'B', queue: '', visited: 'B', order: 'B, A, A, A, A, A' })
+    await user.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(
+      screen.getByRole('textbox', { name: 'Step 1, order so far' }),
+    ).toHaveAccessibleDescription(/This lists 6 vertices, but the graph has only 5/)
   })
 
   it('locks once the trace is correct', () => {
@@ -333,7 +411,12 @@ describe('fix the bug', () => {
   function program() {
     return within(screen.getByRole('list', { name: 'Your fixed program' }))
       .getAllByRole('listitem')
-      .map((item) => item.querySelector('code')?.textContent)
+      .map((item) => {
+        // The code as drawn: its indentation (padding of one space each) and its text, without
+        // the visually hidden words for a screen reader.
+        const code = item.querySelector('code')
+        return ' '.repeat(Number(code?.dataset.indent)) + (code?.firstChild?.textContent ?? '')
+      })
   }
 
   it('starts as the faulty program, with indentation kept', () => {
@@ -348,6 +431,21 @@ describe('fix the bug', () => {
     expect(program()).toEqual(fix.config.lines.map((line) => line.text))
     const list = screen.getByRole('list', { name: 'Your fixed program' })
     expect(list.querySelector('code')?.className).toMatch(/whitespace-pre/)
+    // A screen reader skips leading spaces, so the level is also in words (#136 review).
+    const codes = list.querySelectorAll('code')
+    expect(codes[0]?.textContent).toBe('def bfs(graph, start):')
+    expect(codes[3]?.textContent).toBe('v = queue.pop() (indent level 2)')
+    // Corrections are offered in the content's order, never sorted by id (A5 reorders them).
+    const line4 = screen.getByRole('combobox', { name: 'Line 4' })
+    expect(
+      within(line4)
+        .getAllByRole('option')
+        .map((o) => o.textContent),
+    ).toEqual([
+      'Keep this line',
+      'Replace with: “v = queue.popleft()” (indent level 2)',
+      'Replace with: “v = queue[0]” (indent level 2)',
+    ])
   })
 
   it('replaces a faulty line with a correction and submits the fixed program in order', async () => {
@@ -357,7 +455,7 @@ describe('fix the bug', () => {
 
     await user.selectOptions(
       screen.getByRole('combobox', { name: 'Line 4' }),
-      'Replace with: v = queue.popleft()',
+      'Replace with: “v = queue.popleft()” (indent level 2)',
     )
     expect(program()[3]).toBe('        v = queue.popleft()')
     await user.click(screen.getByRole('button', { name: 'Check answer' }))
@@ -396,16 +494,21 @@ describe('fix the bug', () => {
     expect(screen.getByRole('combobox', { name: 'Line 2' })).toHaveFocus()
     expect(screen.getByText('Removed lines')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Put back: queue = deque([start])' }))
+    await user.click(
+      screen.getByRole('button', { name: 'Put back: “queue = deque([start])” (indent level 1)' }),
+    )
     expect(program()[1]).toBe('    queue = deque([start])')
     expect(screen.queryByText('Removed lines')).not.toBeInTheDocument()
 
     const insert = screen.getByRole('button', { name: 'Insert line' })
     expect(insert).toBeDisabled()
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Correction' }), 'v = queue[0]')
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Correction' }),
+      '“v = queue[0]” (indent level 2)',
+    )
     await user.selectOptions(
       screen.getByRole('combobox', { name: 'Where' }),
-      'After line 3: while queue:',
+      'After line 3: “while queue:” (indent level 1)',
     )
     await user.click(insert)
     expect(program()[3]).toBe('        v = queue[0]')
@@ -484,8 +587,8 @@ describe('choose tests', () => {
       .map((li) => li.querySelector('code'))
     expect(lines.map((line) => line?.textContent)).toEqual([
       'def bfs(graph, start):',
-      '    visited = set()',
-      '        # deeper',
+      '    visited = set() (indent level 1)',
+      '        # deeper (indent level 2)',
     ])
     expect(lines[1]?.className).toMatch(/whitespace-pre/)
 
@@ -622,16 +725,20 @@ describe('the renderer and the activity page', () => {
       await screen.findByRole('combobox', { name: 'Step 1, current vertex' }),
       'B',
     )
-    await user.type(screen.getByRole('textbox', { name: 'Step 1, queue after the step' }), 'A, D')
+    await user.type(
+      screen.getByRole('textbox', { name: 'Step 1, visited (has left the queue)' }),
+      'B',
+    )
+    await user.type(screen.getByRole('textbox', { name: 'Step 1, order so far' }), 'B')
     await user.click(screen.getByRole('button', { name: 'Check answer' }))
 
     await waitFor(() => expect(api.callsTo('POST /api/activities/315/attempts')).toHaveLength(1))
     expect(api.callsTo('POST /api/activities/315/attempts')[0]?.body).toEqual({
-      submitted: { rows: [{ visitedVertex: 'B', queue: ['A', 'D'], visited: [], order: [] }] },
+      submitted: { rows: [{ visitedVertex: 'B', queue: [], visited: ['B'], order: ['B'] }] },
     })
     expect(await screen.findByText('0 of 2 correct.')).toBeInTheDocument()
     expect(screen.getByText(/Step 1: check again\. Order so far/)).toBeInTheDocument()
-    expect(screen.getByText(/There is one more step after step 1/)).toBeInTheDocument()
+    expect(screen.getByText(/The trace isn’t finished/)).toBeInTheDocument()
   })
 
   it('posts the chosen test ids and the fixed program from the activity page', async () => {

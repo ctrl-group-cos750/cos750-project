@@ -1,6 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { Button } from '../../components'
 import type { AttemptResult, CodeLine, FixTheBugActivity } from './activities.types.ts'
+import { IndentedCode } from './CodeListing.tsx'
+import { lineName } from './codeLines.ts'
 
 type FixTheBugProps = {
   activity: FixTheBugActivity
@@ -25,7 +27,11 @@ type Row = { key: number; original: number | null; current: number }
  *
  * The server marks each position of the program right or wrong, with a reason (a bug left in, the
  * wrong correction, a line in the wrong place). Positions move as soon as the program changes,
- * so the marks are cleared on the first change, as in the Parsons problem. */
+ * so the marks are cleared on the first change, as in the Parsons problem.
+ *
+ * Corrections are offered in the order the content gives them, never sorted by id, so their order
+ * gives nothing away. A line's indentation is drawn and also given in words ("indent level 2"),
+ * in the code, the option labels and the button names, as for the Parsons lines (#142). */
 export function FixTheBug({ activity, result, submitting, onSubmit }: FixTheBugProps) {
   const { lines, corrections } = activity.config
   const [rows, setRows] = useState<Row[]>(() =>
@@ -85,7 +91,7 @@ export function FixTheBug({ activity, result, submitting, onSubmit }: FixTheBugP
 
   function replace(index: number, value: number) {
     setRows(rows.map((row, i) => (i === index ? { ...row, current: value } : row)))
-    changed(`Line ${index + 1} is now: ${text(value).trim()}`)
+    changed(`Line ${index + 1} is now: ${lineName(text(value))}`)
   }
 
   function remove(index: number) {
@@ -108,7 +114,7 @@ export function FixTheBug({ activity, result, submitting, onSubmit }: FixTheBugP
     setRows([...rows.slice(0, at), row, ...rows.slice(at)])
     if (original !== null) setRemoved(removed.filter((id) => id !== original))
     focusNext.current = controlId(row.key, '-change')
-    changed(`Inserted line ${at + 1}: ${text(lineId).trim()}`)
+    changed(`Inserted line ${at + 1}: ${lineName(text(lineId))}`)
   }
 
   // A removed line goes back where it was in the faulty program, as near as the rows allow.
@@ -158,29 +164,25 @@ export function FixTheBug({ activity, result, submitting, onSubmit }: FixTheBugP
                 >
                   {index + 1}
                 </span>
-                <code className="block whitespace-pre-wrap [overflow-wrap:anywhere] font-mono text-sm leading-6">
-                  {text(row.current)}
-                </code>
+                <IndentedCode text={text(row.current)} className="text-sm leading-6" />
               </div>
-              <div className="flex flex-wrap items-center gap-2 pl-10">
+              <div className="flex flex-wrap items-center gap-2 sm:pl-10">
                 <label htmlFor={selectId} className="visually-hidden">
                   Line {index + 1}
                 </label>
                 <select
                   id={selectId}
-                  className="min-w-0 max-w-full rounded border border-primary bg-background px-2 py-1 font-mono text-sm"
+                  className="w-full min-w-0 rounded border border-primary bg-background px-2 py-1 font-mono text-sm sm:w-auto sm:max-w-full"
                   value={row.current}
                   disabled={disabled}
                   aria-describedby={`${baseId}-how${part ? ` ${markId}` : ''}`}
                   onChange={(event) => replace(index, Number(event.target.value))}
                 >
-                  {row.original !== null && (
-                    <option value={row.original}>Keep: {text(row.original).trim()}</option>
-                  )}
+                  {row.original !== null && <option value={row.original}>Keep this line</option>}
                   {corrections.map((correction) => (
                     <option key={correction.id} value={correction.id}>
                       {row.original === null ? 'Correction' : 'Replace with'}:{' '}
-                      {correction.text.trim()}
+                      {lineName(correction.text)}
                     </option>
                   ))}
                 </select>
@@ -217,7 +219,7 @@ export function FixTheBug({ activity, result, submitting, onSubmit }: FixTheBugP
               {part && (
                 <p
                   id={markId}
-                  className={`m-0 pl-10 text-sm ${part.correct ? 'text-success' : 'text-warning'}`}
+                  className={`m-0 text-sm sm:pl-10 ${part.correct ? 'text-success' : 'text-warning'}`}
                 >
                   {part.correct
                     ? 'Correct'
@@ -255,7 +257,7 @@ export function FixTheBug({ activity, result, submitting, onSubmit }: FixTheBugP
           <option value="">Choose a correction</option>
           {corrections.map((correction) => (
             <option key={correction.id} value={correction.id}>
-              {correction.text.trim()}
+              {lineName(correction.text)}
             </option>
           ))}
         </select>
@@ -275,7 +277,7 @@ export function FixTheBug({ activity, result, submitting, onSubmit }: FixTheBugP
           <option value="start">At the start</option>
           {rows.map((row, index) => (
             <option key={row.key} value={row.key}>
-              After line {index + 1}: {text(row.current).trim()}
+              After line {index + 1}: {lineName(text(row.current))}
             </option>
           ))}
           <option value="end">At the end</option>
@@ -305,14 +307,12 @@ export function FixTheBug({ activity, result, submitting, onSubmit }: FixTheBugP
           <ul className="m-0 grid list-none gap-2 p-0">
             {removed.map((lineId) => (
               <li key={lineId} className="flex min-w-0 flex-wrap items-center gap-2">
-                <code className="min-w-0 whitespace-pre-wrap [overflow-wrap:anywhere] font-mono text-sm">
-                  {text(lineId)}
-                </code>
+                <IndentedCode text={text(lineId)} className="min-w-0 text-sm" />
                 <Button
                   size="sm"
                   variant="ghost"
                   disabled={disabled}
-                  aria-label={`Put back: ${text(lineId).trim()}`}
+                  aria-label={`Put back: ${lineName(text(lineId))}`}
                   onClick={() => putBack(lineId)}
                 >
                   Put back

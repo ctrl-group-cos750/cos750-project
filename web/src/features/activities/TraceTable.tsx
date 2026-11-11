@@ -20,10 +20,14 @@ const EN_DASH = '–'
 const ARROW = '→'
 const LIST_COLUMNS: readonly { column: ListColumn; heading: string }[] = [
   { column: 'queue', heading: 'Queue after the step' },
-  { column: 'visited', heading: 'Visited' },
+  // Visited here means "has left the queue", as module 3 and the BFS engine define it; the header
+  // says so, because module 4's Python `visited` set holds the vertices found instead.
+  { column: 'visited', heading: 'Visited (has left the queue)' },
   { column: 'order', heading: 'Order so far' },
 ]
 const MAX_INPUT = 300
+// The cells of a step, in the order Enter moves through them.
+const CELLS = ['current', 'queue', 'visited', 'order'] as const
 
 function sameDraft(a: Draft | undefined, b: Draft | undefined): boolean {
   return (
@@ -46,6 +50,12 @@ function sameDraft(a: Draft | undefined, b: Draft | undefined): boolean {
  * "C, E", front of the queue first. A label that is not in the graph is an input error, named
  * beside its cell before anything is sent. The table starts with one step and grows one step at
  * a time, up to one per vertex, so the number of rows gives nothing away.
+ *
+ * Only the first answer to a mastery item counts, so a half-filled table must never go by
+ * accident: Enter in a cell moves to the next cell and never submits, and a table is refused,
+ * with the reason beside the cell, while a list is blank where a step always has vertices (visited,
+ * order so far), is longer than the graph, or the last step's queue isn't empty. A BFS ends only
+ * when the queue is empty, so that rule gives nothing away.
  *
  * The server checks every row against the engine's step and returns one mark per row, with what
  * to look at in a wrong one (Hattie and Timperley 2007; Shute 2008). A row's mark shows until the
@@ -101,12 +111,23 @@ export function TraceTable({ activity, result, submitting, onSubmit }: TraceTabl
         where: `Step ${index + 1}, current vertex`,
       })
     for (const { column, heading } of LIST_COLUMNS) {
-      const { unknown } = parseVertexList(row[column], vertices)
+      const { values, unknown } = parseVertexList(row[column], vertices)
+      const where = `Step ${index + 1}, ${heading.toLowerCase()}`
+      const isLast = index === rows.length - 1
+      let message = ''
       if (unknown.length > 0)
-        errors.set(cellId(row.key, column), {
-          message: `${unknown.join(', ')} ${unknown.length === 1 ? 'is not a vertex' : 'are not vertices'} in this graph.`,
-          where: `Step ${index + 1}, ${heading.toLowerCase()}`,
-        })
+        message = `${unknown.join(', ')} ${unknown.length === 1 ? 'is not a vertex' : 'are not vertices'} in this graph.`
+      else if (values.length > vertices.length)
+        message = `This lists ${values.length} vertices, but the graph has only ${vertices.length}.`
+      else if (column !== 'queue' && values.length === 0)
+        message =
+          column === 'visited'
+            ? 'Fill in every vertex that has left the queue so far.'
+            : 'Fill in the order the vertices left the queue so far.'
+      else if (column === 'queue' && isLast && values.length > 0)
+        message =
+          'BFS ends only when the queue is empty. Add a step for each vertex still in the queue, or check this one.'
+      if (message) errors.set(cellId(row.key, column), { message, where })
     }
   })
   const visibleErrors = showErrors ? errors : new Map<string, { message: string; where: string }>()
@@ -120,6 +141,24 @@ export function TraceTable({ activity, result, submitting, onSubmit }: TraceTabl
     setNextKey(nextKey + 1)
     setRows([...rows, row])
     focusNext.current = cellId(row.key, 'current')
+  }
+
+  // Enter in a cell moves on to the next cell, as in a spreadsheet, and never submits the form:
+  // only the first answer to a mastery item counts, so it must not go half-filled by accident.
+  function nextCell(event: React.KeyboardEvent, index: number, cell: (typeof CELLS)[number]) {
+    if (event.key !== 'Enter') return
+    event.preventDefault()
+    const at = CELLS.indexOf(cell)
+    const row = rows[index]
+    const target =
+      at < CELLS.length - 1
+        ? cellId(row.key, CELLS[at + 1])
+        : index < rows.length - 1
+          ? cellId(rows[index + 1].key, 'current')
+          : rows.length < maxRows
+            ? `${baseId}-add`
+            : `${baseId}-check`
+    document.getElementById(target)?.focus()
   }
 
   function removeLastRow() {
@@ -155,6 +194,9 @@ export function TraceTable({ activity, result, submitting, onSubmit }: TraceTabl
       }}
     >
       <GraphCanvas scenario={scenario} frame={scenario.frames[0]} />
+      <p className="m-0 text-sm">
+        At the start only {start} is in the queue: on the graph, “…” marks a vertex in the queue.
+      </p>
       <p className="m-0 text-sm">
         <span className="font-medium">{directed ? 'Directed' : 'Undirected'} graph.</span> Edges:{' '}
         <span className="font-mono [overflow-wrap:anywhere]">{edgeText || 'none'}</span>
@@ -249,6 +291,7 @@ export function TraceTable({ activity, result, submitting, onSubmit }: TraceTabl
                       value={row.current}
                       disabled={disabled}
                       onChange={(event) => update(index, { current: event.target.value })}
+                      onKeyDown={(event) => nextCell(event, index, 'current')}
                     >
                       <option value="">Choose</option>
                       {vertices.map((vertex) => (
@@ -274,6 +317,7 @@ export function TraceTable({ activity, result, submitting, onSubmit }: TraceTabl
                         value={row[column]}
                         disabled={disabled}
                         onChange={(event) => update(index, { [column]: event.target.value })}
+                        onKeyDown={(event) => nextCell(event, index, column)}
                       />
                       <CellError id={cellId(row.key, column)} errors={visibleErrors} />
                     </td>
@@ -309,10 +353,7 @@ export function TraceTable({ activity, result, submitting, onSubmit }: TraceTabl
 
       {missingSteps.length > 0 && rows.length === checked.length && (
         <p className="m-0 text-sm text-warning">
-          {missingSteps.length === 1
-            ? 'There is one more step'
-            : `There are ${missingSteps.length} more steps`}{' '}
-          after step {rows.length}: the traversal is not finished yet.
+          The trace isn’t finished: BFS goes on until the queue is empty.
         </p>
       )}
 
@@ -336,7 +377,7 @@ export function TraceTable({ activity, result, submitting, onSubmit }: TraceTabl
         </Button>
       </div>
       <div>
-        <Button type="submit" loading={submitting} disabled={disabled}>
+        <Button id={`${baseId}-check`} type="submit" loading={submitting} disabled={disabled}>
           Check answer
         </Button>
       </div>

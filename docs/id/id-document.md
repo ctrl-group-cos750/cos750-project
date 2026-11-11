@@ -185,7 +185,7 @@ We use Gagné's Nine Events of Instruction as a step-by-step guide to structure 
 | 1. Gain attention | A short puzzle on a campus map: "Which building can you reach in the fewest steps?" It appears before any terms are taught. |
 | 2. Inform learners of the objectives | Each module starts with "By the end of this module you can …" in plain words. The words match the objectives. |
 | 3. Stimulate recall of prior learning | A quick queue refresher that uses COS110 knowledge: add an item, remove an item and first in, first out. |
-| 4. Present the content | A narrated walkthrough that shows the graph, the queue and the visited set together. Each segment covers one idea. The walkthroughs are scripted, not yet recorded (#37); until then, worked examples and the visualiser carry this event. |
+| 4. Present the content | A narrated walkthrough that shows the graph, the queue and the visited set together. Each segment covers one idea. The walkthroughs are scripted, not yet recorded (#37); until then, worked examples and the visualiser carry this event. Every narrated video's script is also shown as text in its segment, so module 1's definitions and module 3's queue and visited rules are taught before the activities that use them, even with no video (#149). |
 | 5. Provide learning guidance | A worked example first. Then partly completed code. Then a blank task. A four-level hint ladder is always available. |
 | 6. Elicit performance | Checkpoints where the student predicts, traces, completes or orders code before the lesson continues. |
 | 7. Provide feedback | Instant and specific feedback from trace checks and comparison with the solution. The feedback explains why an answer is wrong. |
@@ -410,7 +410,7 @@ The application aims to meet WCAG 2.1 at level AA [45], the same target as the S
 | Light text or thin lines on graph diagrams.	| Text and controls meet a contrast ratio of at least 4.5:1. |	1.4.3 Contrast (Minimum) |
 | Parsons problems use drag and drop.	| Lines can also be moved with the arrow keys. Every activity works with the keyboard alone. |	2.1.1 Keyboard |
 | Graph diagrams cannot be read by a screen reader.	| Each graph in the content has a short text description, such as its list of vertices and edges.	| 1.1.1 Non-text Content |
-| Narrated videos. |	The player shows captions by default and a transcript below each video. No video is recorded yet (#37). |	1.2.2 Captions (Prerecorded) |
+| Narrated videos. |	The player shows captions by default and a transcript below each video. No video is recorded yet (#37). Every video's script is also shown as text in its segment, so a student who cannot hear or watch it, or who meets the segment before its video exists, gets the same teaching (#149). |	1.2.2 Captions (Prerecorded); 1.2.3 Media Alternative |
 | Moving BFS animations.	| Students can pause, step forward and back, reset and change the speed. |	2.2.2 Pause, Stop, Hide |
 | Time pressure. |	No timers on activities, checkpoints or the mastery check. |	2.2.1 Timing Adjustable |
 

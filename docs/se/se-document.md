@@ -359,7 +359,7 @@ Figure: Use cases. The student takes part in every use case in the first two gro
 
 ## Narrated video with checkpoints (FR-3)
 - **FR-3.1** Play narrated videos (screen recordings with a voice-over, no presenter) with play, pause and seek.
-- **FR-3.2** Show captions, on by default, and a transcript below the video. The transcript is the text version of the segment.
+- **FR-3.2** Show captions, on by default, and a transcript below the video. The transcript is the text version of the segment: the segment's body holds the narration as text, shown as the lesson when no video is attached and in a "Text version" disclosure below the video when one is (#149).
 - **FR-3.3** Pause automatically at each configured checkpoint and show its activity.
 - **FR-3.4** At a checkpoint, give immediate feedback. A wrong answer can be retried, with the hint ladder available (FR-4.4). Playback resumes once the activity is answered correctly.
 - **FR-3.5** Prevent seeking past a checkpoint that has not been answered correctly. Seeking backwards is always allowed.
@@ -534,7 +534,7 @@ Figure: Entities and relationships.
 
 **Module**: `id` (the module number, 0 to 6), `slug`, `title`, `goals` (the "By the end of this module you can …" sentences), `estimated_minutes`, `position`.
 
-**Segment**: `id`, `module_id` or `review_objective_id` (exactly one: a segment is a step of a module, or of an objective's review path, FR-7.5), `position`, `kind` (`video` | `text` | `worked_example` | `activity` | `refresher`), `title`, `body` (Markdown for text and worked examples), `activity_id` (for an `activity` segment), `skip_check_activity_id` (optional: passing this activity lets the student skip the segment: a worked example after a short check, FR-8.2, or a refresher after its diagnostic item, FR-8.1), `refresher_for` (a refresher's diagnostic topic, e.g. `queues`).
+**Segment**: `id`, `module_id` or `review_objective_id` (exactly one: a segment is a step of a module, or of an objective's review path, FR-7.5), `position`, `kind` (`video` | `text` | `worked_example` | `activity` | `refresher`), `title`, `body` (Markdown for text and worked examples, and the narration as text for a video segment, #149), `activity_id` (for an `activity` segment), `skip_check_activity_id` (optional: passing this activity lets the student skip the segment: a worked example after a short check, FR-8.2, or a refresher after its diagnostic item, FR-8.1), `refresher_for` (a refresher's diagnostic topic, e.g. `queues`).
 
 **Video**: `id`, `title`, `segment_id` (the `video` segment that plays it, at most one; empty until it is placed in a module), `media_path`, `captions_path`, `transcript` (Markdown), `duration_seconds`.
 
@@ -1377,7 +1377,7 @@ What `staging` (commit `5668d77`, 11 November) does not yet do, or does only in 
 | Review paths | Each path's one practice item is multiple choice, also for objectives 5 to 7, whose mastery items are a trace table, code, and fix the bug or choose tests. | FR‑7.5, ID §7.6 | In progress (#148) |
 | Badges | The bonus-quest badges can't be earned yet. | FR‑9.3 | Follows #87 |
 | Visualiser | Predictions are checked in the browser and not recorded, so they give no evidence for an objective. The visualiser is reached only from a link in module 3, and has no way back to it. | FR‑6.4 | In progress (#146: the way back, and predictions logged as events) |
-| Videos | No video is recorded yet, and the fixtures hold none: staff upload each video on each site and place it in a module segment in the content editor. A video segment without a video shows "Video not available" and counts as done, and the teaching it carries is not yet in text. | FR‑3, NFR‑A4 | #37; text fallback in progress (#149) |
+| Videos | No video is recorded yet, and the fixtures hold none: staff upload each video on each site and place it in a module segment in the content editor. A video segment without a video shows its narration as text instead (#149). | FR‑3, NFR‑A4 | #37; text version in review (#149) |
 | Navigation | Some dead ends: review-path steps have no way back to the path, module 5 stays "open" with nothing in it, and a page that gets a 403 or 404 retries for several seconds. | NFR‑U3 | In progress (#146) |
 | Staff view of students | The staff accounts pages list every student's email and display name (FR-1.8), more than the evaluation needs. | NFR‑S8 | In progress (#146) |
 | Timing | The app shows the planned minutes (ID Table 4, `estimated_minutes` in the fixtures): about 75 on the register page, 64 on the module map (module 5, with no content, is left out) and 74 in the map's rows. The content as written is estimated at 130 to 140 minutes (ID §4.4), so the app tells students about half the real time. | FR‑2.6 | Figures made to agree in progress (#146); the minutes follow the pilot's timings (#76) |

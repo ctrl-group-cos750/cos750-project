@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useParams } from 'react-router'
+import { ApiError, retryUnlessRefused } from '../../api/client.ts'
 import { Alert, Spinner } from '../../components'
 import { useRefreshRewards } from '../rewards/hooks.ts'
 import { NarratedVideoPlayer } from './NarratedVideoPlayer.tsx'
@@ -22,10 +23,21 @@ export function VideoView({
   /** The level of its "Checkpoint" and "Transcript" headings: h3 inside a module segment. */
   heading?: 'h2' | 'h3'
 }) {
-  const query = useQuery({ queryKey: ['video', id], queryFn: () => fetchVideo(id) })
+  const query = useQuery({
+    queryKey: ['video', id],
+    queryFn: () => fetchVideo(id),
+    retry: retryUnlessRefused, // a video that isn't open yet (403) won't open on a retry
+  })
   const refreshRewards = useRefreshRewards()
   if (query.isPending) return <Spinner label="Loading the video" />
-  if (query.isError) return <Alert tone="danger">{query.error.message}</Alert>
+  if (query.isError)
+    return (
+      <Alert
+        tone={query.error instanceof ApiError && query.error.status === 403 ? 'info' : 'danger'}
+      >
+        {query.error.message}
+      </Alert>
+    )
   return (
     <NarratedVideoPlayer
       key={id}

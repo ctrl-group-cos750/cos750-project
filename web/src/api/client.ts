@@ -12,6 +12,24 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * A TanStack Query `retry` that gives up at once when the API refused the request (a 4xx: not
+ * allowed, not found, too many), since asking again gets the same answer and only keeps a spinner
+ * on screen. Anything else (offline, a 5xx) is retried up to three times, as by default.
+ */
+export function retryUnlessRefused(failureCount: number, error: Error): boolean {
+  if (error instanceof ApiError && error.status >= 400 && error.status < 500) return false
+  return failureCount < 3
+}
+
+/** The API's own message when it refused the request (a 4xx such as "not open yet" or "too many at
+ * once"), which says what to do; otherwise `fallback`. */
+export function refusalMessage(error: unknown, fallback: string): string {
+  return error instanceof ApiError && error.status >= 400 && error.status < 500
+    ? error.message
+    : fallback
+}
+
 export const OFFLINE_MESSAGE = "Can't reach Ctrl Academy. Check your connection and try again."
 const FALLBACK_MESSAGE = 'Something went wrong. Try again in a moment.'
 

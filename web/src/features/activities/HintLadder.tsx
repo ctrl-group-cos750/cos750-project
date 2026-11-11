@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { refusalMessage } from '../../api/client.ts'
 import { Alert, Button } from '../../components'
 import { fetchActivityHints } from './activities.api.ts'
 import type { Hint } from './activities.types.ts'
@@ -59,8 +60,8 @@ export function HintLadder({
     try {
       const hint = await requestHint(activityId)
       setHints((current) => [...current, hint])
-    } catch {
-      setError('We could not load a hint. Please try again.')
+    } catch (failure) {
+      setError(refusalMessage(failure, 'We could not load a hint. Please try again.'))
     } finally {
       setLoading(false)
     }

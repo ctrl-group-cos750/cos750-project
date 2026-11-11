@@ -342,7 +342,7 @@ Figure: Use cases. The student takes part in every use case in both groups excep
 - **FR-1.7** A profile page, reached from the account menu in the header, shows the student their own objectives met and, unless hidden (FR-9.5), points and badges.
 
 ## Modules and progress (FR-2)
-- **FR-2.1** Present the seven modules of the ID document (0 to 6) in order. A module opens once the one before it is complete; module 0 is always open. A module with no segments yet (its content not written) is passed over, so it never locks the modules after it.
+- **FR-2.1** Present the seven modules of the ID document (0 to 6) in order. A module opens once the one before it is complete; module 0 is always open. A module with no segments yet (its content not written) is passed over, so it never locks the modules after it. A locked module's activities can't be opened, answered or hinted at either (403), and nor can a video placed in it or its checkpoint questions; staff may open any activity to preview it (#137).
 - **FR-2.2** Each module is an ordered sequence of segments: narrated video, text, worked example, activity, or code activity.
 - **FR-2.3** Each module starts by stating its objectives in plain words ("By the end of this module you can …"), taken from the content.
 - **FR-2.4** Each module from module 2 onwards opens with one or two retrieval questions on earlier modules.
@@ -362,7 +362,7 @@ Figure: Use cases. The student takes part in every use case in both groups excep
   multiple choice; matching; labelling vertices and edges on a diagram; classifying graphs (directed or undirected); building a graph by adding vertices and edges; predicting the next BFS vertex; filling in a BFS trace table (current vertex, queue, visited set, order); Parsons problems (ordering shuffled lines of code); completing code by choosing a token for each blank; fixing a faulty BFS; choosing the test cases that expose a bug.
 - **FR-4.2** Check every answer on the server and return feedback straight away. Feedback says why an answer is wrong, not only that it is wrong.
 - **FR-4.3** Tag every activity with the learning objective it gives evidence for (1 to 7) and its purpose: practice, diagnostic, retrieval, mastery, review or bonus.
-- **FR-4.4** Offer a four-level hint ladder on every activity, one level at a time. Level 4 is the worked solution.
+- **FR-4.4** Offer a four-level hint ladder on every activity, one level at a time. Level 4 is the worked solution. Two requests at once reveal two levels in turn, never the same level twice.
 - **FR-4.5** Record every attempt with the answer, the result and the highest hint level used. Hint levels 3 and 4 make a later correct answer count as "with support" (FR-7.2).
 
 ## Code activities (FR-5)
@@ -385,7 +385,7 @@ Code activities never execute student-written code. The student constructs code 
 - **FR-6.6** Trace-table activities are checked step by step against the engine's steps.
 
 ## Mastery check and scaffolding (FR-7)
-- **FR-7.1** Module 6 is a mastery check: unseen activities on every objective, checked against the success criteria in the ID document's Table 1.
+- **FR-7.1** Module 6 is a mastery check: unseen activities on every objective, checked against the success criteria in the ID document's Table 1. Its items stay unseen until module 6 opens: the server refuses them before then (FR-2.1).
 - **FR-7.2** Give each objective one of three results: **met independently** (criterion met without hint level 3 or 4), **met with support** (met after using level 3 or 4), or **not yet** (criterion not met).
 - **FR-7.3** Show a mastery report: each objective's result in plain words, with next steps.
 - **FR-7.4** A student is **ready for the lecture** when no objective is "not yet". An objective whose mastery items are not all answered yet isn't met either, so in practice every objective must be met, with or without support.

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useParams } from 'react-router'
+import { Link, useParams } from 'react-router'
+import { buttonVariants } from '@/components/ui/button-variants'
+import { ApiError, retryUnlessRefused } from '../../api/client.ts'
 import { Alert, Spinner } from '../../components'
 import { useRefreshRewards } from '../rewards/hooks.ts'
 import {
@@ -33,10 +35,11 @@ export function ActivityView({ activityId, heading, onResult }: ActivityViewProp
   const query = useQuery({
     queryKey: ['activities', activityId],
     queryFn: () => fetchActivity(activityId),
+    retry: retryUnlessRefused,
   })
 
   if (query.isPending) return <Spinner label="Loading activity" />
-  if (query.isError) return <Alert tone="danger">{query.error.message}</Alert>
+  if (query.isError) return <NotAvailable error={query.error} />
 
   async function submit(submitted: Submission) {
     setSubmitting(true)
@@ -74,6 +77,28 @@ export function ActivityView({ activityId, heading, onResult }: ActivityViewProp
         heading={heading}
       />
     </>
+  )
+}
+
+/** Why an activity can't be shown, in the API's words: not open yet (403, its module is locked or
+ * its review path closed), no longer in the course (404), or a failure. Offers the way back to the
+ * module map rather than a spinner that never ends. */
+export function NotAvailable({ error }: { error: Error }) {
+  const refused = error instanceof ApiError && (error.status === 403 || error.status === 404)
+  return (
+    <div className="grid justify-items-start gap-3">
+      <Alert
+        tone={refused ? 'info' : 'danger'}
+        title={refused ? 'This activity isn’t available' : undefined}
+      >
+        {error.message}
+      </Alert>
+      {refused && (
+        <Link to="/" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+          Back to your modules
+        </Link>
+      )}
+    </div>
   )
 }
 

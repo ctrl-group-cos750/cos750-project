@@ -278,12 +278,3 @@ def recompute_all(session: Session) -> int:
     for user_id in sorted(users):
         recompute(session, user_id)
     return len(users)
-
-
-def review_path_of(session: Session, activity_id: int) -> int | None:
-    """The objective whose review path shows this activity, or None if it is on none."""
-    return session.scalar(
-        select(Segment.review_objective_id).where(
-            Segment.activity_id == activity_id, Segment.review_objective_id.is_not(None)
-        )
-    )

@@ -47,7 +47,7 @@ describe('buildShelf', () => {
     expect(shelf.objective.find((i) => i.achievement.id === 'lo2')?.next).toBe(
       'Meet it again on your own for gold.',
     )
-    expect(shelf.milestone.map((i) => i.state)).toEqual(['locked', 'locked', 'locked'])
+    expect(shelf.milestone.map((i) => i.state)).toEqual(['locked', 'locked', 'locked', 'locked'])
   })
 
   it('leaves off a badge the course cannot award yet, unless the student has it (#147)', () => {
@@ -84,8 +84,9 @@ describe('Badges page', () => {
       screen.getByRole('img', { name: 'Edge Spotter, bronze, met with support' }),
     ).toBeVisible()
     expect(screen.getByRole('img', { name: 'Word Smith, not earned yet' })).toBeVisible()
-    expect(screen.getByRole('img', { name: 'Hidden badge, not found yet' })).toBeVisible()
-    expect(screen.queryByText('Off the Map')).not.toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'First Module, not earned yet' })).toBeVisible()
+    // No hidden badge exists today, so its group isn't shown as an empty heading (#166 review).
+    expect(screen.queryByRole('heading', { name: 'Something to find' })).toBeNull()
   })
 
   it('can hide points and badges, and show them again', async () => {

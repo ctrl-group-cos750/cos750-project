@@ -22,7 +22,7 @@ export type AchievementGlyph =
   | 'solo-run'
   | 'quest'
   | 'all-quests'
-  | 'off-the-map'
+  | 'first-module'
 
 /**
  * The badge's shape. Objective badges are hexagons with two tiers; milestones are medals; quest
@@ -129,6 +129,13 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     description: 'You went back over an objective in the review path and met it.',
   },
   {
+    id: 'first-module',
+    name: 'First Module',
+    kind: 'milestone',
+    glyph: 'first-module',
+    description: 'You worked all the way through your first module.',
+  },
+  {
     id: 'solo-run',
     name: 'Solo Run',
     kind: 'milestone',
@@ -148,12 +155,5 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     kind: 'quest',
     glyph: 'all-quests',
     description: 'You finished every bonus quest.',
-  },
-  {
-    id: 'off-the-map',
-    name: 'Off the Map',
-    kind: 'hidden',
-    glyph: 'off-the-map',
-    description: 'You went exploring beyond what the lesson asked.',
   },
 ]

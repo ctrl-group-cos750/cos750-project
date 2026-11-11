@@ -407,7 +407,7 @@ Code activities never execute student-written code. The student constructs code 
 - **FR-8.3** Offer optional bonus quests after modules for students who want more challenge. They give points but never affect mastery.
 
 ## Points and badges (FR-9)
-- **FR-9.1** Award points for completed modules, correct activities and objectives met, from a server-side rules table.
+- **FR-9.1** Award points for completed modules, correct activities and objectives met, from a server-side rules table. A completed module earns its points, and the first one the First Module badge, only with real work in it: at least one of its activities answered correctly without hint 3 or 4. A module walked through by opening every hint earns nothing until then (FR-9.6). Modules completed before these points existed get them, if earned, when the seed next runs.
 - **FR-9.2** Award fewer points for a correct answer reached after hint level 3 or 4, matching "met with support".
 - **FR-9.3** Award badges for milestones (first module, every objective met, all bonus quests).
 - **FR-9.4** Points and badges are **private**: each student sees only their own. There is no public leaderboard, because public ranking discourages the students who most need the app (those motivated by avoiding failure, L05 [4]).
@@ -547,7 +547,7 @@ Figure: Entities and relationships.
 
 **Attempt** (append-only): `id`, `user_id`, `activity_id`, `submitted` (JSON: the answer — for a code activity, the chosen line order or filled-in tokens), `correct`, `score` (0 to 1, for partial results such as trace tables), `hint_level` (highest level shown before this attempt), `detail` (JSON: per-line or per-blank results for a code activity), `created_at`.
 
-**Event** (append-only): `id`, `user_id`, `type`, `ref` (what it was about: `video:3`, `checkpoint:12`, `segment:301`, `activity:301`, `objective:5`), `payload` (JSON: a hint's level, a result's old and new state), `created_at`. The server logs `hint_shown` and `result_changed` itself; the browser reports `video_started`, `video_completed`, `checkpoint_reached` and `segment_viewed` through `POST /api/events`, which takes only those types, each about a video, checkpoint or segment that exists, and no free text (`app/services/events.py`). On `staging` the web app sends only the video events; `segment_viewed` and a server-side `module_completed` are planned (#141). Answers and hints shown also have their own tables, `Attempt` and `HintView`.
+**Event** (append-only): `id`, `user_id`, `type`, `ref` (what it was about: `video:3`, `checkpoint:12`, `segment:301`, `activity:301`, `objective:5`), `payload` (JSON: a hint's level, a result's old and new state), `created_at`. The server logs `hint_shown`, `result_changed` and `module_completed` itself; the browser reports `video_started`, `video_completed`, `checkpoint_reached` and `segment_viewed` through `POST /api/events`, which takes only those types, each about a video, checkpoint or segment that exists, and no free text (`app/services/events.py`). The module page reports `segment_viewed` for each segment it shows, so the log gives time per segment and per module. Answers and hints shown also have their own tables, `Attempt` and `HintView`.
 
 **ModuleProgress**: `user_id`, `module_id`, `status` (`open` | `in_progress` | `complete`), `current_segment_position` (the furthest segment reached), `completed_at`.
 
@@ -1370,8 +1370,7 @@ What `staging` (commit `e8973c5`) does not yet do, or does only in part, against
 | Answer rate limit | No rate limit or size limit on answers and hints. | NFR‑S6 | In progress (#139) |
 | Mastery check | Feedback and hints 3–4 are available on mastery items, and the result shows at once. | FR‑7.1, FR‑7.2 | Planned (#144) |
 | Parsons | Only the one stored line order is accepted, though some lines could validly swap. | FR‑5.4 | In progress (#145) |
-| Points and events | Module completion earns no points (the 25-point rule is never applied). The web app does not send `segment_viewed`, and no `module_completed` event is logged, so neither time per module nor module completion can be measured from the log. | FR‑9.1, FR‑10.1 | Planned (#141) |
-| Badges | No "first module" badge; the bonus-quest badges can't be earned. | FR‑9.3 | Follows #87 |
+| Badges | The bonus-quest badges can't be earned yet. | FR‑9.3 | Follows #87 |
 | Visualiser | Predictions are checked in the browser and not recorded, so they give no evidence for an objective. The visualiser is reached only from a link in module 3. | FR‑6.4 | Not scheduled |
 | Videos | The fixtures hold no videos: staff upload them on each site. Placing a video in a module segment needs a database change on `staging`; the content editor adds it (#128). A video segment without a video shows "Video not available" and counts as done. | FR‑3, NFR‑A4 | #37; #128 (open pull request); text fallback planned (#149) |
 | Rendering and accessibility | Tables in worked examples and code indentation render wrongly in places; several issues from a browser walk-through (focus, contrast, labels). Two component kits are in use. | NFR‑U2, NFR‑A1–A3 | In progress (#140, #142) |

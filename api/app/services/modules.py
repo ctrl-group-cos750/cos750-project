@@ -34,6 +34,8 @@ from app.schemas.modules import (
     RetrievalActivityOut,
     SegmentOut,
 )
+from app.services import rewards
+from app.services.events import log_event
 from app.services.locks import lock_student
 
 # Activity kinds the web can't show a student yet: it says "This activity kind is not available
@@ -168,6 +170,12 @@ def activity_locked(session: Session, user_id: int, activity: Activity) -> bool:
         if m is not None
     )
     return _locked(session, user_id, homes)
+
+
+def segment_locked(session: Session, user_id: int, segment_id: int) -> bool:
+    """Whether this segment is in a module still locked for this student."""
+    module_id = session.scalar(select(Segment.module_id).where(Segment.id == segment_id))
+    return module_id is not None and _locked(session, user_id, {module_id})
 
 
 def video_locked(session: Session, user_id: int, video: Video) -> bool:
@@ -409,5 +417,82 @@ def save_position(
     ):
         row.status = "complete"
         row.completed_at = datetime.now(tz=UTC)
+        # Once per module: a complete module stays complete (FR-10.1, #141). Its points and badge
+        # come only with real work in it (FR-9.1, FR-9.6): see reward_module.
+        log_event(session, user_id, "module_completed", f"module:{module_id}")
+        reward_module(session, user_id, module_id)
     session.flush()
     return row
+
+
+def _module_activities(session: Session, module_id: int) -> set[int]:
+    """The activities a module asks for: those its segments show, and its own (recall questions)."""
+    shown = session.scalars(
+        select(Segment.activity_id).where(
+            Segment.module_id == module_id, Segment.activity_id.is_not(None)
+        )
+    )
+    own = session.scalars(select(Activity.id).where(Activity.module_id == module_id))
+    return {a for a in shown if a is not None} | set(own)
+
+
+def reward_module(session: Session, user_id: int, module_id: int) -> bool:
+    """Give a complete module's 25 points, and the First Module badge with the first, once
+    (FR-9.1, FR-9.3), if the student has done real work in it: at least one of its activities
+    answered correctly without hint 3 or 4. A module walked through by opening every hint and
+    sending anything earns nothing (FR-9.6, ID document §7.2: badges mark real progress, not
+    clicks; #166 review). Called when the module completes, when such a right answer comes later,
+    and by the seed for modules completed before this rule. Returns whether it was earned."""
+    activities = _module_activities(session, module_id)
+    earned = (
+        session.scalar(
+            select(Attempt.id)
+            .where(
+                Attempt.user_id == user_id,
+                Attempt.activity_id.in_(activities),
+                Attempt.correct.is_(True),
+                Attempt.hint_level < rewards.SUPPORT_LEVEL,
+            )
+            .limit(1)
+        )
+        is not None
+    )
+    if earned:
+        rewards.on_module_completed(session, user_id, module_id)  # points and badge once each
+    return earned
+
+
+def reward_completed_modules(session: Session, user_id: int, activity: Activity) -> None:
+    """After a right answer without hint 3 or 4: a complete module of this activity's that hadn't
+    earned its reward yet earns it now."""
+    homes = set(
+        session.scalars(
+            select(Segment.module_id).where(
+                Segment.activity_id == activity.id, Segment.module_id.is_not(None)
+            )
+        )
+    )
+    if activity.module_id is not None:
+        homes.add(activity.module_id)
+    complete = session.scalars(
+        select(ModuleProgress.module_id).where(
+            ModuleProgress.user_id == user_id,
+            ModuleProgress.module_id.in_({m for m in homes if m is not None}),
+            ModuleProgress.status == "complete",
+        )
+    )
+    for module_id in complete:
+        reward_module(session, user_id, module_id)
+
+
+def backfill_module_rewards(session: Session) -> int:
+    """Reward every complete module that has earned it but has no points yet: modules completed
+    before module points were awarded (#166 review). Safe to run on every seed: points and badges
+    are given once. Not committed. Returns how many modules gained their points."""
+    gained = 0
+    rows = session.scalars(select(ModuleProgress).where(ModuleProgress.status == "complete"))
+    for row in list(rows):
+        before = rewards.total_points(session, row.user_id)
+        reward_module(session, row.user_id, row.module_id)
+        gained += rewards.total_points(session, row.user_id) > before
+    return gained

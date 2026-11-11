@@ -434,7 +434,7 @@
           "events"
         ],
         "summary": "Report Event",
-        "description": "Log something only the browser sees, for the pilot's evaluation (FR-10.1). The server adds\nwho and when. 404 if the video, checkpoint or segment doesn't exist; 429 past 120 a minute.",
+        "description": "Log something only the browser sees, for the pilot's evaluation (FR-10.1). The server adds\nwho and when. 404 if the video, checkpoint or segment doesn't exist; 429 past 120 a minute. A\nsegment viewed in a module still locked for the student is accepted but not logged.",
         "operationId": "report_event_api_events_post",
         "parameters": [
           {
@@ -1876,7 +1876,7 @@
           "staff"
         ],
         "summary": "Export Csv",
-        "description": "Download one table as CSV for every real student (FR-10.2), oldest first:\n\n- `attempts`: each answer; `submitted` and `detail` are what was answered and the per-part\n  result, as JSON.\n- `hints`: each hint shown.\n- `events`: the timeline (app/services/events.py): videos started and finished, checkpoints\n  reached, segments viewed, hints shown, results changing; `payload` as JSON.\n- `objective_results`: each student's current result per objective, with the attempts it was\n  decided from (`evidence`).",
+        "description": "Download one table as CSV for every real student (FR-10.2), oldest first:\n\n- `attempts`: each answer; `submitted` and `detail` are what was answered and the per-part\n  result, as JSON.\n- `hints`: each hint shown.\n- `events`: the timeline (app/services/events.py): videos started and finished, checkpoints\n  reached, segments viewed, hints shown, results changing, modules completed; `payload` as JSON.\n  Segment views and module completions give time per segment and per module.\n- `objective_results`: each student's current result per objective, with the attempts it was\n  decided from (`evidence`).",
         "operationId": "export_csv_api_staff_export__table__csv_get",
         "parameters": [
           {

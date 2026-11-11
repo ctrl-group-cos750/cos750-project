@@ -117,7 +117,8 @@ def test_module_6_items_open_with_module_6(client: TestClient, committed: Sessio
     complete_modules_before(db, STUDENT["email"], 6)
     statuses = {m["id"]: m["status"] for m in client.get("/api/modules").json()}
     assert statuses[6] == "open"
-    assert [s for _, s, _ in every_route(client, db, 601)] == [200, 201, 200, 201]
+    # The hint is 409: a mastery check item gives none once it is answered (#144).
+    assert [s for _, s, _ in every_route(client, db, 601)] == [200, 201, 200, 409]
 
 
 def test_each_modules_activities_open_exactly_when_the_module_does(
@@ -288,6 +289,26 @@ def test_a_review_path_opens_when_module_6_says_not_yet(
     for item in objective_1:  # every one wrong
         body = {"submitted": first_submission(db, item.id)}
         assert client.post(f"/api/activities/{item.id}/attempts", json=body).status_code == 201
+    # Nothing is marked until the whole check is answered (#144): the rest of it right.
+    user_id = db.scalar(select(User.id).where(User.email == STUDENT["email"]))
+    rest = db.scalars(
+        select(Activity.id).where(
+            Activity.module_id == 6, Activity.purpose == "mastery", Activity.objective_id != 1
+        )
+    ).all()
+    for activity_id in rest:
+        db.add(
+            Attempt(
+                user_id=user_id,
+                activity_id=activity_id,
+                submitted={},
+                correct=True,
+                score=1.0,
+                detail={},
+                hint_level=0,
+            )
+        )
+    db.commit()
     states = {o["id"]: o["state"] for o in client.get("/api/me/report").json()["objectives"]}
     assert states[1] == "not_yet"
     for step in review_items(db, 1):

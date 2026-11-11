@@ -52,7 +52,11 @@ const SUPPORTED: ReadonlySet<string> = new Set<Activity['kind']>([
 export function ActivityRenderer(props: ActivityRendererProps) {
   const isSupported = SUPPORTED.has(props.activity.kind)
   const Title = props.heading ?? 'h1'
-  const pictures = picturesForActivity(props.activity.id)
+  // A mastery check item takes one answer, and says only that it was recorded (#144).
+  const check = props.activity.masteryCheck === true
+  const answeredInCheck = check && (props.activity.answered === true || !!props.result?.withheld)
+  // Pictures are for practice items only: a mastery item never shows a correct graph (#155).
+  const pictures = check ? undefined : picturesForActivity(props.activity.id)
   const wide = useMediaQuery(WIDE)
   const [submitted, setSubmitted] = useState<Submission>()
   const [hintLevel, setHintLevel] = useState(0)
@@ -65,66 +69,79 @@ export function ActivityRenderer(props: ActivityRendererProps) {
   const compare =
     props.result?.correct === true || Math.max(hintLevel, props.result?.hintLevel ?? 0) >= 4
 
-  const control =
-    props.activity.kind === 'parsons' ? (
-      <ParsonsProblem
-        activity={props.activity}
-        result={props.result}
-        submitting={props.submitting}
-        onSubmit={(order) => onSubmit({ order })}
-      />
-    ) : props.activity.kind === 'fill_in' ? (
-      <FillInCode
-        activity={props.activity}
-        result={props.result}
-        submitting={props.submitting}
-        onSubmit={(answers) => onSubmit({ answers })}
-      />
-    ) : props.activity.kind === 'multiple_choice' ? (
-      <MultipleChoice
-        activity={props.activity}
-        result={props.result}
-        submitting={props.submitting}
-        onSubmit={(selected) => onSubmit({ selected })}
-      />
-    ) : props.activity.kind === 'matching' ? (
-      <Matching
-        activity={props.activity}
-        result={props.result}
-        submitting={props.submitting}
-        onSubmit={(pairs) => onSubmit({ pairs })}
-        showPrompt={!pictures}
-      />
-    ) : props.activity.kind === 'trace' ? (
-      <TraceTable
-        activity={props.activity}
-        result={props.result}
-        submitting={props.submitting}
-        onSubmit={(rows) => onSubmit({ rows })}
-      />
-    ) : props.activity.kind === 'fix_the_bug' ? (
-      <FixTheBug
-        activity={props.activity}
-        result={props.result}
-        submitting={props.submitting}
-        onSubmit={(order) => onSubmit({ order })}
-      />
-    ) : props.activity.kind === 'choose_tests' ? (
-      <ChooseTests
-        activity={props.activity}
-        result={props.result}
-        submitting={props.submitting}
-        onSubmit={(selected) => onSubmit({ selected })}
-      />
-    ) : (
-      <Alert tone="warning">This activity kind is not available yet.</Alert>
+  const checkNote = check && !answeredInCheck && (
+    <p className="mb-4 text-sm text-muted-foreground">
+      Only your first answer counts, so check it before you send it. You will see your results in
+      your mastery report when you finish the check.
+    </p>
+  )
+  const control = answeredInCheck ? (
+    // Just answered: the feedback panel below says so. Answered before: say it here.
+    !props.result && (
+      <Alert tone="info" title="Answer recorded">
+        You have answered this question. Only your first answer counts, so it can't be changed. Your
+        results are in your mastery report when you finish the check.
+      </Alert>
     )
+  ) : props.activity.kind === 'parsons' ? (
+    <ParsonsProblem
+      activity={props.activity}
+      result={props.result}
+      submitting={props.submitting}
+      onSubmit={(order) => onSubmit({ order })}
+    />
+  ) : props.activity.kind === 'fill_in' ? (
+    <FillInCode
+      activity={props.activity}
+      result={props.result}
+      submitting={props.submitting}
+      onSubmit={(answers) => onSubmit({ answers })}
+    />
+  ) : props.activity.kind === 'multiple_choice' ? (
+    <MultipleChoice
+      activity={props.activity}
+      result={props.result}
+      submitting={props.submitting}
+      onSubmit={(selected) => onSubmit({ selected })}
+    />
+  ) : props.activity.kind === 'matching' ? (
+    <Matching
+      activity={props.activity}
+      result={props.result}
+      submitting={props.submitting}
+      onSubmit={(pairs) => onSubmit({ pairs })}
+      showPrompt={!pictures}
+    />
+  ) : props.activity.kind === 'trace' ? (
+    <TraceTable
+      activity={props.activity}
+      result={props.result}
+      submitting={props.submitting}
+      onSubmit={(rows) => onSubmit({ rows })}
+    />
+  ) : props.activity.kind === 'fix_the_bug' ? (
+    <FixTheBug
+      activity={props.activity}
+      result={props.result}
+      submitting={props.submitting}
+      onSubmit={(order) => onSubmit({ order })}
+    />
+  ) : props.activity.kind === 'choose_tests' ? (
+    <ChooseTests
+      activity={props.activity}
+      result={props.result}
+      submitting={props.submitting}
+      onSubmit={(selected) => onSubmit({ selected })}
+    />
+  ) : (
+    <Alert tone="warning">This activity kind is not available yet.</Alert>
+  )
   const feedback = isSupported && <FeedbackPanel result={props.result} />
   const hints = isSupported && (
     <HintLadder
       activityId={props.activity.id}
       disabled={props.submitting}
-      solved={props.result?.correct === true || props.activity.solved === true}
+      solved={props.result?.correct === true || props.activity.solved === true || answeredInCheck}
       requestHint={props.requestHint}
       loadHints={props.loadHints}
       onLevel={onLevel}
@@ -136,6 +153,7 @@ export function ActivityRenderer(props: ActivityRendererProps) {
     return (
       <Card>
         {title}
+        {checkNote}
         {control}
         {isSupported && (
           <div className="mt-5 grid gap-4">

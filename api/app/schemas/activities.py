@@ -418,8 +418,14 @@ class ActivityOut(ApiModel):
     visible: bool
     config: dict[str, Any]
     # This student has answered it correctly: no more hints are offered or given (#158). False
-    # where the response isn't about one student's answers (a video's checkpoints).
+    # where the response isn't about one student's answers (a video's checkpoints). Always false
+    # on a mastery check item, which doesn't say whether an answer was right (#144).
     solved: bool = False
+    # A module 6 mastery item (#144): one answer only, no right or wrong shown (the mastery report
+    # gives the results once every item is answered), and hints up to `MASTERY_HINT_LIMIT` only.
+    mastery_check: bool = False
+    # This student has answered this mastery check item, so it takes no more answers or hints.
+    answered: bool = False
 
 
 class AttemptIn(ApiModel):
@@ -430,14 +436,19 @@ class AttemptIn(ApiModel):
 
 
 class AttemptOut(ApiModel):
-    """The graded result sent back. Carries per-part correctness and messages, never the solution."""
+    """The graded result sent back. Carries per-part correctness and messages, never the solution.
+
+    On a mastery check item (#144) the result is `withheld`: `correct` and `score` are null,
+    `parts` is empty and `feedback` only says the answer was recorded. The mastery report shows
+    the results once every module 6 item is answered."""
 
     id: int
     activity_id: int
-    correct: bool
-    score: float
+    correct: bool | None
+    score: float | None
     parts: list[PartResult]
     feedback: str
+    withheld: bool = False
     # The highest hint level seen before this attempt; 3 or 4 means "with support" (FR-4.5).
     hint_level: int
 
@@ -450,3 +461,6 @@ class HintOut(ApiModel):
     body: str
     has_more: bool
     next_counts_as_support: bool
+    # The mastery check's hint limit is reached and the activity has more hints it won't give
+    # (#144): a student who needs them gets them on the objective's review path.
+    limit_reached: bool = False

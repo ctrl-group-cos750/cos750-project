@@ -204,4 +204,20 @@ describe('ReportPage', () => {
     await screen.findByText('Ready for the lecture')
     expect(screen.queryByRole('link', { name: /review path/ })).toBeNull()
   })
+
+  it('says an objective waits for the end of the check once its questions are answered (#144)', async () => {
+    withReport({
+      ready: false,
+      objectives: [
+        objective(1, { state: 'not_attempted', answered: 2, total: 2 }),
+        objective(2, { state: 'not_attempted', answered: 0, total: 1 }),
+      ],
+    })
+    renderApp('/report')
+    await screen.findByRole('heading', { name: 'Your mastery report' })
+    expect(row(1).getByText(/Its result shows when you finish the mastery check/)).toBeVisible()
+    expect(
+      row(1).getByRole('link', { name: 'Finish the mastery check in module 6: objective 1' }),
+    ).toHaveAttribute('href', '/modules/6')
+  })
 })

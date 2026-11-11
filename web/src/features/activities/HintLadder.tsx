@@ -118,6 +118,13 @@ export function HintLadder({
           again if you want to continue.
         </Alert>
       )}
+      {/* The mastery check gives hints 1 and 2 only (#144). */}
+      {lastHint?.limitReached && !solved && (
+        <Alert tone="info" title="No more hints in the mastery check">
+          Answer as best you can. If this objective comes out “not yet”, your report opens its
+          review path, which teaches it again with every hint.
+        </Alert>
+      )}
       {error && <Alert tone="danger">{error}</Alert>}
       {hasMore && (
         <div>

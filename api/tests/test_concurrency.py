@@ -431,10 +431,34 @@ def test_a_burst_of_mastery_answers_all_record(
     db.expire_all()
     me = user_id(db)
     assert db.scalar(select(func.count()).where(Attempt.user_id == me)) == 10
-    # Every one was right, so each earned its activity's points, and none failed on a duplicate.
+    # Every one was right, but the check isn't finished, so no item has paid yet (#144); none
+    # failed on a duplicate either.
     paid = db.scalars(select(PointsEntry.ref).where(PointsEntry.user_id == me)).all()
-    assert {f"activity:{i}" for i in items} <= set(paid)
+    assert not {f"activity:{i}" for i in items} & set(paid)
     assert len(paid) == len(set(paid))
+
+
+def test_a_burst_of_one_mastery_answer_records_it_once(
+    clients: list[TestClient], committed: Session
+) -> None:
+    """The mastery check's one answer is checked under the student's lock (#144): ten sent at
+    once record one and refuse the rest."""
+    db = committed
+    complete_modules_before(db, STUDENT["email"], 6)
+    item = db.scalars(
+        select(Activity.id)
+        .where(Activity.module_id == 6, Activity.kind == "multiple_choice")
+        .order_by(Activity.id)
+    ).first()
+    assert item is not None
+    answer = {"submitted": right(db, item)}
+    responses = burst(
+        clients, lambda tab, _: tab.post(f"/api/activities/{item}/attempts", json=answer)
+    )
+    assert Counter(r.status_code for r in responses) == {201: 1, 409: 9}
+    db.expire_all()
+    me = user_id(db)
+    assert db.scalar(select(func.count()).where(Attempt.user_id == me)) == 1
 
 
 def test_a_burst_of_the_same_correct_answer_pays_once(

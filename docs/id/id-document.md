@@ -210,7 +210,7 @@ Constructive alignment means that objectives, learning activities and assessment
 | 3. Meet BFS | 4, 5 | Watch BFS on the campus graph. Predict the next vertex. Fill in the queue, the visited set and the traversal order. | Trace checkpoints | 12 |
 | 4. Build BFS | 6 | Put shuffled lines of code in order (Parsons). Fill in the missing tokens. | Line order and tokens checked against the solution | 15 |
 | 5. Test and debug | 7 | Find and fix bugs in faulty BFS code by selecting and ordering the corrections. Choose the test cases (a disconnected graph, a graph with a cycle) that expose each bug. | Fixes and test choices checked against the solution | 10 |
-| 6. Mastery check and report | 1–7 | Unseen items on every objective. A report for each objective with next steps. | Criteria in Table 1 | 10 |
+| 6. Mastery check and report | 1–7 | Unseen items on every objective. Each item is answered once, with hints up to level 2; results are shown in the report when the check is finished. A report for each objective with next steps. | Criteria in Table 1 | 10 |
 
 Table: The lesson sequence, in which each row links objectives, activities and evidence. This follows constructive alignment [4].
 
@@ -586,7 +586,7 @@ Every activity offers a four-level hint ladder. Hints are shown one level at a t
 3. Partial solution: shows part of the answer, such as the next state of the queue or one key line of code.
 4. Worked solution: shows the full answer with an explanation of each step.
 
-Before level 3, the application warns the student that using it will mark the objective as “Met with support”. This keeps the student in control and keeps the result honest (Section 3.2).
+Before level 3, the application warns the student that using it will mark the objective as “Met with support”. This keeps the student in control and keeps the result honest (Section 3.2). In the mastery check (module 6) hints stop at level 2, because levels 3 and 4 give the answer away. A student who needs the worked solution there goes to the objective's review path, where "Met with support" can still be earned (#144).
 
 Support also fades through the lesson [26]. Modules 1 to 3 start with worked examples. Module 4 moves from a Parsons problem, to filling in missing lines, to a version with most of the lines left blank. Module 5 is designed to start from faulty code with less given; on staging it is still empty (#86). A student who passes a short check is meant to be able to skip a worked example, because guidance that helps beginners can slow down stronger students [10]. The checks are written but not yet shown (SE document FR-8.2, #31).
 
@@ -648,7 +648,7 @@ Table: Evaluation questions and the instruments that answer them.
 
 For each activity we count how often hint level 3 or 4 was used and how many attempts were wrong. For each module we compare the real time with the planned time in Table 4 and with our estimate of the content as written (Section 4.4). We report the SUS score and the ARCS ratings, and group the open answers and think-aloud notes by theme.
 
-When the application is tested with real COS212 students, we will use a pre-test and a separate post-test. Both have items parallel to the mastery check, one or more per objective, with no hints. The pre-test is given before module 0. The post-test is given at least a day after the student finishes, and ideally one to seven days later, so that it measures what was retained, not what was just practised [18]. The mastery check is not the post-test: it comes straight after instruction and, on staging, allows hint levels 3 and 4, so a result on it measures performance with help, minutes after teaching. It stays the application's own check of readiness (Section 7.3).
+When the application is tested with real COS212 students, we will use a pre-test and a separate post-test. Both have items parallel to the mastery check, one or more per objective, with no hints. The pre-test is given before module 0. The post-test is given at least a day after the student finishes, and ideally one to seven days later, so that it measures what was retained, not what was just practised [18]. The mastery check is not the post-test: it comes straight after instruction and allows hint levels 1 and 2 (#144), and a "Not yet" leads to a review path with the full hint ladder, so its results measure performance with some help, minutes after teaching. It stays the application's own check of readiness (Section 7.3).
 
 We will report two measures of gain. Hake's normalised gain [33] shows how much of the possible improvement a student achieved:
 

@@ -74,7 +74,7 @@ def _support_first(data: dict[str, Any]) -> None:
     data["modules"][0]["segments"] = support + [s for s in segments if not s.get("support_for")]
 
 
-def _support_for(objective: int) -> Any:
+def _support_for(objective: Any) -> Any:
     def change(data: dict[str, Any]) -> None:
         for s in _segments(data):
             if s.get("support_for"):

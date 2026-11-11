@@ -165,7 +165,8 @@ def _move(client: TestClient, position: int) -> int:
 def _detail(client: TestClient) -> dict[str, Any]:
     res = client.get("/api/modules/0")
     assert res.status_code == 200
-    return res.json()
+    detail: dict[str, Any] = res.json()
+    return detail
 
 
 def _shown(client: TestClient) -> list[bool]:

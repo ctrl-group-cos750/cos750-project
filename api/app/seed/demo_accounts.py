@@ -236,19 +236,31 @@ def _walk(session: Session, user_id: int, account: DemoAccount) -> str | None:
             for activity in retrieval:
                 submitted = answer_for(activity, "right", f"{where}, retrieval {activity.id}")
                 record_attempt(session, user_id, activity, submitted)
-            for position in range(last + 1):
-                if position > 0:
-                    _do(session, user_id, segments[position - 1], where)
-                save_position(session, user_id, entry.module, position)
+            # As the page does: on to the next segment shown, past support the account doesn't
+            # need (FR-8.4). Support it does need is done on the way, like any other segment.
+            position = 0
+            save_position(session, user_id, entry.module, position)
+            while (after := _next_shown(session, user_id, entry.module, position)) is not None:
+                if after > last:
+                    break
+                _do(session, user_id, segments[position], where)
+                save_position(session, user_id, entry.module, after)
+                position = after
             if entry.through == "end":
-                _do(session, user_id, segments[last], where)
-                save_position(session, user_id, entry.module, last)  # "Finish module"
+                _do(session, user_id, segments[position], where)
+                save_position(session, user_id, entry.module, position)  # "Finish module"
         except ModuleLocked:
             return (
                 f"{account.email}: stopped at module {entry.module}, which is still locked "
                 "because the module before it isn't complete"
             )
     return None
+
+
+def _next_shown(session: Session, user_id: int, module_id: int, position: int) -> int | None:
+    """The position of the next segment shown to this account after `position`, or None."""
+    segments = get_module_detail(session, user_id, module_id).segments
+    return next((s.position for s in segments[position + 1 :] if s.shown), None)
 
 
 def _do(session: Session, user_id: int, segment: Segment, where: str) -> None:
@@ -285,7 +297,8 @@ def _questions(session: Session, step: DemoStep) -> list[Activity]:
     shown = session.scalars(
         select(Activity)
         .join(Segment, Segment.activity_id == Activity.id)
-        .where(Segment.module_id == step.module)
+        # Support segments (FR-8.4) only appear for a struggling student: never a step's question.
+        .where(Segment.module_id == step.module, Segment.support_for.is_(None))
         .order_by(Segment.position)
     ).all()
     picked = [

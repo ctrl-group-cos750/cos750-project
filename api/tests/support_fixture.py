@@ -4,11 +4,11 @@ The real support content is a separate card (#173). Until it lands, the tests us
 a local run of the app (`PYTHONPATH=. python tests/support_fixture.py <folder>`, then load that
 folder): the repository's fixtures, with a worked example and one fresh question for objective 6
 put in right after module 2's base practice on it (segments 206 to 208), as the content will be
-placed. Ids are 280 and 281, clear of the real support content (#173), which uses module 2's 90s.
+placed. Any real support content (#173) is left out first, so the tests see only this group. Ids
+are 280 and 281, clear of the real support, which uses module 2's 90s.
 """
 
 import json
-import shutil
 import sys
 from pathlib import Path
 from typing import Any
@@ -68,11 +68,27 @@ ACTIVITY: dict[str, Any] = {
 }
 
 
-def write_support_fixtures(folder: Path) -> Path:
-    """Copy the repository's fixtures into `folder` and add the support group. Returns `folder`."""
+def write_base_fixtures(folder: Path) -> Path:
+    """Copy the repository's fixtures into `folder` without any support segments (and the
+    activities only they show): the content as staging has it, before support. Returns `folder`."""
     folder.mkdir(parents=True, exist_ok=True)
     for path in FIXTURES.glob("*.json"):
-        shutil.copy(path, folder / path.name)
+        data = json.loads(path.read_text(encoding="utf-8"))
+        dropped: set[int] = set()
+        for module in data.get("modules", []):
+            support = [s for s in module["segments"] if s.get("support_for") is not None]
+            dropped |= {s["activity_id"] for s in support if s.get("activity_id") is not None}
+            module["segments"] = [s for s in module["segments"] if s not in support]
+        if "activities" in data:
+            data["activities"] = [a for a in data["activities"] if a["id"] not in dropped]
+        (folder / path.name).write_text(json.dumps(data, indent=2), encoding="utf-8")
+    return folder
+
+
+def write_support_fixtures(folder: Path) -> Path:
+    """The base fixtures (`write_base_fixtures`) in `folder`, with this support group added.
+    Returns `folder`."""
+    write_base_fixtures(folder)
     target = folder / f"module-{MODULE}.json"
     data = json.loads(target.read_text(encoding="utf-8"))
     segments = data["modules"][0]["segments"]

@@ -140,7 +140,8 @@ def test_a_module_s_segments_can_be_reordered_added_and_removed(
 ) -> None:
     body = module_body(staff, 3)
     segments = body["segments"]
-    text = next(s for s in segments if s["kind"] == "text")
+    # A segment everyone sees: support (FR-8.4) can't move before its objective's practice.
+    text = next(s for s in segments if s["kind"] == "text" and not s.get("supportFor"))
     segments.remove(text)
     segments.insert(0, text)  # moved to the front
     segments = [s for s in segments if s["kind"] != "worked_example"]  # one removed
@@ -197,7 +198,7 @@ def test_a_video_segment_chooses_its_video(staff: TestClient, db: Session) -> No
     assert listed == [{"id": video.id, "title": "Meet BFS", "segmentId": first_video["id"]}]
 
     # A text segment can't play a video.
-    text = next(s for s in body["segments"] if s["kind"] == "text")
+    text = next(s for s in body["segments"] if s["kind"] == "text" and not s.get("supportFor"))
     text["videoId"] = video.id
     assert staff.put(f"{BASE}/modules/3", json=body).status_code == 422
 

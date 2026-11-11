@@ -14,6 +14,7 @@ from support_fixture import (
     AFTER_SEGMENT,
     SUPPORT_ACTIVITY,
     SUPPORT_SEGMENTS,
+    write_base_fixtures,
     write_support_fixtures,
 )
 
@@ -208,7 +209,8 @@ def _shown(db: Session, user_id: int) -> dict[int, bool]:
 def test_students_part_way_keep_their_place_when_support_is_put_in(
     tmp_path: Path, db: Session
 ) -> None:
-    load(db)  # staging's content
+    base = write_base_fixtures(tmp_path / "staging")
+    load(db, base)  # staging's content, without support
     struggling_before = _student(db, "a@example.com")  # wrong twice, not yet at the support
     _at(db, struggling_before, 207)
     _attempt(db, struggling_before, 206, False)
@@ -260,7 +262,7 @@ def test_students_part_way_keep_their_place_when_support_is_put_in(
     save_position(db, struggling_before, 2, [s.id for s in detail.segments].index(208))
     db.commit()
     assert db.scalar(select(func.count(ShownSegment.id))) == 2
-    load(db)
+    load(db, base)
     assert _on(db, struggling_before) == 208
     assert _on(db, struggling_past) == 209
     assert _on(db, finished) == 209
@@ -268,7 +270,7 @@ def test_students_part_way_keep_their_place_when_support_is_put_in(
 
 
 def test_a_student_on_a_removed_segment_goes_to_the_one_before(tmp_path: Path, db: Session) -> None:
-    load(db)
+    load(db, write_base_fixtures(tmp_path / "staging"))
     user_id = _student(db, "a@example.com")
     _at(db, user_id, 207)
     folder = _edit(
@@ -286,8 +288,8 @@ def test_a_student_on_a_removed_segment_goes_to_the_one_before(tmp_path: Path, d
 
 
 @pytest.fixture
-def staff(client: TestClient, db: Session) -> TestClient:
-    load(db)
+def staff(client: TestClient, db: Session, tmp_path: Path) -> TestClient:
+    load(db, write_base_fixtures(tmp_path / "staging"))
     assert client.post("/api/auth/register", json=STAFF).status_code == 201
     user = db.scalars(select(User).where(User.email == STAFF["email"])).one()
     user.is_staff = True

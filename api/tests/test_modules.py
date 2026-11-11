@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, Checkpoint, Module, Objective, Segment, Video
+from app.models import Activity, Attempt, Checkpoint, Hint, Module, Objective, Segment, Video
 from app.services.mastery import counts
 
 # ---------------------------------------------------------------------------
@@ -666,13 +666,16 @@ def test_each_segment_says_whether_it_is_done(client: TestClient, db: Session) -
 
     done = [s["done"] for s in client.get("/api/modules/0").json()["segments"]]
     assert done == [True, False, False, False]
-    _answer(client, 1, "b")
+    _answer(client, 1, "b")  # wrong, without the last hint: not done yet (#143)
     _answer(client, 2, "a")
+    done = [s["done"] for s in client.get("/api/modules/0").json()["segments"]]
+    assert done == [True, False, True, False]
+    _answer(client, 1, "a")
     done = [s["done"] for s in client.get("/api/modules/0").json()["segments"]]
     assert done == [True, True, True, False]
 
 
-def test_an_activity_must_be_answered_once_right_or_wrong_before_moving_on(
+def test_an_activity_must_be_answered_correctly_before_moving_on(
     client: TestClient, db: Session
 ) -> None:
     _make_gated_module(db)
@@ -684,8 +687,38 @@ def test_an_activity_must_be_answered_once_right_or_wrong_before_moving_on(
     assert "activity" in res.json()["detail"]
     assert client.get("/api/modules/0").json()["currentSegmentPosition"] == 1
 
-    _answer(client, 1, "b")  # wrong is enough: it is practice
+    _answer(client, 1, "b")  # a wrong answer, without the last hint, isn't enough (#143)
+    assert _move(client, 2) == 409
+    _answer(client, 1, "a")
     assert _move(client, 2) == 200
+
+
+def test_a_wrong_answer_after_the_last_hint_lets_the_student_move_on(
+    client: TestClient, db: Session
+) -> None:
+    """The last hint gives the answer away: a student who needed it isn't kept on the segment."""
+    _make_gated_module(db)
+    db.add_all(Hint(activity_id=1, level=level, body=f"Hint {level}.") for level in (1, 2, 3, 4))
+    db.commit()
+    _register_and_login(client, ALICE)
+    assert _move(client, 1) == 200
+
+    for _ in range(3):
+        assert client.post("/api/activities/1/hints").status_code == 201
+    _answer(client, 1, "b")  # after hint 3: not yet
+    assert _move(client, 2) == 409
+    assert client.post("/api/activities/1/hints").status_code == 201  # hint 4, the last
+    _answer(client, 1, "b")
+    assert _move(client, 2) == 200
+
+
+def test_a_blank_answer_is_refused_and_not_recorded(client: TestClient, db: Session) -> None:
+    _make_gated_module(db)
+    _register_and_login(client, ALICE)
+    res = client.post("/api/activities/1/attempts", json={"submitted": {"selected": " "}})
+    assert res.status_code == 422
+    assert res.json()["detail"] == "Answer the activity before checking it."
+    assert db.scalars(select(Attempt)).all() == []
 
 
 def test_a_video_needs_every_checkpoint_passed(client: TestClient, db: Session) -> None:
@@ -716,7 +749,7 @@ def test_reaching_the_last_segment_completes_the_module_only_once_it_is_done(
     # refused, but the module isn't complete either.
     assert _move(client, 3) == 200
     assert client.get("/api/modules/0").json()["status"] == "in_progress"
-    _answer(client, 3, "b")
+    _answer(client, 3, "a")
     assert _move(client, 3) == 200  # "Finish module" once it is done completes the module
     statuses = {m["id"]: m["status"] for m in client.get("/api/modules").json()}
     assert statuses == {0: "complete", 1: "open"}

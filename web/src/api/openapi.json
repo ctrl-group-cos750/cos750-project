@@ -245,7 +245,7 @@
           "activities"
         ],
         "summary": "Submit Attempt",
-        "description": "Grade a submission by comparison with the stored solution and record the attempt (FR-4.2,\nFR-4.5, FR-5.3).\n\nSend `{\"submitted\": {...}}` in the kind's shape: `{\"selected\": \"<option id>\"}` for multiple\nchoice, `{\"order\": [...]}` for Parsons, `{\"answers\": {...}}` for fill-in, and\n`{\"rows\": [{\"visitedVertex\", \"queue\", \"visited\", \"order\"}, ...]}` for a trace table, one row\nper BFS step (graded against the engine, so a trace has no stored solution). A submission in the\nwrong shape is 422. No student code is executed: `check_activity` compares the submission with\nthe solution, which stays in this process (NFR-S7).",
+        "description": "Grade a submission by comparison with the stored solution and record the attempt (FR-4.2,\nFR-4.5, FR-5.3).\n\nSend `{\"submitted\": {...}}` in the kind's shape: `{\"selected\": \"<option id>\"}` for multiple\nchoice, `{\"order\": [...]}` for Parsons, `{\"answers\": {...}}` for fill-in, and\n`{\"rows\": [{\"visitedVertex\", \"queue\", \"visited\", \"order\"}, ...]}` for a trace table, one row\nper BFS step (graded against the engine, so a trace has no stored solution). A submission in the\nwrong shape, or one that answers nothing (no option, line, token, pair, test or row), is 422\nand isn't recorded. No student code is executed: `check_activity` compares the submission with\nthe solution, which stays in this process (NFR-S7).",
         "operationId": "submit_attempt_api_activities__activity_id__attempts_post",
         "parameters": [
           {

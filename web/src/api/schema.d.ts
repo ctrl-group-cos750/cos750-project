@@ -118,7 +118,8 @@ export interface paths {
      *     choice, `{"order": [...]}` for Parsons, `{"answers": {...}}` for fill-in, and
      *     `{"rows": [{"visitedVertex", "queue", "visited", "order"}, ...]}` for a trace table, one row
      *     per BFS step (graded against the engine, so a trace has no stored solution). A submission in the
-     *     wrong shape is 422. No student code is executed: `check_activity` compares the submission with
+     *     wrong shape, or one that answers nothing (no option, line, token, pair, test or row), is 422
+     *     and isn't recorded. No student code is executed: `check_activity` compares the submission with
      *     the solution, which stays in this process (NFR-S7).
      */
     post: operations['submit_attempt_api_activities__activity_id__attempts_post']

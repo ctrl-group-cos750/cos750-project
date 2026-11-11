@@ -408,7 +408,7 @@ describe('ModulePage — video segment', () => {
 // ---------------------------------------------------------------------------
 
 describe('ModulePage — activity segment', () => {
-  it('keeps Next disabled until the activity is answered, then moves on', async () => {
+  it('keeps Next disabled until the activity is answered correctly, then moves on', async () => {
     let answered = false
     const detail = (): ModuleDetail => ({
       ...allKindsDetail,
@@ -447,10 +447,10 @@ describe('ModulePage — activity segment', () => {
           return Response.json({
             id: 1,
             activityId: 7,
-            correct: false,
-            score: 0,
+            correct: true,
+            score: 1,
             parts: [],
-            feedback: 'Not quite: D joined the queue last.',
+            feedback: 'Correct: B joined the queue first.',
             hintLevel: 0,
           })
         },
@@ -465,12 +465,12 @@ describe('ModulePage — activity segment', () => {
     const next = screen.getByRole('button', { name: 'Next →' })
     expect(next).toHaveAttribute('aria-disabled', 'true')
     expect(next).toHaveAccessibleDescription(
-      'Answer the activity to continue. A wrong answer still counts.',
+      'Get the activity right to continue. Stuck? The last hint shows the answer.',
     )
 
-    await userEvent.click(screen.getByLabelText('D, the last neighbour queued'))
+    await userEvent.click(screen.getByLabelText('B, the first neighbour queued'))
     await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
-    expect(await screen.findByText('Not quite: D joined the queue last.')).toBeInTheDocument()
+    expect(await screen.findByText('Correct: B joined the queue first.')).toBeInTheDocument()
 
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'Next →' })).not.toHaveAttribute('aria-disabled'),
@@ -546,7 +546,7 @@ describe('ModulePage — blocked Next', () => {
     next.focus()
     expect(next).toHaveFocus()
     expect(next).toHaveAccessibleDescription(
-      'Answer the activity to continue. A wrong answer still counts.',
+      'Get the activity right to continue. Stuck? The last hint shows the answer.',
     )
 
     await userEvent.click(next)

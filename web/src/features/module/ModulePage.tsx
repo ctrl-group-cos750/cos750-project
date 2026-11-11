@@ -112,7 +112,7 @@ export function ModulePage() {
     ? ''
     : segment.kind === 'video'
       ? 'Answer each of the video’s checkpoint questions correctly to continue.'
-      : 'Answer the activity to continue. A wrong answer still counts.'
+      : 'Get the activity right to continue. Stuck? The last hint shows the answer.'
 
   function handlePrevious() {
     setSegmentIndex(Math.max(0, currentIndex - 1))

@@ -22,10 +22,10 @@ from __future__ import annotations
 from collections.abc import Sequence
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, Checkpoint, Module, ModuleProgress, Segment, Video
+from app.models import Activity, Attempt, Checkpoint, Hint, Module, ModuleProgress, Segment, Video
 from app.schemas.modules import (
     ModuleDetailOut,
     ModuleOut,
@@ -161,8 +161,9 @@ def _videos(session: Session, segments: Sequence[Segment]) -> dict[int, int]:
 
 def done_segments(session: Session, user_id: int, segments: Sequence[Segment]) -> set[int]:
     """The ids of the segments this student has done (FR-2.7). An activity segment is done once
-    they have answered its activity at least once, and a video segment once they have passed
-    every checkpoint in its video. A segment with nothing to do (any other kind, or no activity
+    they have answered its activity correctly, or answered it after its last hint was shown
+    (#143): the last hint gives the answer away, so a student who needed it can still move on.
+    A video segment is done once they have passed every checkpoint in its video. A segment with nothing to do (any other kind, or no activity
     or video yet) is always done, and so is an activity, or a checkpoint, whose kind has no
     student UI yet (`KINDS_WITHOUT_STUDENT_UI`)."""
     videos = _videos(session, segments)
@@ -183,14 +184,24 @@ def done_segments(session: Session, user_id: int, segments: Sequence[Segment]) -
             )
         )
     )
-    answered: set[int] = set(no_ui)
+    # Each activity's last hint level: an answer given after it was shown also counts.
+    last_hint = dict(
+        session.execute(
+            select(Hint.activity_id, func.max(Hint.level))
+            .where(Hint.activity_id.in_(wanted))
+            .group_by(Hint.activity_id)
+        ).all()
+    )
+    answered: set[int] = set(no_ui)  # done: answered correctly, or after the last hint
     passed: set[int] = set(no_ui)
-    for activity_id, correct in session.execute(
-        select(Attempt.activity_id, Attempt.correct).where(
+    for activity_id, correct, hint_level in session.execute(
+        select(Attempt.activity_id, Attempt.correct, Attempt.hint_level).where(
             Attempt.user_id == user_id, Attempt.activity_id.in_(wanted)
         )
     ):
-        answered.add(activity_id)
+        last = last_hint.get(activity_id)
+        if correct or (last is not None and hint_level >= last):
+            answered.add(activity_id)
         if correct:
             passed.add(activity_id)
     done: set[int] = set()

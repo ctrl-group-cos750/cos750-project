@@ -354,6 +354,29 @@ def check_choose_tests(
     return _result(parts)
 
 
+def is_blank(kind: str, submission: dict[str, Any]) -> bool:
+    """Whether a submission (already in the kind's shape) answers nothing: no option chosen, no
+    line placed, no blank filled, no pair made, no test chosen, no trace row. A blank answer isn't
+    recorded (FR-2.7, #143): it would count as an attempt without the student trying."""
+
+    def filled(values: Any) -> bool:
+        return any(str(v).strip() for v in (values or {}).values())
+
+    if kind == "multiple_choice":
+        return not str(submission.get("selected") or "").strip()
+    if kind in ("parsons", "fix_the_bug"):
+        return not submission.get("order")
+    if kind == "fill_in":
+        return not filled(submission.get("answers"))
+    if kind == "matching":
+        return not filled(submission.get("pairs"))
+    if kind == "choose_tests":
+        return not submission.get("selected")
+    if kind == "trace":
+        return not submission.get("rows")
+    return False
+
+
 def check_activity(
     kind: str, config: dict[str, Any], solution: dict[str, Any], submission: dict[str, Any]
 ) -> CheckResult:

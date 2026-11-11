@@ -331,7 +331,7 @@ export interface paths {
      * Get Review Path
      * @description The objective's review path: its steps in order, and which the student has answered
      *     (FR-7.5). 404 if the objective has no path; 403 until module 6 marks it "not yet", so the
-     *     fresh items stay unseen until the student needs them.
+     *     fresh items stay unseen until the student needs them. Staff may always open it, to preview.
      */
     get: operations['get_review_path_api_me_review__objective_id__get']
     put?: never

@@ -827,7 +827,7 @@
           "mastery"
         ],
         "summary": "Get Review Path",
-        "description": "The objective's review path: its steps in order, and which the student has answered\n(FR-7.5). 404 if the objective has no path; 403 until module 6 marks it \"not yet\", so the\nfresh items stay unseen until the student needs them.",
+        "description": "The objective's review path: its steps in order, and which the student has answered\n(FR-7.5). 404 if the objective has no path; 403 until module 6 marks it \"not yet\", so the\nfresh items stay unseen until the student needs them. Staff may always open it, to preview.",
         "operationId": "get_review_path_api_me_review__objective_id__get",
         "parameters": [
           {
@@ -2587,6 +2587,7 @@
             "type": "string",
             "maxLength": 50,
             "minLength": 1,
+            "pattern": "^[^\\x00-\\x1f\\x7f]*$",
             "title": "Id"
           },
           "label": {

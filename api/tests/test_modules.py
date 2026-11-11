@@ -11,10 +11,11 @@ unlock chain and the completion logic while keeping the setup minimal.
 """
 
 from fastapi.testclient import TestClient
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Checkpoint, Module, Objective, Segment, Video
+from app.models import Activity, Attempt, Checkpoint, Module, Objective, Segment, Video
+from app.services.mastery import counts
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -142,6 +143,92 @@ def test_get_module_detail_returns_goals_and_ordered_segments(
     assert [s["position"] for s in segs] == [0, 1]
     assert segs[0]["kind"] == "text"
     assert segs[1]["kind"] == "worked_example"
+
+
+def test_module_retrieval_items_are_answer_free_and_attempts_do_not_count_as_mastery(
+    client: TestClient, db: Session
+) -> None:
+    _, _, module_id = _make_modules(db)
+    activity = Activity(
+        id=201,
+        kind="multiple_choice",
+        title="Recall adjacency lists",
+        module_id=module_id,
+        purpose="retrieval",
+        config={
+            "prompt": "What does an adjacency list store?",
+            "options": [
+                {"id": "neighbors", "label": "Connected vertices"},
+                {"id": "counts", "label": "Visit counts"},
+            ],
+        },
+        solution={"correct": "neighbors"},
+    )
+    db.add(activity)
+    db.commit()
+    _register_and_login(client, ALICE)
+    client.post("/api/modules/0/position", json={"segmentPosition": 1})
+    client.post("/api/modules/1/position", json={"segmentPosition": 1})
+
+    detail = client.get(f"/api/modules/{module_id}").json()
+    # The page loads the question from the activity endpoint, which leaves out the answer.
+    assert detail["retrieval"] == [
+        {"id": 201, "title": "Recall adjacency lists", "answered": False}
+    ]
+    blocked = client.post(f"/api/modules/{module_id}/position", json={"segmentPosition": 0})
+    assert blocked.status_code == 409
+
+    submitted = client.post(
+        "/api/activities/201/attempts", json={"submitted": {"selected": "neighbors"}}
+    )
+    assert submitted.status_code == 201
+    stored = db.scalar(select(Attempt).where(Attempt.activity_id == 201))
+    assert stored is not None
+    assert stored.correct
+    assert not counts(activity)
+    detail = client.get(f"/api/modules/{module_id}").json()
+    assert detail["retrieval"][0]["answered"]  # a later visit resumes past it
+    assert (
+        client.post(f"/api/modules/{module_id}/position", json={"segmentPosition": 0}).status_code
+        == 200
+    )
+
+
+def test_a_module_completed_before_its_retrieval_questions_can_still_be_reread(
+    client: TestClient, db: Session
+) -> None:
+    """The retrieval gate (FR-2.4) holds back a module being started, not one already done."""
+    _, _, module_id = _make_modules(db)
+    _register_and_login(client, ALICE)
+    for number in (0, 1, module_id):
+        client.post(f"/api/modules/{number}/position", json={"segmentPosition": 0})
+        client.post(f"/api/modules/{number}/position", json={"segmentPosition": 1})
+    assert client.get(f"/api/modules/{module_id}").json()["status"] == "complete"
+
+    # The question is added after the student finished the module.
+    db.add(
+        Activity(
+            id=201,
+            kind="multiple_choice",
+            title="Recall adjacency lists",
+            module_id=module_id,
+            purpose="retrieval",
+            config={"prompt": "?", "options": [{"id": "a", "label": "A"}]},
+            solution={"correct": "a"},
+        )
+    )
+    db.commit()
+    reread = client.post(f"/api/modules/{module_id}/position", json={"segmentPosition": 0})
+    assert reread.status_code == 200
+    assert reread.json()["status"] == "complete"
+
+    # A student who has not finished it is still asked first.
+    _logout(client)
+    _register_and_login(client, BOB)
+    client.post("/api/modules/0/position", json={"segmentPosition": 1})
+    client.post("/api/modules/1/position", json={"segmentPosition": 1})
+    blocked = client.post(f"/api/modules/{module_id}/position", json={"segmentPosition": 0})
+    assert blocked.status_code == 409
 
 
 def test_get_missing_module_is_404(client: TestClient, db: Session) -> None:

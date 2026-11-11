@@ -2213,6 +2213,55 @@
           "body": "Answer: two-islands and one-way. The faulty version passes the other four."
         }
       ]
+    },
+    {
+      "id": 625,
+      "kind": "multiple_choice",
+      "title": "Quick recall: a graph that tests BFS",
+      "module_id": 6,
+      "purpose": "retrieval",
+      "config": {
+        "prompt": "Which graph is useful for checking that BFS does not visit a vertex repeatedly?",
+        "options": [
+          {
+            "id": "cycle",
+            "label": "A graph containing a cycle"
+          },
+          {
+            "id": "single",
+            "label": "A graph with one vertex and no edges"
+          },
+          {
+            "id": "line",
+            "label": "A straight path with no branches"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "cycle",
+        "feedback": {
+          "single": "A single vertex cannot reveal repeated visits through a cycle.",
+          "line": "A path is useful for order, but a cycle is needed to expose missing visited checks."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Where could BFS meet the same vertex a second time?"
+        },
+        {
+          "level": 2,
+          "body": "It needs a way back to a vertex BFS has already found."
+        },
+        {
+          "level": 3,
+          "body": "Only a loop of edges, a cycle, leads back to a vertex BFS has found."
+        },
+        {
+          "level": 4,
+          "body": "Answer: a graph containing a cycle."
+        }
+      ]
     }
   ]
 }

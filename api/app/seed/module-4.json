@@ -11,18 +11,6 @@
       ],
       "segments": [
         {
-          "id": 401,
-          "kind": "activity",
-          "title": "Quick recall: the BFS order",
-          "activity_id": 401
-        },
-        {
-          "id": 402,
-          "kind": "activity",
-          "title": "Quick recall: adjacency lists",
-          "activity_id": 402
-        },
-        {
           "id": 403,
           "kind": "video",
           "title": "From a trace to code",

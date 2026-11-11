@@ -31,7 +31,16 @@ export type Segment = {
   done: boolean
 }
 
+/** A retrieval question the module asks before its segments (FR-2.4). */
+export type RetrievalActivity = {
+  id: number
+  title: string
+  /** The student has already made an attempt at it, so a later visit skips it. */
+  answered: boolean
+}
+
 /** Matches `ModuleDetailOut` from `GET /api/modules/{id}` and `POST /api/modules/{id}/position`. */
 export type ModuleDetail = ModuleSummary & {
   segments: Segment[]
+  retrieval: RetrievalActivity[]
 }

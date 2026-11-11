@@ -72,6 +72,19 @@ class SegmentOut(ApiModel):
     done: bool = True
 
 
+class RetrievalActivityOut(ApiModel):
+    """A retrieval question the module opens with, before its segments (FR-2.4).
+
+    The page loads the question itself from ``GET /api/activities/{id}``, so it is shown like any
+    other activity, with feedback and hints. ``answered`` is true once the student has made an
+    attempt at it: the page resumes at the first one still unanswered.
+    """
+
+    id: int
+    title: str
+    answered: bool
+
+
 class ModuleDetailOut(ModuleOut):
     """A module with its full ordered segment list.
 
@@ -80,6 +93,8 @@ class ModuleDetailOut(ModuleOut):
     """
 
     segments: list[SegmentOut]
+    # The retrieval questions, answered before the segments (FR-2.4). Not segments themselves.
+    retrieval: list[RetrievalActivityOut]
 
 
 class PositionIn(ApiModel):

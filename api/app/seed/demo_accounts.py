@@ -62,7 +62,7 @@ from app.services.bfs import run_bfs
 from app.services.checking import check_activity
 from app.services.history import delete_history
 from app.services.mastery import evaluate, is_ready
-from app.services.modules import ModuleLocked, done_segments, save_position
+from app.services.modules import ModuleLocked, done_segments, get_module_detail, save_position
 
 DEMO_FILE = Path(__file__).parent / "demo" / "accounts.json"
 
@@ -227,6 +227,15 @@ def _walk(session: Session, user_id: int, account: DemoAccount) -> str | None:
             select(Segment).where(Segment.module_id == entry.module).order_by(Segment.position)
         ).all()
         try:
+            get_module_detail(session, user_id, entry.module)
+            retrieval = session.scalars(
+                select(Activity)
+                .where(Activity.module_id == entry.module, Activity.purpose == "retrieval")
+                .order_by(Activity.id)
+            ).all()
+            for activity in retrieval:
+                submitted = answer_for(activity, "right", f"{where}, retrieval {activity.id}")
+                record_attempt(session, user_id, activity, submitted)
             for position in range(last + 1):
                 if position > 0:
                     _do(session, user_id, segments[position - 1], where)
@@ -282,7 +291,8 @@ def _questions(session: Session, step: DemoStep) -> list[Activity]:
     picked = [
         a
         for a in shown
-        if (step.purposes is None or a.purpose in step.purposes)
+        if (step.purposes is not None or a.purpose != "retrieval")
+        and (step.purposes is None or a.purpose in step.purposes)
         and (step.objectives is None or a.objective_id in step.objectives)
         and a.objective_id not in step.except_objectives
     ]

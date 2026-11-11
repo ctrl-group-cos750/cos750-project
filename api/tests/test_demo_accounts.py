@@ -89,6 +89,26 @@ def test_each_committed_account_reaches_its_stage(db: Session) -> None:
     assert report(db, "ready@demo.example.com") == (True, [])
 
 
+def test_demo_progress_records_retrieval_attempts_before_advancing(db: Session) -> None:
+    load(db)
+    load_demo_accounts(db, PASSWORD)
+    user = db.scalars(select(User).where(User.email == "mid@demo.example.com")).one()
+    progressed_modules = {entry.module for entry in read_demo_accounts()[1].progress}
+    retrieval_ids = set(
+        db.scalars(
+            select(Activity.id).where(
+                Activity.purpose == "retrieval", Activity.module_id.in_(progressed_modules)
+            )
+        ).all()
+    )
+    attempts = db.scalars(
+        select(Attempt).where(Attempt.user_id == user.id, Attempt.activity_id.in_(retrieval_ids))
+    ).all()
+    assert retrieval_ids
+    assert {attempt.activity_id for attempt in attempts} == retrieval_ids
+    assert all(attempt.correct for attempt in attempts)
+
+
 def test_the_not_yet_account_can_open_its_review_path_and_the_ready_one_cannot(
     db: Session, client: TestClient
 ) -> None:
@@ -150,6 +170,7 @@ def test_the_accounts_survive_content_that_changes_its_ids(tmp_path: Path) -> No
         load_demo_accounts(session, PASSWORD)
         assert report(session, "not-yet@demo.example.com") == (False, [6])
         assert report(session, "ready@demo.example.com") == (True, [])
+    fresh.dispose()
 
 
 # --- Module progress (#121) ---------------------------------------------------------------------
@@ -232,6 +253,7 @@ def test_once_every_module_has_segments_each_map_matches_its_stage(tmp_path: Pat
             )
         ).one()
         assert module_3.current_segment_position == 3  # the fourth segment, 0-based
+    fresh.dispose()
 
 
 def test_the_mid_account_can_open_module_3_through_the_api(
@@ -400,7 +422,9 @@ def test_a_demo_account_problem_never_stops_the_seed(tmp_path: Path) -> None:
     # The API only starts once `python -m app.seed` succeeds (Dockerfile), so a demo problem, here
     # a weak DEMO_PASSWORD, must be reported without failing it.
     url = f"sqlite:///{tmp_path / 'seed.db'}"
-    Base.metadata.create_all(create_engine(url))
+    engine = create_engine(url)
+    Base.metadata.create_all(engine)
+    engine.dispose()
     env = {**os.environ, "DATABASE_URL": url, "DEMO_PASSWORD": "weak"}
     run = subprocess.run(
         [sys.executable, "-m", "app.seed"],

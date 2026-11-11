@@ -98,6 +98,11 @@ class ActivityFixture(BaseModel, extra="forbid"):
             raise ValueError(f"activity {self.id}: a {self.purpose} item needs an objective_id")
         if self.purpose == "diagnostic" and self.objective_id is not None:
             raise ValueError(f"activity {self.id}: a diagnostic item has no objective")
+        if self.purpose == "retrieval":
+            if self.module_id not in range(2, 7):
+                raise ValueError(f"activity {self.id}: a retrieval item belongs in module 2 to 6")
+            if self.kind != "multiple_choice":
+                raise ValueError(f"activity {self.id}: retrieval items must be multiple choice")
         return self
 
 
@@ -216,6 +221,14 @@ def check_references(content: FixtureFile) -> None:
             raise ValueError(f"activity {a.id}: no module {a.module_id}")
         if a.objective_id is not None and a.objective_id not in objectives:
             raise ValueError(f"activity {a.id}: no objective {a.objective_id}")
+    retrieval_counts: dict[int, int] = {}
+    for activity in content.activities:
+        if activity.purpose == "retrieval" and activity.module_id is not None:
+            retrieval_counts[activity.module_id] = retrieval_counts.get(activity.module_id, 0) + 1
+    if modules_with_too_many := sorted(
+        module_id for module_id, count in retrieval_counts.items() if count > 2
+    ):
+        raise ValueError(f"modules may have at most two retrieval items: {modules_with_too_many}")
     on_paths = _check_review_paths(content, objectives, activities)
     # Module 6 is the mastery check: every objective needs an item there, or its result could
     # never be met and no student could ever be ready for the lecture (FR-7.1, FR-7.4).
@@ -239,6 +252,13 @@ def check_references(content: FixtureFile) -> None:
             for ref in (seg.activity_id, seg.skip_check_activity_id):
                 if ref is not None and ref not in activities:
                     raise ValueError(f"segment {seg.id}: no activity {ref}")
+                # The module page asks its retrieval questions before the segments (FR-2.4), so
+                # one placed in a segment as well would be asked twice.
+                if ref is not None and activities[ref].purpose == "retrieval":
+                    raise ValueError(
+                        f"segment {seg.id}: activity {ref} is a retrieval question, which the "
+                        "module asks before its segments, not in one"
+                    )
             if seg.activity_id is None:
                 continue
             if seg.activity_id in placed:

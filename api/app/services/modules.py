@@ -26,7 +26,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Activity, Attempt, Checkpoint, Module, ModuleProgress, Segment, Video
-from app.schemas.modules import ModuleDetailOut, ModuleOut, ModuleStatus, SegmentOut
+from app.schemas.modules import (
+    ModuleDetailOut,
+    ModuleOut,
+    ModuleStatus,
+    RetrievalActivityOut,
+    SegmentOut,
+)
 
 # Activity kinds the web can't show a student yet: it says "This activity kind is not available
 # yet" instead (SUPPORTED in web/src/features/activities/ActivityRenderer.tsx is the mirror of
@@ -46,6 +52,10 @@ class ModuleLocked(ValueError):
 
 class PositionTooFar(ValueError):
     """The position is more than one segment past the furthest the student has reached."""
+
+
+class RetrievalIncomplete(ValueError):
+    """The student has not answered every retrieval item before starting the module."""
 
 
 class SegmentNotDone(ValueError):
@@ -208,6 +218,12 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
         )
     )
     segments = _segments(session, module_id)
+    retrieval = session.scalars(
+        select(Activity)
+        .where(Activity.module_id == module_id, Activity.purpose == "retrieval")
+        .order_by(Activity.id)
+    ).all()
+    answered = _answered(session, user_id, [activity.id for activity in retrieval])
     videos = _videos(session, segments)
     done = done_segments(session, user_id, segments)
     # TODO (FR-8.1): leave out the refreshers module 0's diagnostic has ruled out, once the
@@ -227,6 +243,23 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
             )
             for index, segment in enumerate(segments)
         ],
+        retrieval=[
+            RetrievalActivityOut(
+                id=activity.id, title=activity.title, answered=activity.id in answered
+            )
+            for activity in retrieval
+        ],
+    )
+
+
+def _answered(session: Session, user_id: int, activity_ids: Sequence[int]) -> set[int]:
+    """Which of these activities the student has made at least one attempt at."""
+    return set(
+        session.scalars(
+            select(Attempt.activity_id).where(
+                Attempt.user_id == user_id, Attempt.activity_id.in_(activity_ids)
+            )
+        )
     )
 
 
@@ -242,10 +275,22 @@ def save_position(
     again after doing it completes the module (the page's "Finish module"); saving it while it
     isn't done yet changes nothing. A complete module stays complete (FR-2.6). Raises
     `ModuleNotFound` or `ModuleLocked` like `get_module_detail`.
+
+    Raises `RetrievalIncomplete` until the student has answered the module's retrieval questions
+    (FR-2.4), unless the module is already complete: a student who finished it before its
+    questions were added can still go back over it.
     """
     status = _status(session, user_id, module_id)
     if status == "locked":
         raise ModuleLocked(module_id)
+    if status != "complete":
+        retrieval_ids = session.scalars(
+            select(Activity.id).where(
+                Activity.module_id == module_id, Activity.purpose == "retrieval"
+            )
+        ).all()
+        if not set(retrieval_ids) <= _answered(session, user_id, retrieval_ids):
+            raise RetrievalIncomplete(module_id)
     segments = _segments(session, module_id)
     last = len(segments) - 1
     if last < 0:

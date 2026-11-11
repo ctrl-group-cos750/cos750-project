@@ -14,7 +14,7 @@ type ActivityRendererProps = {
   onSubmit: (submitted: Submission) => Promise<void>
   requestHint: (activityId: number) => Promise<Hint>
   loadHints?: (activityId: number) => Promise<readonly Hint[]>
-  heading?: 'h1' | 'h3'
+  heading?: 'h1' | 'h2' | 'h3'
 }
 
 // The kinds a student can answer. The API's KINDS_WITHOUT_STUDENT_UI (api/app/services/modules.py)

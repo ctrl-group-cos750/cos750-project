@@ -26,6 +26,7 @@ from app.services.modules import (
     ModuleLocked,
     ModuleNotFound,
     PositionTooFar,
+    RetrievalIncomplete,
     SegmentNotDone,
     get_module_detail,
     get_modules_for_user,
@@ -38,6 +39,7 @@ router = APIRouter(prefix="/api/modules", tags=["modules"])
 _NOT_FOUND = "Module not found."
 _LOCKED = "This module is not available yet. Complete the previous module to unlock it."
 _TOO_FAR = "Work through the module one segment at a time."
+_RETRIEVAL_INCOMPLETE = "Answer the retrieval questions before starting this module."
 _NOT_DONE = "Answer this segment's activity, or the video's checkpoints, before moving on."
 
 
@@ -96,5 +98,7 @@ def save_module_position(
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=_LOCKED) from None
     except PositionTooFar:
         raise HTTPException(status.HTTP_409_CONFLICT, detail=_TOO_FAR) from None
+    except RetrievalIncomplete:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=_RETRIEVAL_INCOMPLETE) from None
     except SegmentNotDone:
         raise HTTPException(status.HTTP_409_CONFLICT, detail=_NOT_DONE) from None

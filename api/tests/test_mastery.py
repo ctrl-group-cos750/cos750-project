@@ -404,10 +404,14 @@ def correct_submission(activity: Activity) -> dict[str, Any]:
 
 def test_module_6_has_mastery_items_for_every_objective() -> None:
     content = read_fixtures()
-    covered = {a.objective_id for a in content.activities if a.module_id == 6}
+    covered = {
+        a.objective_id for a in content.activities if a.module_id == 6 and a.purpose == "mastery"
+    }
     assert covered == {o.id for o in content.objectives}
     shown = {s.activity_id for m in content.modules if m.id == 6 for s in m.segments}
-    assert {a.id for a in content.activities if a.module_id == 6} <= shown
+    assert {
+        a.id for a in content.activities if a.module_id == 6 and a.purpose == "mastery"
+    } <= shown
 
 
 def test_the_committed_mastery_check_can_be_passed(client: TestClient, db: Session) -> None:

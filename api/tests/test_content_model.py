@@ -104,9 +104,9 @@ def test_modules_0_3_and_6_have_enough_for_the_sprint_1_path() -> None:
         assert seg.skip_check_activity_id is not None
         assert activities[seg.skip_check_activity_id].purpose == "diagnostic"
     # Module 6 is the mastery check (FR-7.1).
-    mastery = [a for a in activities.values() if a.module_id == 6]
+    mastery = [a for a in activities.values() if a.module_id == 6 and a.purpose == "mastery"]
     assert mastery
-    assert all(a.purpose == "mastery" and a.objective_id for a in mastery)
+    assert all(a.objective_id is not None for a in mastery)
 
 
 # --- Content that can't work is refused, naming the problem -------------------------------------

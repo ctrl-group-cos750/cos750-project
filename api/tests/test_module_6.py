@@ -193,8 +193,11 @@ def test_module_6_opens_with_what_the_check_is_then_only_mastery_items() -> None
     assert "first answer" in first.body
     assert all(s.kind == "activity" for s in rest)
     assert all(a.purpose == "mastery" and a.module_id == MASTERY_MODULE for a in CHECK)
+    # Its recall question is asked before the segments (FR-2.4), not in one.
+    recall = [a.id for a in CONTENT.activities if a.module_id == 6 and a.purpose == "retrieval"]
+    assert recall == [625]
     assert sorted(a.id for a in CHECK) == sorted(
-        a.id for a in CONTENT.activities if a.module_id == 6
+        a.id for a in CONTENT.activities if a.module_id == 6 and a.id not in recall
     )
 
 

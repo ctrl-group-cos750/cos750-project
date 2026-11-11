@@ -124,9 +124,25 @@ def test_each_modules_activities_open_exactly_when_the_module_does(
     client: TestClient, committed: Session
 ) -> None:
     """For every module: its practice, retrieval and skip-check activities are 403 while it is
-    locked and usable once it opens. Module 0 (the diagnostic) is open from the start."""
+    locked and usable once it opens. Module 0 (the diagnostic) is open from the start. An activity
+    the module shows only as support (#172) stays shut to this student, who isn't struggling."""
     db = committed
     user_id = register(client)
+    on_base = set(
+        db.scalars(
+            select(Segment.activity_id).where(
+                Segment.activity_id.is_not(None), Segment.support_for.is_(None)
+            )
+        )
+    )
+    on_support = set(
+        db.scalars(
+            select(Segment.activity_id).where(
+                Segment.activity_id.is_not(None), Segment.support_for.is_not(None)
+            )
+        )
+    )
+    support_only = on_support - on_base
     modules = db.scalars(select(Activity.module_id).distinct()).all()
     for module_id in sorted(m for m in modules if m is not None):
         activities = db.scalars(select(Activity.id).where(Activity.module_id == module_id)).all()
@@ -139,7 +155,8 @@ def test_each_modules_activities_open_exactly_when_the_module_does(
         db.commit()
         complete_modules_before(db, STUDENT["email"], module_id)
         for activity in activities:
-            assert client.get(f"/api/activities/{activity}").status_code == 200, activity
+            expected = 403 if activity in support_only else 200
+            assert client.get(f"/api/activities/{activity}").status_code == expected, activity
 
 
 def test_module_0s_diagnostic_is_open_to_a_new_student(

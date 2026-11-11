@@ -349,7 +349,7 @@ Figure: Use cases. The student takes part in every use case in the first two gro
 - **FR-1.9** Staff can make another registered account a team member, or take staff access away. It takes effect on the next request. Nobody can remove their own access, so the portal always keeps at least one team member.
 
 ## Modules and progress (FR-2)
-- **FR-2.1** Present the seven modules of the ID document (0 to 6) in order. A module opens once the one before it is complete; module 0 is always open. A module with no segments yet (its content not written) is passed over, so it never locks the modules after it.
+- **FR-2.1** Present the seven modules of the ID document (0 to 6) in order. A module opens once the one before it is complete; module 0 is always open. A module with no segments yet (its content not written) is passed over, so it never locks the modules after it. A locked module's activities, hints and videos (with their checkpoint questions) can't be opened or answered either, so the mastery check stays unseen until module 6 opens (FR-7.1). Staff are let through, so the content and video editors' "Open as a student" works on any item.
 - **FR-2.2** Each module is an ordered sequence of segments: narrated video, text, worked example, refresher, or activity (a code activity is one kind of activity).
 - **FR-2.3** Each module starts by stating its objectives in plain words ("By the end of this module you can …"), taken from the content.
 - **FR-2.4** Each module from module 2 onwards opens with one or two retrieval questions on earlier modules.
@@ -585,12 +585,12 @@ Base path: `/api`. JSON over HTTPS. Auth via the session cookie set by `/api/aut
 | GET | `/api/modules` | user | All modules with this student's state (locked, open, in progress, complete). |
 | GET | `/api/modules/{module_id}` | user | The module's segments, in order, with this student's position, which segments are done, and the module's retrieval questions (FR-2.4). 403 while the module is locked. Activities come without answers. Every refresher is listed: the diagnostic does not filter them yet (FR-8.1, §15.5). |
 | POST | `/api/modules/{module_id}/position` | user | Save the segment the student is on (FR-2.5). Refuses (409) to move past a segment that isn't done (FR-2.7). |
-| GET | `/api/videos/{video_id}` | user | The video's title, duration, media and captions paths, the transcript as text, and its checkpoints in order, each with its activity and whether this student has passed it (FR-3.5). The media itself comes from `/media/`. |
+| GET | `/api/videos/{video_id}` | user | The video's title, duration, media and captions paths, the transcript as text, and its checkpoints in order, each with its activity and whether this student has passed it (FR-3.5). The media itself comes from `/media/`. 403 while the module that plays it is locked (FR-2.1). |
 
 ## Activities, hints and code
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/api/activities/{activity_id}` | user | The activity to show: kind, title and config, never the solution. 403 for an item on a review path that isn't open yet (FR-7.5). |
+| GET | `/api/activities/{activity_id}` | user | The activity to show: kind, title and config, never the solution. 403 while every module it belongs to is locked (FR-2.1), and for an item on a review path that isn't open yet (FR-7.5). The same applies to its attempts and hints. |
 | GET | `/api/activities/{activity_id}/hints` | user | The hint levels this student has already seen, so a reload shows them again. |
 | POST | `/api/activities/{activity_id}/hints` | user | Reveal the next hint level and record it. Returns the hint, whether there are more, and whether the next one counts as support (FR-7.2). 409 once every level is shown. |
 | POST | `/api/activities/{activity_id}/attempts` | user | Submit an answer. The server checks it (a code activity is compared against its stored solution), records the attempt, updates results and points, and returns the outcome. A submission in the wrong shape for the kind is 422. |

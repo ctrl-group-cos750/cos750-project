@@ -355,7 +355,7 @@ def _wrong_pairs(activity: Activity) -> dict[str, Any]:
 
 def _rotated_lines(activity: Activity) -> dict[str, Any]:
     """The solution's lines, each moved one place on: every line out of place."""
-    order = list(ParsonsSolution.model_validate(activity.solution).order)
+    order = ParsonsSolution.model_validate(activity.solution).first_order()
     return {"order": order[1:] + order[:1]}
 
 
@@ -401,7 +401,7 @@ _BUILDERS: dict[str, tuple[Build, Build]] = {
         _wrong_pairs,
     ),
     "parsons": (
-        lambda a: {"order": ParsonsSolution.model_validate(a.solution).order},
+        lambda a: {"order": ParsonsSolution.model_validate(a.solution).first_order()},
         _rotated_lines,
     ),
     "fill_in": (
@@ -409,7 +409,7 @@ _BUILDERS: dict[str, tuple[Build, Build]] = {
         _wrong_tokens,
     ),
     "fix_the_bug": (
-        lambda a: {"order": FixTheBugSolution.model_validate(a.solution).order},
+        lambda a: {"order": FixTheBugSolution.model_validate(a.solution).first_order()},
         lambda a: {"order": [line.id for line in FixTheBugConfig.model_validate(a.config).lines]},
     ),
     "choose_tests": (

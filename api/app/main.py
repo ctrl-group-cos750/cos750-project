@@ -23,6 +23,7 @@ from app.routers import (
     rewards,
     staff,
     staff_accounts,
+    staff_content,
     staff_evaluation,
     videos,
 )
@@ -60,6 +61,7 @@ app.include_router(videos.router)
 app.include_router(staff.router)
 app.include_router(staff_accounts.router)
 app.include_router(staff_evaluation.router)
+app.include_router(staff_content.router)
 
 # Development without Docker only: serve uploads at /media/ from MEDIA_DIR, which Vite's dev
 # server proxies here. In Docker, nginx serves the media volume and this stays off.

@@ -1,0 +1,151 @@
+{
+  "id": 9907,
+  "kind": "choose_tests",
+  "title": "Template: choose the tests that catch the bug",
+  "module_id": 6,
+  "objective_id": 7,
+  "purpose": "mastery",
+  "config": {
+    "prompt": "This BFS has a bug. Choose every test case it fails: each one is a graph, a start vertex and the order a correct BFS visits it in.",
+    "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.pop()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                visited.add(n)\n                queue.append(n)\n    return order",
+    "tests": [
+      {
+        "id": "fork",
+        "directed": false,
+        "vertices": [
+          "A",
+          "B",
+          "C"
+        ],
+        "edges": [
+          {
+            "source": "A",
+            "target": "B"
+          },
+          {
+            "source": "A",
+            "target": "C"
+          }
+        ],
+        "start_vertex": "A",
+        "expected": [
+          "A",
+          "B",
+          "C"
+        ]
+      },
+      {
+        "id": "line",
+        "directed": false,
+        "vertices": [
+          "A",
+          "B",
+          "C"
+        ],
+        "edges": [
+          {
+            "source": "A",
+            "target": "B"
+          },
+          {
+            "source": "B",
+            "target": "C"
+          }
+        ],
+        "start_vertex": "A",
+        "expected": [
+          "A",
+          "B",
+          "C"
+        ]
+      },
+      {
+        "id": "two-levels",
+        "directed": false,
+        "vertices": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "edges": [
+          {
+            "source": "A",
+            "target": "B"
+          },
+          {
+            "source": "A",
+            "target": "C"
+          },
+          {
+            "source": "B",
+            "target": "D"
+          }
+        ],
+        "start_vertex": "A",
+        "expected": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ]
+      },
+      {
+        "id": "two-islands",
+        "directed": false,
+        "vertices": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "edges": [
+          {
+            "source": "A",
+            "target": "B"
+          },
+          {
+            "source": "C",
+            "target": "D"
+          }
+        ],
+        "start_vertex": "A",
+        "expected": [
+          "A",
+          "B"
+        ]
+      }
+    ]
+  },
+  "solution": {
+    "exposing": [
+      "fork",
+      "two-levels"
+    ],
+    "explanation": "Correct. The bug only shows when a vertex has two or more new neighbours, because then pop takes the wrong one first.",
+    "feedback": {
+      "fork": "A has two neighbours, so pop takes C before B: the faulty version visits A, C, B and fails this test.",
+      "line": "Each vertex has only one new neighbour, so the queue never holds two vertices: the faulty version passes this test.",
+      "two-levels": "A has two neighbours, so pop takes C before B: the faulty version visits A, C, B, D and fails this test.",
+      "two-islands": "Each vertex has only one new neighbour, so the queue never holds two vertices: the faulty version passes this test."
+    }
+  },
+  "hints": [
+    {
+      "level": 1,
+      "body": "Which line takes a vertex out of the queue? Does it take the oldest one?"
+    },
+    {
+      "level": 2,
+      "body": "pop takes the newest vertex. That only matters when the queue holds two or more vertices."
+    },
+    {
+      "level": 3,
+      "body": "Look for a start vertex with two neighbours."
+    },
+    {
+      "level": 4,
+      "body": "Answer: fork and two-levels. In both, A has two neighbours, so pop visits C before B. In line and two-islands the queue never holds two vertices, so the faulty version passes."
+    }
+  ]
+}

@@ -216,6 +216,7 @@ describe('the picture beside the question', () => {
     const selects = screen.getAllByRole('combobox')
     for (const [index, item] of campus.config.left.entries()) {
       const id = (correct ? item.id : wrongPairs[item.id as keyof typeof wrongPairs]) ?? ''
+      // oxlint-disable-next-line no-await-in-loop
       await user.selectOptions(selects[index], id)
     }
     await user.click(screen.getByRole('button', { name: 'Check answer' }))
@@ -285,6 +286,7 @@ describe('directed or undirected', () => {
     )
     const chosen = ['directed', 'directed', 'undirected', 'undirected']
     for (const [index, select] of screen.getAllByRole('combobox').entries())
+      // oxlint-disable-next-line no-await-in-loop
       await user.selectOptions(select, chosen[index])
     await user.click(screen.getByRole('button', { name: 'Check answer' }))
     const correctRows = [false, true, false, true]

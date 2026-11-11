@@ -39,7 +39,7 @@ export function ActivityView({ activityId, heading, onResult }: ActivityViewProp
   })
 
   if (query.isPending) return <Spinner label="Loading activity" />
-  if (query.isError) return <NotAvailable error={query.error} />
+  if (query.isError) return <NotAvailable error={query.error} heading={heading} />
 
   async function submit(submitted: Submission) {
     setSubmitting(true)
@@ -83,21 +83,23 @@ export function ActivityView({ activityId, heading, onResult }: ActivityViewProp
 /** Why an activity can't be shown, in the API's words: not open yet (403, its module is locked or
  * its review path closed), no longer in the course (404), or a failure. Offers the way back to the
  * module map rather than a spinner that never ends. */
-export function NotAvailable({ error }: { error: Error }) {
+export function NotAvailable({
+  error,
+  heading: Heading = 'h1',
+}: {
+  error: Error
+  /** The level of the "isn't available" heading, as for the activity's own title. */
+  heading?: 'h1' | 'h2' | 'h3'
+}) {
   const refused = error instanceof ApiError && (error.status === 403 || error.status === 404)
+  if (!refused) return <Alert tone="danger">{error.message}</Alert>
   return (
     <div className="grid justify-items-start gap-3">
-      <Alert
-        tone={refused ? 'info' : 'danger'}
-        title={refused ? 'This activity isn’t available' : undefined}
-      >
-        {error.message}
-      </Alert>
-      {refused && (
-        <Link to="/" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
-          Back to your modules
-        </Link>
-      )}
+      <Heading className="text-xl font-semibold">This activity isn’t available</Heading>
+      <Alert tone="info">{error.message}</Alert>
+      <Link to="/" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+        Back to your modules
+      </Link>
     </div>
   )
 }

@@ -75,6 +75,9 @@ export function ReviewPage() {
     const closed = path.error instanceof ApiError && path.error.status === 403
     return (
       <>
+        <div className={styles.heading}>
+          <h1>Review: objective {objectiveId}</h1>
+        </div>
         <Alert tone={closed ? 'info' : 'danger'}>{path.error.message}</Alert>
         <Link to="/report" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
           Back to your report

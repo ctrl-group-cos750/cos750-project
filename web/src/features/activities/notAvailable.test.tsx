@@ -28,7 +28,9 @@ describe('an activity the student may not open', () => {
     renderApp('/activities/601')
 
     expect(await screen.findByText(detail)).toBeInTheDocument()
-    expect(screen.getByText('This activity isn’t available')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'This activity isn’t available' }),
+    ).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Back to your modules' })).toHaveAttribute('href', '/')
     expect(screen.queryByText('Loading activity')).not.toBeInTheDocument()
     // Not retried: asking again would get the same answer.
@@ -56,6 +58,9 @@ describe('an activity the student may not open', () => {
     })
     renderApp('/review/2')
     expect(await screen.findByText(detail)).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Review: objective 2' }),
+    ).toBeInTheDocument()
     await new Promise((resolve) => setTimeout(resolve, 50))
     expect(api.callsTo('GET /api/me/review/2')).toHaveLength(1)
   })

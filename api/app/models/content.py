@@ -1,6 +1,12 @@
 """The course structure (SE document §8, FR-2): the learning objectives, the seven modules and the
-ordered segments inside each module. All three are content, loaded from the fixtures in app/seed,
-never edited by students.
+ordered segments inside each module. All three are content: the fixtures in app/seed fill an empty
+database, and staff edit it in the portal from then on (app/routers/staff_content.py). Never edited
+by students.
+
+`edited_at` is set when staff change a row in the portal. From then on the database's version is
+the one that counts: the seed fills in what is missing and updates what nobody has edited, but
+never writes over a staff edit (app/seed, `load`). `segments_edited_at` does the same for the
+order and list of a module's (or an objective's review path's) segments.
 """
 
 from datetime import datetime
@@ -37,6 +43,9 @@ class Objective(Base):
     # Exactly one is set; the seed checks that.
     pass_fraction: Mapped[float | None] = mapped_column()
     max_wrong: Mapped[int | None] = mapped_column()
+    edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Its review path's segments (Segment.review_objective_id) were changed in the portal.
+    segments_edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Module(Base):
@@ -52,6 +61,9 @@ class Module(Base):
     goals: Mapped[list[str]] = mapped_column(JSON)
     estimated_minutes: Mapped[int] = mapped_column()
     position: Mapped[int] = mapped_column()
+    edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Its segments (which, and in what order) were changed in the portal.
+    segments_edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Segment(Base):

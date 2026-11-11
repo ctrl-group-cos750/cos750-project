@@ -42,12 +42,13 @@ def test_parsons_correct_order_passes() -> None:
     assert [p.correct for p in result.parts] == [True, True, True]
 
 
-def test_parsons_two_lines_swapped_fails_both_positions() -> None:
+def test_parsons_two_lines_swapped_marks_one_line_to_move() -> None:
+    # Moving either line fixes it, so only one is marked; position-by-position marked both.
     result = checking.check_parsons(PARSONS, PARSONS_SOLUTION, ParsonsSubmission(order=[1, 0, 2]))
     assert not result.correct
-    assert result.score == pytest.approx(1 / 3)
-    assert [p.correct for p in result.parts] == [False, False, True]
-    assert result.parts[0].message == checking.OUT_OF_PLACE
+    assert result.score == pytest.approx(2 / 3)
+    assert [p.correct for p in result.parts].count(False) == 1
+    assert next(p for p in result.parts if not p.correct).message == checking.OUT_OF_PLACE
 
 
 def test_parsons_distractor_line_used_is_marked_as_not_belonging() -> None:

@@ -268,16 +268,20 @@
         "order": [
           1,
           2,
-          3,
-          4,
-          5,
+          [
+            3,
+            4,
+            5
+          ],
           6,
           7,
           8,
           9,
           10,
-          11,
-          12,
+          [
+            11,
+            12
+          ],
           13
         ]
       },
@@ -288,15 +292,15 @@
         },
         {
           "level": 2,
-          "body": "Before the loop come the three starting values, in the worked example's order: visited, then queue, then order. Inside the loop, take the front vertex first, then add it to the order."
+          "body": "Before the loop come the three starting values: visited, queue and order, in any order. Inside the loop, take the front vertex first, then add it to the order."
         },
         {
           "level": 3,
-          "body": "For each neighbour: the for line, then if n not in visited:, then visited.add(n), then queue.append(n). return order comes last, after the loop."
+          "body": "For each neighbour: the for line, then if n not in visited:, then visited.add(n) and queue.append(n), in either order. return order comes last, after the loop."
         },
         {
           "level": 4,
-          "body": "Answer: the worked example's order. The import, def bfs(graph, start):, visited = {start}, queue = deque([start]), order = [], while queue:, v = queue.popleft(), order.append(v), for n in sorted(graph.adjacency[v]):, if n not in visited:, visited.add(n), queue.append(n), and last return order."
+          "body": "Answer: the worked example's order is one right answer. The import, def bfs(graph, start):, visited = {start}, queue = deque([start]), order = [], while queue:, v = queue.popleft(), order.append(v), for n in sorted(graph.adjacency[v]):, if n not in visited:, visited.add(n), queue.append(n), and last return order. The three starting values can go in any order, and so can visited.add(n) and queue.append(n)."
         }
       ]
     },

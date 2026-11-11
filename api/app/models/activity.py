@@ -41,6 +41,8 @@ class Activity(Base):
     objective_id: Mapped[int | None] = mapped_column(ForeignKey("objectives.id"), index=True)
     # practice | diagnostic | retrieval | mastery | review | bonus (app/schemas/content.py)
     purpose: Mapped[str] = mapped_column(String(32), default="practice", server_default="practice")
+    # Set when staff change it (or its hints) in the portal; the seed never writes over it then.
+    edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Attempt(Base):

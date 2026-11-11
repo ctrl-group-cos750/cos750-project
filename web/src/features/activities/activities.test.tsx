@@ -57,6 +57,25 @@ describe('code activities', () => {
     expect(onSubmit).toHaveBeenCalledWith([3, 1, 2])
   })
 
+  it('leaves a blank set back to its placeholder out of the answer', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi
+      .fn<(answers: Record<number, string>) => Promise<void>>()
+      .mockResolvedValue(undefined)
+    const twoBlanks: FillInActivity = {
+      ...fillIn,
+      config: { ...fillIn.config, code: 'a = __1__\nb = __2__', blanks: [1, 2] },
+    }
+    render(
+      <FillInCode activity={twoBlanks} result={undefined} submitting={false} onSubmit={onSubmit} />,
+    )
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Blank 1' }), 'queue')
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Blank 2' }), 'visited')
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Blank 2' }), 'blank 2') // reset
+    await user.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(onSubmit).toHaveBeenCalledWith({ 1: 'queue' })
+  })
+
   it('submits token selections rather than editable code', async () => {
     const user = userEvent.setup()
     const onSubmit = vi

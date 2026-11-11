@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useParams } from 'react-router'
 import { retryUnlessRefused } from '../../api/retry.ts'
-import { Alert, Spinner } from '../../components'
+import { Spinner } from '../../components'
+import { NotAvailable } from '../activities/ActivityPage.tsx'
 import { useRefreshRewards } from '../rewards/hooks.ts'
 import { NarratedVideoPlayer } from './NarratedVideoPlayer.tsx'
 import { fetchVideo, requestCheckpointHint, submitCheckpointAttempt } from './video.api.ts'
@@ -30,7 +31,14 @@ export function VideoView({
   })
   const refreshRewards = useRefreshRewards()
   if (query.isPending) return <Spinner label="Loading the video" />
-  if (query.isError) return <Alert tone="danger">{query.error.message}</Alert>
+  if (query.isError)
+    return (
+      <NotAvailable
+        error={query.error}
+        title="This video isn’t available"
+        heading={heading ?? 'h1'} // h1 on its own page; a segment's own level inside a module
+      />
+    )
   return (
     <NarratedVideoPlayer
       key={id}

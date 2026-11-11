@@ -1,8 +1,11 @@
 import { useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useParams } from 'react-router'
+import { Link, useParams } from 'react-router'
+import { buttonVariants } from '@/components/ui/button-variants'
+import { ApiError } from '../../api/client.ts'
 import { retryUnlessRefused } from '../../api/retry.ts'
 import { Alert, Spinner } from '../../components'
+import { BackLink } from '../../components/BackLink.tsx'
 import { useRefreshRewards } from '../rewards/hooks.ts'
 import {
   fetchActivity,
@@ -44,7 +47,7 @@ export function ActivityView({ activityId, heading, showTitle, onResult }: Activ
   })
 
   if (query.isPending) return <Spinner label="Loading activity" />
-  if (query.isError) return <Alert tone="danger">{query.error.message}</Alert>
+  if (query.isError) return <NotAvailable error={query.error} heading={heading} />
 
   async function submit(submitted: Submission) {
     if (inFlight.current) return
@@ -94,6 +97,33 @@ export function ActivityView({ activityId, heading, showTitle, onResult }: Activ
   )
 }
 
+/** Why an activity or video can't be shown, in the API's words: not open yet (403, its module is
+ * locked or its review path closed), no longer in the course (404), or a failure. Offers the way
+ * back to the module map rather than a spinner that never ends. */
+export function NotAvailable({
+  error,
+  heading: Heading = 'h1',
+  title = 'This activity isn’t available',
+}: {
+  error: Error
+  /** The level of the "isn't available" heading, as for the activity's own title. */
+  heading?: 'h1' | 'h2' | 'h3'
+  /** The heading's words, e.g. "This video isn't available". */
+  title?: string
+}) {
+  const refused = error instanceof ApiError && (error.status === 403 || error.status === 404)
+  if (!refused) return <Alert tone="danger">{error.message}</Alert>
+  return (
+    <div className="grid justify-items-start gap-3">
+      <Heading className="text-xl font-semibold">{title}</Heading>
+      <Alert tone="info">{error.message}</Alert>
+      <Link to="/" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+        Back to your modules
+      </Link>
+    </div>
+  )
+}
+
 /** /activities/:activityId — a standalone activity. */
 export function ActivityPage() {
   const activityId = Number(useParams().activityId)
@@ -102,5 +132,11 @@ export function ActivityPage() {
   if (!validActivityId)
     return <Alert tone="danger">The activity identifier must be a positive number.</Alert>
 
-  return <ActivityView key={activityId} activityId={activityId} />
+  // Opened from a review path's step: the way back to the path (#146).
+  return (
+    <>
+      <ActivityView key={activityId} activityId={activityId} />
+      <BackLink />
+    </>
+  )
 }

@@ -13,6 +13,7 @@ from app.services.attempts import (
     reveal_next_hint,
 )
 from app.services.mastery import review_open, review_path_of
+from app.services.modules import activity_locked
 
 router = APIRouter(prefix="/api/activities", tags=["activities"])
 
@@ -21,15 +22,23 @@ BAD_SUBMISSION = "This submission is not in the expected shape."
 BLANK = "Answer the activity before checking it."
 NO_MORE_HINTS = "You have seen every hint for this activity."
 REVIEW_CLOSED = "This activity is on a review path, which opens when the mastery check marks its objective 'not yet'."
+MODULE_LOCKED = (
+    "This activity is in a module that isn't open yet. Complete the module before it to unlock it."
+)
 SUPPORT_LEVEL = 3  # hint levels 3 and 4 make a correct answer count as "with support" (FR-7.2)
 
 
 def _activity_or_404(session: DbSession, activity_id: int, user_id: int) -> Activity:
-    """The activity, if this student may open it. An activity on a review path is 403 until the
-    path is open (FR-7.5): its fresh items must still be unseen when the student gets there."""
+    """The activity, if this student may open it. An activity in a module is 403 while that module
+    is locked (FR-2.1), so module 6's mastery items stay unseen until module 6 opens (FR-7.1); that
+    covers a video checkpoint's question too, through the module that plays the video. An activity
+    on a review path is 403 until the path is open (FR-7.5): its fresh items must still be unseen
+    when the student gets there."""
     activity = session.get(Activity, activity_id)
     if activity is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NOT_FOUND)
+    if activity_locked(session, user_id, activity):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=MODULE_LOCKED)
     objective = review_path_of(session, activity_id)
     if objective is not None and not review_open(session, user_id, objective):
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=REVIEW_CLOSED)

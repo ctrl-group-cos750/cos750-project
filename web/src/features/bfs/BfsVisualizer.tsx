@@ -1,3 +1,4 @@
+import { reportEvent } from '../../api/events.ts'
 import { useEffect, useReducer } from 'react'
 import { Gauge, Lightbulb, Pause, Play, RotateCcw, StepBack, StepForward } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -71,6 +72,9 @@ export function BfsVisualizer({ scenario }: BfsVisualizerProps) {
         expected,
       },
     })
+    // Prediction mode is recorded for the pilot's evaluation (FR-10.1, #146): each prediction,
+    // with whether it was right. Still checked here, from the engine's steps (FR-6.4).
+    reportEvent('prediction_made', scenario.id, vertexId === expected)
   }
 
   return (

@@ -67,6 +67,62 @@ afterEach(() => {
 })
 
 describe('BfsPage', () => {
+  it('leads back to the module it was opened from, else to the map (#146)', async () => {
+    stubGraphApi()
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const fromModule = { backTo: '/modules/3', backLabel: 'Back to module 3' }
+    const { unmount } = render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={[{ pathname: '/graphs/2', state: fromModule }]}>
+          <Routes>
+            <Route path="/graphs/:scenarioId" element={<BfsPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(await screen.findByRole('link', { name: /Back to module 3/ })).toHaveAttribute(
+      'href',
+      '/modules/3',
+    )
+    unmount()
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/graphs/2']}>
+          <Routes>
+            <Route path="/graphs/:scenarioId" element={<BfsPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(await screen.findByRole('link', { name: /Back to your modules/ })).toHaveAttribute(
+      'href',
+      '/',
+    )
+  })
+
+  it('records each prediction as an event, with whether it was right (#146)', async () => {
+    stubGraphApi()
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/graphs/2']}>
+          <Routes>
+            <Route path="/graphs/:scenarioId" element={<BfsPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(await screen.findByRole('heading', { name: 'Short path' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Step forward' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'A' }))
+    const fetchMock = vi.mocked(fetch)
+    const posted = fetchMock.mock.calls
+      .filter(([url]) => String(url) === '/api/events')
+      .map(([, init]) => JSON.parse(String(init?.body)) as unknown)
+    expect(posted).toEqual([{ type: 'prediction_made', targetId: 2, correct: true }])
+  })
+
   it('starts a shorter graph at its first step instead of crashing on the old step position', async () => {
     stubGraphApi()
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })

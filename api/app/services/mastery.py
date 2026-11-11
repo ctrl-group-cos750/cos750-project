@@ -265,7 +265,9 @@ def recompute(session: Session, user_id: int) -> list[Outcome]:
     # One recompute per student at a time: two answers submitted together would otherwise both
     # insert the first result rows and one would fail on the unique constraint. An answer takes
     # this lock before its insert (app/services/attempts.py); taking it here as well covers a
-    # recompute on its own (the seed's, after a rule change).
+    # recompute on its own (the seed's `recompute_all`, after a rule change). It is FOR NO KEY
+    # UPDATE: a plain FOR UPDATE conflicts with the KEY SHARE lock that inserting a row which
+    # references the student takes (app/services/locks.py).
     lock_student(session, user_id)
     outcomes = evaluate(session, user_id)
     stored = {
@@ -322,12 +324,3 @@ def recompute_all(session: Session) -> int:
     for user_id in sorted(users):
         recompute(session, user_id)
     return len(users)
-
-
-def review_path_of(session: Session, activity_id: int) -> int | None:
-    """The objective whose review path shows this activity, or None if it is on none."""
-    return session.scalar(
-        select(Segment.review_objective_id).where(
-            Segment.activity_id == activity_id, Segment.review_objective_id.is_not(None)
-        )
-    )

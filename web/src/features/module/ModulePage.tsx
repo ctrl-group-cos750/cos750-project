@@ -5,6 +5,13 @@ import { Alert, Button, ProgressBar, Spinner } from '../../components'
 import { ActivityView } from '../activities/ActivityPage.tsx'
 import { fetchModule, savePosition } from './module.api.ts'
 import { SegmentView } from './SegmentView.tsx'
+import {
+  nearestShown,
+  nextShown,
+  previousShown,
+  shownPlace,
+  supportIntro,
+} from './shownSegments.ts'
 // A line of its own, so it merges cleanly with fix/web-rendering-a11y's change to the imports above.
 import { Link } from 'react-router'
 import { buttonVariants } from '@/components/ui/button-variants'
@@ -188,14 +195,17 @@ export function ModulePage() {
   const openedAt = skipped
     ? firstSkipped
     : Math.min(module.currentSegmentPosition, segments.length - 1)
-  const currentIndex = segmentIndex ?? openedAt
+  // Only segments shown to this student are ever on screen: support they don't need is skipped
+  // (FR-8.4), wherever the page would otherwise open.
+  const currentIndex = nearestShown(segments, segmentIndex ?? openedAt)
   // Fix where the page opened: answering that segment refetches the module, and the page must stay
   // on it to show the feedback, not jump on to the next segment that isn't done. (Setting state
   // during render, guarded so it happens once, is React's pattern for state derived from props.)
   if (segmentIndex === null) setSegmentIndex(currentIndex)
   const segment = segments[currentIndex]
-  const isFirst = currentIndex === 0
-  const isLast = currentIndex === segments.length - 1
+  const isFirst = previousShown(segments, currentIndex) === -1
+  const isLast = nextShown(segments, currentIndex) === -1
+  const place = shownPlace(segments, currentIndex)
   // The server refuses to move past a segment that isn't done (FR-2.7); say why up front. Like
   // the server, only the furthest segment reached gates: stepping back over earlier progress
   // (made before this rule, or before staff changed the content) is never blocked, and nor is
@@ -219,14 +229,15 @@ export function ModulePage() {
   function handlePrevious() {
     if (mutation.isPending) return // aria-disabled while Next saves: the press does nothing
     moveFocus.current = true
-    setSegmentIndex(Math.max(0, currentIndex - 1))
+    setSegmentIndex(Math.max(0, previousShown(segments, currentIndex)))
   }
 
   // Only moving past the furthest segment reached is saved. Moving forward again over segments
   // already reached (after stepping back) just changes what's on screen, like going back does.
   function handleNext() {
     if (blocked) return // the button stays focusable (aria-disabled), so the click is ignored here
-    const next = currentIndex + 1
+    const next = nextShown(segments, currentIndex) // past any support this student isn't shown
+    if (next === -1) return
     if (next <= module.currentSegmentPosition) {
       moveFocus.current = true
       setSegmentIndex(next)
@@ -279,11 +290,11 @@ export function ModulePage() {
       <div className="grid gap-2">
         <ProgressBar
           label={`Module ${module.number} progress`}
-          value={currentIndex + 1}
-          max={segments.length}
+          value={place.number}
+          max={place.total}
         />
         <p className="text-sm text-muted-foreground" aria-live="polite">
-          Segment {currentIndex + 1} of {segments.length}
+          Segment {place.number} of {place.total}
         </p>
       </div>
 
@@ -299,6 +310,7 @@ export function ModulePage() {
         <SegmentView
           key={segment.id}
           segment={segment}
+          intro={supportIntro(segments, currentIndex)}
           onAnswered={() => void queryClient.invalidateQueries({ queryKey: ['module', id] })}
         />
       )}

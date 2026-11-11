@@ -50,6 +50,9 @@ class EditorSegmentIn(ApiModel):
     activity_id: int | None = None
     skip_check_activity_id: int | None = None
     refresher_for: str | None = None
+    # The objective this module segment is support for (FR-8.4): shown only to a student
+    # struggling with it in this module. Not in module 6 or on a review path.
+    support_for: int | None = None
     video_id: int | None = None
 
 

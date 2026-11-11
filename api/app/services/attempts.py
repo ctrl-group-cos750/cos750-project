@@ -13,7 +13,7 @@ from app.models import Activity, Attempt, Hint, HintView
 from app.schemas.activities import CheckResult
 from app.services.checking import check_activity, is_blank
 from app.services.events import log_event
-from app.services.locks import lock_student
+from app.services.locks import hold_activity, lock_student
 from app.services.mastery import counts, in_check, recompute
 from app.services.modules import reward_completed_modules
 from app.services.rewards import SUPPORT_LEVEL, on_attempt
@@ -33,16 +33,39 @@ class BlankAnswer(ValueError):
     """The submission answers nothing (`checking.is_blank`), so it isn't recorded (#143)."""
 
 
+class AlreadyAnswered(ValueError):
+    """A one-answer item (the mastery check, #144) that this student has answered already."""
+
+
 def record_attempt(
-    session: Session, user_id: int, activity: Activity, submitted: dict[str, Any]
+    session: Session,
+    user_id: int,
+    activity: Activity,
+    submitted: dict[str, Any],
+    *,
+    one_answer: bool = False,
 ) -> tuple[Attempt, CheckResult]:
     """Grade `submitted` by comparison with the stored solution and add the attempt, any points it
-    earns and, for a mastery item, the student's objective results to the session (not committed). Raises pydantic's ValidationError if `submitted` is not in the kind's shape,
-    and BlankAnswer, recording nothing, if it answers nothing."""
+    earns and, for a mastery item, the student's objective results to the session (not
+    committed). Raises pydantic's ValidationError if `submitted` is not in the kind's shape, and
+    BlankAnswer, recording nothing, if it answers nothing.
+
+    Holds the student's write lock (app/services/locks.py) from before the attempt is inserted
+    until the caller commits, so two answers sent at once are graded and recorded one after the
+    other: the second sees the first's points and results instead of racing it (#138). Raises
+    `ActivityGone` if the activity was deleted meanwhile.
+
+    With `one_answer` (a mastery check item, #144) it raises `AlreadyAnswered` if the student has
+    an attempt at it already. That is checked under the student's lock, after the submission has
+    passed every other check, so a refused submission never uses up the one answer and two sent
+    at once can't both be recorded."""
     result = check_activity(activity.kind, activity.config, activity.solution, submitted)
     if is_blank(activity.kind, submitted):
         raise BlankAnswer(activity.id)
-    lock_student(session, user_id)  # before any insert: see app/services/locks.py (#138)
+    hold_activity(session, activity.id)  # before the student: see app/services/locks.py
+    lock_student(session, user_id)  # before any insert (#138)
+    if one_answer and answered(session, user_id, activity.id):
+        raise AlreadyAnswered(activity.id)
     attempt = Attempt(
         user_id=user_id,
         activity_id=activity.id,
@@ -97,9 +120,13 @@ def reveal_next_hint(
 ) -> tuple[Hint, Hint | None] | None:
     """Record that this student was shown their next hint level (not committed). Returns that hint
     and the one after it (None if it was the last), or None if every level has been shown, or
-    every level up to `limit` (the mastery check's, #144). The limit is checked under the
-    student's lock, so two requests at once can't pass it either."""
-    lock_student(session, user_id)  # two requests at once must not reveal one level twice (#138)
+    every level up to `limit` (the mastery check's, #144).
+
+    Holds the student's write lock until the caller commits, so two requests sent at once reveal
+    two levels in turn rather than the same level twice (#138), and can't pass the `limit`
+    together either. Raises `ActivityGone` like `record_attempt`."""
+    hold_activity(session, activity.id)  # before the student: see app/services/locks.py
+    lock_student(session, user_id)
     hints = session.scalars(
         select(Hint).where(Hint.activity_id == activity.id).order_by(Hint.level)
     ).all()

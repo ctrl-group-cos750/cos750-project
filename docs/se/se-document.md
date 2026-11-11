@@ -405,6 +405,7 @@ Code activities never execute student-written code. The student constructs code 
 - **FR-8.1** Module 0's diagnostic quiz (queues and basic Python) selects which refreshers the student sees; refreshers the student doesn't need are skipped.
 - **FR-8.2** A worked example can be skipped after the student passes a short check, as the ID document's fading design requires.
 - **FR-8.3** Offer optional bonus quests after modules for students who want more challenge. They give points but never affect mastery.
+- **FR-8.4** A module may give an objective **support segments**: a short worked example, then one or two fresh practice items, placed right after the module's base practice on that objective. Only a student who is struggling with that objective in that module is shown them. Struggling means that among their first attempts at its base practice items there, at least 2 of 3 in a row were wrong, or one was made after hint 3 or 4. Retrieval, mastery and support items don't count. The rule is decided while the support is still ahead of the student, and support once shown stays shown. Support they have already passed is never shown behind them. Support the student doesn't need stays in the module's list, so positions never shift, and counts as done (FR-2.7). The page skips it in Previous, Next and "Segment N of M". Support costs no points, and never appears in the mastery check (module 6) or on a review path (#172; `app/services/support.py`; the support content itself is #173).
 
 ## Points and badges (FR-9)
 - **FR-9.1** Award points for completed modules, correct activities and objectives met, from a server-side rules table. A completed module earns its points, and the first one the First Module badge, only with real work in it: at least one of its activities answered correctly without hint 3 or 4. A module walked through by opening every hint earns nothing until then (FR-9.6). Modules completed before these points existed get them, if earned, when the seed next runs.
@@ -533,7 +534,7 @@ Figure: Entities and relationships.
 
 **Module**: `id` (the module number, 0 to 6), `slug`, `title`, `goals` (the "By the end of this module you can …" sentences), `estimated_minutes`, `position`.
 
-**Segment**: `id`, `module_id` or `review_objective_id` (exactly one: a segment is a step of a module, or of an objective's review path, FR-7.5), `position`, `kind` (`video` | `text` | `worked_example` | `activity` | `refresher`), `title`, `body` (Markdown for text and worked examples), `activity_id` (for an `activity` segment), `skip_check_activity_id` (optional: passing this activity lets the student skip the segment: a worked example after a short check, FR-8.2, or a refresher after its diagnostic item, FR-8.1), `refresher_for` (a refresher's diagnostic topic, e.g. `queues`).
+**Segment**: `id`, `module_id` or `review_objective_id` (exactly one: a segment is a step of a module, or of an objective's review path, FR-7.5), `position`, `kind` (`video` | `text` | `worked_example` | `activity` | `refresher`), `title`, `body` (Markdown for text and worked examples), `activity_id` (for an `activity` segment), `skip_check_activity_id` (optional: passing this activity lets the student skip the segment: a worked example after a short check, FR-8.2, or a refresher after its diagnostic item, FR-8.1), `refresher_for` (a refresher's diagnostic topic, e.g. `queues`), `support_for` (optional: the objective this module segment is support for, shown only to a student struggling with it, FR-8.4).
 
 **Video**: `id`, `title`, `segment_id` (the `video` segment that plays it, at most one; empty until it is placed in a module), `media_path`, `captions_path`, `transcript` (Markdown), `duration_seconds`.
 
@@ -549,7 +550,9 @@ Figure: Entities and relationships.
 
 **Event** (append-only): `id`, `user_id`, `type`, `ref` (what it was about: `video:3`, `checkpoint:12`, `segment:301`, `activity:301`, `objective:5`), `payload` (JSON: a hint's level, a result's old and new state), `created_at`. The server logs `hint_shown`, `result_changed` and `module_completed` itself; the browser reports `video_started`, `video_completed`, `checkpoint_reached` and `segment_viewed` through `POST /api/events`, which takes only those types, each about a video, checkpoint or segment that exists, and no free text (`app/services/events.py`). The module page reports `segment_viewed` for each segment it shows, so the log gives time per segment and per module. Answers and hints shown also have their own tables, `Attempt` and `HintView`.
 
-**ModuleProgress**: `user_id`, `module_id`, `status` (`open` | `in_progress` | `complete`), `current_segment_position` (the furthest segment reached), `completed_at`.
+**ModuleProgress**: `user_id`, `module_id`, `status` (`open` | `in_progress` | `complete`), `current_segment_position` (the furthest segment reached), `completed_at`. When a module's segments change (the seed or the staff editor), each student's position is moved so that it stays on the segment they had reached.
+
+**ShownSegment**: `user_id`, `segment_id`, `shown_at`. A support segment (FR-8.4) the student has been shown. It stays shown from then on.
 
 **ObjectiveResult**: `user_id`, `objective_id`, `state` (`not_attempted` | `met_independently` | `met_with_support` | `not_yet`), `evidence` (IDs of the attempts the decision was based on), `updated_at`.
 
@@ -583,8 +586,8 @@ Base path: `/api`. JSON over HTTPS. Auth via the session cookie set by `/api/aut
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
 | GET | `/api/modules` | user | All modules with this student's state (locked, open, in progress, complete). |
-| GET | `/api/modules/{module_id}` | user | The module's segments, in order, with this student's position, which segments are done, and the module's retrieval questions (FR-2.4). 403 while the module is locked. Activities come without answers. Every refresher is listed: the diagnostic does not filter them yet (FR-8.1, §15.5). |
-| POST | `/api/modules/{module_id}/position` | user | Save the segment the student is on (FR-2.5). Refuses (409) to move past a segment that isn't done (FR-2.7). |
+| GET | `/api/modules/{module_id}` | user | The module's segments, in order, with this student's position, which segments are done, and the module's retrieval questions (FR-2.4). 403 while the module is locked. Activities come without answers. Every refresher is listed: the diagnostic does not filter them yet (FR-8.1, §15.5). Every segment is listed. Support the student doesn't need has `shown: false` and `done: true` (FR-8.4), and `shownSegmentCount` counts only what is shown. |
+| POST | `/api/modules/{module_id}/position` | user | Save the segment the student is on (FR-2.5). Refuses (409) to move past a segment that isn't done (FR-2.7). The next segment is the next one shown, so a save may jump over support the student doesn't need, but never lands on it (FR-8.4). |
 | GET | `/api/videos/{video_id}` | user | The video's title, duration, media and captions paths, the transcript as text, and its checkpoints in order, each with its activity and whether this student has passed it (FR-3.5). The media itself comes from `/media/`. 403 while the module that plays it is locked (FR-2.1). |
 
 ## Activities, hints and code
@@ -748,7 +751,7 @@ The components as they are on `staging`, organised by feature as in `web/src/fea
   - `LoginPage`, `RegisterPage` (with `PasswordChecklist`, NFR-S1), `RequireAuth` (sends visitors to log in, then back), `GuestOnly` (sends logged-in students past the log-in page), `RequireStaff` (the staff portal).
 - **Modules**
   - `ModuleMap` (the home page): the modules with their state, duration and minutes done (FR-2.6).
-  - `ModulePage`: the module's goals, its retrieval questions (FR-2.4), then its segments one at a time; saves the position and holds **Next** until the segment is done (FR-2.7).
+  - `ModulePage`: the module's goals, its retrieval questions (FR-2.4), then its segments one at a time; saves the position and holds **Next** until the segment is done (FR-2.7). It skips support segments the student doesn't need, and opens a run of support with one short, kind line (FR-8.4).
   - `SegmentView`: picks the view for a segment. Text, worked examples and refreshers are rendered as Markdown; a worked example has no skip check yet (FR-8.2). Videos use `VideoView`, activities `ActivityRenderer`.
 - **Narrated video**
   - `NarratedVideoPlayer`: wraps the HTML5 video element with captions on by default, enforces checkpoint pauses and the seek limit (`checkpointGate.ts`, FR-3), shows the transcript below the video and reports the video events (FR-10.1).

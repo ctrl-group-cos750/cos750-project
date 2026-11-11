@@ -90,7 +90,9 @@ export interface paths {
      * Get Activity
      * @description The activity to render. `ActivityOut` has no `solution`, so the answer never reaches the
      *     browser (FR-5.3, NFR-S2). `solved` says whether this student has already answered it
-     *     correctly, so the page stops offering hints after a refresh too (#158).
+     *     correctly, so the page stops offering hints after a refresh too (#158). 403 while the
+     *     activity's module is locked or its review path is closed, 404 if it doesn't exist or is no
+     *     longer part of the course.
      */
     get: operations['get_activity_api_activities__activity_id__get']
     put?: never
@@ -119,13 +121,21 @@ export interface paths {
      *     choice, `{"order": [...]}` for Parsons, `{"answers": {...}}` for fill-in, and
      *     `{"rows": [{"visitedVertex", "queue", "visited", "order"}, ...]}` for a trace table, one row
      *     per BFS step (graded against the engine, so a trace has no stored solution). A submission in the
-     *     wrong shape, or one that answers nothing (no option, line, token, pair, test or row), is 422
-     *     and isn't recorded. No student code is executed: `check_activity` compares the submission with
+     *     wrong shape is 422. No student code is executed: `check_activity` compares the submission with
      *     the solution, which stays in this process (NFR-S7).
+     *
+     *     Each kind's shape bounds its lengths, and the request body is at most `MAX_SUBMISSION_BYTES`
+     *     bytes (413 past it). A matching pair or fill-in blank sent as "" (a reset select) counts as
+     *     unanswered. A submission that answers nothing (no option, line, token, pair, test or row), or
+     *     one naming an option, line, blank, token, test case or vertex the activity doesn't have, is
+     *     422 and not recorded. 403 and 404 as for GET. 429 with `Retry-After` past 60 answers a minute
+     *     from one student. Two answers sent at once are recorded one after the other
+     *     (app/services/locks.py).
      *
      *     A module 6 mastery item takes one answer only (409 after it), and its response is `withheld`:
      *     no `correct`, `score` or `parts`, so the network tab gives nothing away either (#144). The
-     *     mastery report shows the results once every item is answered.
+     *     mastery report shows the results once every item is answered. The 409 comes after every
+     *     other check, so a refused (413, 422, 429) submission never uses up that one answer.
      */
     post: operations['submit_attempt_api_activities__activity_id__attempts_post']
     delete?: never
@@ -145,7 +155,7 @@ export interface paths {
      * Get Revealed Hints
      * @description Every hint level this student has already unlocked on this activity (FR-4.4, FR-4.5).
      *
-     *     Returns an empty list if they have not asked for any hints yet.
+     *     Returns an empty list if they have not asked for any hints yet. 403 and 404 as for GET.
      */
     get: operations['get_revealed_hints_api_activities__activity_id__hints_get']
     put?: never
@@ -161,6 +171,9 @@ export interface paths {
      *     A module 6 mastery item gives hints 1 and 2 only (#144): asking for a third is 409, and the
      *     second says `limitReached`. Once the item is answered it is 409 too, with a message that
      *     doesn't say whether the answer was right.
+     *
+     *     403 and 404 as for GET. 429 with `Retry-After` past 30 reveals a minute from one student. Two
+     *     requests sent at once reveal two levels in turn, never the same level twice.
      */
     post: operations['reveal_hint_api_activities__activity_id__hints_post']
     delete?: never
@@ -181,7 +194,7 @@ export interface paths {
     /**
      * Report Event
      * @description Log something only the browser sees, for the pilot's evaluation (FR-10.1). The server adds
-     *     who and when. 404 if the video, checkpoint or segment doesn't exist; 429 past 120 a minute. A
+     *     who and when. 404 if the video, checkpoint, segment or graph doesn't exist; 429 past 120 a minute. A
      *     segment viewed in a module still locked for the student is accepted but not logged.
      */
     post: operations['report_event_api_events_post']
@@ -334,7 +347,7 @@ export interface paths {
      * Get Review Path
      * @description The objective's review path: its steps in order, and which the student has answered
      *     (FR-7.5). 404 if the objective has no path; 403 until module 6 marks it "not yet", so the
-     *     fresh items stay unseen until the student needs them.
+     *     fresh items stay unseen until the student needs them. Staff may always open it, to preview.
      */
     get: operations['get_review_path_api_me_review__objective_id__get']
     put?: never
@@ -413,6 +426,27 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/modules/length': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Course Length
+     * @description The course's estimated length in minutes, the sum of every module's estimate. Public, so
+     *     the register page can say how long the course takes with the same number the map shows.
+     */
+    get: operations['course_length_api_modules_length_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/modules/{module_id}': {
     parameters: {
       query?: never
@@ -482,6 +516,9 @@ export interface paths {
      * @description Everything the player needs in one call (FR-3): media and captions paths, the transcript,
      *     and each checkpoint with its activity (without the answer) and whether this student has
      *     passed it. Answer a checkpoint with `POST /api/activities/{activityId}/attempts`.
+     *
+     *     403 while the segment that plays the video is in a locked module or a closed review path
+     *     (#137); a video on no segment yet is open. Its checkpoint questions follow the video.
      */
     get: operations['get_video_api_videos__video_id__get']
     put?: never
@@ -623,6 +660,11 @@ export interface paths {
     /**
      * List Accounts
      * @description Every account, newest first. The portal searches this list as you type.
+     *
+     *     Students' emails are masked here (NFR-S8, data minimisation, #146): a list of every student's
+     *     address is more than staff need to find an account, and it would all leak at once from one
+     *     staff session. Staff accounts keep their full email (the team's own). One account's page
+     *     (below) still shows the full email, which staff need to act on it.
      */
     get: operations['list_accounts_api_staff_accounts_get']
     put?: never
@@ -1140,6 +1182,7 @@ export interface components {
     /**
      * AttemptIn
      * @description A submission: only the student's choices (line ids, chosen tokens), never free-form code.
+     *     `submitted` is checked against the activity kind's shape above when it is graded.
      */
     AttemptIn: {
       /** Submitted */
@@ -1249,6 +1292,14 @@ export interface components {
       id: string
       /** Label */
       label: string
+    }
+    /**
+     * CourseLengthOut
+     * @description How long the whole course takes, in minutes: the sum of the modules' estimates.
+     */
+    CourseLengthOut: {
+      /** Minutes */
+      minutes: number
     }
     /**
      * EarnedBadgeOut
@@ -1612,6 +1663,8 @@ export interface components {
       skipCheckActivityId?: number | null
       /** Refresherfor */
       refresherFor?: string | null
+      /** Supportfor */
+      supportFor?: number | null
       /** Videoid */
       videoId?: number | null
     }
@@ -1637,6 +1690,8 @@ export interface components {
       skipCheckActivityId?: number | null
       /** Refresherfor */
       refresherFor?: string | null
+      /** Supportfor */
+      supportFor?: number | null
       /** Videoid */
       videoId?: number | null
     }
@@ -1663,16 +1718,24 @@ export interface components {
     /**
      * EventIn
      * @description What the browser saw: `video_started` or `video_completed` (`targetId` is the video),
-     *     `checkpoint_reached` (the checkpoint) or `segment_viewed` (the segment).
+     *     `checkpoint_reached` (the checkpoint), `segment_viewed` (the segment) or `prediction_made`
+     *     (the graph, with `correct`: whether the predicted vertex was the one BFS takes next).
      */
     EventIn: {
       /**
        * Type
        * @enum {string}
        */
-      type: 'video_started' | 'video_completed' | 'checkpoint_reached' | 'segment_viewed'
+      type:
+        | 'video_started'
+        | 'video_completed'
+        | 'checkpoint_reached'
+        | 'segment_viewed'
+        | 'prediction_made'
       /** Targetid */
       targetId: number
+      /** Correct */
+      correct?: boolean | null
     }
     /**
      * GraphEdge
@@ -1802,6 +1865,10 @@ export interface components {
       segmentCount: number
       /** Currentsegmentposition */
       currentSegmentPosition: number
+      /** Shownsegmentcount */
+      shownSegmentCount: number
+      /** Shownsegmentspassed */
+      shownSegmentsPassed: number
       /** Segments */
       segments: components['schemas']['SegmentOut'][]
       /** Retrieval */
@@ -1838,6 +1905,10 @@ export interface components {
       segmentCount: number
       /** Currentsegmentposition */
       currentSegmentPosition: number
+      /** Shownsegmentcount */
+      shownSegmentCount: number
+      /** Shownsegmentspassed */
+      shownSegmentsPassed: number
     }
     /**
      * ObjectiveReportOut
@@ -2031,6 +2102,13 @@ export interface components {
       videoId?: number | null
       /** Activityid */
       activityId?: number | null
+      /** Supportfor */
+      supportFor?: number | null
+      /**
+       * Shown
+       * @default true
+       */
+      shown: boolean
       /**
        * Done
        * @default true
@@ -2873,6 +2951,26 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  course_length_api_modules_length_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CourseLengthOut']
         }
       }
     }

@@ -30,7 +30,7 @@ From an engineering standpoint, the system is a web application composed of:
 - Every attempt and hint is **logged**, so the ID team's pilot and evaluation have the data they need.
 
 ## Primary user & session shape
-The primary role is **Student**. Team members also have a **staff** flag, used only to export evaluation data (FR-10); there is no authoring interface.
+The primary role is **Student**. Team members also have a **staff** flag, which opens the staff portal: editing the course content (FR-11), the videos and their checkpoints (FR-3), and exporting evaluation data (FR-10).
 
 A typical session: register or log in → module 0 (warm-up and diagnostic, which picks the refreshers this student needs) → modules 1 to 5 (narrated segments, activities and code tasks, with hints on demand) → module 6 (mastery check) → mastery report per objective → review path for any objective marked "not yet". Progress is saved after every module, so the student can stop and return.
 
@@ -184,10 +184,10 @@ These are what make a working increment at the end of every week possible. Detai
 8. The module 0 diagnostic that picks refreshers, skippable worked examples, and optional bonus quests.
 9. Private points and badges.
 10. An event log and CSV export for the ID team's pilot and evaluation.
-11. Seed content: the ID team's modules, activities and graph scenarios, loaded from version-controlled fixtures.
+11. Seed content: the ID team's modules, activities and graph scenarios, loaded from version-controlled fixtures into an empty database.
+12. A content editor in the staff portal, where team members change that content in the database (FR-11).
 
 ## Out of scope
-- An authoring interface: content is edited as fixture files in the repository and loaded by a seed command.
 - A public leaderboard (see FR-9 for why).
 - Topics beyond graphs and BFS (DFS, Dijkstra, trees), and programming languages other than Python.
 - Password reset, refresh tokens, and sign-in with the university account (future work, §15).
@@ -280,7 +280,7 @@ Figure: Submitting a code activity. The browser never sees the solution, and the
 - **Code activities checked by comparison, never executed.** Students order shuffled lines (Parsons) or fill in missing tokens; the server compares the submission with the solution. No student-written code runs on the server, which removes the whole untrusted-code-execution attack surface (decision §15.3, superseding the earlier sandboxed runner).
 - **BFS computed server-side.** One tested implementation produces the animation steps and checks predictions and trace tables, so they can never disagree.
 - **Stateless API with token auth.** The token travels in an httpOnly cookie (§5).
-- **Content as data.** Modules, activities, hints, tests and graph scenarios are fixture files the ID team can edit; adding content needs no frontend or API change.
+- **Content as data.** Modules, activities, hints, tests and graph scenarios are rows in the database. The repository's fixture files seed them, and the ID team edits them in the staff portal (FR-11); adding content needs no frontend or API change.
 
 # Technology stack
 
@@ -322,15 +322,18 @@ flowchart TB
             uc1([Register and log in · FR-1]) ~~~ uc2([Work through a module · FR-2, FR-8]) ~~~ uc3([Watch a narrated video · FR-3]) ~~~ uc4([Answer an activity · FR-4]) ~~~ uc5([Ask for a hint · FR-4.4]) ~~~ uc6([Arrange and complete code · FR-5])
         end
         subgraph assess[Assessment and progress]
-            uc7([Step through and predict BFS · FR-6]) ~~~ uc8([Take the mastery check · FR-7]) ~~~ uc9([Follow a review path · FR-7.5]) ~~~ uc10([See progress, points and badges · FR-2.6, FR-9]) ~~~ uc11([Export evaluation data · FR-10])
+            uc7([Step through and predict BFS · FR-6]) ~~~ uc8([Take the mastery check · FR-7]) ~~~ uc9([Follow a review path · FR-7.5]) ~~~ uc10([See progress, points and badges · FR-2.6, FR-9])
+        end
+        subgraph portal[Staff portal]
+            uc11([Edit the course content · FR-11]) ~~~ uc12([Make videos and checkpoints · FR-3]) ~~~ uc13([Export evaluation data · FR-10])
         end
     end
     student --- learn
     student --- assess
-    uc11 --- staff[Team member with staff access]
+    portal --- staff[Team member with staff access]
 ```
 
-Figure: Use cases. The student takes part in every use case in both groups except the export, which is staff-only.
+Figure: Use cases. The student takes part in every use case in the first two groups; the staff portal is for team members only.
 
 ## Accounts (FR-1)
 - **FR-1.1** Register with an email address, a password and a display name. The display name is shown only to the student.
@@ -422,6 +425,15 @@ Table: Points rules, stored on the server and tunable without a code change.
 - **FR-10.2** Staff can download the log, attempts and objective results as CSV, for the ID team's pilot and evaluation.
 - **FR-10.3** The export identifies students by an internal ID, not by email or display name.
 
+## Content editing (FR-11)
+Agreed by the team on 8 November 2026, so the ID team can change content without a pull request.
+- **FR-11.1** Staff can edit every piece of course content in the staff portal: objectives and their mastery rules, modules and their segments (order, text, which activity or video each shows), review paths, activities with their answers and hints, and graph scenarios. They can add new ones of each.
+- **FR-11.2** The database holds the content. The repository's fixtures seed an empty database and refresh what nobody has edited on every deploy; an item staff have edited is never overwritten by the seed. After each deploy the seed checks all the content together, as a save does (FR-11.3), and logs a warning if the repository's content and the staff edits don't fit together; the API still starts, so staff can fix it in the portal.
+- **FR-11.3** Every save is checked with the same rules CI applies to the fixtures (NFR-M5): the item on its own, then all the content together. A save that breaks a rule is refused with a message naming it, and nothing changes.
+- **FR-11.4** "Use the repository's version" drops the portal's edit of one item and loads the fixture again.
+- **FR-11.5** Staff can download the content as fixture files, to commit to the repository, so the repository can catch up with the portal and the next environment is seeded with it. Once the committed fixtures match an edited item, the next deploy clears its edited mark, so later changes to it in the repository reach the database again.
+- **FR-11.6** An activity students have answered is never deleted, only taken out of use, so the evaluation data keeps it (FR-10). Earlier attempts keep the result they were given.
+
 ## Traceability to the ID document
 
 Section and table numbers refer to the ID document [5].
@@ -437,6 +449,7 @@ Section and table numbers refer to the ID document [5].
 | FR-8 Diagnostic and fading | Warm-up and refreshers (module 0); fading support and bonus quests (§5.2) |
 | FR-9 Points and badges | Motivation and gamification (§7.1, §7.2) |
 | FR-10 Evaluation data | ADDIE Implement and Evaluate phases (§4.2, Table 2); evaluation (§8) |
+| FR-11 Content editing | ADDIE as a repeating cycle: pilot findings go straight back into the Develop phase (§4.1, §8.5) |
 
 Table: Which part of the ID document each functional requirement delivers.
 
@@ -473,7 +486,7 @@ Table: Which part of the ID document each functional requirement delivers.
 - **NFR-M2** Typed boundaries on both sides (Pydantic + TypeScript); the TypeScript API types in `web/src/api/` are generated from the OpenAPI schema by `scripts/gen-api.sh`, and CI fails if they are out of date.
 - **NFR-M3** ruff, mypy --strict, oxlint and Prettier enforced in CI on every PR.
 - **NFR-M4** Database migrations tracked with Alembic.
-- **NFR-M5** Content (modules, activities, hints, tests, scenarios) lives in fixture files validated by a schema in CI, so a broken content edit fails its PR instead of the app.
+- **NFR-M5** Content (modules, activities, hints, tests, scenarios) is validated by one set of rules wherever it is changed: the fixture files in CI, so a broken fixture fails its PR, and every staff edit in the portal, so a broken edit is refused before it reaches a student (FR-11.3).
 
 ## Accessibility
 - **NFR-A1** Every activity, the video player and the BFS controls can be operated with the keyboard alone, including Parsons problems (move lines with arrow keys as well as by dragging).
@@ -543,8 +556,8 @@ Figure: Entities and relationships.
 ## Notes
 - **Attempts and events are the source of truth.** Module progress, objective results, points and badges are derived from them by the services, and can be recomputed if a rule changes (FR-7.6).
 - **Answers never leave the server.** The API strips `answer` from every activity it sends; a code activity's solution (the correct line order and the expected tokens) stays on the server and is only ever compared against, never returned.
-- **JSON columns** hold the parts that differ by activity kind (`config`, `answer`, `feedback`, `submitted`, `detail`). Each kind has a Pydantic schema, so the JSON is still validated when fixtures load and when attempts arrive.
-- **Content is loaded from fixtures** (`api/app/seed/`), versioned in the repository and validated in CI (NFR-M5). Each module has its own file (`module-3.json`) holding the module, its segments in order and its activities; the objectives are in `objectives.json`; each objective's review path (a worked example, practice of purpose `review` with the full hint ladder, then fresh items of purpose `mastery`, none of them in a module) is in `review.json`. Re-running the seed updates content without touching users' attempts.
+- **JSON columns** hold the parts that differ by activity kind (`config`, `answer`, `feedback`, `submitted`, `detail`). Each kind has a Pydantic schema, so the JSON is still validated when fixtures load, when staff save content and when attempts arrive.
+- **Content lives in the database and is seeded from fixtures** (`api/app/seed/`), versioned in the repository and validated in CI (NFR-M5). Each module has its own file (`module-3.json`) holding the module, its segments in order and its activities; the objectives are in `objectives.json`; each objective's review path (a worked example, practice of purpose `review` with the full hint ladder, then fresh items of purpose `mastery`, none of them in a module) is in `review.json`. Re-running the seed inserts what is missing and updates what nobody has edited, without touching users' attempts. Staff edits in the portal (FR-11) set `edited_at` on the row (objectives, modules, activities, graphs) or `segments_edited_at` on a module or objective for its list of segments; the seed leaves those rows alone and names them in its log, unless the fixtures now say exactly what the row says (an export was committed), in which case it clears the mark. After loading, the seed runs the content editor's whole-content check on the database and logs any problem without stopping the API. Content made in the portal gets ids from 50 000, below the video editor's 100 000, so an exported copy can be committed as fixtures without colliding with either.
 
 # API Design (REST)
 
@@ -639,6 +652,16 @@ Progress, results and points change only as a side effect of attempts and segmen
 |---|---|---|---|
 | GET | `/api/staff/export/{table}.csv` | staff | `events`, `attempts`, `hints` or `objective_results` as CSV, students identified by internal ID only, staff and demo accounts left out (FR-10). |
 | POST | `/api/events` | user | Report something only the browser sees (`video_started`, `video_completed`, `checkpoint_reached`, `segment_viewed`) for the event log (FR-10.1); 120 a minute per student. |
+
+## Content editor (staff only)
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| GET | `/api/staff/content` | staff | Everything the editor lists, each marked edited in the portal or not, and in the repository or not (FR-11.1). |
+| GET, PUT | `/api/staff/content/{objectives,modules,review-paths,activities,graphs}/{id}` | staff | One item, with answers and hints; PUT replaces it (a module or review path with its whole list of segments, in order). 422 names the rule a save breaks (FR-11.3). |
+| POST | `/api/staff/content/{objectives,modules,activities,graphs}` | staff | A new item. |
+| DELETE | `/api/staff/content/{modules,activities,graphs}/{id}` | staff | Delete one made in the portal; an activity students used, or one the repository has, is taken out of use instead (FR-11.6). |
+| POST | `/api/staff/content/{kind}/{id}/use-repository` | staff | Drop the portal's edit and load the fixture again (FR-11.4). |
+| GET | `/api/staff/content/export` | staff | The content as fixture files, zipped as `api/app/seed/` is laid out (FR-11.5). |
 
 ## Conventions **[PROVISIONAL]**
 - Standard HTTP status codes; error bodies `{ "detail": "..." }`. `429` with a retry hint when a rate limit is reached.
@@ -1181,7 +1204,7 @@ Before the feature freeze, on 10 and 11 November, team members pilot the app on 
 # Assumptions, Risks, Decisions and Future Work
 
 ## Assumptions
-- The ID team delivers the content for each module as fixture files (segments, activities, hints, tests, scenarios) in time for the sprint that builds it; engineers load placeholders until then.
+- The ID team delivers the content for each module in time for the sprint that builds it, as fixture files or by editing it in the staff portal (FR-11); engineers load placeholders until then.
 - Graphs stay small (up to about 50 vertices), so precomputing every BFS step per request and drawing with SVG are both fine.
 - Pilot and demo users are COS750 classmates and the panel, so a few dozen accounts and at most a handful of simultaneous code submissions.
 - Students use a laptop or desktop for the code modules (NFR-U1).
@@ -1209,12 +1232,12 @@ Table: Risk register.
 6. **Code activities** → **no code execution; checked by comparison** (FR-5, NFR-S7). The student orders shuffled lines (Parsons) or fills in tokens from a given set, and the server compares the result with the solution. This **supersedes the 1 November decision** to run student Python in an isolated code runner: pentesting on staging (§14) found the in-process grader could be forged to fake a pass, and the residual risk of executing arbitrary code on a shared personal server outweighed what a freeform editor added, so on 3 November the team dropped freeform code writing and removed the runner. Running Python in the browser (Pyodide) was considered and rejected for the same era, as every test would then be visible in the browser; comparison-based activities avoid both problems. The ID document's objectives 6 and 7 are unchanged — Parsons performance is an established proxy for code-writing ability (ID document §5) ; objective 7 uses the fix-the-bug and choose-tests activities (FR-5.5).
 7. **Gamification** → **private points and badges, no public leaderboard** (FR-9). The initial meeting on 25 October included leaderboards; on 1 November the team replaced them with private points, because public ranking discourages students who are motivated by avoiding failure [4].
 8. **Accounts** → **email and password**, JWT in an httpOnly cookie (FR-1, §5).
-9. **Content** → **fixture files in the repository**, validated in CI; no authoring interface (§3, NFR-M5).
+9. **Content** → **in the database, seeded from fixture files in the repository, and edited by staff in the portal** (FR-11, NFR-M5). Until 8 November content was fixtures only, with no authoring interface. At the team meeting on 8 November the team agreed that staff, the ID team above all, edit content in the portal as they already do videos, so that pilot findings can be fixed the same day without a pull request. The seed never overwrites a staff edit, and every edit is held to the same rules as a fixture in CI.
 10. **BFS neighbour order** → **alphabetical by label**, matching the lessons (FR-6.5).
 
 ## Future work
 - Password reset and refresh tokens; sign-in with the university account, which needs UP's IT to register the app.
-- An authoring interface for the ID team, replacing fixture files.
+- Forms for each activity kind in the content editor; today the config and solution of an activity are edited as JSON, with a template for each kind.
 - Student-built graphs in the visualiser, and topics beyond BFS (DFS, Dijkstra, trees).
 - If freeform code writing is reintroduced (for example to assess objective 6 by writing rather than ordering), run it in a stronger sandbox than the removed in-process runner — gVisor or a per-submission microVM — and move the grading decision out of the process that runs the student's code. The removed runner is preserved at git tag `archive/code-runner`.
 

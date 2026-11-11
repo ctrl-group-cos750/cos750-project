@@ -152,6 +152,8 @@ Table 2 shows how each phase applies to this project. The software engineering s
 
 Table: The ADDIE phases applied to the COS212 application.
 
+In the Develop phase the ID team writes the lessons, tasks, hints and feedback directly in the application's staff portal, where they go live as soon as they are saved (SE document FR-11). The portal refuses any change that breaks a rule of the design, for example a review-path practice item without all four hint levels, or an objective with no item in the mastery check. This lets each pass through the Develop phase be short.
+
 ## Lesson structure using Gagné's nine events
 
 We use Gagné's Nine Events of Instruction as a step-by-step guide to structure all the modules in our application. This framework helps teachers plan and deliver effective lessons by organising learning into nine clear stages [17], such as opening with a short hook and ending with a real-world task. We use this model because it gives us a proven structure so we do not have to invent one under time pressure, while keeping students engaged and ensuring they can apply what they learn. Table 3 shows how the application carries out each event.
@@ -446,7 +448,7 @@ We report the gain for the whole group and for each objective, so we can see whi
 
 ## Using the results
 
-The results feed back into the Design and Develop phases, which makes ADDIE a repeating cycle (Section 4.1). Each change goes onto the backlog as a content item:
+The results feed back into the Design and Develop phases, which makes ADDIE a repeating cycle (Section 4.1). A change to wording, hints, feedback or the order of a module is made directly in the staff portal, so it can be fixed the same day; a larger change, such as a new activity type, goes onto the backlog. For example:
 
 - An objective with many “Not yet” results: revise the module that teaches it.
 - An activity where many students use hint level 4: add a worked example or split the step.

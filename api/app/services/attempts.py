@@ -13,6 +13,7 @@ from app.models import Activity, Attempt, Hint, HintView
 from app.schemas.activities import CheckResult
 from app.services.checking import check_activity
 from app.services.events import log_event
+from app.services.locking import lock_student
 from app.services.mastery import counts, recompute
 from app.services.rewards import on_attempt
 
@@ -31,7 +32,12 @@ def record_attempt(
     session: Session, user_id: int, activity: Activity, submitted: dict[str, Any]
 ) -> tuple[Attempt, CheckResult]:
     """Grade `submitted` by comparison with the stored solution and add the attempt, any points it
-    earns and, for a mastery item, the student's objective results to the session (not committed). Raises pydantic's ValidationError if `submitted` is not in the kind's shape."""
+    earns and, for a mastery item, the student's objective results to the session (not committed). Raises pydantic's ValidationError if `submitted` is not in the kind's shape.
+
+    Holds the student's write lock (app/services/locking.py) from before the attempt is inserted
+    until the caller commits, so two answers sent at once are graded and recorded one after the
+    other: the second sees the first's points and results instead of racing it (#138)."""
+    lock_student(session, user_id)
     result = check_activity(activity.kind, activity.config, activity.solution, submitted)
     attempt = Attempt(
         user_id=user_id,
@@ -54,7 +60,11 @@ def reveal_next_hint(
     session: Session, user_id: int, activity: Activity
 ) -> tuple[Hint, Hint | None] | None:
     """Record that this student was shown their next hint level (not committed). Returns that hint
-    and the one after it (None if it was the last), or None if every level has been shown."""
+    and the one after it (None if it was the last), or None if every level has been shown.
+
+    Holds the student's write lock until the caller commits, so two requests sent at once reveal
+    two levels in turn rather than the same level twice (#138)."""
+    lock_student(session, user_id)
     hints = session.scalars(
         select(Hint).where(Hint.activity_id == activity.id).order_by(Hint.level)
     ).all()

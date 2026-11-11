@@ -33,6 +33,7 @@ from app.schemas.modules import (
     RetrievalActivityOut,
     SegmentOut,
 )
+from app.services.locking import lock_student
 
 # Activity kinds the web can't show a student yet: it says "This activity kind is not available
 # yet" instead (SUPPORTED in web/src/features/activities/ActivityRenderer.tsx is the mirror of
@@ -279,7 +280,12 @@ def save_position(
     Raises `RetrievalIncomplete` until the student has answered the module's retrieval questions
     (FR-2.4), unless the module is already complete: a student who finished it before its
     questions were added can still go back over it.
+
+    Takes the student's write lock first (app/services/locking.py): the `FOR UPDATE` on the
+    progress row below locks nothing before the first save has made that row, so two first saves
+    at once (a double-clicked "Next") both inserted one and the second failed with a 500 (#138).
     """
+    lock_student(session, user_id)
     status = _status(session, user_id, module_id)
     if status == "locked":
         raise ModuleLocked(module_id)

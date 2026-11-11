@@ -1,7 +1,10 @@
-import { screen, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { Link, MemoryRouter, Route, Routes } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import { ada, fakeApi, renderApp } from '../../test/app.tsx'
+import { ModulePage } from './ModulePage.tsx'
 import type { ModuleDetail, ModuleSummary, Segment } from './module.types.ts'
 
 // ---------------------------------------------------------------------------
@@ -350,6 +353,64 @@ describe('ModulePage — navigation and position saving', () => {
     ).toBeInTheDocument()
   })
 
+  it('opens a complete module at its first segment that is not done (#136 review)', async () => {
+    // A student who finished the module before its activity could be answered: the server keeps
+    // them on the last segment, but the page takes them to what is missing.
+    setupModuleApi({
+      ...allKindsDetail,
+      status: 'complete',
+      currentSegmentPosition: 3,
+      segments: [
+        textSegment,
+        videoSegment,
+        { ...activitySegment, done: false },
+        workedExampleSegment,
+      ],
+    })
+    renderApp('/modules/1')
+    expect(await screen.findByText('Segment 3 of 4')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Practice: BFS step by step' })).toBeInTheDocument()
+  })
+
+  it('opens a complete module with everything done where the student left it', async () => {
+    setupModuleApi({ ...allKindsDetail, status: 'complete', currentSegmentPosition: 3 })
+    renderApp('/modules/1')
+    expect(await screen.findByText('Segment 4 of 4')).toBeInTheDocument()
+  })
+
+  it('opens an in-progress module at a segment the student passed without doing it', async () => {
+    setupModuleApi({
+      ...allKindsDetail,
+      status: 'in_progress',
+      currentSegmentPosition: 3,
+      segments: [
+        textSegment,
+        videoSegment,
+        { ...activitySegment, done: false },
+        workedExampleSegment,
+      ],
+    })
+    renderApp('/modules/1')
+    expect(await screen.findByText('Segment 3 of 4')).toBeInTheDocument()
+  })
+
+  it('resumes an in-progress module on the segment the student is doing', async () => {
+    setupModuleApi({
+      ...allKindsDetail,
+      status: 'in_progress',
+      currentSegmentPosition: 2,
+      segments: [
+        textSegment,
+        videoSegment,
+        { ...activitySegment, done: false },
+        workedExampleSegment,
+      ],
+    })
+    renderApp('/modules/1')
+    expect(await screen.findByText('Segment 3 of 4')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Next →' })).toHaveAttribute('aria-disabled', 'true')
+  })
+
   it('clicking "Finish module" on the last segment saves the position and navigates to "/"', async () => {
     fakeApi({
       user: ada,
@@ -372,6 +433,151 @@ describe('ModulePage — navigation and position saving', () => {
     expect(
       await screen.findByRole('heading', { name: 'Graphs and breadth-first search' }),
     ).toBeInTheDocument()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// (#136 review) A refused module, and one module opened after another
+// ---------------------------------------------------------------------------
+
+describe('ModulePage — refused and switched', () => {
+  it('says at once that a locked module is not open, without retrying (403)', async () => {
+    const api = fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules/:id': () =>
+          Response.json(
+            {
+              detail:
+                'This module is not available yet. Complete the previous module to unlock it.',
+            },
+            { status: 403 },
+          ),
+      },
+    })
+    // Retries on, as in the app: the module query itself must not retry a refusal.
+    const queryClient = new QueryClient()
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/modules/6']}>
+          <Routes>
+            <Route path="/modules/:moduleId" element={<ModulePage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(
+      await screen.findByRole('heading', { name: 'This module isn’t open yet' }),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/Complete the previous module to unlock it/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Back to your modules' })).toHaveAttribute('href', '/')
+    expect(api.callsTo('GET /api/modules/6')).toHaveLength(1)
+  })
+
+  it('does not retry any refusal, such as too many requests (429)', async () => {
+    const api = fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules/:id': () =>
+          Response.json({ detail: 'Too many requests. Wait a moment.' }, { status: 429 }),
+      },
+    })
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={['/modules/2']}>
+          <Routes>
+            <Route path="/modules/:moduleId" element={<ModulePage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(
+      await screen.findByRole('heading', { name: 'This module can’t be shown right now' }),
+    ).toBeInTheDocument()
+    expect(api.callsTo('GET /api/modules/2')).toHaveLength(1)
+  })
+
+  it.each(['abc', '1.5', '-1', '1e3'])(
+    'says /modules/%s is no module, without asking the API (no endless re-render)',
+    async (param) => {
+      const api = fakeApi({ user: ada })
+      renderApp(`/modules/${param}`)
+      expect(await screen.findByRole('heading', { name: 'There’s no such module' })).toBeVisible()
+      expect(screen.getByRole('link', { name: 'Back to your modules' })).toHaveAttribute(
+        'href',
+        '/',
+      )
+      expect(api.calls.filter((c) => c.path.startsWith('/api/modules/'))).toHaveLength(0)
+    },
+  )
+
+  it('switches in place to an address that is no module, and back again', async () => {
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules': () => Response.json([]),
+        'GET /api/modules/:id': () => Response.json(twoSegmentDetail),
+      },
+    })
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <MemoryRouter initialEntries={['/modules/1']}>
+          <Link to="/modules/abc">Bad address</Link>
+          <Link to="/modules/1">Module one</Link>
+          <Routes>
+            <Route path="/modules/:moduleId" element={<ModulePage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(await screen.findByText('Segment 1 of 2')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('link', { name: 'Bad address' }))
+    expect(await screen.findByRole('heading', { name: 'There’s no such module' })).toBeVisible()
+    await userEvent.click(screen.getByRole('link', { name: 'Module one' }))
+    expect(await screen.findByText('Segment 1 of 2')).toBeInTheDocument()
+  })
+
+  it('says there is no such module on a 404', async () => {
+    fakeApi({ user: ada })
+    renderApp('/modules/99')
+    expect(await screen.findByRole('heading', { name: 'There’s no such module' })).toBeVisible()
+  })
+
+  it('starts a module afresh when another opens in place, not at the last one’s segment', async () => {
+    const second: ModuleDetail = { ...allKindsDetail, id: 2, number: 1, title: 'Second module' }
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules': () => Response.json([]),
+        'GET /api/modules/:id': (_body, params) =>
+          Response.json(
+            params.id === '2'
+              ? second
+              : { ...allKindsDetail, status: 'complete', currentSegmentPosition: 3 },
+          ),
+        'GET /api/videos/42': () => Response.json({ detail: 'Not needed.' }, { status: 404 }),
+      },
+    })
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/modules/1']}>
+          <Link to="/modules/2">Open the second module</Link>
+          <Routes>
+            <Route path="/modules/:moduleId" element={<ModulePage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(await screen.findByText('Segment 4 of 4')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: '← Previous' }))
+    expect(await screen.findByText('Segment 3 of 4')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('link', { name: 'Open the second module' }))
+    expect(await screen.findByRole('heading', { name: /Second module/ })).toBeInTheDocument()
+    expect(screen.getByText('Segment 1 of 4')).toBeInTheDocument()
   })
 })
 
@@ -484,6 +690,68 @@ describe('ModulePage — activity segment', () => {
     ).toBeInTheDocument()
   })
 
+  it('stays on the segment it opened at when answering it makes another the first not done', async () => {
+    // A complete module with two segments left undone (#136): answering the first refetches the
+    // module, and the page must keep showing that answer's feedback, not jump to the second.
+    let answered = false
+    const detail = (): ModuleDetail => ({
+      ...allKindsDetail,
+      currentSegmentPosition: 3,
+      status: 'complete',
+      segments: [
+        textSegment,
+        videoSegment,
+        { ...activitySegment, done: answered },
+        { ...activitySegment, id: 14, position: 4, activityId: 8, title: 'Second', done: false },
+      ],
+    })
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules': () => Response.json([]),
+        'GET /api/modules/:id': () => Response.json(detail()),
+        'GET /api/activities/7': () =>
+          Response.json({
+            id: 7,
+            kind: 'multiple_choice',
+            title: 'Which vertex is next?',
+            visible: true,
+            config: {
+              prompt: 'Which?',
+              options: [
+                { id: 'b', label: 'B' },
+                { id: 'd', label: 'D' },
+              ],
+            },
+          }),
+        'GET /api/activities/7/hints': () => Response.json([]),
+        'POST /api/activities/7/attempts': () => {
+          answered = true
+          return Response.json({
+            id: 1,
+            activityId: 7,
+            correct: false,
+            score: 0,
+            parts: [],
+            feedback: 'Not quite: D joined the queue last.',
+            hintLevel: 0,
+          })
+        },
+      },
+    })
+    renderApp('/modules/1')
+    // The answer options, not the activity's own title: #161 hides that title inside a segment.
+    await screen.findByLabelText('D')
+    expect(screen.getByText('Segment 3 of 4')).toBeInTheDocument()
+    await userEvent.click(screen.getByLabelText('D'))
+    await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(await screen.findByText('Not quite: D joined the queue last.')).toBeInTheDocument()
+    // Give the refetch time to land, then check the page didn't move.
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(screen.getByText('Segment 3 of 4')).toBeInTheDocument()
+    expect(screen.getByText('Not quite: D joined the queue last.')).toBeInTheDocument()
+  })
+
   it('asks for the video’s checkpoints, answered correctly, before moving on', async () => {
     const detail: ModuleDetail = {
       ...allKindsDetail,
@@ -574,8 +842,10 @@ describe('ModulePage — blocked Next', () => {
     })
     renderApp('/modules/1')
 
-    await userEvent.click(await screen.findByRole('button', { name: '← Previous' }))
+    // The page opens on the segment that was passed without being done (#136 review) ...
+    expect(await screen.findByText('Segment 3 of 4')).toBeInTheDocument()
     const next = await screen.findByRole('button', { name: 'Next →' })
+    // ... and doesn't block moving on from it.
     expect(next).not.toHaveAttribute('aria-disabled')
 
     await userEvent.click(next)

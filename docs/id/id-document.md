@@ -150,7 +150,7 @@ A student is ready for the lecture when no objective is marked "Not yet". The st
 
 Table: Level, CS2023 skill level, evidence and success criterion for each learning objective.
 
-Table 1 gives the evidence as designed. On staging, some items are simpler. Objective 2 uses four matching items instead of labelled diagrams. Objective 3 uses four multiple-choice items, so the student recognises a model rather than naming its parts. Objective 5 has one trace item, which has no student screen yet (#136).
+Table 1 gives the evidence as designed. On staging, some items are simpler. Objective 2 uses four matching items instead of labelled diagrams. Objective 3 uses four multiple-choice items, so the student recognises a model rather than naming its parts. Objective 5 has one trace item.
 
 # Instructional design model and its application
 
@@ -207,7 +207,7 @@ Constructive alignment means that objectives, learning activities and assessment
 | 0. Warm-up and queue refresher | Prior knowledge | Short quiz on queues and basic Python. The application is designed to pick the refreshers the student needs; not yet built, so every student sees every refresher (#31). | Diagnostic score | 5 |
 | 1. What is a graph? | 1, 2, 3 | Build a campus graph by matching each walkway to the two buildings it joins (designed as adding vertices and edges by hand; not built). Classify directed and undirected graphs. Match real situations to graphs. | Labelling and matching checkpoints | 12 |
 | 2. A graph in Python | 2, 6 | Complete `add_vertex` and `add_edge` in a `Graph` class by filling in missing tokens. Make the class handle directed and undirected edges. | Completed code checked against the solution | 10 |
-| 3. Meet BFS | 4, 5 | Watch BFS on the campus graph. Predict the next vertex. Fill in the queue, the visited set and the traversal order (the trace table has no student screen yet, #136). | Trace checkpoints | 12 |
+| 3. Meet BFS | 4, 5 | Watch BFS on the campus graph. Predict the next vertex. Fill in the queue, the visited set and the traversal order. | Trace checkpoints | 12 |
 | 4. Build BFS | 6 | Put shuffled lines of code in order (Parsons). Fill in the missing tokens. | Line order and tokens checked against the solution | 15 |
 | 5. Test and debug | 7 | Find and fix bugs in faulty BFS code by selecting and ordering the corrections. Choose the test cases (a disconnected graph, a graph with a cycle) that expose each bug. | Fixes and test choices checked against the solution | 10 |
 | 6. Mastery check and report | 1â€“7 | Unseen items on every objective. A report for each objective with next steps. | Criteria in Table 1 | 10 |
@@ -241,7 +241,7 @@ Merrill's first principles describe when learning is most effective [58, pp. 16â
 | 1. Task-centred | Learn in the context of a real-world task. | One task runs through the course: finding the route with the fewest walkways across the campus. The same campus graph returns in modules 1, 3 and 4. | Each module is organised by topic (graphs, then code, then BFS), not as a series of harder whole tasks. |
 | 2. Activation | Recall relevant earlier knowledge. | The module 0 diagnostic and queue refreshers. One or two retrieval questions open each module from module 2. | Module 0 recalls queues but not the Python the code tasks use: dictionaries, sets and classes. |
 | 3. Demonstration | Watch the skill being done. | Worked examples in modules 1 to 4, and the BFS visualiser in watch mode. | The narrated videos are scripted but not yet recorded. Until they are, module 1's definitions and module 3's explanation of BFS are not shown at all, and module 3's worked example comes after the visualiser practice (#37; #149 adds a text fallback). |
-| 4. Application | Practise the new skill, with feedback. | Activities with three-part feedback and the hint ladder in modules 1 to 4, and the mastery check. | Trace, fix-the-bug and choose-tests activities have no student screen yet, and module 5 is empty, so objectives 5 and 7 are not practised (#136). |
+| 4. Application | Practise the new skill, with feedback. | Activities with three-part feedback and the hint ladder in modules 1 to 4, and the mastery check. | Module 5 is empty, so objective 7 is practised only on its review path; objective 5 is practised by module 3's trace table. |
 | 5. Integration | Use the skill in one's own work: reflect, discuss, defend. | The per-objective report, and the COS212 lecture that follows. | Nothing in the application asks the student to explain, defend or reuse what they learnt. |
 
 Table: Merrill's first principles applied to the application [58].
@@ -319,13 +319,13 @@ New ideas stick best when they link to what students already know. Ausubel argue
 
 Recalling information strengthens memory. Roediger and Karpicke found that taking memory tests led to better long-term retention than repeated study [18]. For this reason each module opens with one or two questions on earlier modules. This practice helps students remember. It also shows them which ideas are still weak.
 
-Students need to trace code before they can write it well. Lister and colleagues found that many novice programmers could not trace short pieces of code correctly. They suggested that reading and tracing are skills students need before they write code [13]. For this reason students trace BFS by hand in module 3, before they build it in module 4. On staging they predict each step in the visualiser and read a worked trace table; the trace-table activity itself has no student screen yet (#136).
+Students need to trace code before they can write it well. Lister and colleagues found that many novice programmers could not trace short pieces of code correctly. They suggested that reading and tracing are skills students need before they write code [13]. For this reason students trace BFS by hand in module 3, before they build it in module 4. On staging they predict each step in the visualiser and read a worked trace table; then they fill in a trace table of their own, with feedback for each step.
 
 Showing BFS on screen helps only if students take part. Hundhausen, Douglas and Stasko found that how students use a visualisation matters more than what it shows [9]. Naps and colleagues reached a similar view. They concluded that visualisations help when they make learners active [16]. For this reason students predict the next vertex before the animation shows it. The animation then confirms or corrects the prediction.
 
 | Theory | Key idea | How the application applies it |
 |---|---|---|
-| Active learning [6] | Deeper activity leads to deeper learning. | Checkpoints ask students to predict, order and complete code. Tracing is designed but has no student screen yet (#136). |
+| Active learning [6] | Deeper activity leads to deeper learning. | Checkpoints ask students to predict, order and complete code. Students also trace BFS in a table, one row per step. |
 | Cognitive load [21, 15] | Working memory is limited. | Worked examples first. One idea per segment. The graph, queue and visited set shown together. |
 | Scaffolding [27, 28] | Support lets students do more than they can alone. It fades over time. | A four-level hint ladder. Parsons problems. Less help in later modules. |
 | Retrieval practice [18] | Recalling information strengthens memory. | Opening questions on earlier modules. A final mastery check. |
@@ -357,7 +357,7 @@ Instead, we follow Universal Design for Learning (UDL), which gives every studen
 | UDL principle | How the application applies it |
 |---|---|
 | Multiple means of representation | Each idea appears as text, a worked example and, where relevant, code. BFS also appears in the visualiser, which draws the graph and shows the current vertex, the queue and the visited set. Narrated videos with captions and a transcript are scripted for modules 1 to 4; the player is built, but the videos are not yet recorded (#37). |
-| Multiple means of action and expression |	Students answer by choosing, matching, ordering lines, completing code and predicting each BFS step in the visualiser. Filling in trace tables is planned (#136). Labelling and building graphs by hand are not built; module 1 uses matching instead. |
+| Multiple means of action and expression |	Students answer by choosing, matching, ordering lines, completing code, predicting each BFS step in the visualiser and filling in trace tables. Labelling and building graphs by hand are not built; module 1 uses matching instead. |
 | Multiple means of engagement |	Students control their pace and ask for hints only when they choose. Skipping refreshers and worked examples after a short check is designed (SE document FR-8.1, FR-8.2) but not yet wired (#31). Optional bonus quests are planned; none exist yet (#87). |
 
 Table: Universal Design for Learning applied to the application [31].
@@ -369,7 +369,7 @@ The examination specification asks which learning styles the application caters 
 | Visual | The visualiser's drawing of the graph, with each vertex's state shown by colour, a marker and a label, and the panel showing the queue and visited set. A text drawing of the campus map in module 1. |
 | Aural | Narrated videos for each walkthrough: scripted, not yet recorded (#37). |
 | Read/write | Short definitions, worked examples, code, written feedback and hints, and the per-objective report. Transcripts come with the videos. |
-| Kinesthetic | Ordering Parsons lines, completing code, matching, and stepping through BFS in the visualiser. Filling in trace tables is planned (#136). |
+| Kinesthetic | Ordering Parsons lines, completing code, matching, stepping through BFS in the visualiser and filling in trace tables. |
 
 Table: Learning-style categories covered by the application's representations.
 
@@ -515,9 +515,9 @@ The lecture plans assessment in a table with five columns: the learning activity
 | Module 0: warm-up and queue refresher | Prior knowledge: queues (COS110), Python lists and loops | Answers three diagnostic questions: one on a queue, two on Python lists and loops. | Diagnostic and formative. The diagnostic is designed to choose the refreshers each student needs (SE document FR-8.1); on staging every student sees every refresher. | Activate prior knowledge; refreshers with short examples. |
 | Module 1: what is a graph? | 1, 2, 3 | Table 1, objectives 1 to 3 | Formative: multiple-choice and matching practice with three-part feedback and the hint ladder. | Problem first (the campus puzzle), then a worked example, then practice. A narrated video is scripted, not yet recorded (#37). |
 | Module 2: a graph in Python | 2, 6 | The completed `Graph` methods match the solution. | Formative: fill-in-the-blank code checked blank by blank; retrieval questions at the start. | Worked example, then three fill-in tasks (two, four and three blanks). |
-| Module 3: meet BFS | 4, 5 | Table 1, objectives 4 and 5 | Formative: matching, multiple choice, and predicting each step in the visualiser. The trace table has no student screen yet (#136). | Demonstration (worked trace table; narrated videos scripted, not yet recorded, #37), then prediction with immediate feedback. |
+| Module 3: meet BFS | 4, 5 | Table 1, objectives 4 and 5 | Formative: matching, multiple choice, and predicting each step in the visualiser. Filling in a trace table, with feedback for each step. | Demonstration (worked trace table; narrated videos scripted, not yet recorded, #37), then prediction with immediate feedback. |
 | Module 4: build BFS | 6 | Table 1, objective 6 | Formative: Parsons problem and fill-in code checked against the solution. | Worked example, then Parsons, then three blanks, then nine blanks (fading). |
-| Module 5: test and debug | 7 | Table 1, objective 7 | Formative: fix-the-bug and choose-tests. Designed; the module is empty on staging and the two activity kinds have no student screen (#136). | Planned: a worked debugging example on a graph with a cycle and a disconnected graph, then faded practice. |
+| Module 5: test and debug | 7 | Table 1, objective 7 | Formative: fix-the-bug and choose-tests. Designed, and both kinds have student screens; the module itself is still empty on staging. | Planned: a worked debugging example on a graph with a cycle and a disconnected graph, then faded practice. |
 | Module 6: mastery check | 1 to 7 | Table 1, all criteria. Only the first attempt at each item counts. | Summative within the application and criterion-referenced: one state per objective. | Unseen items; a report with the next step for each objective. |
 | Review path | The objective marked "Not yet" | The same criterion as in Table 1, on fresh items | Formative practice, then re-assessment of that objective only. | Teach again with a new worked example, practice with the full hint ladder, fresh items (Section 7.6). On staging the re-teaching is a short summary (#148). |
 

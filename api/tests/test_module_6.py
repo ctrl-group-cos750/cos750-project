@@ -40,7 +40,11 @@ OBJECTIVES = {o.id: o for o in CONTENT.objectives}
 PATHS: dict[int, ReviewPathFixture] = {r.objective_id: r for r in CONTENT.review_paths}
 CHECK = [ACTIVITIES[s.activity_id] for s in MODULE.segments if s.activity_id is not None]
 FRESH = {
-    o: [ACTIVITIES[s.activity_id] for s in p.segments if s.activity_id is not None][1:]
+    o: [
+        ACTIVITIES[s.activity_id]
+        for s in p.segments
+        if s.activity_id is not None and ACTIVITIES[s.activity_id].purpose == "mastery"
+    ]
     for o, p in PATHS.items()
 }
 PRACTICE = [
@@ -262,6 +266,7 @@ def test_the_fresh_items_are_not_the_module_6_items() -> None:
             + str(a.config.get("left", ""))
             + str(a.config.get("code", ""))
             + str(a.config.get("vertices", ""))
+            + str(a.config.get("lines", ""))  # a Parsons item shows only its lines
         )
 
     check = {seen(a) for a in CHECK}

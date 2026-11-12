@@ -371,3 +371,159 @@ Full CI gate green. Branch: `feat/module-5-test-and-debug`. Not pushed.
 
 ### Open Issues
 None. Branch is ready for PR review.
+
+---
+
+## Developer Notes — Wave 5: reviewer Critical + Important fixes
+
+### Files Modified
+- `api/app/seed/module-5.json` — diamond graph substitution (CRITICAL 1) in four locations
+- `docs/id/module-5/narration-script.md` — diamond graph substitution + vocabulary fix (CRITICAL 1 + 2) + contraction fix (nitpick)
+- `api/tests/test_module_5.py` — pure-deletion branch in `test_each_wrong_correction_leaves_bfs_broken` (IMPORTANT)
+
+### Fixes Applied
+
+#### CRITICAL 1 — Diamond graph substitution (5 locations in 2 files)
+
+**Root cause**: The worked-example trace text, video body prose, and narration script were all written for the diamond graph (adj[A]=[B,C], adj[B]=[A,D], adj[C]=[A,D], adj[D]=[B,C]). But the fixture used a 5-edge cycle (A-B, B-C, C-D, D-A, A-C) whose Bug A output is [A,B,C,D,C,D] (both C and D revisited), not [A,B,C,D,D] as stated.
+
+**Verified on diamond before touching any file:**
+- Correct BFS from A: `[A, B, C, D]` ✓
+- Bug A (visited-too-late) output: `[A, B, C, D, D]` ✓ — D is the only revisit (C sees D in queue but D is not yet in visited, enqueues it again)
+- Bug B output: `[A, B, C, D]` (all vertices reachable, extra loop adds nothing) ✓
+- 506 exposing set unchanged: `["cycle"]` (diamond fails, all others pass) ✓
+- 507 exposing set unchanged: `["two-islands"]` (diamond passes, two-islands fails) ✓
+
+**Changes made:**
+
+1. `segment 501` (worked_example body): "The graph we use" paragraph changed from "Edges: A–B, B–C, C–D, D–A, A–C … cycle A–B–C–D–A and shortcut A–C" to "Edges: A–B, A–C, B–D, C–D … diamond shape: A is at the top and connects to both B and C; B and C both connect to D at the bottom." Trace table D-dequeue row fixed from "D leaves; adds A (already visited)" to "D leaves; B and C are visited, nothing new added" (diamond: adj[D]=[B,C], not [A]).
+
+2. `segment 502` (video body): ASCII art replaced (5-edge box-with-diagonal → simple rectangle A-B/A-C/B-D/C-D); text description rewritten to "4 edges: A–B, A–C, B–D, C–D … diamond shape … cycle A–B–D–C–A"; trace narration step for C updated to "C leaves. A is found. But D?" (removed "and B" since adj[C]=[A,D] not [A,B]).
+
+3. `activity 504` (fix_the_bug prompt): "edges A-B, B-C, C-D, D-A and A-C" → "edges A-B, A-C, B-D, C-D (a diamond: A connects to B and C, which both connect to D)".
+
+4. `activity 506` (choose_tests "cycle" TestCase): 5 edges → 4 edges (A-B, A-C, B-D, C-D); expected unchanged ([A,B,C,D] — same output on diamond). Feedback for "cycle" updated to "two paths reach D before it leaves the queue" (removes incorrect "and a shortcut" and "both C and D").
+
+5. `activity 507` (choose_tests "cycle" TestCase): same edge swap as 506 above.
+
+6. `narration-script.md` header: "same cycle graph" → "same diamond graph"; ASCII art updated (5-edge → 4-edge rectangle); text description updated; notes-for-recorder updated (cycle graph + A–B, B–C, C–D, D–A, A–C → diamond graph + A–B, A–C, B–D, C–D); checkpoint question updated ("cycle graph A–B–C–D–A with shortcut A–C" → "diamond graph A–B, A–C, B–D, C–D").
+
+#### CRITICAL 2 — Banned word "unvisited" in narration script
+
+`narration-script.md` timestamp 2:20 row: "every **unvisited** vertex at the end" → "every vertex BFS never reached". This matches the phrasing already used in segment 502's video body and satisfies `test_found_and_visited_mean_what_module_3_says`. Also fixed contraction "can't" → "cannot" at timestamp 2:35 (house style matches sibling scripts).
+
+#### IMPORTANT — `test_each_wrong_correction_leaves_bfs_broken[505]` trivially passing
+
+**Root cause**: activity 505's fix is pure deletion — `solution.order` contains no correction IDs, so `used = []`. The existing `for wrong in unused: for right in used:` loop never executes.
+
+**Fix**: Added a `if not used:` branch before the existing loop. When the fix is pure deletion, the branch iterates each distractor, builds `appended = [*first_order(a), wrong["id"]]`, and asserts `not passes_hidden(lines_text(a, appended))`.
+
+**Verified before adding the test**: distractor 170 (`for v in sorted(graph.adjacency):`) raises `IndentationError` when appended as a standalone for-loop with no body; distractor 171 (`if v not in order:`) raises `IndentationError` for the same reason. Both cause `passes_hidden` to return `False` → assertion holds. ✓
+
+**Ruff lint**: initial code used list concatenation `first_order(a) + [wrong["id"]]`; ruff RUF005 required spread syntax `[*first_order(a), wrong["id"]]`. Fixed.
+
+### Key Decisions
+
+1. **Why Option A (diamond) over Option B (rewrite trace)**: The trace text was already correct for the diamond — only the fixture graph was wrong. Switching the fixture is a one-line change per location; rewriting the trace would require changing 6 prose sentences plus the table.
+
+2. **HIDDEN suite unchanged**: `HIDDEN["cycle"]` in `test_module_5.py` still uses the 5-edge cycle (A-B, B-C, C-D, D-A, A-C). This is correct — HIDDEN is the hidden test suite used to judge whether arbitrary BFS code "passes", not the choose_tests fixture cases. Bug A still fails HIDDEN["cycle"] and HIDDEN["sports-centre"] etc. on the 5-edge graph.
+
+3. **Segment 502 ASCII art**: Changed from a box-with-diagonal to a plain rectangle because the diamond graph has no diagonal. The four vertices A (top-left), B (top-right), C (bottom-left), D (bottom-right) with edges A-B (top), A-C (left), B-D (right), C-D (bottom) forms a plain rectangle — which is the correct visual for A-B, A-C, B-D, C-D.
+
+4. **506 feedback for "cycle"**: Updated to "two paths reach D before it leaves the queue" (not C and D as in 5-edge). On the diamond, only D is reached by two paths (via B and via C). C is reached only by A directly.
+
+### Recomputed expected arrays for changed TestCases
+
+| Activity | Test ID | Old edges | New edges | Expected (unchanged) |
+|----------|---------|-----------|-----------|----------------------|
+| 506 | cycle | A-B,B-C,C-D,D-A,A-C | A-B,A-C,B-D,C-D | [A,B,C,D] |
+| 507 | cycle | A-B,B-C,C-D,D-A,A-C | A-B,A-C,B-D,C-D | [A,B,C,D] |
+
+Expected `[A,B,C,D]` is correct on the diamond: BFS from A visits A→B,C→D (D found by both B and C, but only enqueued once by the correct engine). Confirmed by running `run_bfs(diamond)`.
+
+### Library Docs Consulted (Context7)
+
+None — pure JSON content, Markdown, and Python test authoring.
+
+### Build & Test Results
+
+```
+seed --check: fixtures valid (7 modules, 118 activities, 7 review paths, 4 graphs);
+templates valid (choose_tests, fill_in, fix_the_bug, matching, multiple_choice, parsons, trace)
+
+pytest -q (module-5 only): 28 passed in 0.93s
+pytest -q (full suite): 2063 passed, 23 skipped in ~115s
+ruff format --check tests/test_module_5.py: 1 file already formatted
+ruff check tests/test_module_5.py: All checks passed!
+mypy tests/test_module_5.py: Success: no issues found in 1 source file
+scripts/check.sh (full, Node 24.22.2):
+  web: format ✓, lint ✓, tests (455 passed, 37 suites) ✓, build ✓, check:api ✓
+  api: ruff format ✓, ruff check ✓, mypy ✓,
+       pytest 2063 passed 23 skipped ✓, coverage 99.14% ≥ 90% ✓
+== all checks passed (exit 0)
+```
+
+### Open Issues
+
+None. All CRITICAL and IMPORTANT reviewer findings resolved. Branch: `feat/module-5-test-and-debug`. Not pushed.
+
+---
+
+## Developer Notes — Wave 6: residual 'A and B' wording fix
+
+### Files Modified
+- `api/app/seed/module-5.json` — trace table row 3 in segment 501 worked_example body
+- `docs/id/module-5/narration-script.md` — 1:20 row on-screen note and narration text
+
+### Exact Before / After
+
+**Edit 1 — module-5.json, segment 501 trace table (row for C-dequeues):**
+
+Before:
+```
+| [C, D] | C leaves; A and B are visited, but D is not in visited yet (it joined at step 2 but visited.add(D) hasn't run), so **D joins again** | {A, B, C} |
+```
+
+After:
+```
+| [C, D] | C leaves; A is visited, but D is not in visited yet (it joined at step 2 but visited.add(D) hasn't run), so **D joins again** | {A, B, C} |
+```
+
+**Edit 2 — docs/id/module-5/narration-script.md, 1:20 row:**
+
+Before:
+```
+| 1:20 | C dequeues; A and B (visited), D highlighted with warning arrow | C leaves. A and B are found. But D? … |
+```
+
+After:
+```
+| 1:20 | C dequeues; A (visited), D highlighted with warning arrow | C leaves. A is found. But D? … |
+```
+
+### Rationale
+On the diamond graph (adj[C] = [A, D]), when C dequeues it only examines
+its two neighbours A and D. B is visited by then but is never a neighbour
+of C and is never examined by C. Saying "A and B are visited" implies C
+checks B, which gives students a wrong mental model of the adjacency
+structure.  The fix matches the already-correct segment 502 video body
+("C leaves. A is found. But D?").
+
+### Library Docs Consulted (Context7)
+None — wording-only content edit.
+
+### Build & Test Results
+
+```
+seed --check: fixtures valid (7 modules, 118 activities, 7 review paths, 4 graphs)
+Exit status: 0
+
+scripts/check.sh (Node 24.22.2, full run):
+  web: format ✓, lint ✓, tests 455 passed (37 suites) ✓, build ✓, check:api ✓
+  api: ruff format ✓, ruff check ✓, mypy ✓,
+       pytest 2063 passed, 23 skipped ✓, coverage 99.14% ≥ 90% ✓
+== all checks passed (exit 0)
+```
+
+### Open Issues
+None. Branch: feat/module-5-test-and-debug. Not pushed.

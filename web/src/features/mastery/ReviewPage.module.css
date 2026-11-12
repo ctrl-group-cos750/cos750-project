@@ -54,5 +54,13 @@
 }
 
 .prose {
+  /* Stretch, not shrink to the widest line: a code block or table scrolls inside the column
+     instead of widening the page at 360 px (WCAG 1.4.10). */
+  justify-self: stretch;
+  min-width: 0;
   max-width: var(--reading-width);
+}
+
+.step > * {
+  max-width: 100%;
 }

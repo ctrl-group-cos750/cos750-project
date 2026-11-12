@@ -28,8 +28,10 @@ test('a new student registers, logs out and back in', async ({ page }, testInfo)
   await page.goto('/report')
   await expect(page).toHaveURL(/\/login/)
 
+  // Back to the page they asked for before logging in.
   await logIn(page, account.email, PASSWORD)
-  await expect(page.getByRole('button', { name: /^(Start|Continue) module 0/ })).toBeVisible()
+  await expect(page).toHaveURL(/\/report$/)
+  await expect(page.getByRole('heading', { name: 'Your mastery report' })).toBeVisible()
 })
 
 test('registering is refused, with the reason beside the field, for a password that breaks the rules', async ({

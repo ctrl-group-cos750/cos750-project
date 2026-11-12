@@ -4,6 +4,13 @@ Playwright tests of the whole student path in Chromium, Firefox and WebKit, agai
 stack served over HTTPS (WebKit only sends the Secure session cookie over HTTPS), with axe-core
 accessibility checks in the light and the dark theme. Issue #35; SE document §14.1.
 
+## When they run
+
+CI runs them only on the pull request that takes `staging` to `master`: a full run in three
+browsers takes about 36 minutes of Actions time. For a pull request into `staging`, run them
+locally (below) and paste the summary into the PR. CI still builds the images on every PR that
+touches the stack.
+
 ## Run them locally
 
 From the repository root, start the stack (your `.env` needs `POSTGRES_PASSWORD`):

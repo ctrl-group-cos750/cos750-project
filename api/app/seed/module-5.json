@@ -14,7 +14,7 @@
           "id": 502,
           "kind": "video",
           "title": "Debugging a faulty BFS",
-          "body": "Staff attach the narrated video to this segment in the video editor, with its checkpoint questions: see `docs/id/module-5/narration-script.md`."
+          "body": "You have written a BFS and tested it on a simple path — a few vertices in a line. It gives the right answer every time. Then you try it on this graph, and something unexpected happens.\n\n```\n   A ─── B\n   │╲    │\n   │ ╲   │\n   │  ╲  │\n   │   ╲ │\n   D ─── C\n```\n\nUndirected graph with 4 vertices: A, B, C, D. It has 5 edges: A–B, B–C, C–D, D–A, A–C. There are two cycles: A–B–C–D–A (the outer square) and A–C (a diagonal shortcut that creates a smaller cycle A–B–C–A). Every edge can be followed in either direction.\n\nHere is the faulty version. It looks almost right. Spot the difference from the BFS you built in module 4.\n\nFirst difference: visited starts empty. In the correct BFS, visited starts as the start vertex already in visited, because the start vertex is already in the queue.\n\nSecond difference: visited.add(v) runs just after popleft, not inside the neighbour loop. A vertex is only marked found when it leaves the queue, not when it joins.\n\nLet's trace it. We start at A. A leaves the queue, and A is marked found. Its neighbours are B and C. Neither is in visited yet, so both join the queue.\n\nB leaves next. A is already found, so we skip it. D is new, so D joins the queue. Queue now: C, D.\n\nC leaves. A and B are found. But D? D joined the queue when B was processed. However, visited.add(D) has not run yet — D leaves the queue only later. So right now, D is not in visited. C adds D to the queue again. Queue: D, D.\n\nD is dequeued once, then dequeued a second time. The output is A, B, C, D, D — D visited twice.\n\nThe fix is two changes together. Change visited = set() to visited = {start}. And move visited.add so it runs inside the neighbour loop, the moment a vertex joins the queue. Now when C checks D, D is already in visited, and D is never queued twice.\n\nFinding a bug matters, but so does knowing which test case would expose it. Some graphs hide a bug; others bring it right out.\n\nThe visited-too-late bug only surfaces when a graph has a cycle — a path that leads back to a vertex already in the queue. On a simple path or a tree, every vertex has only one route to it, so it can never be queued twice.\n\nA different bug adds unreachable vertices to the order. The graph below has two islands: A, B, C are connected, but D and E are completely cut off. A BFS from A visits only A, B, C. A bug that appends every vertex BFS never reached would return A, B, C, D, E — which is wrong. This test exposes the bug because some vertices are unreachable.\n\n```\n   A ─── B ─── C        D ─── E\n```\n\nUndirected graph with 5 vertices: A, B, C, D, E. It has 3 edges: A–B, B–C, D–E. Vertices D and E are not connected to A, B or C. Starting BFS from A visits only A, B, C.\n\nSo: choose a cycle graph to expose a visited-too-late bug. Choose a disconnected graph — one with two separate islands — to expose a bug that adds unreachable vertices. One test cannot do both jobs; that is why you need more than one.\n\nNow you will practise both: fixing the bugs and choosing the tests yourself."
         },
         {
           "id": 501,
@@ -210,7 +210,7 @@
       "objective_id": 7,
       "purpose": "practice",
       "config": {
-        "prompt": "This BFS marks a vertex as found only when it leaves the queue. On the graph below it visits some vertices twice.\n\nGraph (undirected). Vertices: A, B, C, D. Edges: A-B, B-C, C-D, D-A, A-C. Start: A.\n\nReplace the faulty lines with corrections, and leave out the line that does not belong in the fixed program.",
+        "prompt": "This BFS marks a vertex as found only when it leaves the queue. The graph has vertices A, B, C, D and undirected edges A-B, B-C, C-D, D-A and A-C, starting at A. On this graph it visits some vertices twice. Replace the faulty lines with corrections, and leave out the line that does not belong in the fixed program.",
         "lines": [
           {
             "id": 101,
@@ -267,16 +267,16 @@
         ],
         "corrections": [
           {
+            "id": 122,
+            "text": "    visited = []"
+          },
+          {
             "id": 120,
             "text": "    visited = {start}"
           },
           {
             "id": 121,
             "text": "                visited.add(n)"
-          },
-          {
-            "id": 122,
-            "text": "    visited = []"
           },
           {
             "id": 123,
@@ -329,7 +329,7 @@
       "objective_id": 7,
       "purpose": "practice",
       "config": {
-        "prompt": "This BFS looks almost right, but it includes vertices that BFS can never reach. On the graph below it returns extra vertices that should not be in the output.\n\nGraph (undirected). Two islands. Vertices: A, B, C, D, E. Edges: A-B, B-C, D-E. Start: A. A correct BFS from A visits only A, B, C.\n\nRemove the lines that do not belong in the fixed program. Leave out any wrong correction that does not fix the bug.",
+        "prompt": "This BFS looks almost right, but it includes vertices that BFS can never reach. The graph has two islands: vertices A, B, C, D, E with undirected edges A-B, B-C and D-E, starting at A. A correct BFS from A visits only A, B, C. On this graph the faulty version returns extra vertices that should not be in the output. Remove the lines that do not belong in the fixed program. Leave out any wrong correction that does not fix the bug.",
         "lines": [
           {
             "id": 151,
@@ -614,28 +614,27 @@
             "expected": ["A", "B", "C", "D"]
           },
           {
-            "id": "one-way",
+            "id": "directed-tree",
             "directed": true,
             "vertices": ["A", "B", "C", "D"],
             "edges": [
               {"source": "A", "target": "B"},
-              {"source": "B", "target": "C"},
-              {"source": "C", "target": "A"},
-              {"source": "D", "target": "A"}
+              {"source": "A", "target": "C"},
+              {"source": "B", "target": "D"}
             ],
             "start_vertex": "A",
-            "expected": ["A", "B", "C"]
+            "expected": ["A", "B", "C", "D"]
           }
         ]
       },
       "solution": {
-        "exposing": ["two-islands", "one-way"],
+        "exposing": ["two-islands"],
         "feedback": {
           "cycle": "Every vertex in this graph can be reached from A, so the extra loop finds nothing to add. The faulty version passes this test.",
           "two-islands": "D and E cannot be reached from A. The extra loop finds them and adds them to the order, so the faulty version returns A, B, C, D, E instead of A, B, C, and it fails this test.",
           "line": "Every vertex can be reached from X. The extra loop adds nothing. The faulty version passes this test.",
           "tree": "Every vertex can be reached from A. The extra loop adds nothing. The faulty version passes this test.",
-          "one-way": "D has only an arrow into A, so it can never be reached from A. The extra loop finds D and adds it to the order, so the faulty version fails this test."
+          "directed-tree": "Every vertex can be reached from A by following the directed edges. The extra loop adds nothing. The faulty version passes this test."
         }
       },
       "hints": [
@@ -649,11 +648,11 @@
         },
         {
           "level": 3,
-          "body": "The extra loop only changes the answer when some vertex cannot be reached from the start. That happens in disconnected graphs and in directed graphs where some vertex has no path from the start."
+          "body": "The extra loop only changes the answer when some vertex cannot be reached from the start. That happens in disconnected graphs where islands are cut off from the start vertex."
         },
         {
           "level": 4,
-          "body": "Answer: two-islands and one-way. In both, at least one vertex cannot be reached from the start, so the extra loop adds it wrongly."
+          "body": "Answer: Test 2. In that graph, at least one vertex cannot be reached from the start, so the extra loop adds it wrongly. The faulty version passes the other tests."
         }
       ]
     }

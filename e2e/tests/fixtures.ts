@@ -213,9 +213,20 @@ export const test = base.extend<Options & Fixtures>({
       const dismiss = page.getByRole('status').getByRole('button', { name: /^Dismiss/ })
       await page.addLocatorHandler(
         dialog.or(dismiss).first(),
+        // Not real clicks: these overlays aren't what the tests check, and WebKit in CI never
+        // saw their buttons as stable, so a handler's click hung the test it interrupted. Escape
+        // closes the dialog (BadgeAnnouncer listens for it); a note's Dismiss gets its click
+        // event. The note covering Next at 360 px has its own test (mobile.spec.ts).
         async () => {
-          if (await dialog.isVisible()) await dialog.getByRole('button', { name: 'Close' }).click()
-          while (await dismiss.first().isVisible()) await dismiss.first().click()
+          if (await dialog.isVisible()) {
+            await page.keyboard.press('Escape')
+            await dialog.waitFor({ state: 'hidden', timeout: 5_000 })
+          }
+          while (await dismiss.first().isVisible()) {
+            const left = await dismiss.count()
+            await dismiss.first().dispatchEvent('click')
+            await expect.poll(() => dismiss.count()).toBeLessThan(left)
+          }
         },
         { noWaitAfter: true },
       )

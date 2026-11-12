@@ -1,12 +1,29 @@
 """`python -m app.seed`: load the content fixtures into the database at DATABASE_URL, then the demo
-accounts (app/seed/demo_accounts.py) if DEMO_PASSWORD is set."""
+accounts (app/seed/demo_accounts.py) if DEMO_PASSWORD is set.
+
+`python -m app.seed --check`: check the fixtures and the authoring templates (app/seed/templates)
+with the rules CI applies (tests/test_seed.py), and touch no database. See app/seed/README.md."""
 
 import os
+import sys
 
 from app.db import SessionLocal
-from app.seed import load
+from app.seed import load, read_fixtures, read_templates
 from app.seed.demo_accounts import load_demo_accounts
 from app.services.modules import backfill_module_rewards
+
+if sys.argv[1:] == ["--check"]:
+    try:
+        checked = read_fixtures()
+        templates = read_templates()
+    except ValueError as exc:
+        sys.exit(f"seed --check: FAILED\n{exc}")
+    print(
+        f"seed --check: fixtures valid ({len(checked.modules)} modules, "
+        f"{len(checked.activities)} activities, {len(checked.review_paths)} review paths, "
+        f"{len(checked.graphs)} graphs); templates valid ({', '.join(templates)})"
+    )
+    sys.exit(0)
 
 with SessionLocal() as session:
     kept: list[str] = []  # content staff edited in the portal, which the seed leaves alone

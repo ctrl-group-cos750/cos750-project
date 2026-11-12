@@ -68,7 +68,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     test.use({ colorScheme })
 
     test('pages before logging in, and the register errors', async ({ page }) => {
-      for (const path of ['/login', '/register']) {
+      for (const path of ['/', '/login', '/register']) {
         await test.step(path, () => check(page, path))
       }
       const password = page.getByRole('textbox', { name: 'Password' })

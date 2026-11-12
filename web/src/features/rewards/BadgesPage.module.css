@@ -91,5 +91,6 @@
 }
 
 .next {
-  color: var(--color-accent-text);
+  /* How to earn a locked badge: muted text, not link blue, since it isn't a link. */
+  font-style: italic;
 }

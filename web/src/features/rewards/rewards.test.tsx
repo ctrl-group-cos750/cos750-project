@@ -174,4 +174,19 @@ describe('Badge announcements', () => {
     expect(screen.queryByText('Queue Tracer')).not.toBeInTheDocument()
     expect(api.callsTo('POST /api/rewards/seen')).toHaveLength(0)
   })
+
+  it('can turn badges off from the note, and says where to turn them back on', async () => {
+    const api = withRewards({
+      hideRewards: false,
+      points: 15,
+      badges: [badge('lo5', { tier: 'bronze', seen: false })],
+    })
+    renderApp('/')
+    expect(await screen.findByText('Queue Tracer')).toBeVisible()
+    await userEvent.click(screen.getByRole('button', { name: 'Turn off badges' }))
+    expect(await screen.findByText('Badges and points are off')).toBeVisible()
+    expect(api.callsTo('PUT /api/rewards/settings')[0]!.body).toEqual({ hideRewards: true })
+    expect(screen.queryByText('Queue Tracer')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'profile' })).toHaveAttribute('href', '/profile')
+  })
 })

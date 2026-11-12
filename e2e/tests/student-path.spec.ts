@@ -9,14 +9,18 @@ import { logIn, register } from './helpers'
 
 test('a new student registers, logs out and back in', async ({ page }, testInfo) => {
   const account = newAccount(testInfo.project.name)
+  // A visitor at / sees the landing page, with the way in (#landing).
   await page.goto('/')
-  await expect(page).toHaveURL(/\/login$/)
-  await page.getByRole('link', { name: 'Create an account' }).click()
+  await expect(
+    page.getByRole('heading', { level: 1, name: /Learn graphs and breadth-first search/ }),
+  ).toBeVisible()
+  await page.getByRole('link', { name: 'Sign up' }).click()
+  await expect(page).toHaveURL(/\/register$/)
   await register(page, account)
 
   // The module map: module 0 is where a new student starts (FR-2.1, FR-2.6).
   await expect(page).toHaveURL(/\/$/)
-  await expect(page.getByRole('button', { name: /^Continue module 0/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^(Start|Continue) module 0/ })).toBeVisible()
 
   await page.getByRole('button', { name: account.displayName }).click()
   await page.getByRole('button', { name: 'Log out' }).click()
@@ -25,7 +29,7 @@ test('a new student registers, logs out and back in', async ({ page }, testInfo)
   await expect(page).toHaveURL(/\/login/)
 
   await logIn(page, account.email, PASSWORD)
-  await expect(page.getByRole('button', { name: /^Continue module 0/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^(Start|Continue) module 0/ })).toBeVisible()
 })
 
 test('registering is refused, with the reason beside the field, for a password that breaks the rules', async ({
@@ -61,7 +65,8 @@ test('every demo account logs in and its report shows its stage', async ({ page 
       await page.context().clearCookies()
       await logIn(page, `${demo.key}@demo.example.com`, DEMO_PASSWORD)
       await expect(page.getByRole('button', { name: demo.display_name })).toBeVisible()
-      await page.getByRole('link', { name: 'Report', exact: true }).click()
+      await page.getByRole('button', { name: /your account/ }).click()
+      await page.getByRole('link', { name: 'Mastery report' }).click()
       await expect(page.getByRole('heading', { name: 'Your mastery report' })).toBeVisible()
       if (demo.expect.ready)
         await expect(page.getByText('Ready for the lecture', { exact: true })).toBeVisible()
@@ -81,7 +86,7 @@ test('module 0 on screen, from the map to "Finish module"; then module 1 opens',
   course,
 }) => {
   const module = await course.module(0)
-  await page.getByRole('button', { name: /^Continue module 0/ }).click()
+  await page.getByRole('button', { name: /^(Start|Continue) module 0/ }).click()
   await expect(
     page.getByRole('heading', { level: 1, name: new RegExp(module.title) }),
   ).toBeVisible()
@@ -91,7 +96,7 @@ test('module 0 on screen, from the map to "Finish module"; then module 1 opens',
   const modules = await course.modules()
   expect(modules.find((m) => m.number === 0)?.status).toBe('complete')
   expect(modules.find((m) => m.number === 1)?.status).toBe('open')
-  await expect(page.getByRole('button', { name: /^Continue module 1/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^(Start|Continue) module 1/ })).toBeVisible()
 })
 
 // Code submissions (FR-5: ordering and completing code). Module 4 builds BFS with a Parsons

@@ -35,6 +35,8 @@
 
 .prose ul,
 .prose ol {
+  /* Tailwind's reset takes list markers away; module text needs them back. */
+  list-style: revert;
   padding-inline-start: 1.5em;
   margin-block: 0.5em;
 }

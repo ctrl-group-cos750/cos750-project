@@ -130,7 +130,7 @@ export function ModulePage() {
     return (
       <section
         ref={contentRef}
-        className="grid max-w-3xl gap-6"
+        className="mx-auto grid w-full max-w-3xl gap-6"
         aria-label={`Module ${module.number} retrieval`}
       >
         <div className="grid gap-2">
@@ -264,25 +264,38 @@ export function ModulePage() {
   return (
     <section
       ref={contentRef}
-      className="grid min-w-0 max-w-3xl gap-6"
+      className="mx-auto grid w-full min-w-0 max-w-3xl gap-6"
       aria-label={`Module ${module.number}: ${module.title}`}
     >
       {/* Header */}
-      <div className="grid gap-2">
+      <div className="grid gap-3">
+        <Link
+          to="/"
+          className="justify-self-start text-sm text-muted-foreground hover:text-foreground"
+        >
+          ← All modules
+        </Link>
         <h1 className="text-2xl font-bold">
           Module {module.number} · {module.title}
         </h1>
 
-        {/* Goals (FR-2.3) */}
+        {/* Goals (FR-2.3): open on the first segment, where they set the scene (Gagné's event
+            2), then one click away, so the question isn't pushed down the screen every time. */}
         {module.goals.length > 0 && (
-          <div className="rounded-lg border border-border bg-card p-4">
-            <p className="mb-2 font-semibold">By the end of this module you can:</p>
-            <ul className="ml-5 list-disc">
+          <details
+            key={place.number === 1 ? 'first' : 'later'}
+            open={place.number === 1}
+            className="rounded-lg border border-border bg-card px-4 py-3"
+          >
+            <summary className="cursor-pointer font-semibold">
+              By the end of this module you can:
+            </summary>
+            <ul className="mt-2 ml-5 list-disc">
               {module.goals.map((goal) => (
                 <li key={goal}>{goal}</li>
               ))}
             </ul>
-          </div>
+          </details>
         )}
       </div>
 

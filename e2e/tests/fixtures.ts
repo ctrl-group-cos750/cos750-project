@@ -83,8 +83,9 @@ export class Course {
         },
         { method, path, body },
       )
-      // Too many answers in a minute (#139): wait as the API asks, as a student would.
-      if (res.status === 429 && attempt < 2) {
+      // Too many answers in a minute (#139), or the API busy (503 from its admission control,
+      // seen with two suites on one SQLite API): wait as the API asks, as a student would.
+      if ((res.status === 429 || res.status === 503) && attempt < 2) {
         await this.page.waitForTimeout((Number(res.retry ?? 5) + 1) * 1000)
         continue
       }

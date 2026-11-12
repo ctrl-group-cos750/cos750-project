@@ -82,7 +82,9 @@ function Editor({ id, initial }: { id?: number; initial: StaffVideo }) {
     draft.mediaPath && !draft.durationSeconds && "the video's length (upload it again)",
     !draft.captionsPath && 'the captions',
     !draft.title.trim() && 'a title',
-  ].filter((m) => m !== false)
+    // An empty path is '' rather than false: drop every falsy entry, or the list reads
+    // "the video, , the captions" (#146).
+  ].filter((m): m is string => Boolean(m))
 
   function addCheckpointHere() {
     const at = Math.round((playerRef.current?.currentTime ?? 0) * 10) / 10

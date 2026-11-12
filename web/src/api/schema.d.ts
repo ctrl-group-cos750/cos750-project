@@ -173,7 +173,7 @@ export interface paths {
     /**
      * Report Event
      * @description Log something only the browser sees, for the pilot's evaluation (FR-10.1). The server adds
-     *     who and when. 404 if the video, checkpoint or segment doesn't exist; 429 past 120 a minute. A
+     *     who and when. 404 if the video, checkpoint, segment or graph doesn't exist; 429 past 120 a minute. A
      *     segment viewed in a module still locked for the student is accepted but not logged.
      */
     post: operations['report_event_api_events_post']
@@ -405,6 +405,27 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/modules/length': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Course Length
+     * @description The course's estimated length in minutes, the sum of every module's estimate. Public, so
+     *     the register page can say how long the course takes with the same number the map shows.
+     */
+    get: operations['course_length_api_modules_length_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/modules/{module_id}': {
     parameters: {
       query?: never
@@ -615,6 +636,11 @@ export interface paths {
     /**
      * List Accounts
      * @description Every account, newest first. The portal searches this list as you type.
+     *
+     *     Students' emails are masked here (NFR-S8, data minimisation, #146): a list of every student's
+     *     address is more than staff need to find an account, and it would all leak at once from one
+     *     staff session. Staff accounts keep their full email (the team's own). One account's page
+     *     (below) still shows the full email, which staff need to act on it.
      */
     get: operations['list_accounts_api_staff_accounts_get']
     put?: never
@@ -1224,6 +1250,14 @@ export interface components {
       label: string
     }
     /**
+     * CourseLengthOut
+     * @description How long the whole course takes, in minutes: the sum of the modules' estimates.
+     */
+    CourseLengthOut: {
+      /** Minutes */
+      minutes: number
+    }
+    /**
      * EarnedBadgeOut
      * @description A badge the student holds. `badge` is a catalogue id (web/src/components/achievements.ts);
      *     `ref` tells repeatable badges apart (the bonus quest's id), "" otherwise. `seen` is false until
@@ -1640,16 +1674,24 @@ export interface components {
     /**
      * EventIn
      * @description What the browser saw: `video_started` or `video_completed` (`targetId` is the video),
-     *     `checkpoint_reached` (the checkpoint) or `segment_viewed` (the segment).
+     *     `checkpoint_reached` (the checkpoint), `segment_viewed` (the segment) or `prediction_made`
+     *     (the graph, with `correct`: whether the predicted vertex was the one BFS takes next).
      */
     EventIn: {
       /**
        * Type
        * @enum {string}
        */
-      type: 'video_started' | 'video_completed' | 'checkpoint_reached' | 'segment_viewed'
+      type:
+        | 'video_started'
+        | 'video_completed'
+        | 'checkpoint_reached'
+        | 'segment_viewed'
+        | 'prediction_made'
       /** Targetid */
       targetId: number
+      /** Correct */
+      correct?: boolean | null
     }
     /**
      * GraphEdge
@@ -2860,6 +2902,26 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  course_length_api_modules_length_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CourseLengthOut']
         }
       }
     }

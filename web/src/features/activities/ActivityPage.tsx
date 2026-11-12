@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router'
 import { retryUnlessRefused } from '../../api/retry.ts'
 import { Alert, Spinner } from '../../components'
+import { BackLink } from '../../components/BackLink.tsx'
 import { useRefreshRewards } from '../rewards/hooks.ts'
 import {
   fetchActivity,
@@ -102,5 +103,11 @@ export function ActivityPage() {
   if (!validActivityId)
     return <Alert tone="danger">The activity identifier must be a positive number.</Alert>
 
-  return <ActivityView key={activityId} activityId={activityId} />
+  // Opened from a review path's step: the way back to the path (#146).
+  return (
+    <>
+      <ActivityView key={activityId} activityId={activityId} />
+      <BackLink />
+    </>
+  )
 }

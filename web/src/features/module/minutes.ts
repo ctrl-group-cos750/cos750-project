@@ -10,23 +10,24 @@ export type MinutesProgress = {
 /**
  * How far through the course the student is, in the modules' estimated minutes.
  *
- * Only modules with content count towards the total: a module with no segments yet can't be
- * worked through (FR-2.1), so counting it would set a target nobody could reach. The total grows
- * as content is added. A complete module counts in full and one in progress by the share of its
- * segments the student has moved past; the content has no time per segment, so each segment of
- * a module counts the same. Only the segments shown to this student count: support they don't need
- * (FR-8.4) is neither time to spend nor time spent.
+ * The total is every module's estimate, the same sum the register page shows
+ * (GET /api/modules/length) and the rows add up to: one number everywhere (#146). A module with no
+ * content yet still counts towards it, and reads "coming soon" on the map. A complete module
+ * counts in full and one in progress by the share of its segments the student has moved past;
+ * the content has no time per segment, so each segment of a module counts the same. Only the
+ * segments shown to this student count: support they don't need (FR-8.4) is neither time to
+ * spend nor time spent.
  */
 export function minutesProgress(modules: readonly ModuleSummary[]): MinutesProgress {
   let done = 0
   let total = 0
   for (const m of modules) {
-    if (m.segmentCount === 0 && m.status !== 'complete') continue
     total += m.estimatedMinutes
     if (m.status === 'complete') done += m.estimatedMinutes
     else if (m.status === 'in_progress') {
-      const passed = m.shownSegmentsPassed ?? m.currentSegmentPosition
       const count = m.shownSegmentCount ?? m.segmentCount
+      // Capped: a module shortened below the student's position (#128) is worth no more (#146).
+      const passed = Math.min(m.shownSegmentsPassed ?? m.currentSegmentPosition, count)
       if (count > 0) done += (m.estimatedMinutes * passed) / count
     }
   }

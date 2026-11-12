@@ -8,6 +8,8 @@ export type User = {
   isStaff: boolean
   /** The profile picture they chose (FR-1.6), or null for their initial. */
   avatar: AvatarId | null
+  /** Their own uploaded picture, shown instead of `avatar`; null if they haven't uploaded one. */
+  pictureUrl: string | null
 }
 
 export type Credentials = { email: string; password: string }

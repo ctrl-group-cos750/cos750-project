@@ -289,13 +289,24 @@ def test_each_wrong_correction_leaves_bfs_broken(a: ActivityFixture) -> None:
     used = [c for c in a.config["corrections"] if c["id"] in order]
     unused = [c for c in a.config["corrections"] if c["id"] not in order]
     assert unused, f"activity {a.id}: no wrong corrections to test"
-    for wrong in unused:
-        for right in used:
-            swapped = [wrong["id"] if i == right["id"] else i for i in order]
-            assert not passes_hidden(lines_text(a, swapped)), (
-                f"activity {a.id}: wrong correction '{wrong['text']}' replacing "
-                f"'{right['text']}' still passes all hidden tests"
+    if not used:
+        # Fix is pure deletion (no replacement corrections in the solution).
+        # Verify that each distractor, when inserted after the correct deletion-only
+        # program, still causes BFS to fail the hidden suite.
+        for wrong in unused:
+            appended = [*first_order(a), wrong["id"]]
+            assert not passes_hidden(lines_text(a, appended)), (
+                f"activity {a.id}: distractor correction '{wrong['text']}' "
+                "inserted after fixed program still passes all hidden tests"
             )
+    else:
+        for wrong in unused:
+            for right in used:
+                swapped = [wrong["id"] if i == right["id"] else i for i in order]
+                assert not passes_hidden(lines_text(a, swapped)), (
+                    f"activity {a.id}: wrong correction '{wrong['text']}' replacing "
+                    f"'{right['text']}' still passes all hidden tests"
+                )
 
 
 # ---------------------------------------------------------------------------

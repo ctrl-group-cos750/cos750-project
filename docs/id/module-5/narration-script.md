@@ -2,20 +2,18 @@
 
 One narrated screen recording (issue #37). No presenter on camera. Read at a calm pace, about 130 words a minute. Timestamps are approximate; **⏸ CHECKPOINT** marks where the video pauses and the activity appears. The captions file and the transcript use this text word for word.
 
-The graph used throughout this video is the same cycle graph used in the worked example and the fix-the-bug activities, so its vertices, edges and labels must stay as they are.
+The graph used throughout this video is the same diamond graph used in the worked example and the fix-the-bug activities, so its vertices, edges and labels must stay as they are.
 
-**On screen throughout:** left, the cycle graph with each vertex's letter; right, the BFS code with the current line highlighted.
+**On screen throughout:** left, the diamond graph with each vertex's letter; right, the BFS code with the current line highlighted.
 
 ```
    A ─── B
-   │╲    │
-   │ ╲   │
-   │  ╲  │
-   │   ╲ │
-   D ─── C
+   │     │
+   │     │
+   C ─── D
 ```
 
-**Text description (read by screen readers):** Undirected graph with 4 vertices: A, B, C, D. It has 5 edges: A–B, B–C, C–D, D–A, A–C. There are two cycles: A–B–C–D–A (the outer square) and A–C (a diagonal shortcut that creates a smaller cycle A–B–C–A). Every edge can be followed in either direction.
+**Text description (read by screen readers):** Undirected graph with 4 vertices: A, B, C, D. It has 4 edges: A–B, A–C, B–D, C–D. A connects to B and C; B and C both connect to D, forming a diamond shape. The cycle A–B–D–C–A visits all four vertices. Every edge can be followed in either direction.
 
 ---
 
@@ -46,19 +44,19 @@ Plays at the start of module 5, before the worked example.
 |---|---|---|
 | 2:00 | Title card: "Which test cases expose a bug?" | Finding a bug matters, but so does knowing which test case would expose it. Some graphs hide a bug; others bring it right out. |
 | 2:10 | Cycle graph shown again | The visited-too-late bug only surfaces when a graph has a **cycle** — a path that leads back to a vertex already in the queue. On a simple path or a tree, every vertex has only one route to it, so it can never be queued twice. |
-| 2:20 | Two-islands graph appears: A–B–C on left, D–E on right, no edges crossing | A different bug adds unreachable vertices to the order. This graph has two islands: A, B, C are connected, but D and E are completely cut off. A BFS from A visits only A, B, C. A bug that tacks on every unvisited vertex at the end would return A, B, C, D, E — which is wrong. This test exposes the bug because some vertices are unreachable. |
+| 2:20 | Two-islands graph appears: A–B–C on left, D–E on right, no edges crossing | A different bug adds unreachable vertices to the order. This graph has two islands: A, B, C are connected, but D and E are completely cut off. A BFS from A visits only A, B, C. A bug that tacks on every vertex BFS never reached would return A, B, C, D, E — which is wrong. This test exposes the bug because some vertices are unreachable. |
 
 **Text description of the two-islands graph (read by screen readers):** Undirected graph with 5 vertices: A, B, C, D, E. It has 3 edges: A–B, B–C, D–E. Vertices D and E are not connected to A, B or C. Starting BFS from A visits only A, B, C.
 
 | Time | On screen | Narration |
 |---|---|---|
-| 2:35 | Both graphs side by side with labels | So: choose a **cycle graph** to expose a visited-too-late bug. Choose a **disconnected graph** — one with two separate islands — to expose a bug that adds unreachable vertices. One test can't do both jobs; that is why you need more than one. |
+| 2:35 | Both graphs side by side with labels | So: choose a **cycle graph** to expose a visited-too-late bug. Choose a **disconnected graph** — one with two separate islands — to expose a bug that adds unreachable vertices. One test cannot do both jobs; that is why you need more than one. |
 | 2:45 | "Your turn" card | Now you'll practise both: fixing the bugs and choosing the tests yourself. |
 
 ### Notes for whoever records
 
 - Show exactly the faulty and fixed code from the worked example, so it matches activity 504.
-- The cycle graph must match activity 506: vertices A, B, C, D; edges A–B, B–C, C–D, D–A, A–C.
+- The diamond graph must match activity 506: vertices A, B, C, D; edges A–B, A–C, B–D, C–D.
 - The two-islands graph must match activity 507: vertices A, B, C, D, E; edges A–B, B–C, D–E.
 - Pause the recording at the checkpoint time; the player pauses there automatically (FR-3.3).
 - If a time drifts while recording, set the checkpoint's time in the video editor instead.
@@ -74,7 +72,7 @@ In each, **(✓)** marks the right answer, the text after the arrow (→) on a w
 
 ### Checkpoint 1 (1:35)
 
-The faulty BFS is tracing the cycle graph (A–B–C–D–A with shortcut A–C, start A). B has just dequeued and added D to the queue. Now C dequeues. D is already in the queue but has not left it yet. What does the faulty BFS do with D?
+The faulty BFS is tracing the diamond graph (A–B, A–C, B–D, C–D, start A). B has just dequeued and added D to the queue. Now C dequeues. D is already in the queue but has not left it yet. What does the faulty BFS do with D?
 
 - It adds D to the queue a second time, because D is not in visited yet. **(✓)**
 - It skips D, because D is already in the queue. → Not quite. The faulty version only checks visited, not the queue. D is not in visited until it leaves the queue, so nothing stops C from adding it again. Think about when visited.add(D) actually runs.

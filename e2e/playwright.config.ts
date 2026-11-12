@@ -27,6 +27,11 @@ export default defineConfig({
     ignoreHTTPSErrors: true,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
+    // The app's own reduced-motion mode: no page fade-in (AppShell) and no badge note sliding up
+    // (BadgeAnnouncer). On CI's slow WebKit, axe caught the report page mid-fade (its text at
+    // 3.3:1 for a moment) and moving badge notes never counted as stable. These tests check
+    // content and controls, not motion.
+    reducedMotion: 'reduce',
   },
   // The stack is served over HTTPS (docker-compose.e2e.yml): WebKit only sends the Secure
   // session cookie over HTTPS. Students log in or register through the page; the `setup`

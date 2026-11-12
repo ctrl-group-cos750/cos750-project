@@ -309,3 +309,65 @@ No new failures introduced (the "unvisited" vocabulary issue was caught and fixe
 ### Open Issues
 
 None. Branch: feat/module-5-test-and-debug. Not pushed.
+
+---
+
+## Developer Notes — Wave 4 (CI gate): full scripts/check.sh verification
+
+### Files Created
+_(none)_
+
+### Files Modified
+_(none — the check required only a local `npm ci` to restore node_modules; no tracked files changed)_
+
+### Environment Setup
+- Node version: `v24.22.2` (from `web/.nvmrc`), loaded via `~/.nvm/versions/node/v24.22.2/bin`.
+- `api/.venv` already present with all deps.
+- `web/node_modules` existed but `mdast-util-gfm-table` and `micromark-extension-gfm-table` were absent — pre-existing local environment issue (both packages are in `package.json` and `origin/staging`). Fixed with `npm ci` (no tracked file change).
+
+### Pre-existing web test failure (proved, not introduced by this branch)
+Before `npm ci`, 22 Vitest suites failed with:
+```
+Error: Failed to resolve import "mdast-util-gfm-table" from "src/components/Markdown.tsx"
+Error: Failed to resolve import "micromark-extension-gfm-table" from "src/components/Markdown.tsx"
+```
+Both packages were already listed in `web/package.json` on `origin/staging` (confirmed via `git show origin/staging:web/package.json`). The failure was a stale local `node_modules`, not a branch regression. `npm ci` resolved it.
+
+### scripts/check.sh result (full run, Node 24.22.2)
+
+```
+== web
+  format:check  ✓  All matched files use Prettier code style!
+  lint          ✓  Found 0 warnings and 0 errors (oxlint, 166 files, 219 rules)
+  test          ✓  37 passed (455 tests) — vitest run
+  build         ✓  tsc -b + vite build succeeded (2702 modules transformed)
+  check:api     ✓  openapi-typescript regenerated schema.d.ts; git diff --exit-code clean
+
+== api
+  ruff format   ✓  143 files already formatted
+  ruff check    ✓  All checks passed!
+  mypy          ✓  Success: no issues found in 124 source files
+  pytest (full) ✓  2063 passed, 23 skipped in ~129 s
+  pytest (cov)  ✓  252 passed, 1 skipped; coverage 99.14% ≥ 90% gate
+
+== all checks passed
+```
+
+### seed --check result
+```
+seed --check: fixtures valid (7 modules, 118 activities, 7 review paths, 4 graphs);
+templates valid (choose_tests, fill_in, fix_the_bug, matching, multiple_choice, parsons, trace)
+```
+Exit status 0.
+
+### Key Decisions
+No code changes were needed. The only action was `npm ci` to restore the local `node_modules` to the state described by `package-lock.json`. This is an environment fix, not a branch fix.
+
+### Library Docs Consulted (Context7)
+None.
+
+### Build & Test Results
+Full CI gate green. Branch: `feat/module-5-test-and-debug`. Not pushed.
+
+### Open Issues
+None. Branch is ready for PR review.

@@ -2,7 +2,6 @@ import { reportEvent } from '../../api/events.ts'
 import { useEffect, useReducer } from 'react'
 import { Gauge, Lightbulb, Pause, Play, RotateCcw, StepBack, StepForward } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { GraphCanvas } from './GraphCanvas.tsx'
@@ -88,9 +87,6 @@ export function BfsVisualizer({ scenario }: BfsVisualizerProps) {
             <h1 id="bfs-title" className="text-2xl font-semibold tracking-tight">
               {scenario.title}
             </h1>
-            <Badge variant={playback.predictionMode ? 'default' : 'outline'}>
-              {playback.predictionMode ? 'Prediction mode' : 'Watch mode'}
-            </Badge>
           </div>
           <p className="text-sm text-muted-foreground">
             Step {playback.frameIndex + 1} of {scenario.frames.length}

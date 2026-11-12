@@ -24,11 +24,20 @@ from app.models import (
     Checkpoint,
     Event,
     HintView,
+    Objective,
     ObjectiveResult,
     User,
     Video,
 )
-from app.schemas.evaluation import ActivityInsight, CheckpointInsight, Insights, VideoInsight
+from app.schemas.evaluation import (
+    ActivityInsight,
+    CheckpointInsight,
+    CommonWrongAnswer,
+    Insights,
+    ObjectiveReadiness,
+    Readiness,
+    VideoInsight,
+)
 
 router = APIRouter(prefix="/api/staff", tags=["staff"])
 
@@ -289,3 +298,105 @@ def insights(session: DbSession, _staff: StaffUser) -> Insights:
         activities=_activity_insights(session),
         videos=_video_insights(session),
     )
+
+
+@router.get("/readiness")
+def readiness(session: DbSession, _staff: StaffUser) -> Readiness:
+    """For the lecturer, before the lecture (FR-10): how many students who took the mastery check
+    are ready, each objective's results across them, and the most common wrong first answers on
+    the assessed multiple-choice items (module 6 and the review paths' fresh items), each with the
+    content's explanation of why it is wrong. Real students only; counts only, no names."""
+    students = _students()
+    objectives = list(session.scalars(select(Objective).order_by(Objective.id)))
+    counts: dict[tuple[int, str], int] = {
+        (objective_id, state): n
+        for objective_id, state, n in session.execute(
+            select(ObjectiveResult.objective_id, ObjectiveResult.state, func.count())
+            .where(ObjectiveResult.user_id.in_(students))
+            .group_by(ObjectiveResult.objective_id, ObjectiveResult.state)
+        )
+    }
+    assessed = select(Activity.id).where(Activity.purpose == "mastery")
+    took = (
+        session.scalar(
+            select(func.count(distinct(Attempt.user_id))).where(
+                Attempt.user_id.in_(students), Attempt.activity_id.in_(assessed)
+            )
+        )
+        or 0
+    )
+    met = (
+        select(ObjectiveResult.user_id)
+        .where(
+            ObjectiveResult.user_id.in_(students),
+            ObjectiveResult.state.in_(("met_independently", "met_with_support")),
+        )
+        .group_by(ObjectiveResult.user_id)
+        .having(func.count() == len(objectives))
+    )
+    ready = session.scalar(select(func.count()).select_from(met.subquery())) or 0
+    return Readiness(
+        students=took,
+        ready=ready,
+        objectives=[
+            ObjectiveReadiness(
+                id=o.id,
+                text=o.text,
+                met_independently=counts.get((o.id, "met_independently"), 0),
+                met_with_support=counts.get((o.id, "met_with_support"), 0),
+                not_yet=counts.get((o.id, "not_yet"), 0),
+            )
+            for o in objectives
+        ],
+        common_wrong_answers=_common_wrong_answers(session),
+    )
+
+
+def _common_wrong_answers(session: DbSession, top: int = 10) -> list[CommonWrongAnswer]:
+    """Each assessed multiple-choice item's most chosen wrong option at first answer, most wrong
+    first. Only the first answer counts on an assessed item (FR-7.1), so it is the honest one."""
+    items = {
+        a.id: a
+        for a in session.scalars(
+            select(Activity).where(
+                Activity.purpose == "mastery", Activity.kind == "multiple_choice"
+            )
+        )
+    }
+    if not items:
+        return []
+    first: dict[tuple[int, int], Attempt] = {}
+    for attempt in session.scalars(
+        select(Attempt)
+        .where(Attempt.user_id.in_(_students()), Attempt.activity_id.in_(items))
+        .order_by(Attempt.created_at, Attempt.id)
+    ):
+        first.setdefault((attempt.user_id, attempt.activity_id), attempt)
+    answered: dict[int, int] = {}
+    wrong: dict[int, dict[str, int]] = {}
+    for (_user, activity_id), attempt in first.items():
+        answered[activity_id] = answered.get(activity_id, 0) + 1
+        if not attempt.correct:
+            chosen = str(attempt.submitted.get("selected", ""))
+            options = wrong.setdefault(activity_id, {})
+            options[chosen] = options.get(chosen, 0) + 1
+    result = []
+    for activity_id, options in wrong.items():
+        activity = items[activity_id]
+        option_id, chosen_by = max(options.items(), key=lambda kv: (kv[1], kv[0]))
+        labels = {o["id"]: o["label"] for o in activity.config.get("options", [])}
+        feedback = (activity.solution or {}).get("feedback", {})
+        result.append(
+            CommonWrongAnswer(
+                activity_id=activity_id,
+                title=activity.title,
+                objective_id=activity.objective_id,
+                answered=answered[activity_id],
+                wrong=sum(options.values()),
+                option=labels.get(option_id, option_id),
+                chosen_by=chosen_by,
+                why_wrong=feedback.get(option_id),
+            )
+        )
+    result.sort(key=lambda r: (-r.wrong, -r.chosen_by, r.activity_id))
+    return result[:top]

@@ -9,15 +9,19 @@ export type SegmentViewProps = {
   segment: Segment
   /** Called after each answer in the segment, so the module can check whether it is done. */
   onAnswered?: () => void
+  /** A short line under the heading saying why the segment is there: the module page gives one
+   * to the first of a run of support segments (FR-8.4). */
+  intro?: string | null
 }
 
 /** Dispatches on segment.kind and renders the appropriate view. Videos and activities are shown
  * here, inside the module, so its Previous and Next buttons stay on screen. Each segment's heading
  * is focusable from script only (tabIndex -1, data-focus-heading): ModulePage moves focus to it
  * after Previous or Next. */
-export function SegmentView({ segment, onAnswered }: SegmentViewProps) {
+export function SegmentView({ segment, onAnswered, intro }: SegmentViewProps) {
   // The pilot's timeline of what each student saw (FR-10.1, #141): one event per segment shown.
   useEffect(() => reportEvent('segment_viewed', segment.id), [segment.id])
+  const introLine = intro ? <p className="text-muted-foreground">{intro}</p> : null
 
   switch (segment.kind) {
     case 'text':
@@ -28,6 +32,7 @@ export function SegmentView({ segment, onAnswered }: SegmentViewProps) {
           <h2 className="text-xl font-semibold" tabIndex={-1} data-focus-heading>
             {segment.title}
           </h2>
+          {introLine}
           {segment.body ? (
             <Markdown>{segment.body}</Markdown>
           ) : (
@@ -42,6 +47,7 @@ export function SegmentView({ segment, onAnswered }: SegmentViewProps) {
           <h2 className="text-xl font-semibold" tabIndex={-1} data-focus-heading>
             {segment.title}
           </h2>
+          {introLine}
           {segment.videoId !== null ? (
             <VideoView videoId={segment.videoId} heading="h3" onResult={onAnswered} />
           ) : (
@@ -56,6 +62,7 @@ export function SegmentView({ segment, onAnswered }: SegmentViewProps) {
           <h2 className="text-xl font-semibold" tabIndex={-1} data-focus-heading>
             {segment.title}
           </h2>
+          {introLine}
           {segment.activityId !== null ? (
             <ActivityView activityId={segment.activityId} showTitle={false} onResult={onAnswered} />
           ) : (

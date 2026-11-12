@@ -4696,6 +4696,17 @@
             ],
             "title": "Refresherfor"
           },
+          "supportFor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supportfor"
+          },
           "videoId": {
             "anyOf": [
               {
@@ -4775,6 +4786,17 @@
               }
             ],
             "title": "Refresherfor"
+          },
+          "supportFor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supportfor"
           },
           "videoId": {
             "anyOf": [
@@ -5131,6 +5153,14 @@
             "type": "integer",
             "title": "Currentsegmentposition"
           },
+          "shownSegmentCount": {
+            "type": "integer",
+            "title": "Shownsegmentcount"
+          },
+          "shownSegmentsPassed": {
+            "type": "integer",
+            "title": "Shownsegmentspassed"
+          },
           "segments": {
             "items": {
               "$ref": "#/components/schemas/SegmentOut"
@@ -5158,6 +5188,8 @@
           "status",
           "segmentCount",
           "currentSegmentPosition",
+          "shownSegmentCount",
+          "shownSegmentsPassed",
           "segments",
           "retrieval"
         ],
@@ -5210,6 +5242,14 @@
           "currentSegmentPosition": {
             "type": "integer",
             "title": "Currentsegmentposition"
+          },
+          "shownSegmentCount": {
+            "type": "integer",
+            "title": "Shownsegmentcount"
+          },
+          "shownSegmentsPassed": {
+            "type": "integer",
+            "title": "Shownsegmentspassed"
           }
         },
         "additionalProperties": false,
@@ -5223,7 +5263,9 @@
           "estimatedMinutes",
           "status",
           "segmentCount",
-          "currentSegmentPosition"
+          "currentSegmentPosition",
+          "shownSegmentCount",
+          "shownSegmentsPassed"
         ],
         "title": "ModuleOut",
         "description": "A module as it appears on the module map.\n\n``status`` is computed per-student at query time (never stored directly on the\nmodule); it is one of: locked | open | in_progress | complete.\n``segment_count`` and ``current_segment_position`` let the map show a progress\nbar without loading the full segment list."
@@ -5643,6 +5685,22 @@
               }
             ],
             "title": "Activityid"
+          },
+          "supportFor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supportfor"
+          },
+          "shown": {
+            "type": "boolean",
+            "title": "Shown",
+            "default": true
           },
           "done": {
             "type": "boolean",

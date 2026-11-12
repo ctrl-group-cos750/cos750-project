@@ -93,3 +93,57 @@ def test_0016_keeps_each_hint_level_s_first_view(tmp_path: Path) -> None:
         assert [tuple(row) for row in kept] == [(1, 1), (3, 2)]
     finally:
         engine.dispose()
+
+
+def test_0017_upgrades_a_staging_database_without_moving_anyone(tmp_path: Path) -> None:
+    """A database built on staging (at 0016) keeps its segments and every student's place: no
+    segment becomes support and nothing is recorded as shown until the fixtures say so (#172)."""
+    url = f"sqlite:///{tmp_path / 'support.db'}"
+    cfg = alembic_config(url)
+    command.upgrade(cfg, "0016")
+    engine = create_engine(url)
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    "INSERT INTO users (id, email, display_name, password_hash)"
+                    " VALUES (1, 'ada@example.com', 'Ada', 'x')"
+                )
+            )
+            conn.execute(
+                text(
+                    "INSERT INTO modules (id, slug, title, goals, estimated_minutes, position)"
+                    " VALUES (2, 'graphs', 'Graphs', '[]', 10, 2)"
+                )
+            )
+            for segment_id, position in ((201, 0), (202, 1), (203, 2)):
+                conn.execute(
+                    text(
+                        "INSERT INTO segments (id, module_id, position, kind, title, body)"
+                        " VALUES (:id, 2, :position, 'text', 'S', '')"
+                    ),
+                    {"id": segment_id, "position": position},
+                )
+            conn.execute(
+                text(
+                    "INSERT INTO module_progress (user_id, module_id, status,"
+                    " current_segment_position) VALUES (1, 2, 'in_progress', 1)"
+                )
+            )
+        command.upgrade(cfg, "0017")
+        with engine.connect() as conn:
+            segments = conn.execute(
+                text("SELECT id, position, support_for FROM segments ORDER BY id")
+            ).all()
+            place = conn.execute(
+                text("SELECT current_segment_position, status FROM module_progress")
+            ).one()
+            shown = conn.execute(text("SELECT COUNT(*) FROM shown_segments")).scalar()
+        assert [tuple(row) for row in segments] == [(201, 0, None), (202, 1, None), (203, 2, None)]
+        assert tuple(place) == (1, "in_progress")
+        assert shown == 0
+        command.downgrade(cfg, "0016")  # and it can be undone
+        with engine.connect() as conn:
+            assert conn.execute(text("SELECT COUNT(*) FROM segments")).scalar() == 3
+    finally:
+        engine.dispose()

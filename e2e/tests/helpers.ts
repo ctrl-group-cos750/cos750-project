@@ -116,3 +116,64 @@ export async function expectVisibleFocus(target: Locator, label: string) {
     `${label}: no visible focus indicator (focused ${JSON.stringify(focused)}, not focused ${JSON.stringify(unfocused)})`,
   ).toBe(true)
 }
+
+/** Click, and if the click can't go through (Playwright waits for the element to be visible,
+ * enabled and stable), fail with what the page was doing: whether the element kept moving,
+ * whether animation frames ran, which animations were running, and the scroll position. Used
+ * where WebKit timed out on the trace activity's buttons in CI (#35), so the log names the cause. */
+export async function clickOrExplain(target: Locator, timeout = 15_000) {
+  try {
+    await target.click({ timeout })
+  } catch (error) {
+    const page = target.page()
+    const facts = await target
+      .evaluate(async (el) => {
+        const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
+        const rects: string[] = []
+        const scrolls: string[] = []
+        for (let i = 0; i < 8; i++) {
+          const r = el.getBoundingClientRect()
+          rects.push(
+            `${r.x.toFixed(1)},${r.y.toFixed(1)},${r.width.toFixed(1)}x${r.height.toFixed(1)}`,
+          )
+          scrolls.push(`${window.scrollX},${window.scrollY}`)
+          await wait(60)
+        }
+        const frames = await Promise.race([
+          new Promise<number>((resolve) => {
+            let n = 0
+            const tick = () => (++n >= 3 ? resolve(n) : requestAnimationFrame(tick))
+            requestAnimationFrame(tick)
+          }),
+          wait(1500).then(() => -1),
+        ])
+        const animations = document
+          .getAnimations()
+          .map((a) => {
+            const t = (a.effect as KeyframeEffect | null)?.target as Element | null
+            const name =
+              (a as CSSAnimation).animationName ?? (a as CSSTransition).transitionProperty
+            return `${name ?? a.constructor.name} on ${t?.tagName ?? '?'}.${t?.className ?? ''} (${a.playState})`
+          })
+          .slice(0, 10)
+        const hit = (() => {
+          const r = el.getBoundingClientRect()
+          const at = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)
+          return at === el || el.contains(at) ? 'self' : `${at?.tagName}.${at?.className}`
+        })()
+        return {
+          rects,
+          scrolls,
+          rafFramesIn1500ms: frames,
+          animations,
+          hit,
+          visibility: document.visibilityState,
+          active: `${document.activeElement?.tagName}#${document.activeElement?.id}`,
+        }
+      })
+      .catch((e: unknown) => ({ evaluateFailed: String(e) }))
+    throw new Error(
+      `${String(error).split('\n')[0]}\nWhat the page was doing: ${JSON.stringify(facts)}\nURL: ${page.url()}`,
+    )
+  }
+}

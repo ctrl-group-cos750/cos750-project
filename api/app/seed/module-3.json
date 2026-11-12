@@ -4,7 +4,7 @@
       "id": 3,
       "slug": "meet-bfs",
       "title": "Meet BFS",
-      "estimated_minutes": 12,
+      "estimated_minutes": 25,
       "goals": [
         "Explain what BFS is for, and when it is the right tool.",
         "Trace BFS by hand: say which vertex comes next, what is in the queue, which vertices are visited and the order they are visited in.",

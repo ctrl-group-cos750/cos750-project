@@ -1,5 +1,7 @@
 import type { ComponentPropsWithoutRef } from 'react'
 import ReactMarkdown, { type Components, type ExtraProps } from 'react-markdown'
+import { Link, useInRouterContext, useLocation } from 'react-router'
+import { backState } from './backState.ts'
 import { gfmTableFromMarkdown } from 'mdast-util-gfm-table'
 import { gfmTable } from 'micromark-extension-gfm-table'
 import styles from './Markdown.module.css'
@@ -78,7 +80,34 @@ function ScrollableCode({ node, ...props }: ComponentPropsWithoutRef<'pre'> & Ex
   )
 }
 
-const components: Components = { table: ScrollableTable, pre: ScrollableCode }
+/** A link inside the app (`/graphs/4`) goes through the router, carrying where it was opened from,
+ * so the page it opens can lead back (#146: the BFS visualiser opened from module 3). Anything
+ * else stays an ordinary link. */
+function AppLink({
+  node: _node,
+  href,
+  children,
+  ...props
+}: ComponentPropsWithoutRef<'a'> & ExtraProps) {
+  if (!useInRouterContext() || !href?.startsWith('/') || href.startsWith('//'))
+    return (
+      <a href={href} {...props}>
+        {children}
+      </a>
+    )
+  return (
+    <RouterLink href={href} {...props}>
+      {children}
+    </RouterLink>
+  )
+}
+
+function RouterLink({ href, ...props }: ComponentPropsWithoutRef<'a'> & { href: string }) {
+  const { pathname } = useLocation()
+  return <Link to={href} state={backState(pathname)} {...props} />
+}
+
+const components: Components = { table: ScrollableTable, pre: ScrollableCode, a: AppLink }
 
 /**
  * Renders a markdown string as React elements, with GFM tables (remarkGfmTables), so the

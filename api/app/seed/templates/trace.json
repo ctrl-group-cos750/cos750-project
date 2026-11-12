@@ -1,0 +1,55 @@
+{
+  "id": 9905,
+  "kind": "trace",
+  "title": "Template: trace BFS from A",
+  "module_id": 3,
+  "objective_id": 5,
+  "purpose": "practice",
+  "config": {
+    "directed": false,
+    "vertices": [
+      "A",
+      "B",
+      "C",
+      "D"
+    ],
+    "edges": [
+      {
+        "source": "A",
+        "target": "B"
+      },
+      {
+        "source": "A",
+        "target": "C"
+      },
+      {
+        "source": "B",
+        "target": "D"
+      },
+      {
+        "source": "C",
+        "target": "D"
+      }
+    ],
+    "start_vertex": "A"
+  },
+  "solution": {},
+  "hints": [
+    {
+      "level": 1,
+      "body": "Start with only A in the queue. Row 1 is what happens when A leaves."
+    },
+    {
+      "level": 2,
+      "body": "For each row: take the vertex at the front of the queue, add it to the order, then add its neighbours that haven't been found yet, in alphabetical order, at the back."
+    },
+    {
+      "level": 3,
+      "body": "Row 1: A leaves, and B and C join. Row 2: B leaves, and only D is new."
+    },
+    {
+      "level": 4,
+      "body": "Answer: the order is A, B, C, D. The queue after each row is [B, C], [C, D], [D], []. At row 3, D is not added again because it is already waiting in the queue."
+    }
+  ]
+}

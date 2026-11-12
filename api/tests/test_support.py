@@ -279,7 +279,12 @@ def test_only_first_attempts_at_base_practice_here_count(client: TestClient, db:
     _answer(client, 11, False)  # a later attempt at the same item doesn't count
     _answer(client, 11, False)
     _answer(client, 20, False)  # another objective's item doesn't count for objective 2
-    _answer(client, 19, False)  # nor does the support item itself
+    # Nor does the support item itself. A student it is hidden from can't answer it over HTTP
+    # (403, app/services/access.py), so record one as if it had been shown earlier.
+    user_id = db.scalar(select(User.id).where(User.email == ADA["email"]))
+    assert user_id is not None
+    record_attempt(db, user_id, db.get_one(Activity, 19), {"selected": "b"})
+    db.commit()
     assert _shown(client)[SUPPORT_TEXT] is False
 
 
@@ -497,3 +502,57 @@ def test_saves_at_once_record_the_support_once(db: Session) -> None:
     assert sorted(r.segment_id for r in rows) == [90, 91]
     progress = db.scalars(select(ModuleProgress).where(ModuleProgress.user_id == user_id)).one()
     assert progress.current_segment_position == SUPPORT_TEXT
+
+
+# --- Opening a support item by id (app/services/access.py) -------------------------------------
+
+
+def test_a_support_item_opens_only_for_a_student_shown_it(client: TestClient, db: Session) -> None:
+    """A support item belongs to its module, but a student it isn't shown to can't open it by id,
+    answer it or ask for its hints (403): it is extra help for those who struggle, and its answers
+    should be theirs. Once it is shown it opens, and staff may always open it to preview it."""
+    from app.routers.activities import NOT_SHOWN
+
+    _make_module(db)
+    _register(client, ADA)
+    _walk_base(client, (True, True, False))  # confident: the support stays hidden
+    for response in (
+        client.get("/api/activities/19"),
+        client.get("/api/activities/19/hints"),
+        client.post("/api/activities/19/hints"),
+        client.post("/api/activities/19/attempts", json={"submitted": {"selected": "a"}}),
+    ):
+        assert (response.status_code, response.json()["detail"]) == (403, NOT_SHOWN)
+    assert db.scalars(select(Attempt).where(Attempt.activity_id == 19)).all() == []
+    assert client.get("/api/activities/12").status_code == 200  # base items are unaffected
+
+    client.cookies.clear()
+    _register(client, BEA)
+    assert _move(client, BASE_1) == 200
+    _first(client, 11, False)
+    assert client.get("/api/activities/19").status_code == 403  # one wrong answer: not yet
+    assert _move(client, BASE_2) == 200
+    _first(client, 12, False)  # struggling: shown now, ahead of her
+    assert client.get("/api/activities/19").status_code == 200
+
+    db.execute(update(User).where(User.email == ADA["email"]).values(is_staff=True))
+    db.commit()
+    client.cookies.clear()
+    assert (
+        client.post("/api/auth/login", json={k: ADA[k] for k in ("email", "password")}).status_code
+        == 200
+    )
+    assert client.get("/api/activities/19").status_code == 200
+
+
+def test_a_support_item_in_a_locked_module_is_locked(client: TestClient, db: Session) -> None:
+    from app.routers.activities import MODULE_LOCKED
+
+    _make_module(db)
+    db.add(Segment(id=101, module_id=1, position=1, kind="activity", title="S", support_for=2))
+    _question(db, 21, module_id=1, objective_id=2, purpose="practice")
+    db.execute(update(Segment).where(Segment.id == 101).values(activity_id=21))
+    db.commit()
+    _register(client, ADA)
+    response = client.get("/api/activities/21")
+    assert (response.status_code, response.json()["detail"]) == (403, MODULE_LOCKED)

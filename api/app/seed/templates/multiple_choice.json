@@ -1,0 +1,51 @@
+{
+  "id": 9901,
+  "kind": "multiple_choice",
+  "title": "Template: when is BFS the right tool?",
+  "module_id": 3,
+  "objective_id": 4,
+  "purpose": "practice",
+  "config": {
+    "prompt": "Which of these problems is BFS a good fit for?",
+    "options": [
+      {
+        "id": "a",
+        "label": "Finding the route from the Admin block to the Green that uses the fewest walkways."
+      },
+      {
+        "id": "b",
+        "label": "Sorting a list of test marks from highest to lowest."
+      },
+      {
+        "id": "c",
+        "label": "Adding up the marks in a list."
+      }
+    ]
+  },
+  "solution": {
+    "correct": "a",
+    "explanation": "Correct. BFS visits the vertices closest to the start first, so it finds the route with the fewest walkways. Next, try tracing it on the campus graph.",
+    "feedback": {
+      "b": "Not quite. Sorting a list is a job for a sorting algorithm, and a list has no edges to follow. BFS traverses a graph. Look for the option that has vertices joined by edges.",
+      "c": "Not quite. Adding up a list needs one loop, not a graph. BFS traverses a graph by following its edges. Look for the option that has vertices joined by edges."
+    }
+  },
+  "hints": [
+    {
+      "level": 1,
+      "body": "BFS is a graph traversal. Which option is about a graph?"
+    },
+    {
+      "level": 2,
+      "body": "Buildings joined by walkways are a graph. BFS visits the vertices closest to the start first."
+    },
+    {
+      "level": 3,
+      "body": "Two of the options are about a list of numbers, and a list has no edges to follow."
+    },
+    {
+      "level": 4,
+      "body": "Answer: a, the route with the fewest walkways. BFS visits the buildings one walkway away first, then two walkways away, so it finds the shortest route first."
+    }
+  ]
+}

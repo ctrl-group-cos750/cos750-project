@@ -71,6 +71,9 @@ from app.services.mastery import MASTERY_MODULE, recompute_all
 from app.services.modules import keep_places, segment_order
 
 FIXTURES = Path(__file__).parent
+# One example activity per kind, for authors to copy (README.md in this folder). The loader reads
+# only the *.json files directly in FIXTURES, so these are never loaded as content.
+TEMPLATES = FIXTURES / "templates"
 
 # Activities come from two places: the fixtures, and the video editor (a checkpoint's question,
 # made in the app). They share one table, so they get separate id ranges: fixtures stay below
@@ -441,6 +444,28 @@ def read_fixtures(folder: Path = FIXTURES) -> FixtureFile:
     return merged
 
 
+def read_templates(
+    folder: Path = TEMPLATES, fixtures: Path = FIXTURES
+) -> dict[str, ActivityFixture]:
+    """Every template in `folder` (one activity, named after its kind), keyed by kind. Each is
+    checked as a fixture activity, then added to the committed fixtures and checked with them, so
+    a template copied into a module file is valid there too. Raises ValueError naming the file."""
+    content = read_fixtures(fixtures)
+    templates: dict[str, ActivityFixture] = {}
+    for path in sorted(folder.glob("*.json")):
+        try:
+            activity = ActivityFixture.model_validate(json.loads(path.read_text(encoding="utf-8")))
+            if activity.kind != path.stem:
+                raise ValueError(f"the file holds a {activity.kind} activity")
+            check_content(
+                content.model_copy(update={"activities": [*content.activities, activity]})
+            )
+        except (ValidationError, json.JSONDecodeError, ValueError) as exc:
+            raise ValueError(f"templates/{path.name}: {exc}") from exc
+        templates[activity.kind] = activity
+    return templates
+
+
 def check_content(merged: FixtureFile) -> None:
     """The checks across all content, wherever it comes from: the fixtures (`read_fixtures`) or
     the database after a staff edit (app/services/content_editor.py). Ids are unique, slugs are
@@ -771,6 +796,9 @@ def retire_dropped_activities(session: Session, listed: set[int]) -> list[int]:
     objective whose old placeholder still counted could never be reached. The video editor's
     questions (ids from EDITOR_IDS_FROM) are never touched, and neither is one staff edited in the
     portal or one a staff-edited module still shows: those belong to the portal now.
+
+    Each activity is locked before it is checked for use, so an answer being recorded at that
+    moment is finished first and counts as use (#138).
     """
     dropped = session.scalars(
         select(Activity).where(
@@ -790,6 +818,14 @@ def retire_dropped_activities(session: Session, listed: set[int]) -> list[int]:
             .limit(1)
         )
         if shown is not None:
+            continue
+        # Wait for any answer or hint on it still in flight (they hold FOR KEY SHARE on the row,
+        # app/services/locks.py), so "used" below sees their rows: otherwise an uncommitted
+        # attempt looked unused, the delete waited for it and then failed on the foreign key.
+        if (
+            session.scalar(select(Activity.id).where(Activity.id == activity.id).with_for_update())
+            is None
+        ):
             continue
         used = any(
             session.scalar(select(child.id).where(child.activity_id == activity.id).limit(1))

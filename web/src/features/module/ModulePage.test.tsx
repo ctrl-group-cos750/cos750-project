@@ -488,6 +488,27 @@ describe('ModulePage — navigation and position saving', () => {
       await screen.findByRole('heading', { name: 'Graphs and breadth-first search' }),
     ).toBeInTheDocument()
   })
+  it('finishing module 6, the mastery check, opens the mastery report (#144)', async () => {
+    const api = fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules': () =>
+          Response.json([{ ...moduleSummary, id: 6, number: 6, status: 'complete' }]),
+        'GET /api/modules/:id': () =>
+          Response.json({ ...twoSegmentDetail, id: 6, number: 6, currentSegmentPosition: 1 }),
+        'POST /api/modules/:id/position': () => Response.json(twoSegmentDetail),
+        'GET /api/me/report': () => Response.json({ ready: false, objectives: [] }),
+      },
+    })
+    renderApp('/modules/6')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Finish module' }))
+
+    expect(
+      await screen.findByRole('heading', { name: 'Your mastery report', level: 1 }),
+    ).toBeInTheDocument()
+    expect(api.callsTo('POST /api/modules/6/position')).toHaveLength(1)
+  })
 })
 
 // ---------------------------------------------------------------------------

@@ -4,6 +4,7 @@ from app.auth import CurrentUser
 from app.db import DbSession
 from app.models import GraphScenario
 from app.schemas.graphs import BfsResult, GraphScenarioOut
+from app.schemas.ids import RowId
 from app.services.bfs import InvalidGraph, run_bfs
 
 router = APIRouter(prefix="/api/graphs", tags=["graphs"])
@@ -25,13 +26,13 @@ def _scenario_or_404(session: DbSession, scenario_id: int) -> GraphScenario:
 
 
 @router.get("/{scenario_id}", response_model=GraphScenarioOut)
-def get_scenario(scenario_id: int, session: DbSession, _user: CurrentUser) -> GraphScenario:
+def get_scenario(scenario_id: RowId, session: DbSession, _user: CurrentUser) -> GraphScenario:
     """The graph scenario to draw (FR-6.1)."""
     return _scenario_or_404(session, scenario_id)
 
 
 @router.get("/{scenario_id}/bfs")
-def get_bfs(scenario_id: int, session: DbSession, _user: CurrentUser) -> BfsResult:
+def get_bfs(scenario_id: RowId, session: DbSession, _user: CurrentUser) -> BfsResult:
     """The breadth-first traversal of the scenario, step by step (FR-6.1).
 
     Computed by the one tested engine so the animation, prediction and trace table agree (FR-6.5).

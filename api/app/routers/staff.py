@@ -7,6 +7,7 @@ from app.auth import StaffUser
 from app.db import DbSession
 from app.media import KINDS, MediaError, file_for, save_upload
 from app.models import Checkpoint, User, Video
+from app.schemas.ids import RowId
 from app.schemas.staff import (
     MediaOut,
     StaffMemberIn,
@@ -99,7 +100,7 @@ def create_video(data: StaffVideoIn, session: DbSession, _staff: StaffUser) -> S
 
 
 @router.get("/videos/{video_id}")
-def get_video_for_editor(video_id: int, session: DbSession, _staff: StaffUser) -> StaffVideoOut:
+def get_video_for_editor(video_id: RowId, session: DbSession, _staff: StaffUser) -> StaffVideoOut:
     """The video with every checkpoint's question, correct option, feedback and hints."""
     video = session.get(Video, video_id)
     if video is None:
@@ -109,7 +110,7 @@ def get_video_for_editor(video_id: int, session: DbSession, _staff: StaffUser) -
 
 @router.put("/videos/{video_id}")
 def update_video(
-    video_id: int, data: StaffVideoIn, session: DbSession, _staff: StaffUser
+    video_id: RowId, data: StaffVideoIn, session: DbSession, _staff: StaffUser
 ) -> StaffVideoOut:
     """Replace the video and its checkpoint list. Keep each existing checkpoint's `id` so its
     attempts stay linked; a checkpoint left out is removed."""
@@ -150,7 +151,7 @@ def add_member(data: StaffMemberIn, session: DbSession, _staff: StaffUser) -> St
 
 
 @router.delete("/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-def remove_member(user_id: int, session: DbSession, staff: StaffUser) -> None:
+def remove_member(user_id: RowId, session: DbSession, staff: StaffUser) -> None:
     """Take staff access away. It ends at once: every request reads `is_staff` afresh. Nobody can
     remove themselves, so the portal always has at least one team member left."""
     if user_id == staff.id:

@@ -1,0 +1,17 @@
+# The end-to-end stack's HTTPS front (docker-compose.e2e.yml): https://localhost:8443 with
+# Caddy's own local certificate, forwarding to the web container.
+{
+	# Don't try to add Caddy's root certificate to the container's trust store.
+	skip_install_trust
+	servers {
+		# Keep the X-Forwarded-For each test sends (tests/fixtures.ts, clientAddress): the
+		# tests reach Caddy through Docker's private network, so each test counts as its own
+		# address for the API's rate limits, as students in a class would. Test stack only.
+		trusted_proxies static private_ranges
+	}
+}
+
+https://localhost:8443 {
+	tls internal
+	reverse_proxy web:80
+}

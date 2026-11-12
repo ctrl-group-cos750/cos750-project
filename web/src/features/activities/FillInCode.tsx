@@ -84,7 +84,13 @@ export function FillInCode({ activity, result, submitting, onSubmit }: FillInCod
       className="grid gap-4"
       onSubmit={(event) => {
         event.preventDefault()
-        void onSubmit(answers)
+        // A blank set back to its placeholder ("") is a blank not filled, as the API counts it.
+        void onSubmit(
+          Object.fromEntries(Object.entries(answers).filter(([, token]) => token !== '')) as Record<
+            number,
+            string
+          >,
+        )
       }}
     >
       {/* The code keeps its indentation (whitespace-pre): in Python it is the program, and the

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { refusalMessage } from '../../api/client.ts'
 import type { AttemptInput, AttemptResult, Hint, MultipleChoiceActivity } from './video.types.ts'
 
 type CheckpointQuestionProps = {
@@ -42,8 +43,8 @@ export function CheckpointQuestion(props: CheckpointQuestionProps) {
         answer: { selectedOptionId },
       })
       setResult(nextResult)
-    } catch {
-      setError('We could not check your answer. Please try again.')
+    } catch (failure) {
+      setError(refusalMessage(failure, 'We could not check your answer. Please try again.'))
     } finally {
       setSubmitting(false)
     }
@@ -60,8 +61,8 @@ export function CheckpointQuestion(props: CheckpointQuestionProps) {
     try {
       const hint = await props.onHint({ activityId: props.activity.id })
       setHints((currentHints) => [...currentHints, hint])
-    } catch {
-      setError('We could not load a hint. Please try again.')
+    } catch (failure) {
+      setError(refusalMessage(failure, 'We could not load a hint. Please try again.'))
     }
   }
 
@@ -96,7 +97,9 @@ export function CheckpointQuestion(props: CheckpointQuestionProps) {
               }
             >
               <AlertTitle>{result.correct ? 'Correct' : 'Not quite'}</AlertTitle>
-              <AlertDescription>{result.feedback}</AlertDescription>
+              {/* Body text, not the muted grey: muted text on the warning tint is 3.8:1, under WCAG 1.4.3's
+                  4.5:1 (axe, end-to-end tests #35). */}
+              <AlertDescription className="text-foreground">{result.feedback}</AlertDescription>
             </Alert>
           )}
 

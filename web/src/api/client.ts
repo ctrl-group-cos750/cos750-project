@@ -12,6 +12,14 @@ export class ApiError extends Error {
   }
 }
 
+/** The API's own message when it refused the request (a 4xx such as "not open yet" or "too many at
+ * once"), which says what to do; otherwise `fallback`. */
+export function refusalMessage(error: unknown, fallback: string): string {
+  return error instanceof ApiError && error.status >= 400 && error.status < 500
+    ? error.message
+    : fallback
+}
+
 export const OFFLINE_MESSAGE = "Can't reach Ctrl Academy. Check your connection and try again."
 const FALLBACK_MESSAGE = 'Something went wrong. Try again in a moment.'
 

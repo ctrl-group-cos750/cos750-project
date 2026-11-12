@@ -84,3 +84,30 @@ describe('SegmentView — video segment text (#149)', () => {
     expect(screen.getByText('queue')).toBeVisible()
   })
 })
+
+describe('a bonus quest segment (#87)', () => {
+  const quest: Segment = {
+    id: 380,
+    position: 9,
+    kind: 'activity',
+    title: 'Bonus quest: a walkway closes',
+    body: null,
+    videoId: null,
+    activityId: 380,
+    done: true,
+    optional: true,
+  }
+
+  it('says it is optional and never affects results', () => {
+    fakeApi({ overrides: { 'GET /api/activities/380': () => new Response(null, { status: 404 }) } })
+    renderSegment(quest)
+    expect(screen.getByText(/Optional bonus quest/)).toBeInTheDocument()
+    expect(screen.getByText(/never affects your results/)).toBeInTheDocument()
+  })
+
+  it('an ordinary activity segment has no such line', () => {
+    fakeApi({ overrides: { 'GET /api/activities/380': () => new Response(null, { status: 404 }) } })
+    renderSegment({ ...quest, optional: false, title: 'Practice' })
+    expect(screen.queryByText(/Optional bonus quest/)).toBeNull()
+  })
+})

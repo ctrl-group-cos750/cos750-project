@@ -5826,6 +5826,11 @@
             "type": "boolean",
             "title": "Attempted",
             "default": false
+          },
+          "optional": {
+            "type": "boolean",
+            "title": "Optional",
+            "default": false
           }
         },
         "additionalProperties": false,

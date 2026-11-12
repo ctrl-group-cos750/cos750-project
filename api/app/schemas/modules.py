@@ -91,6 +91,9 @@ class SegmentOut(ApiModel):
     # opens a module at an activity the student passed *without* trying (one that had no screen
     # yet), never at one they tried and got wrong under an earlier rule (#165 review).
     attempted: bool = False
+    # An optional bonus quest (FR-8.3): done whether or not it is answered, so it never holds
+    # Next back; the page labels it optional.
+    optional: bool = False
 
 
 class RetrievalActivityOut(ApiModel):

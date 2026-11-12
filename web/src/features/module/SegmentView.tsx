@@ -94,6 +94,12 @@ export function SegmentView({ segment, onAnswered, intro }: SegmentViewProps) {
             {segment.title}
           </h2>
           {introLine}
+          {segment.optional && (
+            <p className="m-0 text-sm text-muted-foreground">
+              Optional bonus quest: try it for extra points and a badge, or carry on with Next. It
+              never affects your results.
+            </p>
+          )}
           {segment.activityId !== null ? (
             <ActivityView activityId={segment.activityId} showTitle={false} onResult={onAnswered} />
           ) : (

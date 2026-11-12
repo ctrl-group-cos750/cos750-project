@@ -190,7 +190,7 @@ We use Gagné's Nine Events of Instruction as a step-by-step guide to structure 
 | 6. Elicit performance | Checkpoints where the student predicts, traces, completes or orders code before the lesson continues. |
 | 7. Provide feedback | Instant and specific feedback from trace checks and comparison with the solution. The feedback explains why an answer is wrong. |
 | 8. Assess performance | A final mastery check with unseen graphs. The result is shown for each objective. |
-| 9. Enhance retention and transfer | Opening questions that recall earlier modules. A closing task that applies BFS to a new problem. An optional bonus quest: designed, not yet built (#87). |
+| 9. Enhance retention and transfer | Opening questions that recall earlier modules. A closing task that applies BFS to a new problem: at the end of module 5, a study-group network, traced from one person to find the fewest introductions to another. Two optional bonus quests, after modules 3 and 4 (#87). |
 
 Table: Gagné's nine events applied to the BFS lessons.
 
@@ -456,7 +456,7 @@ Flow is the state of being fully absorbed in a task, an optimal state of intrins
 - **Clear and immediate feedback.** Every practice answer is marked at once, and a wrong answer gets a reason and a next step (Section 7.4).
 - **Challenge balanced with skill.** Worked examples come first, support fades, the hint ladder is there on request, and a "Not yet" result leads to a review path rather than a failure.
 
-The balance is tuned for novices. For a student who already knows BFS, the design relies on skipping worked examples and on bonus quests. Neither is built yet, so a strong student meets no extra challenge and may be bored, which breaks the third condition [10].
+The balance is tuned for novices. For a student who already knows BFS, the design relies on skipping worked examples and on bonus quests. The two bonus quests are built (#87), so a strong student meets some extra challenge; skipping worked examples is not yet (#31), so they still read every one, which can break the third condition [10].
 
 ### Malone and Lepper's taxonomy
 
@@ -488,7 +488,7 @@ Gamification is the use of game design elements outside games [32]. A review fou
 | Private points	| Reward correct work, finished modules and objectives met. Fewer points are given after hint level 3 or 4. A finished module is rewarded only if at least one of its activities was answered correctly without hint 3 or 4, so clicking through hints earns nothing. |
 | Badges for milestones |	Mark real progress, not time spent or clicks. Built: a badge per objective met, "ready for the lecture", one for meeting every objective independently, one for meeting an objective after its review path, and one for the first module completed. Quest badges wait for bonus quests (#87). |
 | Campus storyline |	Links the modules into one problem: finding routes across campus. |
-| Optional bonus quests	| Extra challenge for strong students. They give points but never affect mastery. Planned; none exist yet (#87). |
+| Optional bonus quests	| Extra challenge for strong students. They give points but never affect mastery. Two exist (#87): after module 3, a closed walkway that cuts the campus graph in two; after module 4, one-way buses BFS can't follow back to a stop. Each is labelled optional and never holds a student back. |
 
 Table: Game elements and the learning purpose of each.
 
@@ -702,7 +702,7 @@ Table: Our main instructional choices and their trade-offs.
 Applying the module's frameworks to the design (Sections 4.5 to 4.8, 5.5, 6.1, 7.1 and 7.3) showed gaps that we had not seen when we used our own research alone:
 
 - **Reflection and integration are thin.** Kolb's reflective-observation stage and Merrill's integration principle are the weakest parts of every module. The application asks students to do and to check, but seldom to explain or think back.
-- **What is built lags what is designed.** Narrated videos, skippable worked examples and bonus quests are in the design but not on staging; trace tables reached staging on 11 November (SE document FR-6.6) and module 5 on 12 November (#189). This document now marks them as planned where it mentions them, so that its claims match what a student can use on staging.
+- **What is built lags what is designed.** Narrated videos and skippable worked examples are in the design but not on staging; trace tables reached staging on 11 November (SE document FR-6.6) and module 5 on 12 November (#189). This document now marks them as planned where it mentions them, so that its claims match what a student can use on staging.
 - **Two CS2023 topics are only half covered.** The adjacency matrix (AL-Foundational 8.a) and BFS's running time are taught only briefly: one short text segment each, with no practice item yet (Section 1.2).
 - **Results are close to right or wrong.** Three states per objective are better than one mark, but they do not yet use the lecture's differentiated descriptors or report which misconception a student holds (Section 7.3).
 - **The evaluation can show less than we first claimed.** The team pilot is a usability walkthrough, and learning needs a separate, delayed post-test with real students (Section 8).

@@ -2119,6 +2119,11 @@ export interface components {
        * @default false
        */
       attempted: boolean
+      /**
+       * Optional
+       * @default false
+       */
+      optional: boolean
     }
     /**
      * StaffCheckpointIn

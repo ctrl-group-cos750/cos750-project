@@ -16,7 +16,7 @@ from app.services.events import log_event
 from app.services.locks import hold_activity, lock_student
 from app.services.mastery import counts, in_check, recompute
 from app.services.modules import reward_completed_modules
-from app.services.rewards import SUPPORT_LEVEL, on_attempt
+from app.services.rewards import SUPPORT_LEVEL, on_attempt, on_bonus_quest
 
 
 def hint_level_seen(session: Session, user_id: int, activity_id: int) -> int:
@@ -35,6 +35,33 @@ class BlankAnswer(ValueError):
 
 class AlreadyAnswered(ValueError):
     """A one-answer item (the mastery check, #144) that this student has answered already."""
+
+
+def reward_bonus_quest(session: Session, user_id: int, activity: Activity) -> None:
+    """A bonus quest answered correctly (FR-8.3, FR-9.3; #87): its 20 points and its Quest badge,
+    once, and All Quests once every bonus quest in the course is answered correctly. Quests are
+    numbered in the course's order of their ids ("Quest 1", "Quest 2"), which the badge shelf
+    shows. Never touches mastery: a bonus item counts towards no objective."""
+    quests = list(
+        session.scalars(
+            select(Activity.id).where(Activity.purpose == "bonus").order_by(Activity.id)
+        )
+    )
+    solved = set(
+        session.scalars(
+            select(Attempt.activity_id).where(
+                Attempt.user_id == user_id,
+                Attempt.activity_id.in_(quests),
+                Attempt.correct.is_(True),
+            )
+        )
+    )
+    on_bonus_quest(
+        session,
+        user_id,
+        quests.index(activity.id) + 1,
+        all_quests_done=set(quests) <= solved,
+    )
 
 
 def record_attempt(
@@ -77,10 +104,15 @@ def record_attempt(
     )
     session.add(attempt)
     session.flush()
-    if not in_check(activity):  # a module 6 item's points wait for the end of the check (#144)
+    if activity.purpose == "bonus":
+        # A bonus quest earns its own points and badge instead of an activity's (FR-8.3, #87).
+        if result.correct:
+            reward_bonus_quest(session, user_id, activity)
+    elif not in_check(activity):  # a module 6 item's points wait for the end of the check (#144)
         on_attempt(session, attempt)  # points for a first correct answer (FR-9.1, FR-9.2)
-    if result.correct and attempt.hint_level < SUPPORT_LEVEL:
-        # Real work in a module already complete earns its reward now (#166 review).
+    if result.correct and attempt.hint_level < SUPPORT_LEVEL and activity.purpose != "bonus":
+        # Real work in a module already complete earns its reward now (#166 review). An optional
+        # bonus quest isn't the module's work: it earns its own reward.
         reward_completed_modules(session, user_id, activity)
     if counts(activity):
         recompute(session, user_id)  # the objective results, and what they earn (FR-7)

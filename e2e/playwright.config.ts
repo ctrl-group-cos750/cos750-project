@@ -45,6 +45,15 @@ export default defineConfig({
       },
     },
     { name: 'firefox', dependencies: ['setup'], use: { ...devices['Desktop Firefox'] } },
-    { name: 'webkit', dependencies: ['setup'], use: { ...devices['Desktop Safari'] } },
+    {
+      name: 'webkit',
+      dependencies: ['setup'],
+      // WebKit runs these tests three to four times slower than Chromium and Firefox on CI's
+      // runners: the activity tests took 47-56 s of their 60 s there, and the trace activity and
+      // the mastery walk ran out of time mid-click. Same tests, more time; test.slow() still
+      // triples it.
+      timeout: 180_000,
+      use: { ...devices['Desktop Safari'] },
+    },
   ],
 })

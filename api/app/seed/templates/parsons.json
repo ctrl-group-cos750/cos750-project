@@ -1,0 +1,84 @@
+{
+  "id": 9903,
+  "kind": "parsons",
+  "title": "Template: put add_edge in order",
+  "module_id": 4,
+  "objective_id": 6,
+  "purpose": "practice",
+  "config": {
+    "lines": [
+      {
+        "id": 4,
+        "text": "    graph.adjacency[u].append(v)"
+      },
+      {
+        "id": 2,
+        "text": "    graph.add_vertex(u)"
+      },
+      {
+        "id": 6,
+        "text": "    graph.adjacency[u] = [v]"
+      },
+      {
+        "id": 1,
+        "text": "def add_edge(graph, u, v):"
+      },
+      {
+        "id": 5,
+        "text": "    graph.adjacency[v].append(u)"
+      },
+      {
+        "id": 3,
+        "text": "    graph.add_vertex(v)"
+      }
+    ]
+  },
+  "solution": {
+    "order": [
+      1,
+      [
+        2,
+        3
+      ],
+      [
+        4,
+        5
+      ]
+    ],
+    "alternatives": [
+      [
+        1,
+        2,
+        4,
+        3,
+        5
+      ],
+      [
+        1,
+        3,
+        5,
+        2,
+        4
+      ]
+    ],
+    "explanation": "Correct. Both vertices must exist before an edge is added, and an undirected edge is stored in both vertices' lists."
+  },
+  "hints": [
+    {
+      "level": 1,
+      "body": "Start with the def line. A vertex must be in the graph before you add to its list."
+    },
+    {
+      "level": 2,
+      "body": "An undirected edge goes in two lists: v in u's list and u in v's list."
+    },
+    {
+      "level": 3,
+      "body": "One line throws away u's other neighbours. Leave it out."
+    },
+    {
+      "level": 4,
+      "body": "Answer: def add_edge(graph, u, v):, then graph.add_vertex(u) and graph.add_vertex(v), then graph.adjacency[u].append(v) and graph.adjacency[v].append(u). Leave out graph.adjacency[u] = [v], which replaces u's list."
+    }
+  ]
+}

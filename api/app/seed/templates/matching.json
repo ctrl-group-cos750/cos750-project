@@ -1,0 +1,72 @@
+{
+  "id": 9902,
+  "kind": "matching",
+  "title": "Template: one-way or two-way?",
+  "module_id": 1,
+  "objective_id": 2,
+  "purpose": "practice",
+  "config": {
+    "prompt": "Match each situation to the kind of graph that models it.",
+    "left": [
+      {
+        "id": "s1",
+        "label": "Walkways you can walk both ways"
+      },
+      {
+        "id": "s2",
+        "label": "One-way streets"
+      },
+      {
+        "id": "s3",
+        "label": "Friends on a social network"
+      },
+      {
+        "id": "s4",
+        "label": "Following someone on Instagram"
+      }
+    ],
+    "right": [
+      {
+        "id": "u",
+        "label": "Undirected graph: each edge goes both ways"
+      },
+      {
+        "id": "d",
+        "label": "Directed graph: each edge goes one way"
+      }
+    ]
+  },
+  "solution": {
+    "pairs": {
+      "s1": "u",
+      "s2": "d",
+      "s3": "u",
+      "s4": "d"
+    },
+    "explanation": "Correct. When a link works both ways, the graph is undirected. When it works one way only, the graph is directed.",
+    "feedback": {
+      "s1": "Not quite. You can walk a walkway both ways, so its edge has no direction. Ask: does the link work both ways?",
+      "s2": "Not quite. A one-way street can only be driven one way, so its edge needs an arrow. Ask: does the link work both ways?",
+      "s3": "Not quite. If Ama is Ben's friend, Ben is also Ama's friend, so the edge goes both ways. Ask: does the link work both ways?",
+      "s4": "Not quite. You can follow someone who doesn't follow you back, so the edge goes one way. Ask: does the link work both ways?"
+    }
+  },
+  "hints": [
+    {
+      "level": 1,
+      "body": "For each situation, ask: does the link work both ways?"
+    },
+    {
+      "level": 2,
+      "body": "An edge that works both ways is undirected. An edge that works one way only is directed."
+    },
+    {
+      "level": 3,
+      "body": "Walkways and friendships work both ways. A right item can fit more than one situation."
+    },
+    {
+      "level": 4,
+      "body": "Answer: walkways → undirected; one-way streets → directed; friends → undirected; following on Instagram → directed."
+    }
+  ]
+}

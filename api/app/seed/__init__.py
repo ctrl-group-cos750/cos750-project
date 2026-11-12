@@ -71,6 +71,9 @@ from app.services.mastery import MASTERY_MODULE, recompute_all
 from app.services.modules import keep_places, segment_order
 
 FIXTURES = Path(__file__).parent
+# One example activity per kind, for authors to copy (README.md in this folder). The loader reads
+# only the *.json files directly in FIXTURES, so these are never loaded as content.
+TEMPLATES = FIXTURES / "templates"
 
 # Activities come from two places: the fixtures, and the video editor (a checkpoint's question,
 # made in the app). They share one table, so they get separate id ranges: fixtures stay below
@@ -439,6 +442,28 @@ def read_fixtures(folder: Path = FIXTURES) -> FixtureFile:
         )
     check_content(merged)
     return merged
+
+
+def read_templates(
+    folder: Path = TEMPLATES, fixtures: Path = FIXTURES
+) -> dict[str, ActivityFixture]:
+    """Every template in `folder` (one activity, named after its kind), keyed by kind. Each is
+    checked as a fixture activity, then added to the committed fixtures and checked with them, so
+    a template copied into a module file is valid there too. Raises ValueError naming the file."""
+    content = read_fixtures(fixtures)
+    templates: dict[str, ActivityFixture] = {}
+    for path in sorted(folder.glob("*.json")):
+        try:
+            activity = ActivityFixture.model_validate(json.loads(path.read_text(encoding="utf-8")))
+            if activity.kind != path.stem:
+                raise ValueError(f"the file holds a {activity.kind} activity")
+            check_content(
+                content.model_copy(update={"activities": [*content.activities, activity]})
+            )
+        except (ValidationError, json.JSONDecodeError, ValueError) as exc:
+            raise ValueError(f"templates/{path.name}: {exc}") from exc
+        templates[activity.kind] = activity
+    return templates
 
 
 def check_content(merged: FixtureFile) -> None:

@@ -60,7 +60,7 @@ const themes = [
   },
 ] as const
 
-describe.each(themes)('$name theme contrast', ({ selector, tokens }) => {
+describe.each(themes)('$name theme contrast', ({ name: theme, selector, tokens }) => {
   const g = (name: string) => colour({ css: globalCss, selector, name })
   const surfaces = () => [g('--background'), g('--card'), g('--muted')]
 
@@ -86,6 +86,25 @@ describe.each(themes)('$name theme contrast', ({ selector, tokens }) => {
       const soft = g(`${name}-soft`)
       expect(ratio(g(name), soft)).toBeGreaterThanOrEqual(4.5)
     }
+  })
+
+  // #35: dark --destructive was 3.1:1 as text on the card (register errors, staff alerts). It is
+  // text on the surfaces, on --destructive-soft (Tag, Alert) and on its own tint (shadcn's
+  // destructive button and badge: 10%, 20% in the dark theme).
+  it('danger text reaches 4.5:1 on every surface, its soft fill and its own tint', () => {
+    const danger = g('--destructive')
+    for (const surface of [...surfaces(), g('--destructive-soft')]) {
+      expect(ratio(danger, surface), `on ${surface}`).toBeGreaterThanOrEqual(4.5)
+    }
+    const tint = theme === 'dark' ? 0.2 : 0.1
+    for (const surface of [g('--background'), g('--card')]) {
+      expect(ratio(danger, mix(danger, surface, tint))).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+
+  // The danger button's label is the page colour on --destructive (Button.module.css .danger).
+  it('the danger button label reaches 4.5:1', () => {
+    expect(ratio(g('--background'), g('--destructive'))).toBeGreaterThanOrEqual(4.5)
   })
 
   it('badge outlines reach 3:1 on the card and on their own fill', () => {

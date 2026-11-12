@@ -1,0 +1,20 @@
+# For the end-to-end tests (e2e/): serves the app at https://localhost:8443. HTTPS because
+# WebKit won't send the Secure session cookie (__Host-session) over plain http://localhost.
+# Caddy makes its own certificate; Playwright accepts it (ignoreHTTPSErrors).
+#   docker compose -f docker-compose.yml -f docker-compose.e2e.yml up --build -d --wait
+services:
+  api:
+    environment:
+      # A test-only password for the seeded demo accounts, never the deployed one.
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-Demo-pass-2026!}
+
+  tls:
+    image: caddy:2-alpine
+    # e2e/Caddyfile: HTTPS with a local certificate, and the tests' X-Forwarded-For kept.
+    volumes:
+      - ./e2e/Caddyfile:/etc/caddy/Caddyfile:ro
+    ports:
+      - "8443:8443"
+    depends_on:
+      web:
+        condition: service_healthy

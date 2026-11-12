@@ -16,6 +16,21 @@ export type SegmentViewProps = {
   intro?: string | null
 }
 
+/** A video segment's narration as text, below its video (FR-3.2, #149): closed by default, so it
+ * doesn't push the module's buttons down, and opened with a native disclosure (keyboard: Tab to
+ * the summary, then Enter or Space). Named "Text version" because the player has its own
+ * "Transcript" heading. */
+function TextVersion({ body }: { body: string }) {
+  return (
+    <details className="max-w-3xl rounded-lg border border-border bg-card p-6">
+      <summary className="cursor-pointer text-lg font-semibold">Text version</summary>
+      <div className="mt-3">
+        <Markdown>{body}</Markdown>
+      </div>
+    </details>
+  )
+}
+
 /** Dispatches on segment.kind and renders the appropriate view. Videos and activities are shown
  * here, inside the module, so its Previous and Next buttons stay on screen. Each segment's heading
  * is focusable from script only (tabIndex -1, data-focus-heading): ModulePage moves focus to it
@@ -59,7 +74,13 @@ export function SegmentView({ segment, onAnswered, intro }: SegmentViewProps) {
           </h2>
           {introLine}
           {segment.videoId !== null ? (
-            <VideoView videoId={segment.videoId} heading="h3" onResult={onAnswered} />
+            <>
+              <VideoView videoId={segment.videoId} heading="h3" onResult={onAnswered} />
+              {segment.body && <TextVersion body={segment.body} />}
+            </>
+          ) : segment.body ? (
+            // No video yet (or it can't be played): the narration as text is the lesson (FR-3.2, #149).
+            <Markdown>{segment.body}</Markdown>
           ) : (
             <Alert tone="warning">Video not available.</Alert>
           )}

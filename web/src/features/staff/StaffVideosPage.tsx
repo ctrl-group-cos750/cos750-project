@@ -108,7 +108,11 @@ export function StaffVideosPage() {
                 <CardDescription>
                   {formatTime(v.durationSeconds)} · {v.checkpointCount} checkpoint
                   {v.checkpointCount === 1 ? '' : 's'} ·{' '}
-                  <Link to={`/videos/${v.id}`} className="text-primary">
+                  {/* Underlined: in a line of text a link must not differ by colour alone (WCAG 1.4.1). */}
+                  <Link
+                    to={`/videos/${v.id}`}
+                    className="text-primary underline underline-offset-2"
+                  >
                     student view
                   </Link>
                 </CardDescription>

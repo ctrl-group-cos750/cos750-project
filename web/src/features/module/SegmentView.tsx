@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { reportEvent } from '../../api/events.ts'
 import { Alert, Markdown } from '../../components'
 import { ActivityView } from '../activities/ActivityPage.tsx'
+import { PicturePanel } from '../activities/pictures/PicturePanel.tsx'
+import { pictureForSegment, pictureName } from '../activities/pictures/pictures.ts'
 import { VideoView } from '../video/VideoPage.tsx'
 import type { Segment } from './module.types.ts'
 
@@ -41,13 +43,20 @@ export function SegmentView({ segment, onAnswered, intro }: SegmentViewProps) {
   switch (segment.kind) {
     case 'text':
     case 'worked_example':
-    case 'refresher':
+    case 'refresher': {
+      // Module 1's campus map and campus graph (#155): the picture the text talks about.
+      const picture = pictureForSegment(segment.id)
       return (
         <section aria-label={segment.title} className="grid gap-4">
           <h2 className="text-xl font-semibold" tabIndex={-1} data-focus-heading>
             {segment.title}
           </h2>
           {introLine}
+          {picture && (
+            <div className="max-w-[520px]">
+              <PicturePanel tabs={[{ name: pictureName(picture), picture }]} />
+            </div>
+          )}
           {segment.body ? (
             <Markdown>{segment.body}</Markdown>
           ) : (
@@ -55,6 +64,7 @@ export function SegmentView({ segment, onAnswered, intro }: SegmentViewProps) {
           )}
         </section>
       )
+    }
 
     case 'video':
       return (

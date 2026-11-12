@@ -15,7 +15,7 @@
           "id": 101,
           "kind": "text",
           "title": "The campus map",
-          "body": "This is the campus you'll use in this module, and again in module 3.\n\n```\n   A ─── C ─── B ─── G\n   │     │\n   E ─── F\n   │\n   D\n```\n\nA Admin block · B Bookshop · C Computer Science building · D Dining hall · E Engineering building · F Fountain · G Green (sports field)\n\nEach line is a walkway, and you can walk every walkway both ways. The walkways join A–C, A–E, B–C, B–G, C–F, D–E and E–F."
+          "body": "This is the campus you'll use in this module, and again in module 3.\n\nA Admin block · B Bookshop · C Computer Science building · D Dining hall · E Engineering building · F Fountain · G Green (sports field)\n\nEach line is a walkway, and you can walk every walkway both ways. The walkways join A–C, A–E, B–C, B–G, C–F, D–E and E–F."
         },
         {
           "id": 102,
@@ -479,7 +479,7 @@
       "purpose": "practice",
       "objective_id": 3,
       "config": {
-        "prompt": "Now build the campus graph from the campus guide. Each building is a vertex: A Admin block, B Bookshop, C Computer Science, D Dining hall, E Engineering, F Fountain, G Green. Turn each walkway on the guide's list into its edge.",
+        "prompt": "Now build the campus graph from the campus guide. Each place is a vertex: A Admin block, B Bookshop, C Computer Science, D Dining hall, E Engineering, F Fountain, G Green. Turn each walkway on the guide's list into its edge.",
         "left": [
           {
             "id": "DE",

@@ -166,11 +166,11 @@ Table 2 shows how each phase applies to this project. The software engineering s
 
 | Phase | Work in this project | Output | Dates |
 |---|---|---|---|
-| Analyse | Study the learners, their prior knowledge and the differences between them (Section 2). Check what CS2023 lists for graphs and BFS. | Learner profile | TBD |
-| Design | Write the objectives, success criteria, assessments and lesson plan. Choose the motivation and gamification design. | Objectives, assessment plan and storyboards | TBD |
-| Develop | Build the lessons, tasks, hints and feedback messages. Write the code activities (Parsons, fill-in, fix the bug, choose tests) and their solutions. | Working prototype | TBD |
-| Implement | Run the prototype with a small group of peers. Fix urgent problems. | Pilot session and usage logs | TBD |
-| Evaluate | Collect survey and test results. Review the data and update the design. Finish this document. | Evaluation summary | TBD |
+| Analyse | Study the learners, their prior knowledge and the differences between them (Section 2). Check what CS2023 lists for graphs and BFS. | Learner profile | 22 October – 1 November 2026 (Sprint 0) |
+| Design | Write the objectives, success criteria, assessments and lesson plan. Choose the motivation and gamification design. | Objectives, assessment plan and storyboards | 22 October – 8 November 2026 (Sprint 0 and Sprint 1; refined alongside prototyping) |
+| Develop | Build the lessons, tasks, hints and feedback messages. Write the code activities (Parsons, fill-in, fix the bug, choose tests) and their solutions. | Working prototype | 2 – 15 November 2026 (Sprints 1 and 2) |
+| Implement | Run the prototype with a small group of peers. Fix urgent problems. | Pilot session and usage logs | 10 – 11 November 2026 (Sprint 2 pilot on staging) |
+| Evaluate | Collect survey and test results. Review the data and update the design. Finish this document. | Evaluation summary | 10 – 16 November 2026 (pilot evidence collected on 10–11 November; review and design updates through document submission) |
 
 Table: The ADDIE phases applied to the COS212 application.
 

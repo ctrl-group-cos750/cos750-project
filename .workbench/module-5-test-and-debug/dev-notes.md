@@ -672,3 +672,31 @@ Frontend dev server running at http://localhost:5173. Import error resolved. API
 
 ### Open Issues
 None. Branch: `feat/module-5-test-and-debug`. Not pushed.
+
+## Developer Notes — Service restart (2026-11-12)
+
+### What was down
+- **Vite** (`:5173`): dead — ERR_CONNECTION_REFUSED
+- **uvicorn / FastAPI** (`:8000`): dead — no response
+- **Postgres** (`:5432`): already up and healthy (container `cos750-project-db-1`, up 3 days)
+
+### What was done
+No source changes. LOCAL ONLY. Branch confirmed: `feat/module-5-test-and-debug`.
+
+1. Started FastAPI (uvicorn) from `api/` using `.venv/bin/uvicorn app.main:app --reload` with env vars sourced from `.env` (`DATABASE_URL` constructed from `POSTGRES_USER/PASSWORD/DB`, `SECRET_KEY`, `DEMO_PASSWORD=Demo1234!`, `MEDIA_DIR=./media`, `SERVE_MEDIA=1`). Logs at `/tmp/uvicorn.log`.
+2. Started Vite from `web/` with `PATH` prefixed to Node v24.22.2 (`$HOME/.nvm/versions/node/v24.22.2/bin`). `node_modules` was intact (no `npm ci` needed). Logs at `/tmp/vite.log`.
+
+### Final status
+| Service | Status |
+|---|---|
+| Postgres (`:5432`) | ✅ up (healthy, Docker) |
+| FastAPI (`:8000`) | ✅ `{"status":"ok","database":"ok","schema":"0017"}` |
+| Vite (`:5173`) | ✅ HTTP 200 |
+| `/modules/5` | ✅ HTTP 200 (SPA index.html) |
+
+### Log paths
+- API: `/tmp/uvicorn.log`
+- Vite: `/tmp/vite.log`
+
+### To reach module 5
+Navigate to `http://localhost:5173/modules/5` — log in first with `ready@demo.example.com` / `Demo1234!` (or any registered account with module 5 unlocked).

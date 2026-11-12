@@ -144,10 +144,25 @@ def closing(segment: dict[str, Any]) -> bool:
 # Each module's segments in order after this card, support in brackets: the positions #172's
 # migration of saved progress must handle (a saved position is an index into this list).
 ORDER = {
-    1: [101, 102, 103, 104, [190, 191], 105, 106, 107, 108, 109, [192, 193, 194], [195, 196], 110],
-    2: [203, 204, 205, [290, 291], 206, 207, 208, [292, 293, 294], 209],
-    3: [313, 314, [392, 393], 315, 316, 317, 318, [390, 391], 319],
-    4: [403, 404, 405, 406, 407, [490, 491, 492], 408],
+    1: [
+        101,
+        102,
+        103,
+        104,
+        [190, 191],
+        105,
+        170,
+        106,
+        107,
+        108,
+        109,
+        [192, 193, 194],
+        [195, 196],
+        110,
+    ],
+    2: [203, 204, 270, 205, [290, 291], 206, 207, 271, 208, [292, 293, 294], 209],
+    3: [313, 314, [392, 393], 315, 316, 317, 370, 318, [390, 391], 319],
+    4: [403, 404, 470, 405, 406, 471, 472, 473, 407, [490, 491, 492], 408],
 }
 
 
@@ -197,12 +212,13 @@ def test_support_questions_are_practice_on_their_objective() -> None:
 
 
 def test_the_existing_segments_keep_their_order() -> None:
-    """The support segments are inserted; everyone's segments are as on staging, in order."""
+    """The support segments are inserted; everyone's segments are as on staging, in order, with
+    #150's segments (170, 270, 271, 370, 470-473) inserted among them."""
     base = {
-        1: [101, 102, 103, 104, 105, 106, 107, 108, 109, 110],
-        2: [203, 204, 205, 206, 207, 208, 209],
-        3: [313, 314, 315, 316, 317, 318, 319],
-        4: [403, 404, 405, 406, 407, 408],
+        1: [101, 102, 103, 104, 105, 170, 106, 107, 108, 109, 110],
+        2: [203, 204, 270, 205, 206, 207, 271, 208, 209],
+        3: [313, 314, 315, 316, 317, 370, 318, 319],
+        4: [403, 404, 470, 405, 406, 471, 472, 473, 407, 408],
     }
     for n, ids in base.items():
         assert [s["id"] for s in SEGMENTS[n] if s.get("support_for") is None] == ids

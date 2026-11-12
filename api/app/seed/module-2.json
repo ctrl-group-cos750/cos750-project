@@ -20,8 +20,14 @@
           "id": 204,
           "kind": "worked_example",
           "title": "Worked example: building a graph in code",
-          "body": "You can see at a glance that the Admin block is joined to Computer Science and Engineering. A program can't see the map: it needs to answer one question in a single step, **which buildings are next to this one?** How would you store the campus so it can?\n\nWe'll build the corner of campus with the `Graph` class, one call at a time, and watch `adjacency` change.\n\n```python\nclass Graph:\n    def __init__(self, directed=False):\n        self.directed = directed\n        self.adjacency = {}  # vertex -> list of neighbours\n```\n\n| Call | `adjacency` afterwards | Why |\n|---|---|---|\n| `g = Graph()` | `{}` | A new graph has no vertices. |\n| `g.add_vertex(\"A\")` | `{\"A\": []}` | A is new, so it gets an empty list. |\n| `g.add_vertex(\"A\")` | `{\"A\": []}` | A is already there, so nothing changes. |\n| `g.add_edge(\"A\", \"C\")` | `{\"A\": [\"C\"], \"C\": [\"A\"]}` | C is added first. The edge goes in both lists. |\n| `g.add_edge(\"A\", \"E\")` | `{\"A\": [\"C\", \"E\"], \"C\": [\"A\"], \"E\": [\"A\"]}` | E is appended to A's list; A keeps C. |\n\n**With arrows.** For `h = Graph(directed=True)`, `h.add_edge(\"A\", \"D\")` gives `{\"A\": [\"D\"], \"D\": []}`. D is added, but the edge is only stored in A's list.\n\n**Three rules:** a new vertex gets its own empty list; never replace a list that already exists; an undirected edge goes in both lists.",
+          "body": "You can see at a glance that the Admin block is joined to Computer Science and Engineering. A program can't see the map: it needs to answer one question in a single step, **which buildings are next to this one?** How would you store the campus so it can?\n\n**The Python you need here.** This code uses four Python building blocks. If you learnt to code in another language, here is what each one does.\n\n- A **list** keeps values in order, like `[\"C\", \"E\"]`. `append` adds a value at the end.\n- A **dictionary** (`dict`) finds a value by its key in one step. `{\"A\": [\"C\", \"E\"]}` stores the list `[\"C\", \"E\"]` under the key `\"A\"`, and `adjacency[\"A\"]` gives that list back.\n- A **set** holds values with no order and no repeats, like `{\"A\"}`. `\"A\" in s` asks whether `\"A\"` is in the set `s`. You'll use one in module 4.\n- A **class** bundles data with the functions that work on it. `Graph()` makes a new graph. Inside the class, `self` is that graph, so `self.adjacency` is its own dictionary.\n\nWe'll build the corner of campus with the `Graph` class, one call at a time, and watch `adjacency` change.\n\n```python\nclass Graph:\n    def __init__(self, directed=False):\n        self.directed = directed\n        self.adjacency = {}  # vertex -> list of neighbours\n```\n\n| Call | `adjacency` afterwards | Why |\n|---|---|---|\n| `g = Graph()` | `{}` | A new graph has no vertices. |\n| `g.add_vertex(\"A\")` | `{\"A\": []}` | A is new, so it gets an empty list. |\n| `g.add_vertex(\"A\")` | `{\"A\": []}` | A is already there, so nothing changes. |\n| `g.add_edge(\"A\", \"C\")` | `{\"A\": [\"C\"], \"C\": [\"A\"]}` | C is added first. The edge goes in both lists. |\n| `g.add_edge(\"A\", \"E\")` | `{\"A\": [\"C\", \"E\"], \"C\": [\"A\"], \"E\": [\"A\"]}` | E is appended to A's list; A keeps C. |\n\n**With arrows.** For `h = Graph(directed=True)`, `h.add_edge(\"A\", \"D\")` gives `{\"A\": [\"D\"], \"D\": []}`. D is added, but the edge is only stored in A's list.\n\n**Three rules:** a new vertex gets its own empty list; never replace a list that already exists; an undirected edge goes in both lists.",
           "skip_check_activity_id": 203
+        },
+        {
+          "id": 270,
+          "kind": "activity",
+          "title": "Why does add_edge change both lists?",
+          "activity_id": 260
         },
         {
           "id": 205,
@@ -54,6 +60,12 @@
           "kind": "activity",
           "title": "Code: add_edge, both ways",
           "activity_id": 206
+        },
+        {
+          "id": 271,
+          "kind": "text",
+          "title": "Another way to store a graph: the adjacency matrix",
+          "body": "Our `Graph` stores an **adjacency list**: each vertex has a list of its neighbours. The other common way is an **adjacency matrix**: a table with a row and a column for every vertex, holding 1 where an edge joins the two and 0 where none does.\n\nHere is the corner of campus, with the edges A–C and A–E, both ways:\n\n| | A | C | E |\n|---|---|---|---|\n| **A** | 0 | 1 | 1 |\n| **C** | 1 | 0 | 0 |\n| **E** | 1 | 0 | 0 |\n\n- **Is X joined to Y?** The matrix answers in one step: look at row X, column Y. The list has to search X's list.\n- **Which vertices are next to X?** The list gives them straight away. The matrix has to read X's whole row, one cell for every vertex, zeros included.\n- **Space.** The matrix always has V × V cells for V vertices. The list stores only the edges that exist, so it is much smaller when each vertex has only a few neighbours, as on maps and in networks.\n\nBFS asks \"which vertices are next to this one?\" for every vertex it visits, so this course uses the adjacency list."
         },
         {
           "id": 208,
@@ -321,6 +333,57 @@
         {
           "level": 4,
           "body": "Answer: graph 1 → {\"A\": [\"B\"], \"B\": [\"A\", \"C\"], \"C\": [\"B\"]}; graph 2 → {\"A\": [\"B\"], \"B\": [\"C\"], \"C\": []}; graph 3 → {\"A\": [\"B\", \"C\"], \"B\": [\"A\", \"C\"], \"C\": [\"A\", \"B\"]}."
+        }
+      ]
+    },
+    {
+      "id": 260,
+      "kind": "multiple_choice",
+      "title": "Why does add_edge change both lists?",
+      "module_id": 2,
+      "purpose": "practice",
+      "objective_id": 6,
+      "config": {
+        "prompt": "In the worked example, g.add_edge(\"A\", \"C\") puts C in A's list and A in C's list. Why does it change both lists?",
+        "options": [
+          {
+            "id": "a",
+            "label": "Each vertex needs at least one neighbour, so both lists get one."
+          },
+          {
+            "id": "c",
+            "label": "BFS must find every edge twice, so it is stored in two places."
+          },
+          {
+            "id": "b",
+            "label": "The edge works both ways, so each end is the other's neighbour."
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "The campus graph is undirected: you can go from A to C and from C to A. So C is A's neighbour and A is C's neighbour, and each list records its own vertex's neighbours.",
+        "correct": "b",
+        "feedback": {
+          "a": "Not quite. A vertex can have no neighbours at all: add_vertex gives it an empty list. Both lists change because the edge works both ways. Compare the directed graph, where only A's list changes.",
+          "c": "Not quite. BFS reads each vertex's list when that vertex leaves the queue, so it needs C's list to hold A. Both lists change because the edge works both ways. Compare the directed graph, where only A's list changes."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Is the campus graph directed or undirected?"
+        },
+        {
+          "level": 2,
+          "body": "In an undirected graph you can go from A to C, and from C to A."
+        },
+        {
+          "level": 3,
+          "body": "Compare h.add_edge(\"A\", \"D\") on the directed graph: only A's list changes there."
+        },
+        {
+          "level": 4,
+          "body": "Answer: the edge works both ways, so each end is the other's neighbour."
         }
       ]
     },

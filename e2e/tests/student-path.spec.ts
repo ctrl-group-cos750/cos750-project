@@ -28,8 +28,10 @@ test('a new student registers, logs out and back in', async ({ page }, testInfo)
   await page.goto('/report')
   await expect(page).toHaveURL(/\/login/)
 
-  // Back to the page they asked for before logging in.
-  await logIn(page, account.email, PASSWORD)
+  // Logging in on the page it sent them to takes them back to the page they asked for.
+  await page.getByRole('textbox', { name: 'Email' }).fill(account.email)
+  await page.getByRole('textbox', { name: 'Password' }).fill(PASSWORD)
+  await page.getByRole('button', { name: 'Log in' }).click()
   await expect(page).toHaveURL(/\/report$/)
   await expect(page.getByRole('heading', { name: 'Your mastery report' })).toBeVisible()
 })

@@ -700,3 +700,27 @@ No source changes. LOCAL ONLY. Branch confirmed: `feat/module-5-test-and-debug`.
 
 ### To reach module 5
 Navigate to `http://localhost:5173/modules/5` — log in first with `ready@demo.example.com` / `Demo1234!` (or any registered account with module 5 unlocked).
+
+## Developer Notes — Branch push and PR (2026-11-12)
+
+### Branch push
+- Branch `feat/module-5-test-and-debug` pushed to `origin` via HTTPS keychain token.
+- Tracking set: `git push -u origin feat/module-5-test-and-debug`.
+
+### Staging integration check
+- `git merge-base HEAD origin/staging` == `origin/staging` HEAD (`c190740`) — branch was already based on the latest staging commit.
+- No merge was needed; no conflicts; no new alembic heads (`alembic heads` → `0017 (head)`, single).
+
+### Final checks before PR
+- `cd api && .venv/bin/python -m app.seed --check` → **valid** (7 modules, 118 activities, 7 review paths, 4 graphs)
+- `scripts/check.sh` → **all checks passed** (2063 pytest + 252 coverage-subset passed, 23 skipped; web 455 tests; coverage 99.14%)
+
+### PR
+- **URL**: https://github.com/ctrl-group-cos750/cos750-project/pull/189
+- **Title**: `content: module 5 Test and debug (objective 7)`
+- **Base**: `staging` ✅
+- **Head**: `feat/module-5-test-and-debug`
+- **State**: OPEN — awaiting teammate review per DoD (not merged)
+
+### Open Issues
+None. PR is open and ready for review.

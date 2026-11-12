@@ -166,7 +166,7 @@ These are what make a working increment at the end of every week possible. Detai
 | Claim | Where to see it |
 |---|---|
 | Backlog, sprints, estimates, burn-up | GitHub Project board: <https://github.com/orgs/ctrl-group-cos750/projects/1> |
-| Daily stand-ups | Discord #general channel (exported for the appendix) |
+| Daily stand-ups | Discord #general channel; the record from 2 to 12 November is Appendix A |
 | Reviews, retros and planning | `docs/se/sprints/` in the repository |
 | Code review and Definition of Done | Merged PRs and their reviews on GitHub |
 | CI and continuous delivery | GitHub Actions history; Coolify deployment log |
@@ -1428,6 +1428,92 @@ Table: Known limitations of the build on `staging`.
 [17] International Organization for Standardization. *ISO 9241-11:2018, Ergonomics of human-system interaction — Part 11: Usability: Definitions and concepts.* ISO, Geneva, 2018.
 
 </div>
+
+# Appendix A: Stand-up record
+
+The daily stand-up (§2.5) was asynchronous: a message in the team's Discord #general channel saying what was done, what is next and what blocks it, with a weekly call for review, retrospective and planning. This appendix is the record from 2 to 12 November (Sprints 1 and 2), taken from the channel's export, dated as Discord records them (UTC, two hours behind South African time). Each update is summarised in a line; issue and PR numbers are the repository's. Only members' names are given. Credentials, contact details and personal circumstances that were posted are left out.
+
+Not every member posted every day, and many updates were made on pull requests and the board rather than in the channel; Table A1 shows who posted in #general on each day. The record is evidence of the process as it ran, not as it was planned: posting was most regular when work was being handed between people, and thinnest on 4 November, when most of the team was working on their first pull requests.
+
+| Member | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Matthew Els | ✓ | ✓ |  | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Jacobus Hoogenboezem | ✓ |  |  | ✓ | ✓ |  | ✓ |  | ✓ | ✓ | ✓ |
+| Mohtashim Hussain |  |  |  |  | ✓ |  | ✓ | ✓ | ✓ |  |  |
+| Ayanda Juqu | ✓ | ✓ | ✓ |  | ✓ |  | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Simphiwe Nhlapo |  |  |  |  | ✓ | ✓ |  |  |  | ✓ |  |
+| Reece Schmidt |  | ✓ |  |  | ✓ |  | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Joshua Wereley | ✓ | ✓ |  | ✓ | ✓ | ✓ | ✓ | ✓ |  | ✓ | ✓ |
+
+Table: Members who posted in #general on each day of November (Sprints 1 and 2).
+
+**Monday 2 November.**
+Matthew: user authentication, a basic UI and the backend, penetration-tested and the holes found fixed.
+Joshua: chose his issues for the week; started the video checkpoint flow (submit an answer, server feedback, hints, resume after a correct answer); chose shadcn/ui and a palette matching the logo.
+Jacobus: added Mohtashim's subsections to the ID document and reviewed it; it waits only on the GenAI declarations.
+Ayanda: not started yet; will take available issues.
+
+**Tuesday 3 November.**
+Matthew: proposed dropping the code sandbox, after finding that a submission could fake passing the hidden tests; the team agreed. End of day: server-checked Parsons and fill-in answers (#61–#63), the code runner removed (#60, docs #88), branch guards (#52), CI only on pull requests (#56, #58).
+Joshua: frontend of the narrated video player with checkpoints, with tests, handed to the backend; started the BFS visualiser (#19). Opened his first pull request.
+Reece: caught up after being away; took #18, and by evening the BFS engine and `GET /api/graphs/{id}/bfs` were up for review.
+Ayanda: asked how the work is split; pointed to the project board.
+
+**Wednesday 4 November.**
+Ayanda: working on the module map and module player.
+
+**Thursday 5 November.**
+Matthew: reviewed and merged Reece's and Joshua's pull requests; set up staging accounts so members could be made staff.
+Jacobus: asked for the staging gate and demo settings to start testing.
+
+**Friday 6 November.**
+Reece: two pull requests up, the 90% coverage gate (#103, for #67) and the trace-table activity (#104, for #30); reviewed #99.
+Joshua: frontend of the graphing views, the palette with light and dark mode, and layouts for large monitors; finished #21.
+Jacobus: the seeded demo accounts (part of #34).
+Ayanda: frontend work; tests next.
+Simphiwe: #66 under way, the API types generated from OpenAPI with a CI check for stale types. Next: run it locally and open the pull request. Blocked by: nothing.
+Mohtashim: took the content of modules 1, 2, 3, 4 and 6 (#27, #28, #83–#85); for module 3 so far, the campus graph, the narration scripts with checkpoint times, the recall, checkpoint and prediction questions, and the "when to use BFS" matching activity.
+Matthew: limited time this day.
+
+**Saturday 7 November.**
+Matthew: approved and merged #103 and #104; asked Joshua for a pull request to build on.
+Joshua: reviewed Matthew's pull request and requested changes; updated his own code from review comments.
+Simphiwe: #66 done, pull request #112 open with the CI check tested by breaking it on purpose; waiting on review.
+
+**Sunday 8 November.**
+Matthew: built on Ayanda's #115 (the content model, migration 0014); fixed the seed overwriting checkpoint questions that Jacobus found in review.
+Jacobus: reviewed #107 and #108, and found that the loader never removed activities a fixture dropped, which would have kept "ready" out of reach.
+Reece: reviewed #107, #109, #113 and #117, with a hardening suggestion for retired activities.
+Mohtashim: module 3, "Meet BFS" (#27), up for review with its narration script and a test of every BFS answer.
+Ayanda: pushing to the shared repository; a migration question answered.
+Joshua: confirmed which pull requests had been folded into #110.
+
+**Monday 9 November.**
+Matthew: all of the previous day's pull requests reviewed and merged; started the staff content editor.
+Mohtashim: modules 1 (#83) and 2 (#84) up for review; module 4 (#85) next.
+Ayanda: the retrieval questions (pull request up) and UI changes for modules (pending).
+Joshua: recording the narrated videos (#37).
+Reece: ran every API test suite locally, all passing; looking for unowned work on the board.
+
+**Tuesday 10 November.**
+Jacobus: reviewed two pull requests; a fix so activities and videos show inside their module segment.
+Matthew: reviewed three pull requests; the staff profile for uploading content.
+Mohtashim: modules 4 and 6 up for review.
+
+**Wednesday 11 November.**
+Reece: a pull request up for review; asked whether a reviewer may merge.
+Jacobus: offered to take over the end-to-end tests; merge order for his six pull requests (#162 → #163 → #160 → #165 → #166 → #167).
+Matthew: took over the unassigned work; reviewed Jacobus's pull requests.
+Ayanda: took module 5 (#86).
+Simphiwe: #186 up with CI green, Playwright against the real stack in three browsers, with axe, keyboard and 360 px checks.
+Joshua: away; full update the next day.
+
+**Thursday 12 November.**
+Joshua: PowerPoint slides for every module's video finished, with speaker notes marking the checkpoints; asked the module authors to check them; updated the ID document; reviewed #86; next, the module 0 refresher skip (#31).
+Reece: module 0 work done apart from the refresher skip; checked his tickets against the repository and the SE document.
+Ayanda: module 5 (#86) up for review.
+Jacobus: reviewed #184 and #185; working on #171 and #87; closed issues already resolved; #195 and #196 up for review.
+Matthew: the weekly call skipped by agreement, with updates on Discord instead; drawn graph answers (#184) and the documents (#185) up for review.
 
 *End of the Software Engineering document, Draft 2. Instructional-design content is in the separate ID document, as the examination specification requires.*
 

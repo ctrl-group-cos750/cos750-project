@@ -17,7 +17,9 @@ test('module 0, from the map to "Finish module", with the keyboard only', async 
   const module = await course.module(0)
   await page.goto('/')
   await press(page, page.getByRole('button', { name: /^Continue module 0/ }))
-  await expect(page.getByRole('heading', { level: 1, name: new RegExp(module.title) })).toBeVisible()
+  await expect(
+    page.getByRole('heading', { level: 1, name: new RegExp(module.title) }),
+  ).toBeVisible()
 
   let firstActivity = true
   // The segments the student is shown (#172), as "Segment N of M" counts them.

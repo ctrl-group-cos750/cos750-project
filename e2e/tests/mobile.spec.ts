@@ -82,7 +82,12 @@ test.describe('badge notes', () => {
     const module = await course.module(1)
     await page.goto(`/modules/${module.id}`)
     await expect(segmentRegion(page, module.segments[0].title)).toBeVisible()
-    await expect(page.getByRole('status').getByRole('button', { name: /^Dismiss/ }).first()).toBeVisible()
+    await expect(
+      page
+        .getByRole('status')
+        .getByRole('button', { name: /^Dismiss/ })
+        .first(),
+    ).toBeVisible()
     const next = page.getByRole('navigation', { name: 'Segment navigation' }).getByRole('button', {
       name: /^Next/,
     })

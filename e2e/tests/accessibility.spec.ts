@@ -185,7 +185,8 @@ for (const colorScheme of ['light', 'dark'] as const) {
           await page.context().clearCookies()
           await logIn(page, `${demo.key}@demo.example.com`, DEMO_PASSWORD)
           await check(page, '/report')
-          for (const objective of demo.expect.not_yet ?? []) await check(page, `/review/${objective}`)
+          for (const objective of demo.expect.not_yet ?? [])
+            await check(page, `/review/${objective}`)
           await check(page, '/badges')
         })
       }
@@ -205,7 +206,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
         extraHTTPHeaders: { 'X-Forwarded-For': clientAddress() },
       })
       const member = newAccount('member')
-      const res = await other.post('/api/auth/register', { data: { ...member, password: PASSWORD } })
+      const res = await other.post('/api/auth/register', {
+        data: { ...member, password: PASSWORD },
+      })
       expect(res.status(), await res.text()).toBe(201)
       await other.dispose()
       const added = await staff.post('/api/staff/members', { data: { email: member.email } })
@@ -218,7 +221,12 @@ for (const colorScheme of ['light', 'dark'] as const) {
         await test.step(path, async () => {
           if (path === '/staff/members') {
             await open(page, path)
-            await expect(page.getByRole('main').getByRole('button', { name: /Remove/ }).first()).toBeVisible()
+            await expect(
+              page
+                .getByRole('main')
+                .getByRole('button', { name: /Remove/ })
+                .first(),
+            ).toBeVisible()
             await expectNoViolations(page, path)
           } else await check(page, path)
         })

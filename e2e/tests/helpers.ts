@@ -44,7 +44,11 @@ export async function register(page: Page, account: { email: string; displayName
  * clicking or calling focus(). Shift+Tab when the target comes before the focused element on the
  * page, unless `back` says otherwise. Fails if it isn't reached in `max` presses, which means it
  * can't be reached with the keyboard (NFR-A1, WCAG 2.1.1). */
-export async function tabTo(page: Page, target: Locator, options: { back?: boolean; max?: number } = {}) {
+export async function tabTo(
+  page: Page,
+  target: Locator,
+  options: { back?: boolean; max?: number } = {},
+) {
   await expect(target).toBeVisible()
   const back =
     options.back ??
@@ -58,7 +62,10 @@ export async function tabTo(page: Page, target: Locator, options: { back?: boole
     if (await target.evaluate((el) => el === document.activeElement).catch(() => false)) return
     await page.keyboard.press(back ? 'Shift+Tab' : 'Tab')
   }
-  await expect(target, `reachable with ${back ? 'Shift+Tab' : 'Tab'} in ${max} presses`).toBeFocused()
+  await expect(
+    target,
+    `reachable with ${back ? 'Shift+Tab' : 'Tab'} in ${max} presses`,
+  ).toBeFocused()
 }
 
 /** Activate a button or link with the keyboard: Tab to it, then Enter. */

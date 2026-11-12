@@ -75,7 +75,9 @@ test('the mastery check on screen, the report, then a review path that makes the
   await course.completeBefore(6)
   const module = await course.module(6)
   // The mastery check asks every kind of activity (ID document §7.5).
-  const kinds = new Set(module.segments.flatMap((s) => (s.activityId ? [activity(s.activityId).kind] : [])))
+  const kinds = new Set(
+    module.segments.flatMap((s) => (s.activityId ? [activity(s.activityId).kind] : [])),
+  )
   expect([...kinds].sort()).toEqual([...ALL_KINDS].sort())
   await course.roomFor(module.segments.length + module.retrieval.length)
 
@@ -87,14 +89,18 @@ test('the mastery check on screen, the report, then a review path that makes the
       await expect(page.getByRole('button', { name: 'Check answer' }).first()).toBeVisible()
       await page.clock.fastForward('30:00')
       await expect(page.getByRole('timer')).toHaveCount(0)
-      await expect(page.getByText(/time('s| is) up|timed out|time left|time remaining/i)).toHaveCount(0)
+      await expect(
+        page.getByText(/time('s| is) up|timed out|time left|time remaining/i),
+      ).toHaveCount(0)
     },
   })
 
   // The report (FR-7.3, FR-7.4): the missed objective is "not yet", with its review path.
   await page.goto('/report')
   await expect(page.getByRole('heading', { name: 'Your mastery report' })).toBeVisible()
-  await expect(page.getByText('Not ready yet: 1 objective to review', { exact: true })).toBeVisible()
+  await expect(
+    page.getByText('Not ready yet: 1 objective to review', { exact: true }),
+  ).toBeVisible()
   for (const { id } of objectives)
     await expect(row(page, id)).toContainText(id === missed ? 'Not yet' : 'Met independently')
 

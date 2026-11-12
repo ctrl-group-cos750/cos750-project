@@ -1,13 +1,6 @@
 import { activity, firstOfKind, type Kind } from './content'
 import { answerActivity, segmentRegion } from './drive'
-import {
-  CHECKPOINT,
-  createVideo,
-  expect,
-  seekPastCheckpoint,
-  test,
-  type Page,
-} from './fixtures'
+import { CHECKPOINT, createVideo, expect, seekPastCheckpoint, test, type Page } from './fixtures'
 import type { Locator } from '@playwright/test'
 
 // No timers on any activity, checkpoint or the mastery check (ID document §6.2; WCAG 2.2.1).
@@ -88,7 +81,9 @@ for (const kind of kinds) {
     await page.goto(`/activities/${a.id}`)
     await expect(page.getByRole('heading', { level: 1, name: a.title })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Check answer' })).toBeVisible()
-    await expectNoTimerAcross(page, page.getByRole('main'), () => page.clock.fastForward('02:00:00'))
+    await expectNoTimerAcross(page, page.getByRole('main'), () =>
+      page.clock.fastForward('02:00:00'),
+    )
     await answerActivity(page, page.getByRole('main'), a, 'right')
   })
 }

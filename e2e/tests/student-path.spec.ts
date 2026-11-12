@@ -82,7 +82,9 @@ test('module 0 on screen, from the map to "Finish module"; then module 1 opens',
 }) => {
   const module = await course.module(0)
   await page.getByRole('button', { name: /^Continue module 0/ }).click()
-  await expect(page.getByRole('heading', { level: 1, name: new RegExp(module.title) })).toBeVisible()
+  await expect(
+    page.getByRole('heading', { level: 1, name: new RegExp(module.title) }),
+  ).toBeVisible()
   await walkModule(page, module)
 
   // Back on the map: module 0 is complete and module 1 is open (FR-2.1, FR-2.6).
@@ -106,7 +108,8 @@ test('module 4: a code activity answered wrong, then right, then the rest of the
   await course.completeBefore(4)
   const module = await course.module(4)
   const index = module.segments.findIndex(
-    (s) => s.shown !== false && s.activityId !== null && CODE_KINDS.has(activity(s.activityId).kind),
+    (s) =>
+      s.shown !== false && s.activityId !== null && CODE_KINDS.has(activity(s.activityId).kind),
   )
   expect(index, 'module 4 has a Parsons or fill-in activity').toBeGreaterThanOrEqual(0)
   await course.walk(4, index)

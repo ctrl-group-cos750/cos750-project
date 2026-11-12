@@ -127,7 +127,7 @@ def test_two_mastery_answers_inserted_before_either_recomputes_do_not_deadlock(
         assert errors == []
     db.expire_all()
     assert db.scalar(select(func.count()).where(Attempt.user_id == user_id)) == 2
-    assert db.scalar(select(func.count()).where(ObjectiveResult.user_id == user_id)) == 7
+    assert db.scalar(select(func.count()).where(ObjectiveResult.user_id == user_id)) == 8
 
 
 def test_a_second_answer_waits_for_the_first_then_sees_its_points(committed: Session) -> None:

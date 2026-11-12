@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ctrl Academy: COS750 presentation</title>
+<!--
+  The 10-minute presentation (#81). Each <section> is one 16:9 slide; build.mjs prints them to
+  slides.pdf with Chromium. Speaker notes and who presents each slide: speaker-notes.md.
+-->
+<style>
+  @page { size: 1280px 720px; margin: 0; }
+  :root {
+    --ink: #1b2430;
+    --muted: #5a6573;
+    --blue: #2470c9;
+    --blue-dark: #184a85;
+    --blue-soft: #e6f0fb;
+    --green: #147047;
+    --green-soft: #e3f8f0;
+    --amber: #8f4a00;
+    --amber-soft: #fff2e1;
+    --line: #d9dee5;
+    --paper: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #888; }
+  body { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; color: var(--ink); }
+  section {
+    width: 1280px; height: 720px; position: relative; overflow: hidden;
+    background: var(--paper); padding: 56px 72px; page-break-after: always;
+    margin: 0 auto 24px;
+  }
+  @media print { section { margin: 0; } html, body { background: none; } }
+  h1, h2, h3 { font-family: 'Space Grotesk', 'Segoe UI', Arial, sans-serif; margin: 0; letter-spacing: -0.01em; }
+  h2 { font-size: 40px; line-height: 1.15; margin-bottom: 28px; }
+  h3 { font-size: 22px; margin-bottom: 8px; }
+  p, li { font-size: 19px; line-height: 1.45; }
+  p { margin: 0 0 12px; }
+  ul { margin: 0; padding-left: 22px; }
+  li { margin-bottom: 8px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 15px; }
+  .foot { position: absolute; left: 72px; right: 72px; bottom: 24px; display: flex;
+          justify-content: space-between; font-size: 13px; color: var(--muted); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .card { border: 1px solid var(--line); border-radius: 16px; padding: 20px 22px; background: #fff; }
+  .card p, .card li { font-size: 17px; }
+  .tint { background: var(--blue-soft); border-color: transparent; }
+  .num { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
+         background: var(--blue-soft); color: var(--blue-dark); font-weight: 700; font-size: 18px; margin-bottom: 10px; }
+  .shot { width: 100%; border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 6px 24px rgb(0 0 0 / 10%); }
+  .dark { background: var(--blue-dark); color: #fff; }
+  .dark .muted, .dark .foot { color: #c9dbf2; }
+  .big { font-size: 64px; font-weight: 700; font-family: 'Space Grotesk', Arial, sans-serif; line-height: 1; color: var(--blue); }
+  .stat p { margin-top: 8px; font-size: 16px; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: 16px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 14px; }
+  .flow { display: flex; align-items: stretch; gap: 10px; }
+  .flow .step { flex: 1; border-radius: 14px; padding: 14px 14px; background: var(--blue-soft); }
+  .flow .step h3 { font-size: 18px; }
+  .flow .step p { font-size: 15px; margin: 0; }
+  .flow .arrow { align-self: center; font-size: 26px; color: var(--muted); }
+  .step.ok { background: var(--green-soft); }
+  .step.warn { background: var(--amber-soft); }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 14px; font-weight: 600; }
+  .pill.ok { background: var(--green-soft); color: var(--green); }
+  .pill.warn { background: var(--amber-soft); color: var(--amber); }
+  .pill.blue { background: var(--blue-soft); color: var(--blue-dark); }
+  svg text { font-family: 'Space Grotesk', Arial, sans-serif; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- 1. Title -->
+<section class="dark">
+  <img src="../../assets/svg/logo-horizontal-reversed.svg" alt="Ctrl Academy" style="height:64px">
+  <div style="margin-top:110px; max-width:760px">
+    <h1 style="font-size:56px; line-height:1.1">Graphs and breadth-first search, before the lecture</h1>
+    <p style="font-size:24px; margin-top:22px" class="muted">A pre-lecture tutor for COS212 students who have never met a graph</p>
+  </div>
+  <svg viewBox="0 0 430 240" style="position:absolute; right:56px; top:210px; width:430px" aria-hidden="true">
+    <g stroke="#9cc0ea" stroke-width="3">
+      <line x1="60" y1="110" x2="160" y2="50"/><line x1="60" y1="110" x2="160" y2="170"/>
+      <line x1="160" y1="50" x2="270" y2="30"/><line x1="160" y1="50" x2="270" y2="120"/>
+      <line x1="160" y1="170" x2="270" y2="120"/><line x1="160" y1="170" x2="270" y2="200"/>
+      <line x1="270" y1="30" x2="370" y2="80"/><line x1="270" y1="120" x2="370" y2="80"/>
+    </g>
+    <g font-size="18" text-anchor="middle">
+      <circle cx="60" cy="110" r="22" fill="#ffffff"/><text x="60" y="116" fill="#184a85">A</text>
+      <circle cx="160" cy="50" r="22" fill="#cfe2f8"/><text x="160" y="56" fill="#184a85">B</text>
+      <circle cx="160" cy="170" r="22" fill="#cfe2f8"/><text x="160" y="176" fill="#184a85">C</text>
+      <circle cx="270" cy="30" r="22" fill="#9fd9bf"/><text x="270" y="36" fill="#0d3b26">D</text>
+      <circle cx="270" cy="120" r="22" fill="#9fd9bf"/><text x="270" y="126" fill="#0d3b26">E</text>
+      <circle cx="270" cy="200" r="22" fill="#9fd9bf"/><text x="270" y="206" fill="#0d3b26">F</text>
+      <circle cx="370" cy="80" r="22" fill="#f6c97f"/><text x="370" y="86" fill="#4a2a00">G</text>
+    </g>
+  </svg>
+  <div class="foot"><span>Control Group · COS750 Educational Software Development · University of Pretoria · 2026</span>
+  <span>Matthew Els · Jacobus Hoogenboezem · Mohtashim Hussain · Ayanda Juqu · Simphiwe Nhlapo · Reece Schmidt · Joshua Wereley</span></div>
+</section>
+
+<!-- 2. The problem and the learners -->
+<section>
+  <h2>The learners arrive at the graphs lecture knowing nothing about graphs</h2>
+  <div class="grid2">
+    <div>
+      <ul>
+        <li><strong>Who:</strong> second-year COS212 students. They know queues (COS110) and basic loops and lists, but have never seen a graph.</li>
+        <li><strong>The gap:</strong> a lecture on BFS assumes vocabulary, a mental model of the queue and some code fluency, all at once.</li>
+        <li><strong>Our answer:</strong> about three hours of self-paced preparation, in seven short modules, that ends in an honest report: what the student can do alone, with help, or not yet.</li>
+      </ul>
+      <p class="small muted" style="margin-top:18px">CS2023 Algorithmic Foundations: graphs, BFS and shortest paths are core topics. Learner profile: ID document §2.</p>
+    </div>
+    <img class="shot" src="images/landing-1440.png" alt="The Ctrl Academy landing page" style="object-fit:cover; object-position:top; height:430px">
+  </div>
+  <div class="foot"><span>Ctrl Academy</span><span>2</span></div>
+</section>
+
+<!-- 3. Objectives and alignment -->
+<section>
+  <h2>Eight objectives, each with its own evidence and criterion</h2>
+  <table>
+    <tr><th>#</th><th>The student can…</th><th>Bloom</th><th>Evidence in the app</th><th>Met when</th></tr>
+    <tr><td>1</td><td>define a data structure, an algorithm, a graph, a traversal</td><td>Understand</td><td>matching, multiple choice</td><td>4 of 5</td></tr>
+    <tr><td>2</td><td>identify vertices and edges; directed or undirected</td><td>Understand</td><td>labelling and classifying</td><td>80%</td></tr>
+    <tr><td>3</td><td>map a real problem to a graph</td><td>Apply</td><td>choosing the model of a situation</td><td>3 of 4</td></tr>
+    <tr><td>4</td><td>explain what BFS is for</td><td>Understand</td><td>choosing BFS with a reason</td><td>3 of 4</td></tr>
+    <tr><td>5</td><td>trace BFS by hand</td><td>Apply</td><td>trace table on an unseen graph</td><td>≤ 1 error</td></tr>
+    <tr><td>6</td><td>implement BFS in Python</td><td>Apply</td><td>Parsons, then fill-in with fading</td><td>matches solution</td></tr>
+    <tr><td>7</td><td>test and debug BFS</td><td>Evaluate</td><td>fix the bug; choose the tests</td><td>both bugs</td></tr>
+    <tr><td>8</td><td>find the shortest route with BFS, and say why it is shortest</td><td>Apply</td><td>fewest edges, the route, the reason</td><td>3 of 4</td></tr>
+  </table>
+  <p class="small muted" style="margin-top:16px">Constructive alignment (Biggs): each objective's activity and assessment exercise the same skill. ID document Table 1.</p>
+  <div class="foot"><span>Ctrl Academy</span><span>3</span></div>
+</section>
+
+<!-- 4. ID model -->
+<section>
+  <h2>ADDIE as a loop, with rapid prototypes inside it</h2>
+  <div class="flow" style="margin-bottom:28px">
+    <div class="step"><h3>Analyse</h3><p>Learners, prior knowledge, CS2023 · 22 Oct – 1 Nov</p></div><div class="arrow">→</div>
+    <div class="step"><h3>Design</h3><p>Objectives, criteria, storyboards, motivation · to 8 Nov</p></div><div class="arrow">→</div>
+    <div class="step"><h3>Develop</h3><p>Content as data: questions, hints, feedback, scripts · 2–15 Nov</p></div><div class="arrow">→</div>
+    <div class="step"><h3>Implement</h3><p>On staging, in the team's hands every sprint</p></div><div class="arrow">→</div>
+    <div class="step"><h3>Evaluate</h3><p>Pilot, logs, export · feeds back into Design</p></div>
+  </div>
+  <div class="grid3">
+    <div class="card"><h3>Why ADDIE</h3><p>Every phase leaves an artefact the panel can check: a learner profile, Table 1, the fixtures, the evaluation plan.</p></div>
+    <div class="card"><h3>Why not strictly linear</h3><p>We prototyped inside it (SAM-style), so content was tried on screen days after it was written, not at the end.</p></div>
+    <div class="card"><h3>Gagné in every module</h3><p>Gain attention with a problem, state the goals, recall prior knowledge, worked example, practice, feedback, assess, transfer.</p></div>
+  </div>
+  <div class="foot"><span>Ctrl Academy · ID document §4</span><span>4</span></div>
+</section>
+
+<!-- 5. Theories in the app -->
+<section>
+  <h2>The learning theories are visible on screen</h2>
+  <div class="grid2">
+    <div>
+      <div class="card" style="margin-bottom:16px"><h3>Cognitivism: worked examples, then fading</h3><p>Every new skill starts as a worked example, then a question; module 4 removes help step by step: Parsons, 3 blanks, 9 blanks (Sweller; Renkl &amp; Atkinson).</p></div>
+      <div class="card" style="margin-bottom:16px"><h3>Constructivism: a problem first</h3><p>Module 1 opens with the campus puzzle before any definition; students build the graph themselves (Kapur, productive failure).</p></div>
+      <div class="card"><h3>Behaviourism, used carefully</h3><p>Immediate feedback that explains <em>why</em>, never just "wrong" (Hattie &amp; Timperley).</p></div>
+    </div>
+    <img class="shot" src="images/module-mid-1366.png" alt="A module page with a worked example" style="height:470px; object-fit:cover; object-position:top">
+  </div>
+  <div class="foot"><span>Ctrl Academy · ID document §5</span><span>5</span></div>
+</section>
+
+<!-- 6. Assessment and scaffolding -->
+<section>
+  <h2>Struggling students get more help, not a lower mark</h2>
+  <div class="flow" style="margin-bottom:26px">
+    <div class="step"><h3>Diagnostic</h3><p>Module 0 checks queues, lists, loops</p></div><div class="arrow">→</div>
+    <div class="step"><h3>Practice</h3><p>4-level hint ladder: nudge → worked answer</p></div><div class="arrow">→</div>
+    <div class="step warn"><h3>Support</h3><p>Extra worked example if a student struggles in a module</p></div><div class="arrow">→</div>
+    <div class="step"><h3>Mastery check</h3><p>Unseen items, one answer each, hints ≤ 2</p></div><div class="arrow">→</div>
+    <div class="step ok"><h3>Report</h3><p>Per objective, with the next step</p></div>
+  </div>
+  <div class="grid2">
+    <div>
+      <p><span class="pill ok">Met independently</span> &nbsp;<span class="pill blue">Met with support</span> &nbsp;<span class="pill warn">Not yet</span></p>
+      <ul>
+        <li>One result <strong>per objective</strong>, not one mark: "not yet on 5" says exactly what to review (mastery learning, Bloom; Guskey).</li>
+        <li>A "not yet" opens a <strong>review path</strong>: taught again with a new worked example, practice of the same kind, then fresh items.</li>
+        <li>This is the specification's one hard requirement.</li>
+      </ul>
+    </div>
+    <img class="shot" src="images/review-notyet-1366.png" alt="A review path for objective 6" style="height:300px; object-fit:cover; object-position:top left">
+  </div>
+  <div class="foot"><span>Ctrl Academy · ID document §7</span><span>6</span></div>
+</section>
+
+<!-- 7. Motivation -->
+<section>
+  <h2>Motivation by design, not by points alone</h2>
+  <div class="grid4" style="margin-bottom:28px">
+    <div class="card tint"><h3>Attention</h3><p>A real problem first; videos that stop to ask a question.</p></div>
+    <div class="card tint"><h3>Relevance</h3><p>Campus routes, bus networks, study groups: graphs students know.</p></div>
+    <div class="card tint"><h3>Confidence</h3><p>Clear goals, honest time estimates, hints that never leave anyone stuck.</p></div>
+    <div class="card tint"><h3>Satisfaction</h3><p>Badges that name a skill learnt, and the "ready for the lecture" moment.</p></div>
+  </div>
+  <div class="grid2">
+    <ul>
+      <li><strong>No leaderboard:</strong> comparison demotivates the weakest students, the ones this app is for (Hamari et al.).</li>
+      <li><strong>Badges can be turned off</strong> where they appear: rewards can crowd out interest (Deci, Koestner &amp; Ryan).</li>
+    </ul>
+    <p class="small muted">ARCS (Keller). Self-determination: autonomy (stop and resume anywhere), competence (mastery report), relatedness (the lecture it prepares for). ID document, Motivation.</p>
+  </div>
+  <div class="foot"><span>Ctrl Academy</span><span>7</span></div>
+</section>
+
+<!-- 8. Software engineering -->
+<section>
+  <h2>Scrum in one-week sprints, with the content as data</h2>
+  <div class="grid2">
+    <div>
+      <ul>
+        <li><strong>Sprints:</strong> 0 (setup, 22 Oct – 1 Nov), 1 (a complete path, 2–8 Nov), 2 (real content, 9–15 Nov). Daily async stand-ups on Discord, a weekly call, one board for engineers and designers.</li>
+        <li><strong>Every change</strong> by pull request into staging, reviewed by another member, checks green, then staging → production.</li>
+        <li><strong>Content is data:</strong> the instructional designers write JSON fixtures or use the staff editor; tests check every answer against the BFS engine.</li>
+        <li><strong>Security first:</strong> we dropped running students' code after finding a way to fake the hidden tests; code activities are Parsons and fill-in, checked on the server.</li>
+      </ul>
+    </div>
+    <div>
+      <svg viewBox="0 0 520 330" style="width:100%">
+        <g font-size="16" text-anchor="middle">
+          <rect x="10" y="20" width="150" height="70" rx="12" fill="#e6f0fb"/><text x="85" y="52" fill="#184a85">React + Vite</text><text x="85" y="74" font-size="13" font-weight="400" fill="#5a6573">the app</text>
+          <rect x="185" y="20" width="150" height="70" rx="12" fill="#e6f0fb"/><text x="260" y="52" fill="#184a85">FastAPI</text><text x="260" y="74" font-size="13" font-weight="400" fill="#5a6573">checks every answer</text>
+          <rect x="360" y="20" width="150" height="70" rx="12" fill="#e6f0fb"/><text x="435" y="52" fill="#184a85">PostgreSQL</text><text x="435" y="74" font-size="13" font-weight="400" fill="#5a6573">progress, events</text>
+          <rect x="10" y="140" width="500" height="60" rx="12" fill="#e3f8f0"/><text x="260" y="176" fill="#147047">Docker Compose on Coolify · staging and production</text>
+          <rect x="10" y="240" width="240" height="70" rx="12" fill="#fff2e1"/><text x="130" y="272" fill="#8f4a00">GitHub Actions</text><text x="130" y="294" font-size="13" font-weight="400" fill="#5a6573">lint, types, tests, images</text>
+          <rect x="270" y="240" width="240" height="70" rx="12" fill="#fff2e1"/><text x="390" y="272" fill="#8f4a00">Playwright + axe</text><text x="390" y="294" font-size="13" font-weight="400" fill="#5a6573">3 browsers, WCAG 2.1 AA</text>
+        </g>
+        <g stroke="#9aa6b4" stroke-width="2"><line x1="160" y1="55" x2="185" y2="55"/><line x1="335" y1="55" x2="360" y2="55"/><line x1="260" y1="90" x2="260" y2="140"/></g>
+      </svg>
+    </div>
+  </div>
+  <div class="foot"><span>Ctrl Academy · SE document §2, §7</span><span>8</span></div>
+</section>
+
+<!-- 9. Quality in numbers -->
+<section>
+  <h2>Quality we can show, not only claim</h2>
+  <div class="grid4" style="margin-bottom:30px">
+    <div class="stat"><div class="big">2,100+</div><p>API tests, including every content answer run through the BFS engine</p></div>
+    <div class="stat"><div class="big">470+</div><p>web tests of every screen and activity kind</p></div>
+    <div class="stat"><div class="big">3</div><p>browsers every end-to-end test runs in: Chromium, Firefox and WebKit</p></div>
+    <div class="stat"><div class="big">0</div><p>WCAG 2.1 AA violations found by axe, light and dark, every page</p></div>
+  </div>
+  <div class="grid3">
+    <div class="card"><h3>Accessible</h3><p>Keyboard only, visible focus, screen-reader labels, 360 px phones to 4K screens.</p></div>
+    <div class="card"><h3>Safe</h3><p>Penetration-tested login, rate limits, no student code run, POPIA: only name, email and progress kept.</p></div>
+    <div class="card"><h3>Measurable</h3><p>Every attempt and hint logged; staff export the data for evaluation.</p></div>
+  </div>
+  <div class="foot"><span>Ctrl Academy · SE document §14</span><span>9</span></div>
+</section>
+
+<!-- 10. Evaluation and reflection -->
+<section>
+  <h2>What we would change, and how we will know</h2>
+  <div class="grid2">
+    <div>
+      <h3>Honest about the gaps</h3>
+      <ul>
+        <li>The content takes about 180 minutes, not the 75 we planned; the app now says so, and the pilot will show what to cut.</li>
+        <li>All practice happens in one sitting: a spaced quiz the day of the lecture would help retention (Roediger &amp; Karpicke; Cepeda et al.).</li>
+        <li>Explanations are checked by multiple choice; a free-text "explain it" would need marking.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>How we evaluate</h3>
+      <ul>
+        <li>Pilot with think-aloud, SUS and ARCS ratings (docs/pilot).</li>
+        <li>Item analysis from the event log: which questions, which hints, which wrong answers.</li>
+        <li>With real students: a pre-test, and a delayed post-test a day or more later.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card tint" style="margin-top:26px"><p style="margin:0"><strong>Generative AI</strong> was used for parts of the code, the documents and the content; every use is recorded with its prompts in the ID document §10, and every output was reviewed and tested.</p></div>
+  <div class="foot"><span>Ctrl Academy · ID document §8–10</span><span>10</span></div>
+</section>
+
+<!-- 11. Demo -->
+<section class="dark">
+  <img src="../../assets/svg/logo-horizontal-reversed.svg" alt="Ctrl Academy" style="height:56px">
+  <div style="margin-top:140px">
+    <h1 style="font-size:60px">Live demo</h1>
+    <p style="font-size:26px; margin-top:20px">ctrlacademy.co.za</p>
+    <p style="font-size:22px" class="muted">github.com/ctrl-group-cos750/cos750-project</p>
+  </div>
+  <div class="foot"><span>Control Group · COS750 · 2026</span><span>11</span></div>
+</section>
+
+</body>
+</html>

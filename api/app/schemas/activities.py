@@ -426,6 +426,11 @@ class ActivityOut(ApiModel):
     mastery_check: bool = False
     # This student has answered this mastery check item, so it takes no more answers or hints.
     answered: bool = False
+    # This student's latest answer and the result they were shown, so coming back to an activity
+    # shows it instead of a blank form (#171). None before they answer, and on a response that
+    # isn't about one student (a video's checkpoints). On a mastery check item the result is
+    # withheld, as when they answered (#144).
+    last_attempt: "LastAttemptOut | None" = None
 
 
 class AttemptIn(ApiModel):
@@ -451,6 +456,17 @@ class AttemptOut(ApiModel):
     withheld: bool = False
     # The highest hint level seen before this attempt; 3 or 4 means "with support" (FR-4.5).
     hint_level: int
+
+
+class LastAttemptOut(ApiModel):
+    """A student's latest answer to an activity (#171): what they chose, in the kind's shape (as
+    sent in `AttemptIn.submitted`), and the result they were shown for it."""
+
+    submitted: dict[str, Any]
+    result: AttemptOut
+
+
+ActivityOut.model_rebuild()
 
 
 class HintOut(ApiModel):

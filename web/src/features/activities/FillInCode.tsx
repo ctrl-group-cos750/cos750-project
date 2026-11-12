@@ -7,6 +7,10 @@ type FillInCodeProps = {
   result: AttemptResult | undefined
   submitting: boolean
   onSubmit: (answers: Record<number, string>) => Promise<void>
+  /** The student's last answer, to start from when they come back to the activity (#171). */
+  previous?: Record<number, string>
+  /** Show the answer only, with no Check answer: an answered mastery item (#144, #171). */
+  readOnly?: boolean
 }
 
 const PYTHON_TOKEN =
@@ -40,8 +44,15 @@ function HighlightedText({ text }: { text: string }) {
 }
 
 /** Read-only highlighted Python with token-only blank controls; no free-form code can be entered. */
-export function FillInCode({ activity, result, submitting, onSubmit }: FillInCodeProps) {
-  const [answers, setAnswers] = useState<Record<number, string>>({})
+export function FillInCode({
+  activity,
+  result,
+  submitting,
+  onSubmit,
+  previous,
+  readOnly,
+}: FillInCodeProps) {
+  const [answers, setAnswers] = useState<Record<number, string>>(previous ?? {})
   const disabled = submitting || result?.correct === true
   const partsByBlank = new Map(result?.parts.map((part) => [part.ref, part]))
   const lineOccurrences = new Map<string, number>()
@@ -130,18 +141,20 @@ export function FillInCode({ activity, result, submitting, onSubmit }: FillInCod
           })}
         </ul>
       )}
-      <div>
-        {/* Focusable while the answer is checked, so a failed check leaves focus here and a
-            result can take it from here (WCAG 2.4.3). */}
-        <Button
-          type="submit"
-          loading={submitting}
-          keepFocusWhileLoading
-          disabled={result?.correct === true}
-        >
-          Check answer
-        </Button>
-      </div>
+      {!readOnly && (
+        <div>
+          {/* Focusable while the answer is checked, so a failed check leaves focus here and a
+              result can take it from here (WCAG 2.4.3). */}
+          <Button
+            type="submit"
+            loading={submitting}
+            keepFocusWhileLoading
+            disabled={result?.correct === true}
+          >
+            Check answer
+          </Button>
+        </div>
+      )}
     </form>
   )
 }

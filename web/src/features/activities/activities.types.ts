@@ -147,6 +147,19 @@ export type TraceRow = {
  * and hints 1 and 2 only. `answered` says this student has given that answer. */
 export type MasteryCheckFlags = { masteryCheck?: boolean; answered?: boolean }
 
+/** The student's latest answer and the result they were shown for it (#171): what each kind
+ * sends, as in `Submission`, and the check's result (withheld on a mastery check item). */
+export type LastAttempt = {
+  submitted: {
+    order?: number[]
+    answers?: Record<number, string>
+    selected?: string | string[]
+    pairs?: Record<string, string>
+    rows?: TraceRow[]
+  }
+  result: AttemptResult
+}
+
 export type Activity = (
   | CodeActivity
   | MultipleChoiceActivity
@@ -155,7 +168,7 @@ export type Activity = (
   | ChooseTestsActivity
   | TraceActivity
 ) &
-  MasteryCheckFlags
+  MasteryCheckFlags & { lastAttempt?: LastAttempt | null }
 
 /** What a student submits for each kind: their choices only, never code or the answer. */
 export type Submission =

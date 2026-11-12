@@ -9,12 +9,32 @@ type FixTheBugProps = {
   result: AttemptResult | undefined
   submitting: boolean
   onSubmit: (order: number[]) => Promise<void>
+  /** The student's last answer, to start from when they come back to the activity (#171). */
+  previous?: number[]
+  /** Show the answer only, with no Check answer: an answered mastery item (#144, #171). */
+  readOnly?: boolean
 }
 
 /** One line of the student's program. `original` is the faulty program's line this row started
  * as (null for a correction inserted as a new line); `current` is the line or correction it
  * holds now. */
 type Row = { key: number; original: number | null; current: number }
+
+/** A sent program as the screen's rows (#171). The answer is only ids, so which faulty line a
+ * correction replaced isn't stored: each correction is paired with the earliest faulty line the
+ * program leaves out, and the faulty lines left over are the removed ones, which can be put back. */
+function restore(
+  lines: readonly { id: number }[],
+  order: readonly number[],
+): { rows: Row[]; removed: number[] } {
+  const lineIds = new Set(lines.map((line) => line.id))
+  const missing = lines.map((line) => line.id).filter((id) => !order.includes(id))
+  const rows = order.map((id, index): Row => {
+    if (lineIds.has(id)) return { key: id, original: id, current: id }
+    return { key: 100_000 + index, original: missing.shift() ?? null, current: id }
+  })
+  return { rows, removed: missing }
+}
 
 /** Fix a faulty BFS (FR-5.5; objective 7, ID document §4.4 and Table 1 row 7). The program starts
  * as the faulty version. For each line the student can keep it, replace it with one of the given
@@ -34,12 +54,22 @@ type Row = { key: number; original: number | null; current: number }
  * telling place), and the ids it carries can be read in the browser's developer tools. A line's
  * indentation is drawn and also given in words ("indent level 2"),
  * in the code, the option labels and the button names, as for the Parsons lines (#142). */
-export function FixTheBug({ activity, result, submitting, onSubmit }: FixTheBugProps) {
+export function FixTheBug({
+  activity,
+  result,
+  submitting,
+  onSubmit,
+  previous,
+  readOnly,
+}: FixTheBugProps) {
   const { lines, corrections } = activity.config
-  const [rows, setRows] = useState<Row[]>(() =>
-    lines.map((line) => ({ key: line.id, original: line.id, current: line.id })),
+  const [restored] = useState(() => (previous ? restore(lines, previous) : undefined))
+  const [rows, setRows] = useState<Row[]>(
+    () =>
+      restored?.rows ??
+      lines.map((line) => ({ key: line.id, original: line.id, current: line.id })),
   )
-  const [removed, setRemoved] = useState<number[]>([])
+  const [removed, setRemoved] = useState<number[]>(restored?.removed ?? [])
   const [nextKey, setNextKey] = useState(() => Math.max(0, ...lines.map((l) => l.id)) + 1000)
   const [insertId, setInsertId] = useState('')
   const [insertAfter, setInsertAfter] = useState('end')
@@ -324,18 +354,20 @@ export function FixTheBug({ activity, result, submitting, onSubmit }: FixTheBugP
           </ul>
         </section>
       )}
-      <div>
-        {/* Focusable while the answer is checked, so a failed check leaves focus here and a
-            result can take it from here (WCAG 2.4.3). */}
-        <Button
-          type="submit"
-          loading={submitting}
-          keepFocusWhileLoading
-          disabled={result?.correct === true}
-        >
-          Check answer
-        </Button>
-      </div>
+      {!readOnly && (
+        <div>
+          {/* Focusable while the answer is checked, so a failed check leaves focus here and a
+              result can take it from here (WCAG 2.4.3). */}
+          <Button
+            type="submit"
+            loading={submitting}
+            keepFocusWhileLoading
+            disabled={result?.correct === true}
+          >
+            Check answer
+          </Button>
+        </div>
+      )}
     </form>
   )
 }

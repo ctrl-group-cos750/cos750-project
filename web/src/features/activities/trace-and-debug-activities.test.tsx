@@ -862,3 +862,38 @@ describe('focus while checking (WCAG 2.4.3)', () => {
     },
   )
 })
+
+describe('coming back to an answered activity (#171)', () => {
+  it('fix the bug starts from the program the student sent', async () => {
+    const onSubmit = vi.fn<(order: number[]) => Promise<void>>().mockResolvedValue(undefined)
+    render(
+      <FixTheBug
+        activity={fix}
+        result={undefined}
+        submitting={false}
+        onSubmit={onSubmit}
+        previous={[1, 2, 3, 20, 5]}
+      />,
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(onSubmit).toHaveBeenCalledWith([1, 2, 3, 20, 5])
+  })
+
+  it('choose tests starts from the tests the student chose', async () => {
+    const onSubmit = vi.fn<(selected: string[]) => Promise<void>>().mockResolvedValue(undefined)
+    render(
+      <ChooseTests
+        activity={choose}
+        result={undefined}
+        submitting={false}
+        onSubmit={onSubmit}
+        previous={['cycle']}
+      />,
+    )
+    expect(
+      screen.getAllByRole('checkbox').filter((box) => (box as HTMLInputElement).checked),
+    ).toHaveLength(1)
+    await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(onSubmit).toHaveBeenCalledWith(['cycle'])
+  })
+})

@@ -14,7 +14,7 @@ import {
   submitActivityAttempt,
 } from './activities.api.ts'
 import { ActivityRenderer } from './ActivityRenderer.tsx'
-import type { AttemptResult, Submission } from './activities.types.ts'
+import type { AttemptResult, LastAttempt, Submission } from './activities.types.ts'
 
 type ActivityViewProps = {
   activityId: number
@@ -45,8 +45,14 @@ export function ActivityView({ activityId, heading, showTitle, onResult }: Activ
     queryFn: () => fetchActivity(activityId),
     retry: retryUnlessRefused, // a locked or missing activity says so at once
   })
+  // The answer the student gave last time, kept as it was on the first load (#171). A refetch (on
+  // focus, or after an answer) brings a new copy, which mustn't count as a new result: that would
+  // move focus to it (FeedbackPanel) and reset the control. Null until the activity has loaded.
+  const [restored, setRestored] = useState<LastAttempt | undefined | null>(null)
+  if (query.data && restored === null) setRestored(query.data.lastAttempt ?? undefined)
 
-  if (query.isPending) return <Spinner label="Loading activity" />
+  if (query.isPending || (query.data && restored === null))
+    return <Spinner label="Loading activity" />
   if (query.isError) return <NotAvailable error={query.error} heading={heading} />
 
   async function submit(submitted: Submission) {
@@ -60,12 +66,11 @@ export function ActivityView({ activityId, heading, showTitle, onResult }: Activ
       onResult?.(nextResult)
       // A withheld (mastery check) answer may be the one that finishes the check, and earns the
       // check's points and badges at once (#144).
-      if (nextResult.correct || nextResult.withheld) {
-        refreshRewards()
-        // It is solved, or answered for good, now: the next time it is shown (Back, a refresh),
-        // the server says so, and no hints are offered (#158, #144).
-        void queryClient.invalidateQueries({ queryKey: ['activities', activityId] })
-      }
+      if (nextResult.correct || nextResult.withheld) refreshRewards()
+      // The next time it is shown (Previous, a refresh), the server has this answer: it comes back
+      // with the answer and its result (#171), and once solved or answered for good, with no hints
+      // offered (#158, #144). After every answer, so a wrong one comes back too.
+      void queryClient.invalidateQueries({ queryKey: ['activities', activityId] })
     } catch (error) {
       setSubmitError(
         error instanceof Error
@@ -87,7 +92,8 @@ export function ActivityView({ activityId, heading, showTitle, onResult }: Activ
       )}
       <ActivityRenderer
         activity={query.data}
-        result={result}
+        result={result ?? restored?.result}
+        previous={restored?.submitted}
         submitting={submitting}
         onSubmit={submit}
         requestHint={requestActivityHint}

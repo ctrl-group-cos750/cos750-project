@@ -903,3 +903,87 @@ describe('the mastery check (#144)', () => {
     expect(screen.queryByRole('button', { name: 'Show next hint' })).not.toBeInTheDocument()
   })
 })
+
+describe('coming back to an answered activity (#171)', () => {
+  const choice = {
+    id: 41,
+    kind: 'multiple_choice',
+    title: 'Which leaves first?',
+    visible: true,
+    config: {
+      prompt: 'Which leaves the queue first?',
+      options: [
+        { id: 'a', label: 'The first to join' },
+        { id: 'b', label: 'The last to join' },
+      ],
+    },
+  }
+  const wrongResult = {
+    id: 9,
+    activityId: 41,
+    correct: false,
+    score: 0,
+    parts: [{ ref: 0, correct: false, message: 'A queue is first in, first out.' }],
+    feedback: 'Not quite. A queue is first in, first out.',
+    hintLevel: 0,
+    withheld: false,
+  }
+
+  it('shows the answer the student gave and its result, without moving focus', async () => {
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/activities/41': () =>
+          Response.json({
+            ...choice,
+            lastAttempt: { submitted: { selected: 'b' }, result: wrongResult },
+          }),
+        'GET /api/activities/41/hints': () => Response.json([]),
+      },
+    })
+    renderApp('/activities/41')
+
+    expect(await screen.findByLabelText('The last to join')).toBeChecked()
+    expect(screen.getByText('Not quite. A queue is first in, first out.')).toBeInTheDocument()
+    expect(document.activeElement).toBe(document.body) // a page load never moves focus
+  })
+
+  it('shows an answered mastery item read-only, with no Check answer', async () => {
+    const withheld = { ...wrongResult, correct: null, score: null, parts: [], withheld: true }
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/activities/41': () =>
+          Response.json({
+            ...choice,
+            masteryCheck: true,
+            answered: true,
+            lastAttempt: { submitted: { selected: 'a' }, result: withheld },
+          }),
+        'GET /api/activities/41/hints': () => Response.json([]),
+      },
+    })
+    renderApp('/activities/41')
+
+    const option = await screen.findByLabelText('The first to join')
+    expect(option).toBeChecked()
+    expect(option).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Check answer' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Correct')).not.toBeInTheDocument()
+  })
+
+  it('a Parsons problem keeps the student’s order instead of starting afresh', async () => {
+    const onSubmit = vi.fn<(order: number[]) => Promise<void>>().mockResolvedValue(undefined)
+    render(
+      <ParsonsProblem
+        activity={parsons}
+        result={undefined}
+        submitting={false}
+        onSubmit={onSubmit}
+        previous={[3, 1]}
+      />,
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(onSubmit).toHaveBeenCalledWith([3, 1])
+  })
+})

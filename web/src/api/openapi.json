@@ -186,7 +186,7 @@
           "activities"
         ],
         "summary": "Get Activity",
-        "description": "The activity to render. `ActivityOut` has no `solution`, so the answer never reaches the\nbrowser (FR-5.3, NFR-S2). `solved` says whether this student has already answered it\ncorrectly, so the page stops offering hints after a refresh too (#158). 403 while the\nactivity's module is locked or its review path is closed, 404 if it doesn't exist or is no\nlonger part of the course.",
+        "description": "The activity to render. `ActivityOut` has no `solution`, so the answer never reaches the\nbrowser (FR-5.3, NFR-S2). `solved` says whether this student has already answered it\ncorrectly, so the page stops offering hints after a refresh too (#158), and `lastAttempt`\nholds this student's latest answer and the result they were shown, so coming back to an\nactivity shows it (#171; withheld on a mastery check item, as when answered). 403 while the\nactivity's module is locked or its review path is closed, 404 if it doesn't exist or is no\nlonger part of the course.",
         "operationId": "get_activity_api_activities__activity_id__get",
         "parameters": [
           {
@@ -3549,6 +3549,16 @@
             "type": "boolean",
             "title": "Answered",
             "default": false
+          },
+          "lastAttempt": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LastAttemptOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -5156,6 +5166,26 @@
           "videos"
         ],
         "title": "Insights"
+      },
+      "LastAttemptOut": {
+        "properties": {
+          "submitted": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Submitted"
+          },
+          "result": {
+            "$ref": "#/components/schemas/AttemptOut"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "submitted",
+          "result"
+        ],
+        "title": "LastAttemptOut",
+        "description": "A student's latest answer to an activity (#171): what they chose, in the kind's shape (as\nsent in `AttemptIn.submitted`), and the result they were shown for it."
       },
       "LoginIn": {
         "properties": {

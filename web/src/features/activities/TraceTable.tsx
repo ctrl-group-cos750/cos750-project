@@ -10,6 +10,10 @@ type TraceTableProps = {
   result: AttemptResult | undefined
   submitting: boolean
   onSubmit: (rows: TraceRow[]) => Promise<void>
+  /** The student's last answer, to start from when they come back to the activity (#171). */
+  previous?: TraceRow[]
+  /** Show the answer only, with no Check answer: an answered mastery item (#144, #171). */
+  readOnly?: boolean
 }
 
 /** A row as the student typed it. */
@@ -28,6 +32,17 @@ const LIST_COLUMNS: readonly { column: ListColumn; heading: string }[] = [
 const MAX_INPUT = 300
 // The cells of a step, in the order Enter moves through them.
 const CELLS = ['current', 'queue', 'visited', 'order'] as const
+
+/** A sent row as the table's text cells, lists written "A, B" as the student types them. */
+function toDraft(row: TraceRow, key: number): Draft {
+  return {
+    key,
+    current: row.visitedVertex,
+    queue: row.queue.join(', '),
+    visited: row.visited.join(', '),
+    order: row.order.join(', '),
+  }
+}
 
 function sameDraft(a: Draft | undefined, b: Draft | undefined): boolean {
   return (
@@ -61,14 +76,24 @@ function sameDraft(a: Draft | undefined, b: Draft | undefined): boolean {
  * to look at in a wrong one (Hattie and Timperley 2007; Shute 2008). A row's mark shows until the
  * student edits that row. The table scrolls inside its own labelled region at 320 px, so the page
  * never does (WCAG 1.4.10). */
-export function TraceTable({ activity, result, submitting, onSubmit }: TraceTableProps) {
+export function TraceTable({
+  activity,
+  result,
+  submitting,
+  onSubmit,
+  previous,
+  readOnly,
+}: TraceTableProps) {
   const { vertices, start_vertex: start, edges, directed } = activity.config
   const baseId = useId()
-  const [rows, setRows] = useState<Draft[]>([
-    { key: 0, current: '', queue: '', visited: '', order: '' },
-  ])
-  const [nextKey, setNextKey] = useState(1)
-  const [checked, setChecked] = useState<Draft[]>([])
+  // Coming back: the student's rows as they typed them, and those are the rows the restored marks
+  // are about (#171).
+  const [restored] = useState<Draft[]>(() => (previous ?? []).map(toDraft))
+  const [rows, setRows] = useState<Draft[]>(() =>
+    restored.length > 0 ? restored : [{ key: 0, current: '', queue: '', visited: '', order: '' }],
+  )
+  const [nextKey, setNextKey] = useState(() => Math.max(1, restored.length))
+  const [checked, setChecked] = useState<Draft[]>(restored)
   const [showErrors, setShowErrors] = useState(false)
   // The control to focus once React has drawn the row it belongs to.
   const focusNext = useRef('')
@@ -376,19 +401,21 @@ export function TraceTable({ activity, result, submitting, onSubmit }: TraceTabl
           Remove the last step
         </Button>
       </div>
-      <div>
-        {/* Focusable while the answer is checked, so a failed check leaves focus here and a
-            result can take it from here (WCAG 2.4.3). */}
-        <Button
-          id={`${baseId}-check`}
-          type="submit"
-          loading={submitting}
-          keepFocusWhileLoading
-          disabled={result?.correct === true}
-        >
-          Check answer
-        </Button>
-      </div>
+      {!readOnly && (
+        <div>
+          {/* Focusable while the answer is checked, so a failed check leaves focus here and a
+              result can take it from here (WCAG 2.4.3). */}
+          <Button
+            id={`${baseId}-check`}
+            type="submit"
+            loading={submitting}
+            keepFocusWhileLoading
+            disabled={result?.correct === true}
+          >
+            Check answer
+          </Button>
+        </div>
+      )}
     </form>
   )
 }

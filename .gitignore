@@ -47,3 +47,5 @@ api/media/
 
 # Python tooling
 .pytest_cache/
+
+.workbench/

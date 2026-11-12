@@ -214,15 +214,16 @@ def test_module_0_promises_no_skip_the_app_does_not_make() -> None:
 # The segment that gains attention in each module (Gagné's event 1): the module's first text or
 # worked-example segment, which opens with a question. Modules 2 and 4 start with a video that
 # may not be recorded yet, so their hook opens the worked example after it; module 3's hook is
-# its first video (the campus puzzle). Module 5 has no segments yet (#86). No segment is added
-# for a hook: saved progress is a segment index, so a new segment would move every student.
-HOOKS = {0: 1, 1: 101, 2: 204, 3: 313, 4: 404, 6: 601}
+# its first video (the campus puzzle). Module 5 opens with a video then a worked example (501)
+# that leads straight into a practice activity. No segment is added for a hook: saved progress
+# is a segment index, so a new segment would move every student.
+HOOKS = {0: 1, 1: 101, 2: 204, 3: 313, 4: 404, 5: 501, 6: 601}
 
 
 def test_every_module_with_content_opens_by_gaining_attention() -> None:
     for m in CONTENT.modules:
         if not m.segments:
-            assert m.id == 5
+            assert m.id not in HOOKS
             continue
         if m.id == 3:
             assert m.segments[0].id == HOOKS[3]

@@ -42,8 +42,11 @@
   padding: var(--space-4) var(--space-5);
 }
 
-.locked {
-  opacity: 0.6;
+/* A locked module reads as locked from its tag ("locked") and from not being a link, and its
+   title in the muted text colour; not from fading the whole row, which took its text below
+   WCAG 1.4.3 contrast (axe, end-to-end tests #35). */
+.locked .title {
+  color: var(--color-text-muted);
 }
 
 .number {

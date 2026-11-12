@@ -96,7 +96,9 @@ export function CheckpointQuestion(props: CheckpointQuestionProps) {
               }
             >
               <AlertTitle>{result.correct ? 'Correct' : 'Not quite'}</AlertTitle>
-              <AlertDescription>{result.feedback}</AlertDescription>
+              {/* Body text, not the muted grey: muted text on the warning tint is 3.8:1, under WCAG 1.4.3's
+                  4.5:1 (axe, end-to-end tests #35). */}
+              <AlertDescription className="text-foreground">{result.feedback}</AlertDescription>
             </Alert>
           )}
 

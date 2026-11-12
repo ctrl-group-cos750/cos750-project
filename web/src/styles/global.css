@@ -182,3 +182,12 @@
     letter-spacing: var(--tracking-normal);
   }
 }
+
+/* Radios and checkboxes draw their own focus ring (WCAG 2.4.7). The global :focus-visible ring is
+   a box-shadow, which a native radio in WebKit doesn't show, and WebKit's own ring there is painted
+   by the platform theme, so a keyboard user could lose track of the focused option (#35, WebKit
+   in CI). On :focus, not only :focus-visible: WebKit drops focus-visible once Space checks a radio. */
+input:is([type='radio'], [type='checkbox']):focus {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}

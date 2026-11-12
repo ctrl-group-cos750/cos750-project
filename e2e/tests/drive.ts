@@ -8,7 +8,7 @@ import {
   type ActivityOf,
 } from './content'
 import { expect, shownPositions, type ModuleDetail } from './fixtures'
-import { tabTo } from './helpers'
+import { clickOrExplain, tabTo } from './helpers'
 
 /**
  * Answering an activity through its screen, as a student does, from the fixture's solution: the
@@ -33,7 +33,7 @@ export async function check(scope: Locator, answer: Answer, a?: Activity) {
   const button = scope.getByRole('button', { name: 'Check answer' })
   // No result yet: whatever shows after the click is this answer's.
   await expect(result(scope)).toHaveCount(0)
-  await button.click()
+  await clickOrExplain(button)
   const verdict = answer === 'right' ? 'Correct' : 'Not quite'
   const shown = result(scope)
   if (a?.purpose === 'mastery') {
@@ -137,7 +137,7 @@ async function trace(scope: Locator, a: ActivityOf<'trace'>, answer: Answer) {
   const steps = bfsSteps(a.config)
   const { vertices } = a.config
   for (let i = 1; i < steps.length; i++)
-    await scope.getByRole('button', { name: 'Add a step' }).click()
+    await clickOrExplain(scope.getByRole('button', { name: 'Add a step' }))
   for (const [i, step] of steps.entries()) {
     const n = i + 1
     const current =

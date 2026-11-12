@@ -1,6 +1,6 @@
 # Presentation: speaker notes (#81)
 
-Ten minutes, then the ten-minute demo (`demo-script.md`), then five minutes of questions
+Ten minutes, then the ten-minute demo (`docs/demo/README.md`, #197), then five minutes of questions
 (examination specification). Every member presents a part. The split below is a **proposal**:
 change names at the rehearsal, but keep each part to its time.
 
@@ -108,4 +108,4 @@ documents and content; every use is recorded with its prompts in the ID document
 
 ## 11. Demo (0:15)
 
-Hand over to the demo: `demo-script.md`.
+Hand over to the demo: `docs/demo/README.md` (#197).

@@ -1,7 +1,7 @@
 """Module 2 (A graph in Python, #84): the code the module teaches really does what it says.
 
-The three code activities are fill-in-the-blank: filled in with their answers, the Graph class
-passes the tests below (the hidden tests from the module's design), and each token a wrong-answer
+The code activities (three, and a support item from #173) are fill-in-the-blank: filled in with
+their answers, the Graph class passes the tests below (the hidden tests from the module's design), and each token a wrong-answer
 message is written for really breaks one of them, so the message describes a real mistake. Every
 other answer (the dictionaries, the worked example's table, the closing task) is what the
 finished class produces. Plus the content rules from issue #84: four hint levels on every
@@ -57,6 +57,15 @@ TESTS = {
         'assert g.adjacency == {"A": ["B"], "B": ["A"]}',
         'g = Graph(directed=True)\ng.add_edge("A", "D")\ng.add_edge("D", "G")\n'
         'g.add_edge("G", "A")\nassert g.adjacency == {"A": ["D"], "D": ["G"], "G": ["A"]}',
+    ],
+    # The support item for objective 6 (#173): the whole class, with the worked example's calls.
+    291: [
+        'g = Graph()\ng.add_edge("P", "R")\ng.add_edge("R", "T")\n'
+        'assert g.adjacency == {"P": ["R"], "R": ["P", "T"], "T": ["R"]}',
+        'g = Graph(directed=True)\ng.add_edge("P", "R")\ng.add_edge("R", "T")\n'
+        'assert g.adjacency == {"P": ["R"], "R": ["T"], "T": []}',
+        'g = Graph()\ng.add_edge("K", "L")\ng.add_vertex("L")\ng.add_edge("L", "M")\n'
+        'assert g.adjacency["L"] == ["K", "M"]',
     ],
 }
 

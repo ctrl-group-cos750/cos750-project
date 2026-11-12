@@ -59,6 +59,7 @@ from app.models import (
     Module,
     Objective,
     Segment,
+    ShownSegment,
     Video,
 )
 from app.schemas.activities import ActivityKind
@@ -67,8 +68,12 @@ from app.schemas.graphs import VERTEX, GraphScenarioOut
 from app.services.bfs import InvalidGraph, run_bfs
 from app.services.content import validate_activity
 from app.services.mastery import MASTERY_MODULE, recompute_all
+from app.services.modules import keep_places, segment_order
 
 FIXTURES = Path(__file__).parent
+# One example activity per kind, for authors to copy (README.md in this folder). The loader reads
+# only the *.json files directly in FIXTURES, so these are never loaded as content.
+TEMPLATES = FIXTURES / "templates"
 
 # Activities come from two places: the fixtures, and the video editor (a checkpoint's question,
 # made in the app). They share one table, so they get separate id ranges: fixtures stay below
@@ -150,6 +155,9 @@ class SegmentFixture(BaseModel, extra="forbid"):
     activity_id: int | None = None
     skip_check_activity_id: int | None = None
     refresher_for: str | None = Field(default=None, min_length=1, max_length=100)
+    # Support for this objective (FR-8.4, #172): shown only to a student struggling with it in
+    # this module (app/services/support.py). Only in modules 0 to 5; see `check_references`.
+    support_for: int | None = Field(default=None, ge=1, le=8)
 
     @model_validator(mode="after")
     def check_kind(self) -> "SegmentFixture":
@@ -164,7 +172,21 @@ class SegmentFixture(BaseModel, extra="forbid"):
                 f"segment {self.id}: a refresher needs refresher_for (the diagnostic topic), "
                 "and only a refresher has one"
             )
+        if self.support_for is not None:
+            if self.kind not in SUPPORT_KINDS:
+                raise ValueError(
+                    f"segment {self.id}: support is a text, worked example or activity segment, "
+                    f"not a {self.kind}"
+                )
+            if self.skip_check_activity_id is not None:
+                raise ValueError(
+                    f"segment {self.id}: a support segment can't be skipped by a check"
+                )
         return self
+
+
+# What a support segment (FR-8.4) can be: a worked example, in text, or a fresh practice item.
+SUPPORT_KINDS = ("text", "worked_example", "activity")
 
 
 class ModuleFixture(BaseModel, extra="forbid"):
@@ -182,6 +204,11 @@ class ReviewPathFixture(BaseModel, extra="forbid"):
 
     @model_validator(mode="after")
     def check_segments(self) -> "ReviewPathFixture":
+        if any(seg.support_for is not None for seg in self.segments):
+            raise ValueError(
+                f"review path {self.objective_id}: support segments (support_for) belong in "
+                "modules 0 to 5; the review path is already the objective's corrective step"
+            )
         if any(seg.kind == "refresher" for seg in self.segments):
             raise ValueError(f"review path {self.objective_id}: a refresher belongs in module 0")
         # ID document §7.6: the path starts by teaching the objective again.
@@ -289,6 +316,46 @@ def check_references(content: FixtureFile) -> None:
                     f"segment {seg.id}: activity {seg.activity_id} belongs to module {home}, "
                     f"not module {m.id}"
                 )
+        _check_support(m, objectives, activities)
+
+
+def _check_support(
+    m: ModuleFixture, objectives: set[int], activities: dict[int, ActivityFixture]
+) -> None:
+    """A module's support segments (FR-8.4, app/services/support.py). Never in module 6: the
+    mastery check is the same for everyone (FR-7.1). Each is for an objective that exists; a support
+    activity is a practice item on that objective; and the module has a base practice item on it
+    (an activity segment that isn't support) before its first support segment for it, or nothing
+    could ever show the support."""
+    base_before: set[int] = set()  # objectives with base practice so far, in segment order
+    for seg in m.segments:
+        activity = activities.get(seg.activity_id) if seg.activity_id is not None else None
+        if seg.support_for is None:
+            if activity is not None and activity.purpose == "practice" and activity.objective_id:
+                base_before.add(activity.objective_id)
+            continue
+        if m.id == MASTERY_MODULE:
+            raise ValueError(
+                f"segment {seg.id}: module {MASTERY_MODULE} is the mastery check, the same for "
+                "everyone, so it has no support segments"
+            )
+        if seg.support_for not in objectives:
+            raise ValueError(
+                f"segment {seg.id}: support for objective {seg.support_for}, which doesn't exist"
+            )
+        if activity is not None and (
+            activity.purpose != "practice" or activity.objective_id != seg.support_for
+        ):
+            raise ValueError(
+                f"segment {seg.id}: a support activity is a practice item on objective "
+                f"{seg.support_for}; activity {activity.id} is {activity.purpose} on objective "
+                f"{activity.objective_id}"
+            )
+        if seg.support_for not in base_before:
+            raise ValueError(
+                f"segment {seg.id}: support for objective {seg.support_for} needs a practice item "
+                f"on that objective earlier in module {m.id}, or nothing could ever show it"
+            )
 
 
 def _check_review_paths(
@@ -377,6 +444,28 @@ def read_fixtures(folder: Path = FIXTURES) -> FixtureFile:
     return merged
 
 
+def read_templates(
+    folder: Path = TEMPLATES, fixtures: Path = FIXTURES
+) -> dict[str, ActivityFixture]:
+    """Every template in `folder` (one activity, named after its kind), keyed by kind. Each is
+    checked as a fixture activity, then added to the committed fixtures and checked with them, so
+    a template copied into a module file is valid there too. Raises ValueError naming the file."""
+    content = read_fixtures(fixtures)
+    templates: dict[str, ActivityFixture] = {}
+    for path in sorted(folder.glob("*.json")):
+        try:
+            activity = ActivityFixture.model_validate(json.loads(path.read_text(encoding="utf-8")))
+            if activity.kind != path.stem:
+                raise ValueError(f"the file holds a {activity.kind} activity")
+            check_content(
+                content.model_copy(update={"activities": [*content.activities, activity]})
+            )
+        except (ValidationError, json.JSONDecodeError, ValueError) as exc:
+            raise ValueError(f"templates/{path.name}: {exc}") from exc
+        templates[activity.kind] = activity
+    return templates
+
+
 def check_content(merged: FixtureFile) -> None:
     """The checks across all content, wherever it comes from: the fixtures (`read_fixtures`) or
     the database after a staff edit (app/services/content_editor.py). Ids are unique, slugs are
@@ -436,6 +525,7 @@ def segment_as_fixture(seg: Segment) -> dict[str, Any]:
         "activity_id": seg.activity_id,
         "skip_check_activity_id": seg.skip_check_activity_id,
         "refresher_for": seg.refresher_for,
+        "support_for": seg.support_for,
     }
 
 
@@ -706,6 +796,9 @@ def retire_dropped_activities(session: Session, listed: set[int]) -> list[int]:
     objective whose old placeholder still counted could never be reached. The video editor's
     questions (ids from EDITOR_IDS_FROM) are never touched, and neither is one staff edited in the
     portal or one a staff-edited module still shows: those belong to the portal now.
+
+    Each activity is locked before it is checked for use, so an answer being recorded at that
+    moment is finished first and counts as use (#138).
     """
     dropped = session.scalars(
         select(Activity).where(
@@ -725,6 +818,14 @@ def retire_dropped_activities(session: Session, listed: set[int]) -> list[int]:
             .limit(1)
         )
         if shown is not None:
+            continue
+        # Wait for any answer or hint on it still in flight (they hold FOR KEY SHARE on the row,
+        # app/services/locks.py), so "used" below sees their rows: otherwise an uncommitted
+        # attempt looked unused, the delete waited for it and then failed on the foreign key.
+        if (
+            session.scalar(select(Activity.id).where(Activity.id == activity.id).with_for_update())
+            is None
+        ):
             continue
         used = any(
             session.scalar(select(child.id).where(child.activity_id == activity.id).limit(1))
@@ -808,6 +909,7 @@ def _load_segments(
     order. A segment the fixture no longer lists is deleted, after unlinking any video that
     played it."""
     keep = [seg.id for seg in segments]
+    before = [] if module_id is None else segment_order(session, module_id)
     home = (
         Segment.module_id == module_id
         if module_id is not None
@@ -816,6 +918,7 @@ def _load_segments(
     gone = session.scalars(select(Segment.id).where(home, Segment.id.not_in(keep))).all()
     if gone:
         session.execute(update(Video).where(Video.segment_id.in_(gone)).values(segment_id=None))
+        session.execute(delete(ShownSegment).where(ShownSegment.segment_id.in_(gone)))
         session.execute(delete(Segment).where(Segment.id.in_(gone)))
     for position, seg in enumerate(segments, start=1):
         session.merge(
@@ -830,5 +933,10 @@ def _load_segments(
                 activity_id=seg.activity_id,
                 skip_check_activity_id=seg.skip_check_activity_id,
                 refresher_for=seg.refresher_for,
+                support_for=seg.support_for,
             )
         )
+    if module_id is not None:
+        # New segments (support, #172) put in before a student's place must not move them.
+        session.flush()
+        keep_places(session, module_id, before)

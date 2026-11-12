@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { retryUnlessRefused } from '../../api/retry.ts'
 import { fetchReport, fetchReviewPath } from './mastery.api.ts'
 
 export const reportKey = ['mastery-report'] as const
@@ -15,5 +16,6 @@ export function useReviewPath(objectiveId: number) {
     queryKey: [...reportKey, 'review', objectiveId],
     queryFn: () => fetchReviewPath(objectiveId),
     enabled: Number.isInteger(objectiveId) && objectiveId > 0,
+    retry: retryUnlessRefused, // a closed path (403) stays closed until the student answers
   })
 }

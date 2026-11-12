@@ -191,7 +191,7 @@ describe('accounts pages', () => {
     portalApi()
     renderApp('/staff/accounts')
     expect(await screen.findByText('3 accounts')).toBeInTheDocument()
-    await userEvent.type(screen.getByLabelText('Search by name or email'), 'ALAN@')
+    await userEvent.type(screen.getByLabelText('Search by name'), 'ALAN')
     expect(screen.getByText('1 of 3 accounts match')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Alan' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Ada' })).not.toBeInTheDocument()
@@ -237,5 +237,15 @@ describe('accounts pages', () => {
     expect(await screen.findByRole('heading', { level: 1, name: /Grace/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Delete account' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /staff/i })).not.toBeInTheDocument()
+  })
+})
+
+describe('video editor', () => {
+  it('lists what a new video still needs without an empty item (#146)', async () => {
+    portalApi()
+    renderApp('/staff/videos/new')
+    expect(
+      await screen.findByText('Still needs the video, the captions, a title.'),
+    ).toBeInTheDocument()
   })
 })

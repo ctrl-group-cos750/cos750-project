@@ -14,7 +14,7 @@
           "id": 313,
           "kind": "video",
           "title": "Why BFS? The fewest walkways",
-          "body": "Staff attach the narrated video to this segment in the video editor, with its checkpoint questions: see `docs/id/module-3/narration-script.md`."
+          "body": "It's your first day on campus. You're at the Admin block, A, and your friends are waiting at the Green, G. You want the route with the fewest walkways. How would you find it?\n\n```\n   A ─── C ─── B ─── G\n   │     │\n   E ─── F\n   │\n   D\n```\n\nA Admin block · B Bookshop · C Computer Science building · D Dining hall · E Engineering building · F Fountain · G Green (sports field)\n\nThe walkways are A–C, A–E, B–C, B–G, C–F, D–E and E–F.\n\nEach place is a vertex, and each walkway is an edge. The walkways go both ways, so this is an undirected graph, just like in module 1.\n\nOne way to search is in rings. First, every building one walkway from A: that is A's neighbours, C and E. Then every building two walkways away: B, F and D. Then three: G. The first time you reach G, you know you've used the fewest walkways possible.\n\nSearching ring by ring like this is called **breadth-first search**, or BFS. \"Breadth-first\" means we go wide before we go deep: we finish one ring before we start the next.\n\nBFS is useful whenever you care about the fewest steps: fewest stops on a train map, friends of friends on a social network, or the fewest moves in a puzzle.\n\nNext, you'll see how BFS keeps track of the rings, using something you already know: a queue."
         },
         {
           "id": 314,
@@ -23,10 +23,24 @@
           "activity_id": 313
         },
         {
+          "id": 392,
+          "kind": "text",
+          "title": "Worked example: is BFS the right tool?",
+          "body": "Is BFS the right tool? Ask two questions.\n\n**Question 1. Is there a graph?** Are there things joined to other things? If not, there is nothing for BFS to search.\n\n**Question 2. What does the problem ask for?** BFS reaches vertices in rings: first everything one edge from the start, then everything two edges away, and so on. So it is the right tool for **the fewest edges** to somewhere, or **everything within a number of edges** of a start. It counts edges, so it is not the right tool when each edge has its own length or cost.\n\n| Problem | 1. A graph? | 2. What is asked? | BFS? |\n|---|---|---|---|\n| The fewest clicks from one web page to another | Yes: pages joined by links | The fewest edges | Good fit |\n| The quickest drive, when each road takes a different number of minutes | Yes: places joined by roads | The least total time, not the fewest roads | Not a fit |\n| The highest mark in a test | No: the marks aren't joined | – | Not a fit |\n\n**Explain it to yourself before you go on:** a drive along more roads can still be quicker. Why does that rule BFS out for the quickest drive?",
+          "support_for": 4
+        },
+        {
+          "id": 393,
+          "kind": "activity",
+          "title": "Try another: is BFS the right tool?",
+          "activity_id": 391,
+          "support_for": 4
+        },
+        {
           "id": 315,
           "kind": "video",
           "title": "BFS step by step on the campus",
-          "body": "Staff attach the narrated video to this segment in the video editor, with its checkpoint questions: see `docs/id/module-3/narration-script.md`."
+          "body": "To search ring by ring, BFS needs to remember which buildings are waiting to be explored. It uses a **queue**: first in, first out, like the line at the dining hall.\n\nTwo words matter here. A vertex is **found** when it joins the queue, and BFS never adds a vertex it has already found. It is **visited** when it leaves the queue, which is when it joins the order.\n\nWe start by putting A in the queue. A is now found: BFS will never add it to the queue again.\n\nBFS repeats three steps until the queue is empty:\n\n1. Take the vertex at the front of the queue. It is now **visited**.\n2. Add it to the order.\n3. Add each of its neighbours that hasn't been found yet to the back of the queue. Take the neighbours in alphabetical order.\n\n**A leaves.** A is visited. Its neighbours are C and E. Neither has been found yet, so both join the queue. The queue is now C, E.\n\n**C leaves.** The queue holds C, then E, so BFS takes C: it joined first, so it leaves first. C's neighbours are A, B and F. A has already been found, so we skip it. B and F join at the **back**, behind E. The queue is now E, B, F.\n\n**E leaves.** E is at the front now. Its neighbours are A, D and F. A is visited. D is new. But what about F? F hasn't been visited yet: it is still waiting in the queue. So F is skipped. It was found when it joined the queue, so it can't be added a second time, even though it hasn't been visited yet. Only D joins. The queue is now B, F, D. That is why BFS checks whether a vertex has been *found*, not only whether it has been visited.\n\n**B leaves.** Its new neighbour is G, so G joins the back of the queue. The queue is now F, D, G.\n\n**F, D and G leave** in turn. All of their neighbours have already been found, so nothing new joins. The queue is empty, and BFS is finished.\n\nThe order is **A, C, E, B, F, D, G**. Look at the rings: first A, then the one-walkway buildings C and E, then B, F and D, and finally G. The queue is what keeps the rings in order.\n\nNow it's your turn. In the visualiser you'll predict every step before it happens."
         },
         {
           "id": 316,
@@ -38,14 +52,34 @@
           "id": 317,
           "kind": "worked_example",
           "title": "Worked example: filling in a trace table",
-          "body": "We trace BFS on the campus graph from **A**, one row for each vertex that leaves the queue. A vertex is **found** when it joins the queue, and BFS never adds a vertex it has already found. It is **visited** when it leaves the queue, which is when it joins the order.\n\n| Step | Current vertex | Queue after the step | Visited | Order so far |\n|---|---|---|---|---|\n| start | – | A | – | – |\n| 1 | A | C, E | A | A |\n| 2 | C | E, B, F | A, C | A, C |\n| 3 | E | B, F, D | A, C, E | A, C, E |\n\n**Step 1.** A leaves the queue, so it is visited and joins the order. Its neighbours in alphabetical order are C and E. Neither has been found yet, so both join the back of the queue.\n\n**Step 2.** C is at the front, so C leaves. Its neighbours are A, B and F. A has been found already, so only B and F join.\n\n**Step 3.** E leaves. Its neighbours are A, D and F. A is visited, and F is already waiting in the queue, so only D joins.\n\nThe remaining steps work the same way. The full order is **A, C, E, B, F, D, G**.",
+          "body": "We trace BFS on the campus graph from **A**, one row for each vertex that leaves the queue. A vertex is **found** when it joins the queue, and BFS never adds a vertex it has already found. It is **visited** when it leaves the queue, which is when it joins the order.\n\nEvery row follows the same four subgoals. First, **initialise**: the start is found and waits in the queue (the start row). Then, for each row: **take the next vertex** from the front of the queue. Then, **for each neighbour** of that vertex, in alphabetical order, ask whether it has been found. If it hasn't, **mark and enqueue** it: it is found and joins the back.\n\n| Step | Current vertex | Queue after the step | Visited | Order so far |\n|---|---|---|---|---|\n| start | – | A | – | – |\n| 1 | A | C, E | A | A |\n| 2 | C | E, B, F | A, C | A, C |\n| 3 | E | B, F, D | A, C, E | A, C, E |\n\n**Step 1.** *Take the next vertex:* A leaves the queue, so it is visited and joins the order. *For each neighbour:* A's neighbours in alphabetical order are C and E. *Mark and enqueue:* neither has been found yet, so both join the back of the queue.\n\n**Step 2.** *Take the next vertex:* C is at the front, so C leaves. *For each neighbour:* its neighbours are A, B and F. *Mark and enqueue:* A has been found already, so only B and F join.\n\n**Step 3.** *Take the next vertex:* E leaves. *For each neighbour:* its neighbours are A, D and F. *Mark and enqueue:* A is visited, and F is already waiting in the queue, so only D joins.\n\nThe remaining steps work the same way. The full order is **A, C, E, B, F, D, G**.",
           "skip_check_activity_id": 314
+        },
+        {
+          "id": 370,
+          "kind": "activity",
+          "title": "Why doesn't F join again?",
+          "activity_id": 360
         },
         {
           "id": 318,
           "kind": "activity",
           "title": "Your turn: a trace table",
           "activity_id": 315
+        },
+        {
+          "id": 390,
+          "kind": "text",
+          "title": "Worked example: a vertex that is already waiting",
+          "body": "Here is a whole trace on a new graph, with one tricky step. The graph is undirected, with vertices M, N, P, Q, R and S, and edges M–S, N–Q, N–R, P–R, Q–S and R–S. We start at **Q**. A vertex is **found** when it joins the queue, and **visited** when it leaves.\n\n| Step | Current vertex | Queue after the step | Visited | Order so far |\n|---|---|---|---|---|\n| start | – | Q | – | – |\n| 1 | Q | N, S | Q | Q |\n| 2 | N | S, R | Q, N | Q, N |\n| 3 | S | R, M | Q, N, S | Q, N, S |\n| 4 | R | M, P | Q, N, S, R | Q, N, S, R |\n| 5 | M | P | Q, N, S, R, M | Q, N, S, R, M |\n| 6 | P | (empty) | Q, N, S, R, M, P | Q, N, S, R, M, P |\n\n**The hard step is step 3.** S leaves the queue. Its neighbours, in alphabetical order, are M, Q and R. Q is visited already. R hasn't been visited, but it is **already waiting** in the queue: it was found at step 2, so it doesn't join again. Only M is new, so only M joins the back.\n\n**For each row, ask two questions.** Which vertex is at the front? It leaves and is visited. Which of its neighbours haven't been found yet? Those join the back, in alphabetical order.\n\n**Explain it to yourself before you go on:** at step 4, R leaves, and its neighbours are N, P and S. Why does only P join the queue?",
+          "support_for": 5
+        },
+        {
+          "id": 391,
+          "kind": "activity",
+          "title": "Try another: a trace table",
+          "activity_id": 390,
+          "support_for": 5
         },
         {
           "id": 319,
@@ -295,6 +329,57 @@
       ]
     },
     {
+      "id": 360,
+      "kind": "multiple_choice",
+      "title": "Why doesn't F join again?",
+      "module_id": 3,
+      "purpose": "practice",
+      "objective_id": 5,
+      "config": {
+        "prompt": "In step 3 of the worked example, E leaves the queue. Its neighbours are A, D and F, but only D joins. Why doesn't F join the queue?",
+        "options": [
+          {
+            "id": "a",
+            "label": "F was found at step 2 and is already waiting in the queue."
+          },
+          {
+            "id": "b",
+            "label": "F comes after D in the alphabet, so it must wait its turn."
+          },
+          {
+            "id": "c",
+            "label": "F has been visited already, so it is in the order so far."
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "C added F at step 2, so F has been found and is waiting in the queue. BFS never adds a vertex it has already found, so F doesn't join a second time.",
+        "correct": "a",
+        "feedback": {
+          "b": "Not quite. Alphabetical order only decides the order in which new neighbours join. F is left out because C already added it at step 2. Before a neighbour joins, check whether it is already in the queue.",
+          "c": "Not quite. F isn't in the order yet: it is still waiting in the queue, so it is found but not visited. BFS adds only neighbours it hasn't found, so check the queue as well as the order."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Look at the queue after step 2."
+        },
+        {
+          "level": 2,
+          "body": "After step 2 the queue is E, B, F."
+        },
+        {
+          "level": 3,
+          "body": "F joined at step 2, when C left. Can a vertex be in the queue twice?"
+        },
+        {
+          "level": 4,
+          "body": "Answer: F was found at step 2 and is already waiting in the queue."
+        }
+      ]
+    },
+    {
       "id": 315,
       "kind": "trace",
       "title": "Trace BFS from B: one row each time a vertex leaves the queue",
@@ -402,6 +487,149 @@
         {
           "level": 4,
           "body": "Answer: 3 walkways, A → C → B → G."
+        }
+      ]
+    },
+    {
+      "id": 390,
+      "kind": "trace",
+      "title": "Try another: trace BFS from F, one row each time a vertex leaves the queue",
+      "module_id": 3,
+      "purpose": "practice",
+      "objective_id": 5,
+      "config": {
+        "directed": false,
+        "vertices": [
+          "D",
+          "E",
+          "F",
+          "G",
+          "H"
+        ],
+        "edges": [
+          {
+            "source": "D",
+            "target": "E"
+          },
+          {
+            "source": "D",
+            "target": "F"
+          },
+          {
+            "source": "E",
+            "target": "G"
+          },
+          {
+            "source": "E",
+            "target": "H"
+          },
+          {
+            "source": "F",
+            "target": "H"
+          }
+        ],
+        "start_vertex": "F"
+      },
+      "solution": {},
+      "hints": [
+        {
+          "level": 1,
+          "body": "Start with only F in the queue. Nothing is visited yet. Row 1 is what happens when F leaves."
+        },
+        {
+          "level": 2,
+          "body": "For each row: the vertex at the front leaves and is visited. Its neighbours that haven't been found yet join the back, in alphabetical order."
+        },
+        {
+          "level": 3,
+          "body": "Row 1: F leaves, and D and H join. Row 2: D leaves. Its neighbours are E and F, and only E is new. Row 3: H leaves. E is already waiting in the queue, so nothing joins."
+        },
+        {
+          "level": 4,
+          "body": "Answer: the order is F, D, H, E, G. The queue after each row is [D, H], [H, E], [E], [G], []."
+        }
+      ]
+    },
+    {
+      "id": 391,
+      "kind": "matching",
+      "title": "Try another: is BFS the right tool?",
+      "module_id": 3,
+      "purpose": "practice",
+      "objective_id": 4,
+      "config": {
+        "prompt": "For each problem, choose whether BFS is a good fit and why.",
+        "left": [
+          {
+            "id": "s1",
+            "label": "Find the fewest moves a chess knight needs to get from one square of the board to another."
+          },
+          {
+            "id": "s2",
+            "label": "In a video game, find every room of a castle that is no more than two doors from the entrance."
+          },
+          {
+            "id": "s3",
+            "label": "Plan the trip between two towns that uses the least petrol, when every road uses a different amount."
+          },
+          {
+            "id": "s4",
+            "label": "Count how many learners in a class wrote the test."
+          }
+        ],
+        "right": [
+          {
+            "id": "r_len",
+            "label": "Not a fit: BFS counts edges, but here each edge has its own length or cost."
+          },
+          {
+            "id": "r_few",
+            "label": "Good fit: the first time BFS reaches a vertex, it has used as few edges as possible."
+          },
+          {
+            "id": "r_deep",
+            "label": "Good fit: BFS follows one path as far as it goes, so it finds the longest route."
+          },
+          {
+            "id": "r_none",
+            "label": "Not a fit: nothing is joined to anything, so there is no graph to search."
+          },
+          {
+            "id": "r_ring",
+            "label": "Good fit: BFS has found everything one edge away before it finds anything two edges away."
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "s1": "r_few",
+          "s2": "r_ring",
+          "s3": "r_len",
+          "s4": "r_none"
+        },
+        "feedback": {
+          "s1": "Not quite. The squares are vertices and each knight move is an edge, so the fewest moves is the fewest edges from the start. Look for the reason about the fewest edges.",
+          "s2": "Not quite. The rooms are vertices and the doors are edges, and no more than two doors means everything within two edges. Look for the reason about finding everything one edge away first.",
+          "s3": "Not quite. There is a graph, but each road uses its own amount of petrol, and BFS only counts edges: a trip along more roads can still use less petrol. Look for the reason about each edge having its own length.",
+          "s4": "Not quite. Counting learners needs no connections between them, so there is no graph and nothing for BFS to search. Look for the reason that says there is no graph."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "First ask: are there things joined to other things? If not, there is no graph."
+        },
+        {
+          "level": 2,
+          "body": "Then ask what the problem wants: the fewest edges, everything within some number of edges, or the least total length?"
+        },
+        {
+          "level": 3,
+          "body": "BFS counts edges and works ring by ring, so it ignores lengths and costs. It doesn't follow one path to its end first."
+        },
+        {
+          "level": 4,
+          "body": "Answer: knight → the fewest edges; castle rooms → everything one edge away before two; least petrol → each edge has its own length; counting learners → no graph to search."
         }
       ]
     }

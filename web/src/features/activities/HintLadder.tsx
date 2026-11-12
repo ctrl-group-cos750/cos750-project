@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { refusalMessage } from '../../api/client.ts'
 import { Alert, Button } from '../../components'
 import { fetchActivityHints } from './activities.api.ts'
 import type { Hint } from './activities.types.ts'
@@ -83,8 +84,8 @@ export function HintLadder({
       const hint = await requestHint(activityId)
       focusNewest.current = true
       setHints((current) => [...current, hint])
-    } catch {
-      setError('We could not load a hint. Please try again.')
+    } catch (failure) {
+      setError(refusalMessage(failure, 'We could not load a hint. Please try again.'))
     } finally {
       setLoading(false)
     }
@@ -108,6 +109,13 @@ export function HintLadder({
         <Alert tone="warning" title="The next hint gives a lot away">
           Using it means a later correct answer counts as met with support. Choose “Show next hint”
           again if you want to continue.
+        </Alert>
+      )}
+      {/* The mastery check gives hints 1 and 2 only (#144). */}
+      {lastHint?.limitReached && !solved && (
+        <Alert tone="info" title="No more hints in the mastery check">
+          Answer as best you can. If this objective comes out “not yet”, your report opens its
+          review path, which teaches it again with every hint.
         </Alert>
       )}
       {error && <Alert tone="danger">{error}</Alert>}

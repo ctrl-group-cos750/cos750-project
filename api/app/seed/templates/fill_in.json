@@ -1,0 +1,54 @@
+{
+  "id": 9904,
+  "kind": "fill_in",
+  "title": "Template: fill in the BFS loop",
+  "module_id": 4,
+  "objective_id": 6,
+  "purpose": "practice",
+  "config": {
+    "code": "def bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.__1__()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n __2__ visited:\n                visited.add(n)\n                queue.append(n)\n    return order",
+    "blanks": [
+      1,
+      2
+    ],
+    "options": [
+      "popleft",
+      "pop",
+      "not in",
+      "in"
+    ]
+  },
+  "solution": {
+    "answers": {
+      "1": "popleft",
+      "2": "not in"
+    },
+    "explanation": "Correct. popleft takes the vertex that has waited longest, and not in skips a vertex that has already been found.",
+    "feedback": {
+      "1": {
+        "pop": "Not quite. pop takes the newest vertex from the back, so the queue acts like a stack and the order is no longer BFS. Take the vertex that has waited longest."
+      },
+      "2": {
+        "in": "Not quite. With in, only vertices already found are added again, and new ones are never found. Add a neighbour only if it has not been found yet."
+      }
+    }
+  },
+  "hints": [
+    {
+      "level": 1,
+      "body": "A queue is first in, first out."
+    },
+    {
+      "level": 2,
+      "body": "Blank 1 takes a vertex from the front of the queue. Blank 2 decides whether a neighbour is new."
+    },
+    {
+      "level": 3,
+      "body": "Blank 1 is popleft."
+    },
+    {
+      "level": 4,
+      "body": "Answer: blank 1 is popleft, and blank 2 is not in. So v = queue.popleft(), and if n not in visited: adds only new neighbours."
+    }
+  ]
+}

@@ -177,7 +177,12 @@ def test_every_activity_is_shown_once_and_every_objective_has_one() -> None:
 
 
 def test_support_fades_parsons_then_fill_in_then_most_lines_blank() -> None:  # ID document §7.4
-    shown = [activity(s.activity_id) for s in MODULE.segments if s.activity_id is not None]
+    # Everyone's path: a support segment (#172, #173) is only for a student who struggles.
+    shown = [
+        activity(s.activity_id)
+        for s in MODULE.segments
+        if s.activity_id is not None and s.support_for is None
+    ]
     code = [a for a in shown if a.kind in ("parsons", "fill_in")]
     assert [a.id for a in code] == [404, 405, 406]
     assert code[0].kind == "parsons"

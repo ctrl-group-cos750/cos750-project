@@ -216,3 +216,21 @@ describe('register page', () => {
     expect(screen.getByRole('heading', { name: 'Log in' })).toBeInTheDocument()
   })
 })
+
+describe('register page length', () => {
+  it('says how long the course takes, from the modules’ estimates (#146)', async () => {
+    fakeApi({ overrides: { 'GET /api/modules/length': () => Response.json({ minutes: 74 }) } })
+    renderApp('/register')
+    expect(
+      await screen.findByText(/^About 74 minutes of graphs and breadth-first search/),
+    ).toBeInTheDocument()
+  })
+
+  it('leaves the length out when it can’t be loaded', async () => {
+    fakeApi()
+    renderApp('/register')
+    expect(
+      await screen.findByText(/^Graphs and breadth-first search, at your own pace/),
+    ).toBeInTheDocument()
+  })
+})

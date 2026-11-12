@@ -6,6 +6,7 @@ from typing import Any
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from support import open_module
 
 from app.models import Activity, Attempt, Hint, HintView
 
@@ -28,7 +29,7 @@ FILL_IN: dict[str, Any] = {
 
 
 def make_activity(db: Session, **data: Any) -> int:
-    activity = Activity(**data)
+    activity = Activity(**{"module_id": open_module(db), **data})
     db.add(activity)
     db.commit()
     return activity.id
@@ -346,11 +347,13 @@ def test_hostile_parsons_submissions_are_refused_or_graded_wrong(
         {"order": [0, None, 2, 3]},
         {"order": list(range(101))},
         {"order": [0, 1, 2, 3], "alternatives": [[3, 2, 1, 0]]},
+        {"order": [-5, 2**62, 1, 3]},  # an id no Postgres integer can hold (#139)
         {"order": []},  # answers nothing: refused, not recorded (#143)
+        {"order": [-5, 2**31 - 1, 1, 3]},  # names lines the problem doesn't have (#139)
     ]
     for bad in refused:
         assert client.post(url, json={"submitted": bad}).status_code == 422, bad
-    for wrong in ([0, 1, 2, 3, 9], [0, 0, 0, 0], [-5, 2**62, 1, 3], [3, 2, 1, 0]):
+    for wrong in ([0, 1, 2, 3, 9], [0, 0, 0, 0], [3, 2, 1, 0]):  # 9 is the distractor
         res = client.post(url, json={"submitted": {"order": wrong}})
         assert res.status_code == 201, wrong
         assert res.json()["correct"] is False, wrong

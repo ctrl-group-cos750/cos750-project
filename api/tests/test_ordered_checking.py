@@ -138,7 +138,8 @@ def test_every_line_repeated_cannot_pass() -> None:
 
 
 def test_junk_ids_are_not_belonging() -> None:
-    result = check_bfs([-1, 0, 10**12, *REFERENCE])
+    # 2**31 - 1 is the largest id a submission may carry (#139); more is a 422 before checking.
+    result = check_bfs([-1, 0, 2**31 - 1, *REFERENCE])
     assert not result.correct
     assert wrong_positions(result) == [0, 1, 2]
     assert {result.parts[i].message for i in (0, 1, 2)} == {checking.EXTRA_LINE}

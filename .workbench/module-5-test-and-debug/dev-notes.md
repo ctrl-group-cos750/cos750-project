@@ -527,3 +527,148 @@ scripts/check.sh (Node 24.22.2, full run):
 
 ### Open Issues
 None. Branch: feat/module-5-test-and-debug. Not pushed.
+
+---
+
+## Local Run Note — module 5 (Test and debug)
+
+**Date:** 2026-11-12  
+**Branch:** `feat/module-5-test-and-debug`
+
+### Stack Status
+
+| Component | Status | URL / Details |
+|---|---|---|
+| Postgres (Docker) | ✅ running | localhost:5432, schema `0017` |
+| API (uvicorn --reload) | ✅ running | http://localhost:8000 — `{"status":"ok","database":"ok","schema":"0017"}` |
+| Frontend (Vite dev) | ✅ running | http://localhost:5173 (proxies `/api` → :8000) |
+
+Migrations were applied (`alembic upgrade head` — ran migrations 0015, 0016, 0017).  
+Seed ran with `DEMO_PASSWORD=Demo1234!`: 7 modules, 118 activities, 4 demo accounts created.
+
+### Demo accounts (seeded, password: `Demo1234!`)
+
+| Email | Stage |
+|---|---|
+| `new@demo.example.com` | Brand new — nothing done |
+| `mid@demo.example.com` | Partway through module 3 |
+| `not-yet@demo.example.com` | Finished all modules, objective 6 "not yet" |
+| `ready@demo.example.com` | Finished, ready for lecture |
+
+⚠️ The `not-yet` and `ready` accounts have **already completed** module 5, so they can revisit it but will see it pre-answered. **Best path for fresh testing: register a new account + run the unlock snippet below.**
+
+### Module 5 content map
+
+| Step | What | Detail |
+|---|---|---|
+| Before segments | 2 × retrieval | activity 501 & 502 (multiple_choice) — must answer both to proceed |
+| Seg pos=1 | Video: "Debugging a faulty BFS" | No checkpoints in DB; auto-done |
+| Seg pos=2 | Worked example | Embeds activity 503 (multiple_choice "Check: spotting a BFS bug") with skip-check |
+| Seg pos=3 | fix_the_bug #1 | "Fix the bug: the visited-too-late BFS" (activity 504) — 4 hints |
+| Seg pos=4 | fix_the_bug #2 | "Fix the bug: the appends-unreachable BFS" (activity 505) — 4 hints |
+| Seg pos=5 | choose_tests #1 | "Choose the tests: visited-too-late bug" (activity 506) — 4 hints |
+| Seg pos=6 | choose_tests #2 | "Choose the tests: appends-unreachable bug" (activity 507) — 4 hints |
+
+### Unlock snippet (LOCAL ONLY — run after registering)
+
+After registering a new account in the app, run this from `api/` to mark modules 0–4 complete so module 5 unlocks immediately:
+
+```bash
+cd /Users/ayandajuqu/UP_Hons/cos750/cos750-project/api
+
+DATABASE_URL="postgresql+psycopg://ctrl:b04e346b1c4f4168b814dd5be1204fd6def2a2177ce0d701@localhost:5432/ctrl" \
+.venv/bin/python -c "
+import os, datetime
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session
+from app.models import ModuleProgress, Module, Segment, User
+
+EMAIL = 'YOUR_EMAIL_HERE'   # <-- replace with your registered email
+
+engine = create_engine(os.environ['DATABASE_URL'])
+with Session(engine) as s:
+    user = s.scalar(select(User).where(User.email == EMAIL))
+    if user is None:
+        print(f'No user found with email {EMAIL}'); exit(1)
+    for mod in s.scalars(select(Module).where(Module.id.in_([0,1,2,3,4])).order_by(Module.id)):
+        segs = s.scalars(select(Segment).where(Segment.module_id == mod.id).order_by(Segment.position)).all()
+        last_pos = segs[-1].position if segs else 0
+        prog = s.scalar(select(ModuleProgress).where(ModuleProgress.user_id == user.id, ModuleProgress.module_id == mod.id))
+        if prog is None:
+            prog = ModuleProgress(user_id=user.id, module_id=mod.id, status='complete',
+                                  current_segment_position=last_pos,
+                                  completed_at=datetime.datetime.now(datetime.UTC))
+            s.add(prog)
+        else:
+            prog.status = 'complete'; prog.current_segment_position = last_pos
+            prog.completed_at = datetime.datetime.now(datetime.UTC)
+        print(f'  Module {mod.id} ({mod.title}): marked complete')
+    s.commit()
+    print('Done — refresh the app; module 5 is now unlocked.')
+"
+```
+
+Tested: snippet verified to unlock module 5 (sets status `open`) without errors on a throwaway account; throwaway user was deleted after testing.
+
+### How to stop everything
+
+```bash
+pkill -f "uvicorn app.main:app"
+pkill -f "vite"
+cd /Users/ayandajuqu/UP_Hons/cos750/cos750-project
+docker compose -f docker-compose.yml -f docker-compose.local.yml stop db
+```
+
+Logs: API and frontend log to their respective terminal sessions. Check with:
+```bash
+# API process logs (if started in background terminal)
+ps aux | grep uvicorn
+ps aux | grep vite
+```
+
+---
+
+## Developer Notes — Vite import error fix (stale node_modules)
+
+### Files Created
+_(none)_
+
+### Files Modified
+_(none — environment fix only; no tracked files changed)_
+
+### Diagnosis
+
+Both `mdast-util-gfm-table` and `micromark-extension-gfm-table` were confirmed present in `web/package.json` and `web/package-lock.json` (versions 2.0.1 and 2.1.2). However the running Vite process (PID 32559, correctly using Node v24.22.2) was returning `Failed to resolve import` errors because the `vite:import-analysis` plugin could not find these packages during its module-resolution pass. The packages appeared to exist as directories in `node_modules/` but the dep-optimization cache (`node_modules/.vite/deps/`) had no entries for them, indicating `node_modules` had been populated partially — likely from a `git merge` of staging work without a subsequent `npm ci`.
+
+Root cause: stale `node_modules` from a merged staging commit that added these two packages to `package.json` and `package-lock.json` but was never followed by `npm ci` locally.
+
+### Fix
+
+1. Killed the running Vite server: `kill -9 32559`.
+2. Ran `npm ci` with Node 24 explicitly on PATH (the shell defaulted to Node v8.17.0, which cannot run npm 11):
+   ```
+   PATH="/Users/ayandajuqu/.nvm/versions/node/v24.22.2/bin:$PATH" npm ci
+   ```
+   Result: `added 310 packages, and audited 317 packages in 3s`, 0 vulnerabilities. No `package.json` change.
+3. Restarted Vite in background:
+   ```
+   PATH="/Users/ayandajuqu/.nvm/versions/node/v24.22.2/bin:$PATH" npm run dev > /tmp/vite.log 2>&1 &
+   ```
+
+### Results
+
+- `node_modules/mdast-util-gfm-table` ✅ present  
+- `node_modules/micromark-extension-gfm-table` ✅ present  
+- Vite started in 1226 ms with no errors in `/tmp/vite.log`  
+- `curl http://localhost:5173` → HTTP 200  
+- `curl http://localhost:5173/src/components/Markdown.tsx` → correctly resolves both imports via `/node_modules/.vite/deps/mdast-util-gfm-table.js` and `/node_modules/.vite/deps/micromark-extension-gfm-table.js` — no error overlay  
+- `git status` shows only pre-existing changes to `.gitignore` and `dev-notes.md` — no tracked-file modifications  
+
+### Library Docs Consulted (Context7)
+None — environment fix, no library API changes.
+
+### Build & Test Results
+Frontend dev server running at http://localhost:5173. Import error resolved. API (:8000) and Postgres left untouched.
+
+### Open Issues
+None. Branch: `feat/module-5-test-and-debug`. Not pushed.

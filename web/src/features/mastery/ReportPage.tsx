@@ -35,6 +35,9 @@ function nextStep(o: ObjectiveReport): string {
       return 'Work through its review path before the lecture.'
     case 'not_attempted':
       if (o.total === 0) return 'There are no questions on this objective yet.'
+      // Module 6 is marked as a whole, once every question in it is answered (#144).
+      if (o.answered === o.total)
+        return 'All its questions are answered. Its result shows when you finish the mastery check.'
       if (o.answered > 0) return `${o.answered} of ${o.total} questions answered in module 6.`
       return 'Not answered yet: its questions are in module 6, the mastery check.'
   }
@@ -98,7 +101,11 @@ function MasteryCheckLink({ o, moduleId }: { o: ObjectiveReport; moduleId: numbe
       to={`/modules/${moduleId}`}
       className={buttonVariants({ variant: 'secondary', size: 'sm' })}
     >
-      {o.answered > 0 ? 'Finish its questions in module 6' : 'Answer its questions in module 6'}
+      {o.answered === o.total
+        ? 'Finish the mastery check in module 6'
+        : o.answered > 0
+          ? 'Finish its questions in module 6'
+          : 'Answer its questions in module 6'}
       <span className="sr-only">: objective {o.id}</span>
     </Link>
   )

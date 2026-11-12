@@ -24,6 +24,10 @@ import { ApiError } from '../../api/client.ts'
 const refused = (error: Error) =>
   error instanceof ApiError && error.status >= 400 && error.status < 500
 
+/** Module 6, the mastery check: finishing it opens the report (#144). MASTERY_MODULE in
+ * api/app/services/mastery.py. */
+const MASTERY_MODULE_ID = 6
+
 /** A module id as the route gives it: a whole number, or nothing the API is asked about. */
 const MODULE_ID = /^\d{1,9}$/
 
@@ -249,10 +253,12 @@ export function ModulePage() {
 
   // Saving the last segment again once it is done is what completes the module (the server
   // completes it when the furthest position is the last segment and that segment is done). Then
-  // back to the map, where the next module is now open.
+  // back to the map, where the next module is now open; after the mastery check (module 6), to
+  // the mastery report, which now has the results (#144).
   function handleFinish() {
     if (blocked) return
-    mutation.mutate(segments[currentIndex].position, { onSuccess: () => void navigate('/') })
+    const next = module.id === MASTERY_MODULE_ID ? '/report' : '/'
+    mutation.mutate(segments[currentIndex].position, { onSuccess: () => void navigate(next) })
   }
 
   return (

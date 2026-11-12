@@ -11,7 +11,14 @@ import { FillInCode } from './FillInCode.tsx'
 import { HintLadder } from './HintLadder.tsx'
 import { CodeLine, ParsonsProblem } from './ParsonsProblem.tsx'
 import { indentLabel, lineName } from './codeLines.ts'
-import type { CodeActivity, FillInActivity, Hint, ParsonsActivity } from './activities.types.ts'
+import type {
+  CodeActivity,
+  FillInActivity,
+  Hint,
+  MasteryCheckFlags,
+  ParsonsActivity,
+  Submission,
+} from './activities.types.ts'
 
 const parsons: ParsonsActivity = {
   id: 7,
@@ -804,6 +811,95 @@ describe('hints once an activity is solved (#158)', () => {
 
     rerender(<HintLadder activityId={7} solved loadHints={loadHints} requestHint={requestHint} />)
     expect(screen.queryByText(/The next hint gives a lot away/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Show next hint' })).not.toBeInTheDocument()
+  })
+})
+
+describe('the mastery check (#144)', () => {
+  const checkItem: ParsonsActivity & MasteryCheckFlags = {
+    ...parsons,
+    masteryCheck: true,
+    answered: false,
+  }
+  const withheld = {
+    id: 21,
+    activityId: 7,
+    correct: null,
+    score: null,
+    parts: [],
+    feedback:
+      'Answer recorded. You will see your results in your mastery report when you finish the check.',
+    hintLevel: 0,
+    withheld: true,
+  }
+
+  it('says the answer was recorded, never right or wrong, and takes no second answer', async () => {
+    let item = checkItem
+    const api = fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/activities/7': () => Response.json(item),
+        'GET /api/activities/7/hints': () => Response.json([]),
+        'POST /api/activities/7/attempts': () => {
+          item = { ...checkItem, answered: true }
+          return Response.json(withheld)
+        },
+      },
+    })
+    const user = userEvent.setup()
+    renderApp('/activities/7')
+
+    expect(await screen.findByText(/Only your first answer counts/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Check answer' }))
+
+    expect(await screen.findByText('Answer recorded')).toBeInTheDocument()
+    expect(screen.queryByText('Correct')).not.toBeInTheDocument()
+    expect(screen.queryByText('Not quite')).not.toBeInTheDocument()
+    // The answer can't be sent again, and no more hints are offered.
+    expect(screen.queryByRole('button', { name: 'Check answer' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Show next hint' })).not.toBeInTheDocument()
+    expect(api.callsTo('POST /api/activities/7/attempts')).toHaveLength(1)
+  })
+
+  it('says an item answered before is answered, without showing the form again', async () => {
+    render(
+      <ActivityRenderer
+        activity={{ ...checkItem, answered: true }}
+        result={undefined}
+        submitting={false}
+        onSubmit={vi.fn<(submitted: Submission) => Promise<void>>()}
+        requestHint={vi.fn<(activityId: number) => Promise<Hint>>()}
+        loadHints={() => Promise.resolve([])}
+      />,
+    )
+    expect(screen.getByText('Answer recorded')).toBeInTheDocument()
+    expect(screen.getByText(/it can't be changed/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Check answer' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Show next hint' })).toBeNull()
+  })
+
+  it('stops at hint 2 and points to the review path', async () => {
+    const loadHints = vi.fn<(activityId: number) => Promise<readonly Hint[]>>().mockResolvedValue([
+      { level: 1, body: 'First hint.', hasMore: true, nextCountsAsSupport: false },
+      {
+        level: 2,
+        body: 'Second hint.',
+        hasMore: false,
+        nextCountsAsSupport: false,
+        limitReached: true,
+      },
+    ])
+    render(
+      <HintLadder
+        activityId={7}
+        loadHints={loadHints}
+        requestHint={vi.fn<(activityId: number) => Promise<Hint>>()}
+      />,
+    )
+
+    expect(await screen.findByText('Second hint.')).toBeInTheDocument()
+    expect(screen.getByText('No more hints in the mastery check')).toBeInTheDocument()
+    expect(screen.getByText(/review path/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Show next hint' })).not.toBeInTheDocument()
   })
 })

@@ -247,7 +247,7 @@
           "activities"
         ],
         "summary": "Submit Attempt",
-        "description": "Grade a submission by comparison with the stored solution and record the attempt (FR-4.2,\nFR-4.5, FR-5.3).\n\nSend `{\"submitted\": {...}}` in the kind's shape: `{\"selected\": \"<option id>\"}` for multiple\nchoice, `{\"order\": [...]}` for Parsons, `{\"answers\": {...}}` for fill-in, and\n`{\"rows\": [{\"visitedVertex\", \"queue\", \"visited\", \"order\"}, ...]}` for a trace table, one row\nper BFS step (graded against the engine, so a trace has no stored solution). A submission in the\nwrong shape is 422. No student code is executed: `check_activity` compares the submission with\nthe solution, which stays in this process (NFR-S7).\n\nEach kind's shape bounds its lengths, and the request body is at most `MAX_SUBMISSION_BYTES`\nbytes (413 past it). A matching pair or fill-in blank sent as \"\" (a reset select) counts as\nunanswered. A submission that answers nothing (no option, line, token, pair, test or row), or\none naming an option, line, blank, token, test case or vertex the activity doesn't have, is\n422 and not recorded. 403 and 404 as for GET. 429 with `Retry-After` past 60 answers a minute\nfrom one student. Two answers sent at once are recorded one after the other\n(app/services/locks.py).",
+        "description": "Grade a submission by comparison with the stored solution and record the attempt (FR-4.2,\nFR-4.5, FR-5.3).\n\nSend `{\"submitted\": {...}}` in the kind's shape: `{\"selected\": \"<option id>\"}` for multiple\nchoice, `{\"order\": [...]}` for Parsons, `{\"answers\": {...}}` for fill-in, and\n`{\"rows\": [{\"visitedVertex\", \"queue\", \"visited\", \"order\"}, ...]}` for a trace table, one row\nper BFS step (graded against the engine, so a trace has no stored solution). A submission in the\nwrong shape is 422. No student code is executed: `check_activity` compares the submission with\nthe solution, which stays in this process (NFR-S7).\n\nEach kind's shape bounds its lengths, and the request body is at most `MAX_SUBMISSION_BYTES`\nbytes (413 past it). A matching pair or fill-in blank sent as \"\" (a reset select) counts as\nunanswered. A submission that answers nothing (no option, line, token, pair, test or row), or\none naming an option, line, blank, token, test case or vertex the activity doesn't have, is\n422 and not recorded. 403 and 404 as for GET. 429 with `Retry-After` past 60 answers a minute\nfrom one student. Two answers sent at once are recorded one after the other\n(app/services/locks.py).\n\nA module 6 mastery item takes one answer only (409 after it), and its response is `withheld`:\nno `correct`, `score` or `parts`, so the network tab gives nothing away either (#144). The\nmastery report shows the results once every item is answered. The 409 comes after every\nother check, so a refused (413, 422, 429) submission never uses up that one answer.",
         "operationId": "submit_attempt_api_activities__activity_id__attempts_post",
         "parameters": [
           {
@@ -381,7 +381,7 @@
           "activities"
         ],
         "summary": "Reveal Hint",
-        "description": "Reveal this student's next hint level, one at a time, and record it (FR-4.4, FR-4.5).\n\nNo body. Each call returns the next level (1, then 2, …); once every level has been shown,\nor once the student has answered correctly, it is 409. When `nextCountsAsSupport` is true,\nwarn the student before calling again: a correct answer after hint 3 or 4 counts as \"met\nwith support\" (ID document §7.4).\n\n403 and 404 as for GET. 429 with `Retry-After` past 30 reveals a minute from one student. Two\nrequests sent at once reveal two levels in turn, never the same level twice.",
+        "description": "Reveal this student's next hint level, one at a time, and record it (FR-4.4, FR-4.5).\n\nNo body. Each call returns the next level (1, then 2, …); once every level has been shown,\nor once the student has answered correctly, it is 409. When `nextCountsAsSupport` is true,\nwarn the student before calling again: a correct answer after hint 3 or 4 counts as \"met\nwith support\" (ID document §7.4).\n\nA module 6 mastery item gives hints 1 and 2 only (#144): asking for a third is 409, and the\nsecond says `limitReached`. Once the item is answered it is 409 too, with a message that\ndoesn't say whether the answer was right.\n\n403 and 404 as for GET. 429 with `Retry-After` past 30 reveals a minute from one student. Two\nrequests sent at once reveal two levels in turn, never the same level twice.",
         "operationId": "reveal_hint_api_activities__activity_id__hints_post",
         "parameters": [
           {
@@ -3539,6 +3539,16 @@
             "type": "boolean",
             "title": "Solved",
             "default": false
+          },
+          "masteryCheck": {
+            "type": "boolean",
+            "title": "Masterycheck",
+            "default": false
+          },
+          "answered": {
+            "type": "boolean",
+            "title": "Answered",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -3580,11 +3590,25 @@
             "title": "Activityid"
           },
           "correct": {
-            "type": "boolean",
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Correct"
           },
           "score": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Score"
           },
           "parts": {
@@ -3597,6 +3621,11 @@
           "feedback": {
             "type": "string",
             "title": "Feedback"
+          },
+          "withheld": {
+            "type": "boolean",
+            "title": "Withheld",
+            "default": false
           },
           "hintLevel": {
             "type": "integer",
@@ -3615,7 +3644,7 @@
           "hintLevel"
         ],
         "title": "AttemptOut",
-        "description": "The graded result sent back. Carries per-part correctness and messages, never the solution."
+        "description": "The graded result sent back. Carries per-part correctness and messages, never the solution.\n\nOn a mastery check item (#144) the result is `withheld`: `correct` and `score` are null,\n`parts` is empty and `feedback` only says the answer was recorded. The mastery report shows\nthe results once every module 6 item is answered."
       },
       "AvatarIn": {
         "properties": {
@@ -5070,6 +5099,11 @@
           "nextCountsAsSupport": {
             "type": "boolean",
             "title": "Nextcountsassupport"
+          },
+          "limitReached": {
+            "type": "boolean",
+            "title": "Limitreached",
+            "default": false
           }
         },
         "additionalProperties": false,

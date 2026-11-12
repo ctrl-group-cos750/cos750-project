@@ -40,11 +40,28 @@ const SUPPORTED: ReadonlySet<string> = new Set<Activity['kind']>([
 export function ActivityRenderer(props: ActivityRendererProps) {
   const isSupported = SUPPORTED.has(props.activity.kind)
   const Title = props.heading ?? 'h1'
+  // A mastery check item takes one answer, and says only that it was recorded (#144).
+  const check = props.activity.masteryCheck === true
+  const answeredInCheck = check && (props.activity.answered === true || !!props.result?.withheld)
 
   return (
     <Card>
       {props.showTitle !== false && <Title>{props.activity.title}</Title>}
-      {props.activity.kind === 'parsons' ? (
+      {check && !answeredInCheck && (
+        <p className="mb-4 text-sm text-muted-foreground">
+          Only your first answer counts, so check it before you send it. You will see your results
+          in your mastery report when you finish the check.
+        </p>
+      )}
+      {answeredInCheck ? (
+        // Just answered: the feedback panel below says so. Answered before: say it here.
+        !props.result && (
+          <Alert tone="info" title="Answer recorded">
+            You have answered this question. Only your first answer counts, so it can't be changed.
+            Your results are in your mastery report when you finish the check.
+          </Alert>
+        )
+      ) : props.activity.kind === 'parsons' ? (
         <ParsonsProblem
           activity={props.activity}
           result={props.result}
@@ -102,7 +119,9 @@ export function ActivityRenderer(props: ActivityRendererProps) {
           <HintLadder
             activityId={props.activity.id}
             disabled={props.submitting}
-            solved={props.result?.correct === true || props.activity.solved === true}
+            solved={
+              props.result?.correct === true || props.activity.solved === true || answeredInCheck
+            }
             requestHint={props.requestHint}
             loadHints={props.loadHints}
           />

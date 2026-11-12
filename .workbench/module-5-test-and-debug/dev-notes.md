@@ -229,3 +229,83 @@ These failures require Wave 1 content fixes. They are out of scope for Wave 3 (t
 
 ### Open Issues
 - The 7 pre-existing failures above need to be fixed in the Wave 1 content (module-5.json) before the full check.sh gate will pass. Key fixes needed: (1) rename stored test IDs so they don't look like display text in hints; (2) remove `\n` from `config.prompt` fields in activities 504 and 505; (3) add module 5 to the `HOOKS` dict in test_content_cues.py or add a text/hook opening segment; (4) make activity 507's exposing set distinct from 624's (different test case IDs); (5) reorder corrections in 504 so the first listed is a wrong one; (6) fix video segment 502 body so it embeds the narration text.
+
+---
+
+## Developer Notes — Wave 4: fix 7 content-convention violations
+
+### Files Modified
+- `api/app/seed/module-5.json` — fixed all 6 content violations (see below)
+- `api/tests/test_content_cues.py` — added module 5 to HOOKS dict; updated no-segments guard
+
+### Fixes Applied
+
+#### Fix 1 — Rule: test_choose_tests_text_never_names_a_test_by_its_stored_id (activity 507)
+**Problem**: Level-4 hint said "Answer: two-islands and one-way" — those are stored test case ids with hyphens.
+**Fix**: Rewrote hint to refer by test number: "Answer: Test 2. In that graph, at least one vertex cannot be reached from the start, so the extra loop adds it wrongly. The faulty version passes the other tests." (After fix 5 replaced "one-way" with "directed-tree", only Test 2 is in the exposing set.)
+
+#### Fix 2 — Rule: test_plain_text_fields_carry_no_markdown (activity 504)
+**Problem**: `config.prompt` contained `\n` line breaks between three paragraphs.
+**Fix**: Merged into one plain-text paragraph describing the graph inline: "The graph has vertices A, B, C, D and undirected edges A-B, B-C, C-D, D-A and A-C, starting at A."
+
+#### Fix 3 — Rule: test_plain_text_fields_carry_no_markdown (activity 505)
+**Problem**: Same — `config.prompt` contained `\n` line breaks.
+**Fix**: Merged into one plain-text paragraph: "The graph has two islands: vertices A, B, C, D, E with undirected edges A-B, B-C and D-E, starting at A."
+
+#### Fix 4 — Rule: test_every_module_with_content_opens_by_gaining_attention
+**Problem**: Module 5 now has segments but was not in the HOOKS dict, so the test had no expected hook segment id for it.
+**Fix**: Added `5: 501` to `HOOKS` in `api/tests/test_content_cues.py`. Segment 501 (worked_example) is module 5's first text/worked_example; the segment immediately after it (503) is `kind="activity"`, satisfying `after.kind == "activity"`. Also updated the comment (removed "Module 5 has no segments yet") and changed the no-segments guard from `assert m.id == 5` to `assert m.id not in HOOKS` so it works correctly for any future module that starts empty.
+
+#### Fix 5 — Rule: test_no_two_choose_tests_items_have_the_same_answer (activity 507)
+**Problem**: Activity 507's exposing set `{"two-islands", "one-way"}` was identical to activity 624's (module 6).
+**Fix**: Replaced the "one-way" test case (directed A→B, B→C, C→A, D→A, start A — D unreachable) with "directed-tree" (directed A→B, A→C, B→D, start A — all vertices reachable). The appends-unreachable code passes "directed-tree" (BFS reaches all 4 vertices). Exposing set becomes `{"two-islands"}` ≠ 624's `{"two-islands", "one-way"}`. BFS engine output for directed-tree confirmed as `["A", "B", "C", "D"]`. AC2 still satisfied: test set includes "cycle" and "two-islands", and the disconnected "two-islands" graph exposes the Bug B bug.
+
+#### Fix 6 — Rule: test_the_first_correction_listed_is_never_a_right_one (activity 504)
+**Problem**: First correction in `config.corrections` was id 120 (`visited = {start}`), which appears in `solution.order`.
+**Fix**: Reordered corrections list to `[122, 120, 121, 123]` — distractor 122 (`visited = []`) is now first. The `solution.order` is unchanged; only the display order of the corrections list changed.
+
+#### Fix 7 — Rule: test_every_video_segment_has_its_narration_as_text (segment 502)
+**Problem**: Segment 502 body was a placeholder: "Staff attach the narrated video to this segment..."
+**Fix**: Replaced with the full narration text extracted from `docs/id/module-5/narration-script.md` — all spoken narration from both sections, in prose (no stage directions, no `[slide]`, no "on screen", no "CHECKPOINT" markers). Word count: ~477 words (well above the 150-word minimum). Also removed the word "unvisited" (which violates the found/visited vocabulary rule in `test_found_and_visited_mean_what_module_3_says`) — replaced with "every vertex BFS never reached".
+
+### Key Decisions
+
+1. **Fix 5 approach**: Replaced "one-way" with "directed-tree" rather than changing the "two-islands" graph, because test_module_5.py's `test_both_choose_tests_activities_include_cycle_and_two_islands` requires the id "two-islands" to remain in activity 507. Using a fully-reachable directed graph gives exposing = `{"two-islands"}` which is minimal and correct.
+
+2. **Vocabulary check on video body**: After embedding the narration, discovered that the word "unvisited" appeared in the body ("appends every unvisited vertex"). The `test_found_and_visited_mean_what_module_3_says` test bans "unvisited" because it implies a vertex waiting in the queue is "unvisited" when the module-3 definition says it is "found". Replaced with "every vertex BFS never reached" — semantically equivalent and vocabulary-compliant.
+
+3. **HOOKS guard update**: Changed `assert m.id == 5` to `assert m.id not in HOOKS` so the test is future-proof — if a new module starts empty it won't falsely claim to be module 5.
+
+### Library Docs Consulted (Context7)
+
+None — pure JSON content and test file editing.
+
+### Build & Test Results
+
+```
+seed --check: fixtures valid (7 modules, 118 activities, 7 review paths, 4 graphs); templates valid
+(choose_tests, fill_in, fix_the_bug, matching, multiple_choice, parsons, trace)
+
+pytest -q (full suite):
+2063 passed, 23 skipped in 120.99s
+(23 skips are all pre-existing Postgres-only tests: row locks, migrations, support)
+
+ruff format --check tests/test_content_cues.py: 1 file already formatted
+ruff check tests/test_content_cues.py: All checks passed!
+mypy tests/test_content_cues.py: Success: no issues found in 1 source file
+```
+
+The 7 previously-failing tests now pass:
+- test_choose_tests_text_never_names_a_test_by_its_stored_id ✓
+- test_plain_text_fields_carry_no_markdown[504] ✓
+- test_plain_text_fields_carry_no_markdown[505] ✓
+- test_every_module_with_content_opens_by_gaining_attention ✓
+- test_no_two_choose_tests_items_have_the_same_answer ✓
+- test_the_first_correction_listed_is_never_a_right_one[504] ✓
+- test_every_video_segment_has_its_narration_as_text ✓
+
+No new failures introduced (the "unvisited" vocabulary issue was caught and fixed before final commit).
+
+### Open Issues
+
+None. Branch: feat/module-5-test-and-debug. Not pushed.

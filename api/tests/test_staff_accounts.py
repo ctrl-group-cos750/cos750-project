@@ -16,6 +16,7 @@ from app.models import (
     UserBadge,
     Video,
 )
+from app.routers.staff_accounts import mask_email
 from app.services import rewards
 
 PASSWORD = "Correct horse 1"  # noqa: S105 (a test account)
@@ -104,7 +105,8 @@ def test_lists_every_account_newest_first_with_last_activity(
     rows = client.get("/api/staff/accounts").json()
     assert [(r["id"], r["email"], r["isStaff"]) for r in rows] == [
         (grace, "grace@example.com", True),
-        (ada, "ada@example.com", False),
+        # A student's email is masked in the list (NFR-S8, #146); their own page shows it.
+        (ada, "a•••@example.com", False),
     ]
     assert rows[0]["lastActiveAt"] is None
     assert rows[1]["lastActiveAt"] is not None
@@ -122,6 +124,7 @@ def test_one_account_shows_totals_video_progress_and_recent_answers(
     assert response.status_code == 200
     body = response.json()
     assert body["displayName"] == "Ada"
+    assert body["email"] == "ada@example.com"  # in full on their own page, unlike the list
     assert body["stats"] == {
         "attempts": 2,
         "correctAttempts": 1,
@@ -197,3 +200,9 @@ def test_nobody_can_delete_their_own_account_here(client: TestClient, db: Sessio
     assert response.status_code == 409
     db.expire_all()
     assert db.get(User, grace) is not None
+
+
+def test_mask_email_keeps_only_the_first_letter_and_the_domain() -> None:
+    assert mask_email("ada@example.com") == "a•••@example.com"
+    assert mask_email("x@up.ac.za") == "x•••@up.ac.za"
+    assert mask_email("no-at-sign") == "•••"

@@ -213,3 +213,22 @@ describe('the activity page', () => {
     expect(within(results).queryByRole('list')).not.toBeInTheDocument()
   })
 })
+
+describe('a select set back to its placeholder', () => {
+  it('is left out of a matching answer, as a pair not made', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi
+      .fn<(pairs: Record<string, string>) => Promise<void>>()
+      .mockResolvedValue(undefined)
+    render(
+      <Matching activity={matching} result={undefined} submitting={false} onSubmit={onSubmit} />,
+    )
+    const roads = screen.getByRole('combobox', { name: 'Two-way roads between towns' })
+    const follows = screen.getByRole('combobox', { name: 'Who follows whom online' })
+    await user.selectOptions(roads, 'Undirected graph')
+    await user.selectOptions(follows, 'Tree')
+    await user.selectOptions(follows, 'Choose a match') // reset
+    await user.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(onSubmit).toHaveBeenCalledWith({ roads: 'undirected' })
+  })
+})

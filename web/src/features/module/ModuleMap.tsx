@@ -2,14 +2,22 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router'
 import { Alert, Button, Card, ProgressBar, Spinner, Tag } from '../../components'
 import type { TagTone } from '../../components'
-import type { ModuleStatus, ModuleSummary } from './module.types.ts'
+import type { ModuleSummary } from './module.types.ts'
 import { fetchModules } from './module.api.ts'
 import { minutesProgress } from './minutes.ts'
 import styles from './ModuleMap.module.css'
 
+/** A module with nothing to work through yet (no segments, so it can't be completed). It doesn't
+ * lock the ones after it (#123), and it isn't shown as "open" for ever or offered by Continue:
+ * it reads "coming soon" until it has content (#146). */
+function notReady(module: ModuleSummary): boolean {
+  return module.segmentCount === 0 && module.status !== 'complete' && module.status !== 'locked'
+}
+
 /** Maps a module status to a Tag tone and display label. */
-function statusDisplay(status: ModuleStatus): { tone: TagTone; label: string; icon: string } {
-  switch (status) {
+function statusDisplay(module: ModuleSummary): { tone: TagTone; label: string; icon: string } {
+  if (notReady(module)) return { tone: 'neutral', label: 'coming soon', icon: '…' }
+  switch (module.status) {
     case 'locked':
       return { tone: 'neutral', label: 'locked', icon: '🔒' }
     case 'open':
@@ -28,7 +36,7 @@ function formatDuration(minutes: number): string {
 
 /** A single module row on the map. Locked modules are shown but not interactive. */
 function ModuleRow({ module }: { module: ModuleSummary }) {
-  const { tone, label, icon } = statusDisplay(module.status)
+  const { tone, label, icon } = statusDisplay(module)
   const isLocked = module.status === 'locked'
 
   const cardContent = (
@@ -67,9 +75,11 @@ function ModuleRow({ module }: { module: ModuleSummary }) {
   )
 }
 
-/** Picks the first in-progress module, else the first open module, to continue from. */
+/** Picks the first in-progress module, else the first open module, to continue from; never one
+ * with nothing in it yet (#146). */
 function findContinueTarget(modules: ModuleSummary[]): ModuleSummary | undefined {
-  return modules.find((m) => m.status === 'in_progress') ?? modules.find((m) => m.status === 'open')
+  const ready = modules.filter((m) => m.segmentCount > 0)
+  return ready.find((m) => m.status === 'in_progress') ?? ready.find((m) => m.status === 'open')
 }
 
 /**

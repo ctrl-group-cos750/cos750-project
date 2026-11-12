@@ -187,6 +187,27 @@ describe('ModuleMap — Continue button', () => {
     expect(btn).toBeInTheDocument()
   })
 
+  it('never points Continue at a module with no content yet, which reads "coming soon"', async () => {
+    // Module 5 today: open (it doesn't lock the rest, #123) but nothing to work through (#146).
+    const empty: ModuleSummary = {
+      ...openModule,
+      id: 6,
+      number: 5,
+      title: 'Test and debug',
+      segmentCount: 0,
+    }
+    moduleListApi([
+      completeModule,
+      empty,
+      { ...openModule, id: 7, number: 6, title: 'Mastery check' },
+    ])
+    renderApp('/')
+
+    expect(await screen.findByRole('button', { name: /continue module 6/i })).toBeInTheDocument()
+    expect(screen.getByText('coming soon')).toBeInTheDocument()
+    expect(screen.getByText('open')).toBeInTheDocument() // module 6
+  })
+
   it('hides the Continue button when all modules are locked or complete', async () => {
     moduleListApi([completeModule, lockedModule])
     renderApp('/')
@@ -309,21 +330,22 @@ describe('ModuleMap — minutes', () => {
     segmentCount: 0,
   }
 
-  it('shows the total, leaving out modules with no content yet, before anything is done', async () => {
+  it('shows the total of every module, as the rows add up, before anything is done', async () => {
     moduleListApi([openModule, lockedModule, emptyModule])
     renderApp('/')
 
-    expect(await screen.findByText('About 17 minutes in total')).toBeInTheDocument()
+    // 5 + 12 + 15: the same sum the register page shows (#146).
+    expect(await screen.findByText('About 32 minutes in total')).toBeInTheDocument()
     expect(screen.queryByRole('progressbar', { name: 'Course progress in minutes' })).toBeNull()
   })
 
   it('shows the minutes done and left', async () => {
-    // Module 3 complete (12) and module 2 halfway (2 of 4 segments of 10): 17 of 39.
+    // Module 3 complete (12) and module 2 halfway (2 of 4 segments of 10): 17 of 54.
     moduleListApi([openModule, lockedModule, inProgressModule, completeModule, emptyModule])
     renderApp('/')
 
     expect(
-      await screen.findByText('About 17 of 39 minutes done · about 22 left'),
+      await screen.findByText('About 17 of 54 minutes done · about 37 left'),
     ).toBeInTheDocument()
     expect(screen.getByRole('progressbar', { name: 'Course progress in minutes' })).toHaveAttribute(
       'value',
@@ -331,10 +353,19 @@ describe('ModuleMap — minutes', () => {
     )
   })
 
-  it('says when everything with content is done', async () => {
-    moduleListApi([completeModule, emptyModule])
+  it('says when everything is done', async () => {
+    moduleListApi([completeModule])
     renderApp('/')
 
     expect(await screen.findByText('All 12 minutes done')).toBeInTheDocument()
+  })
+
+  it('still counts a module with no content yet once the rest is done', async () => {
+    moduleListApi([completeModule, emptyModule])
+    renderApp('/')
+
+    expect(
+      await screen.findByText('About 12 of 27 minutes done · about 15 left'),
+    ).toBeInTheDocument()
   })
 })

@@ -37,7 +37,7 @@ from app.seed.demo_accounts import (
 from app.services.checking import check_activity
 from app.services.history import history_tables
 from app.services.mastery import evaluate, is_ready
-from app.services.modules import get_modules_for_user
+from app.services.modules import get_module_detail, get_modules_for_user
 
 PASSWORD = "Demo pass 2026!"  # noqa: S105 (test only)
 API_DIR = Path(__file__).resolve().parent.parent
@@ -252,7 +252,9 @@ def test_once_every_module_has_segments_each_map_matches_its_stage(tmp_path: Pat
                 ModuleProgress.user_id == mid.id, ModuleProgress.module_id == 3
             )
         ).one()
-        assert module_3.current_segment_position == 3  # the fourth segment, 0-based
+        # The fourth segment it is shown (support it doesn't need is skipped, FR-8.4).
+        shown = [s.position for s in get_module_detail(session, mid.id, 3).segments if s.shown]
+        assert module_3.current_segment_position == shown[3]
     fresh.dispose()
 
 
@@ -393,6 +395,7 @@ def test_the_reset_covers_every_table_of_student_history() -> None:
         "module_progress",
         "objective_results",
         "points_entries",
+        "shown_segments",
         "user_badges",
     ]
 

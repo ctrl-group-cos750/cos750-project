@@ -112,6 +112,13 @@ def create_thing(body: ThingIn, session: DbSession) -> ThingOut:
 
 Tests never need Postgres: the `working_db` fixture in `api/tests/conftest.py` swaps in SQLite.
 
+## Writing content
+
+Modules, activities, hints and review paths are JSON fixtures in `api/app/seed/`. The authoring
+guide, [`api/app/seed/README.md`](api/app/seed/README.md), explains every segment and activity
+kind, with a template per activity kind in `api/app/seed/templates/`. Check content with
+`cd api && .venv/bin/python -m app.seed --check`.
+
 ## Branches and deploys
 
 `feature/*` → PR into `staging` → PR from `staging` into `master`. A PR into `master` from any

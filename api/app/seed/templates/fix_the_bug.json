@@ -1,0 +1,117 @@
+{
+  "id": 9906,
+  "kind": "fix_the_bug",
+  "title": "Template: fix the BFS that visits in the wrong order",
+  "objective_id": 7,
+  "purpose": "review",
+  "config": {
+    "prompt": "This BFS visits the vertices in the wrong order. Replace the faulty line with a correction.",
+    "lines": [
+      {
+        "id": 1,
+        "text": "from collections import deque"
+      },
+      {
+        "id": 2,
+        "text": "def bfs(graph, start):"
+      },
+      {
+        "id": 3,
+        "text": "    visited = {start}"
+      },
+      {
+        "id": 4,
+        "text": "    queue = deque([start])"
+      },
+      {
+        "id": 5,
+        "text": "    order = []"
+      },
+      {
+        "id": 6,
+        "text": "    while queue:"
+      },
+      {
+        "id": 7,
+        "text": "        v = queue.pop()"
+      },
+      {
+        "id": 8,
+        "text": "        order.append(v)"
+      },
+      {
+        "id": 9,
+        "text": "        for n in sorted(graph.adjacency[v]):"
+      },
+      {
+        "id": 10,
+        "text": "            if n not in visited:"
+      },
+      {
+        "id": 11,
+        "text": "                visited.add(n)"
+      },
+      {
+        "id": 12,
+        "text": "                queue.append(n)"
+      },
+      {
+        "id": 13,
+        "text": "    return order"
+      }
+    ],
+    "corrections": [
+      {
+        "id": 21,
+        "text": "        v = queue[0]"
+      },
+      {
+        "id": 20,
+        "text": "        v = queue.popleft()"
+      }
+    ]
+  },
+  "solution": {
+    "order": [
+      1,
+      2,
+      [
+        3,
+        4,
+        5
+      ],
+      6,
+      20,
+      8,
+      9,
+      10,
+      [
+        11,
+        12
+      ],
+      13
+    ],
+    "explanation": "Correct. popleft takes the vertex that has waited longest, so BFS visits the closest vertices first.",
+    "feedback": {
+      "7": "Not quite. pop takes the newest vertex from the back, so the queue acts like a stack and BFS goes deep first. Replace it with a line that takes the vertex at the front."
+    }
+  },
+  "hints": [
+    {
+      "level": 1,
+      "body": "Run it in your head on a graph where A has two neighbours. Which one is visited second?"
+    },
+    {
+      "level": 2,
+      "body": "Look at the line that takes a vertex out of the queue."
+    },
+    {
+      "level": 3,
+      "body": "pop takes from the back of the queue. BFS takes from the front."
+    },
+    {
+      "level": 4,
+      "body": "Answer: replace v = queue.pop() with v = queue.popleft(). Every other line stays."
+    }
+  ]
+}

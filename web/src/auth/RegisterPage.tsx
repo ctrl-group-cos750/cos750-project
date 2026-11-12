@@ -1,7 +1,9 @@
+import { useQuery } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { ApiError } from '../api/client.ts'
 import { Alert, Button, TextField } from '../components'
+import { fetchCourseMinutes } from './api.ts'
 import { AuthLayout } from './AuthLayout.tsx'
 import { PasswordChecklist } from './PasswordChecklist.tsx'
 import styles from './AuthLayout.module.css'
@@ -35,6 +37,12 @@ function fieldProblems(error: Error): FieldErrors<Field> | null {
 export function RegisterPage() {
   const navigate = useNavigate()
   const register = useRegister()
+  const minutes = useQuery({
+    queryKey: ['course-minutes'],
+    queryFn: fetchCourseMinutes,
+    staleTime: Infinity,
+    retry: false,
+  })
   const [values, setValues] = useState<Record<Field, string>>({
     displayName: '',
     email: '',
@@ -84,7 +92,9 @@ export function RegisterPage() {
   return (
     <AuthLayout
       title="Create your account"
-      intro="About 75 minutes of graphs and breadth-first search, at your own pace, before the lecture."
+      // The same number as the map's total, from the modules' estimates (#146). Until it loads,
+      // or if it can't, the sentence just leaves the length out.
+      intro={`${minutes.data ? `About ${minutes.data} minutes of graphs` : 'Graphs'} and breadth-first search, at your own pace, before the lecture.`}
       footer={
         <>
           Already have an account? <Link to="/login">Log in</Link>

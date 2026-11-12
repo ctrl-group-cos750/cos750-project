@@ -38,8 +38,9 @@ export function FeedbackPanel({ result }: FeedbackPanelProps) {
       <Alert
         ref={alert}
         announce="focus"
-        tone={result.correct ? 'success' : 'warning'}
-        title={result.correct ? 'Correct' : 'Not quite'}
+        // A mastery check answer says only that it was recorded (#144).
+        tone={result.withheld ? 'info' : result.correct ? 'success' : 'warning'}
+        title={result.withheld ? 'Answer recorded' : result.correct ? 'Correct' : 'Not quite'}
       >
         {result.feedback}
       </Alert>

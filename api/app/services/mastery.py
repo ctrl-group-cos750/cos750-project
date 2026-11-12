@@ -21,6 +21,12 @@ trace table, a pair in a matching item, a line or blank in code. The result is t
 - **not yet** if it isn't met either way,
 - **not attempted** until every one of the objective's items has been answered.
 
+Module 6 is one check, marked at the end (#144): no result is shown for any objective, and no
+points or badges are given for its items, until the student has answered **every** module 6 item
+(`check_finished`). Until then each objective reads "not attempted", so neither the report nor a
+badge gives away whether an earlier answer was right. The attempt response says nothing about it
+either (app/routers/activities.py), and each item takes one answer only.
+
 Everything here is worked out from attempts, so a changed rule or item is applied by running it
 again (FR-7.6): `recompute` after each mastery attempt, `recompute_all` on every seed. The report
 (GET /api/me/report) calls `evaluate` on each request, so it always follows the current rules.
@@ -64,6 +70,12 @@ def counts(activity: Activity) -> bool:
     a fresh mastery item on a review path, which has no module (FR-7.5). The seed refuses a
     mastery item anywhere else."""
     return activity.purpose == "mastery" and activity.module_id in (MASTERY_MODULE, None)
+
+
+def in_check(activity: Activity) -> bool:
+    """Whether this is one of module 6's mastery items: one answer each, no right or wrong shown
+    and hints up to level 2 only, until the check is finished (#144)."""
+    return activity.purpose == "mastery" and activity.module_id == MASTERY_MODULE
 
 
 def _counted() -> ColumnElement[bool]:
@@ -175,29 +187,56 @@ def review_items(session: Session) -> dict[int, list[Activity]]:
     return found
 
 
-def evaluate(session: Session, user_id: int) -> list[Outcome]:
-    """This student's result on every objective, in objective order. Reads only."""
-    objectives = session.scalars(select(Objective).order_by(Objective.id)).all()
-    check = session.scalars(
+def _check_items(session: Session) -> Sequence[Activity]:
+    """Module 6's mastery items, in id order."""
+    return session.scalars(
         select(Activity)
         .where(Activity.purpose == "mastery", Activity.module_id == MASTERY_MODULE)
         .order_by(Activity.id)
     ).all()
-    fresh = review_items(session)
-    ids = [i.id for i in check] + [i.id for items in fresh.values() for i in items]
+
+
+def _first_attempts(session: Session, user_id: int, ids: Sequence[int]) -> dict[int, Attempt]:
+    """This student's first attempt at each of these activities, by activity id."""
     first_ids = (
         select(func.min(Attempt.id))
         .where(Attempt.user_id == user_id, Attempt.activity_id.in_(ids))
         .group_by(Attempt.activity_id)
     )
-    first = {
+    return {
         a.activity_id: a for a in session.scalars(select(Attempt).where(Attempt.id.in_(first_ids)))
     }
+
+
+def check_finished(session: Session, user_id: int) -> bool:
+    """Whether this student has answered every module 6 item: the check is over, and its results
+    can be shown (#144)."""
+    items = [i.id for i in _check_items(session)]
+    answered = set(
+        session.scalars(
+            select(Attempt.activity_id).where(
+                Attempt.user_id == user_id, Attempt.activity_id.in_(items)
+            )
+        )
+    )
+    return bool(items) and answered >= set(items)
+
+
+def evaluate(session: Session, user_id: int) -> list[Outcome]:
+    """This student's result on every objective, in objective order. Reads only."""
+    objectives = session.scalars(select(Objective).order_by(Objective.id)).all()
+    check = _check_items(session)
+    fresh = review_items(session)
+    ids = [i.id for i in check] + [i.id for items in fresh.values() for i in items]
+    first = _first_attempts(session, user_id, ids)
+    finished = bool(check) and all(i.id in first for i in check)
 
     outcomes = []
     for objective in objectives:
         rule = Rule(objective.pass_fraction, objective.max_wrong)
         on_check = _tally(rule, [i for i in check if i.objective_id == objective.id], first)
+        if not finished:  # nothing is marked until the whole check is answered (#144)
+            on_check = Tally("not_attempted", on_check.answered, on_check.total, on_check.evidence)
         review = None
         if on_check.state == "not_yet":
             review = _tally(rule, fresh.get(objective.id, []), first)
@@ -226,7 +265,9 @@ def recompute(session: Session, user_id: int) -> list[Outcome]:
     # One recompute per student at a time: two answers submitted together would otherwise both
     # insert the first result rows and one would fail on the unique constraint. An answer takes
     # this lock before its insert (app/services/attempts.py); taking it here as well covers a
-    # recompute on its own (the seed's, after a rule change).
+    # recompute on its own (the seed's `recompute_all`, after a rule change). It is FOR NO KEY
+    # UPDATE: a plain FOR UPDATE conflicts with the KEY SHARE lock that inserting a row which
+    # references the student takes (app/services/locks.py).
     lock_student(session, user_id)
     outcomes = evaluate(session, user_id)
     stored = {
@@ -263,6 +304,12 @@ def recompute(session: Session, user_id: int) -> list[Outcome]:
                 via_review=o.via_review,  # Came Back Stronger
                 objectives=[x.objective.id for x in outcomes],
             )
+    # A module 6 item's points wait for the end of the check, like its result (#144): given now,
+    # they would say which answers were right. Points are given once, so this is safe to repeat.
+    if check_finished(session, user_id):
+        evidence = [i for o in outcomes for i in o.check.evidence]
+        for attempt in session.scalars(select(Attempt).where(Attempt.id.in_(evidence))):
+            rewards.on_attempt(session, attempt)
     session.flush()
     return outcomes
 
@@ -277,12 +324,3 @@ def recompute_all(session: Session) -> int:
     for user_id in sorted(users):
         recompute(session, user_id)
     return len(users)
-
-
-def review_path_of(session: Session, activity_id: int) -> int | None:
-    """The objective whose review path shows this activity, or None if it is on none."""
-    return session.scalar(
-        select(Segment.review_objective_id).where(
-            Segment.activity_id == activity_id, Segment.review_objective_id.is_not(None)
-        )
-    )

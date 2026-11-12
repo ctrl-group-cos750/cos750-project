@@ -1,50 +1,103 @@
-import { expect, test, type Page } from '@playwright/test'
-import { DEMO_PASSWORD, demo } from './accounts'
+import { demoAccounts } from './content'
+import { segmentRegion, walkModule } from './drive'
+import { DEMO_PASSWORD } from './env'
+import { expect, test, type Page } from './fixtures'
 import { logIn } from './helpers'
 
-// NFR-U1: every module except 2, 4 and 5 (which need a keyboard for code) works at 360 px.
+// NFR-U1: every module except 2, 4 and 5 (the code modules, which need a wide screen) works on a
+// phone 360 px wide: each segment fits without scrolling sideways (WCAG 1.4.10), and every
+// activity is answered there with real clicks and taps, so a control that something covers fails.
+// So do the pages around the modules.
 test.use({ viewport: { width: 360, height: 740 } })
 
-async function expectNoSidewaysScroll(page: Page) {
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - window.innerWidth,
-  )
-  expect(overflow, 'the page scrolls sideways').toBeLessThanOrEqual(0)
+async function fits(page: Page, label: string) {
+  const { scrollWidth, innerWidth } = await page.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    innerWidth: window.innerWidth,
+  }))
+  // Soft: one test lists every segment that doesn't fit, not just the first.
+  expect
+    .soft(scrollWidth, `${label} is ${scrollWidth}px wide in a ${innerWidth}px window`)
+    .toBeLessThanOrEqual(innerWidth)
 }
 
-/** Moves to the next or previous segment and waits until the page shows it. */
-async function step(page: Page, name: 'Next →' | '← Previous') {
-  const counter = page.getByText(/^Segment \d+ of \d+$/)
-  const before = (await counter.textContent()) ?? ''
-  // dispatchEvent: Playwright's WebKit on Windows never reports this button as "stable" at
-  // 360 px (a different segment each run), so a normal click times out. This test checks
-  // layout, not clicking. Still to check on a real iPhone that nothing on these pages jitters.
-  await page.getByRole('button', { name }).dispatchEvent('click')
-  await expect(counter).not.toHaveText(before)
+for (const number of [0, 1, 3, 6]) {
+  test(`module ${number}: every segment at 360 px, every activity answered`, async ({
+    page,
+    course,
+  }) => {
+    if (number >= 3) test.slow()
+    await course.completeBefore(number)
+    const module = await course.module(number)
+    await course.roomFor(module.segments.length + module.retrieval.length)
+    await walkModule(page, module, { onSegment: (label) => fits(page, label) })
+  })
 }
 
-test('modules 0, 1, 3 and 6 fit a 360 px screen', async ({ page }) => {
-  // The ready account has finished every module, so every segment can be visited.
-  await logIn(page, demo.ready, DEMO_PASSWORD)
-  await expectNoSidewaysScroll(page) // the module map
-
-  for (const id of [0, 1, 3, 6]) {
-    await test.step(`module ${id}`, async () => {
-      await page.goto(`/modules/${id}`)
-      const counter = page.getByText(/^Segment \d+ of \d+$/)
-      await expect(counter).toBeVisible()
-
-      // A finished module opens at its end: go back to the first segment.
-      for (let i = 0; i < 20 && !/^Segment 1 of/.test((await counter.textContent()) ?? ''); i++) {
-        await step(page, '← Previous')
-      }
-      // Then check every segment on the way to the end.
-      for (let i = 0; i < 20; i++) {
-        await expectNoSidewaysScroll(page)
-        const [, at, total] = ((await counter.textContent()) ?? '').match(/(\d+) of (\d+)/) ?? []
-        if (at === total) break
-        await step(page, 'Next →')
-      }
-    })
+test('the sign-in pages fit 360 px', async ({ page }) => {
+  for (const path of ['/login', '/register']) {
+    await page.goto(path)
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    await fits(page, path)
   }
+})
+
+test('the map, report, badges and profile fit 360 px', async ({ page, course }) => {
+  await course.completeBefore(1)
+  for (const path of ['/', '/report', '/badges', '/profile']) {
+    await page.goto(path)
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    await fits(page, path)
+  }
+})
+
+test('the report and a review path fit 360 px', async ({ page }) => {
+  const notYet = demoAccounts.find((d) => (d.expect.not_yet ?? []).length > 0)
+  expect(notYet, 'a demo account with an objective not yet met').toBeDefined()
+  await logIn(page, `${notYet?.key}@demo.example.com`, DEMO_PASSWORD)
+  await page.goto('/report')
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+  await fits(page, '/report with a review path')
+  await page.goto(`/review/${notYet?.expect.not_yet?.[0]}`)
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+  await fits(page, 'the review path')
+})
+
+test.describe('badge notes', () => {
+  // Nothing closes the notes here: the test is about where they sit.
+  test.use({ dismissOverlays: false })
+
+  // FIXME: fails on staging (5668d77). A new badge's note is fixed to the bottom of the screen and
+  // stays until dismissed (BadgeAnnouncer.tsx, BadgeAnnouncer.module.css); at 360 px it covers the
+  // module's Next button, so a tap lands on the note and a focused Next is hidden (WCAG 2.2
+  // 2.4.11). To file as a card; turn this into test() when it is fixed.
+  test.fixme("at 360 px a new badge's note doesn't cover the module's Next", async ({
+    page,
+    course,
+  }) => {
+    // Module 0 finished earns the First Module badge; its note shows on the next page, module 1
+    // (its recall questions answered, so the module itself is on screen, with Next).
+    await course.walk(0)
+    await course.walk(1, 0)
+    const module = await course.module(1)
+    await page.goto(`/modules/${module.id}`)
+    await expect(segmentRegion(page, module.segments[0].title)).toBeVisible()
+    await expect(
+      page
+        .getByRole('status')
+        .getByRole('button', { name: /^Dismiss/ })
+        .first(),
+    ).toBeVisible()
+    const next = page.getByRole('navigation', { name: 'Segment navigation' }).getByRole('button', {
+      name: /^Next/,
+    })
+    // What a tap would hit in the middle of Next, scrolled as far into view as it goes.
+    const covered = await next.evaluate((el) => {
+      el.scrollIntoView({ block: 'end' })
+      const box = el.getBoundingClientRect()
+      const at = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)
+      return at !== null && !el.contains(at)
+    })
+    expect(covered, 'Next is covered by the badge note').toBe(false)
+  })
 })

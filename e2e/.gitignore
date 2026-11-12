@@ -1,3 +1,5 @@
 test-results/
 playwright-report/
 .auth/
+.state/
+node_modules/

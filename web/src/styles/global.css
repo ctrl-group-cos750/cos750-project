@@ -183,6 +183,13 @@
   }
 }
 
+/* Module 1's map illustrations (#155) get a dark palette in dark mode instead of staying light
+ * pictures on a dark page: lightness inverted, hues kept (the grass stays green, the bus stops
+ * blue). Graph drawings need none of this: they are drawn in the theme's own tokens. */
+:is(.dark, [data-theme='dark']) .situation-map {
+  filter: invert(0.9) hue-rotate(180deg) saturate(0.85);
+}
+
 /* Radios and checkboxes draw their own focus ring (WCAG 2.4.7). The global :focus-visible ring is
    a box-shadow, which a native radio in WebKit doesn't show, and WebKit's own ring there is painted
    by the platform theme, so a keyboard user could lose track of the focused option (#35, WebKit

@@ -214,9 +214,9 @@ Constructive alignment means that objectives, learning activities and assessment
 
 Table: The lesson sequence, in which each row links objectives, activities and evidence. This follows constructive alignment [4].
 
-The timings are the plan; the Duration column is unchanged. Our own estimate of the content as written, at about a minute per multiple-choice item and the video lengths in the scripts, is about 145 minutes against the 75 planned, now that the support and evidence-based items are in (#150, #173). Module 6 alone, with 24 items, takes about 52 minutes against 10 planned. The pilot's timings will decide what to cut (Section 8.5).
+The timings are the plan; the Duration column is unchanged. Our own estimate of the content as written, at about a minute per multiple-choice item and the video lengths in the scripts, is about 145 minutes against the 75 planned, now that the support and evidence-based items are in (#150, #173). Module 6 alone, with 24 items, takes about 52 minutes against 10 planned. Module 5's content (#189) adds about 20 minutes against 10 planned: a video of about three minutes in its script, a worked example of about 480 words (nearly four minutes at the scripts' 130 words a minute), two retrieval questions and four code items at about three minutes each. That brings the estimate to about 165 minutes. The pilot's timings will decide what to cut (Section 8.5).
 
-The application shows students the planned times, which are the modules' estimated minutes in the content: 74 minutes in total, on the register page and the module map alike (#146; the plan's "about 75" is the same figure, rounded). So the application tells students about half the time the content takes. When the pilot's timings are written up (#76), either the estimated minutes are changed to the measured times or the content is cut to fit the plan. The SE document lists this as a known limitation (§15.5).
+The application shows students the planned times, which are the modules' estimated minutes in the content: 74 minutes in total, on the register page and the module map alike (#146; the plan's "about 75" is the same figure, rounded). So the application tells students less than half the time the content takes. When the pilot's timings are written up (#76), either the estimated minutes are changed to the measured times or the content is cut to fit the plan. The SE document lists this as a known limitation (§15.5).
 
 Each checkpoint is small and focused on one key idea. Here is an example from module 2. The lesson explains that an undirected edge must be stored in both directions. The student then completes the method below.
 
@@ -243,7 +243,7 @@ Merrill's first principles describe when learning is most effective [58, pp. 16�
 | 1. Task-centred | Learn in the context of a real-world task. | One task runs through the course: finding the route with the fewest walkways across the campus. The same campus graph returns in modules 1, 3 and 4. | Each module is organised by topic (graphs, then code, then BFS), not as a series of harder whole tasks. |
 | 2. Activation | Recall relevant earlier knowledge. | The module 0 diagnostic and queue refreshers. One or two retrieval questions open each module from module 2. | Module 0 recalls queues but not the Python the code tasks use: dictionaries, sets and classes. |
 | 3. Demonstration | Watch the skill being done. | Worked examples in modules 1 to 4, and the BFS visualiser in watch mode. | The narrated videos are scripted but not yet recorded (#37). Until they are, their scripts are shown as text (#149), so module 1's definitions and module 3's explanation of BFS are read rather than watched. Module 3's worked trace table still comes after the visualiser practice. |
-| 4. Application | Practise the new skill, with feedback. | Activities with three-part feedback and the hint ladder in modules 1 to 4, and the mastery check. | Module 5 is empty, so objective 7 is practised only on its review path; objective 5 is practised by module 3's trace table. |
+| 4. Application | Practise the new skill, with feedback. | Activities with three-part feedback and the hint ladder in modules 1 to 5, and the mastery check. Module 5 practises objective 7 with two fix-the-bug and two choose-tests items (#189). | Objective 5 is practised by module 3's trace table. |
 | 5. Integration | Use the skill in one's own work: reflect, discuss, defend. | The per-objective report, and the COS212 lecture that follows. | Nothing in the application asks the student to explain, defend or reuse what they learnt. |
 
 Table: Merrill's first principles applied to the application [58].
@@ -272,10 +272,10 @@ The lecture calls the storyboard "one of the most important steps" of ADDIE's De
 
 Our storyboards are of two kinds:
 
-- **Narration scripts** for modules 1 to 4, in `docs/id/module-1/` to `docs/id/module-4/`. Each row is one frame: the time, what is on screen and the narration. These are close to the three columns of the lecture's example storyboard (video, diagram, audio) [58, p. 28]. They also give each video's checkpoint questions, feedback and hints.
+- **Narration scripts** for modules 1 to 5, in `docs/id/module-1/` to `docs/id/module-5/`. Each row is one frame: the time, what is on screen and the narration. These are close to the three columns of the lecture's example storyboard (video, diagram, audio) [58, p. 28]. They also give each video's checkpoint questions, feedback and hints.
 - **Wireframes** of the main screens in the SE document (§11.1), which storyboard the interactive screens.
 
-This part of the Design phase was done late and is incomplete. The scripts were added to the repository between 8 and 11 November, at the same time as the content was loaded, not before it. There is no storyboard for modules 0, 5 and 6, or for the review paths, and the videos the scripts describe are not yet recorded.
+This part of the Design phase was done late and is incomplete. The scripts were added to the repository between 8 and 11 November, at the same time as the content was loaded, not before it. There is no storyboard for modules 0 and 6, or for the review paths, and the videos the scripts describe are not yet recorded.
 
 ## Are SE and ID so different?
 
@@ -396,7 +396,7 @@ Kolb's experiential learning theory describes a four-stage cycle: concrete exper
 | Concrete experience | The campus puzzle before any terms are taught (module 1). Predicting each BFS step in the visualiser (module 3). | After their retrieval questions, modules 2 and 4 open with a video or a worked example, so they start at abstract conceptualisation. |
 | Reflective observation | Feedback that gives the reason for a result. Stepping back and replaying BFS in the visualiser. A short "why" question after each worked example in modules 1 to 4 asks the student to explain a step [62] (#150). | No "why" question follows a level-4 hint yet. |
 | Abstract conceptualisation | Definitions, the three rules of BFS, and worked examples in modules 1 to 4. | In module 1, the definitions are read as the video's script until the video is recorded (#37). |
-| Active experimentation | Practice on new graphs, ordering and completing BFS in module 4, and the closing task on a new directed graph. | Testing and debugging, the clearest experiment, is module 5, which is empty (#136). |
+| Active experimentation | Practice on new graphs, ordering and completing BFS in module 4, and the closing task on a new directed graph. | Testing and debugging in module 5 (#189) gives the faulty programs; the student does not yet find a bug by testing their own code. |
 
 Table: Kolb's learning cycle in the application's modules [50].
 
@@ -522,7 +522,7 @@ The lecture plans assessment in a table with five columns: the learning activity
 | Module 2: a graph in Python | 2, 6 | The completed `Graph` methods match the solution. | Formative: fill-in-the-blank code checked blank by blank; retrieval questions at the start. | Worked example, then three fill-in tasks (two, four and three blanks). |
 | Module 3: meet BFS | 4, 5 | Table 1, objectives 4 and 5 | Formative: matching, multiple choice, and predicting each step in the visualiser. Filling in a trace table, with feedback for each step. | Demonstration (worked trace table; narrated videos scripted, not yet recorded, #37), then prediction with immediate feedback. |
 | Module 4: build BFS | 6 | Table 1, objective 6 | Formative: Parsons problem and fill-in code checked against the solution. | Worked example, then Parsons, then three blanks, then nine blanks (fading). |
-| Module 5: test and debug | 7 | Table 1, objective 7 | Formative: fix-the-bug and choose-tests. Designed, and both kinds have student screens; the module itself is still empty on staging. | Planned: a worked debugging example on a graph with a cycle and a disconnected graph, then faded practice. |
+| Module 5: test and debug | 7 | Table 1, objective 7 | Formative: two retrieval questions, then two fix-the-bug and two choose-tests items with three-part feedback and the hint ladder (#189). | A narrated video (scripted, not yet recorded, #37) and a worked debugging example on a graph with a cycle, then practice. |
 | Module 6: mastery check | 1 to 7 | Table 1, all criteria. Only the first attempt at each item counts. | Summative within the application and criterion-referenced: one state per objective. | Unseen items; a report with the next step for each objective. |
 | Review path | The objective marked "Not yet" | The same criterion as in Table 1, on fresh items | Formative practice, then re-assessment of that objective only. | Teach again with a new worked example, practice of the same kind as the assessed items with the full hint ladder, then fresh items (Section 7.6). |
 
@@ -591,7 +591,7 @@ Every activity offers a four-level hint ladder. Hints are shown one level at a t
 
 Before level 3, the application warns the student that using it will mark the objective as “Met with support”. This keeps the student in control and keeps the result honest (Section 3.2). In the mastery check (module 6) hints stop at level 2, because levels 3 and 4 give the answer away. A student who needs the worked solution there goes to the objective's review path, where "Met with support" can still be earned (#144).
 
-Support also fades through the lesson [26]. Modules 1 to 3 start with worked examples. Module 4 moves from a Parsons problem, to filling in missing lines, to a version with most of the lines left blank. Module 5 is designed to start from faulty code with less given; on staging it is still empty (#86). A student who passes a short check is meant to be able to skip a worked example, because guidance that helps beginners can slow down stronger students [10]. The checks are written but not yet shown (SE document FR-8.2, #31).
+Support also fades through the lesson [26]. Modules 1 to 3 start with worked examples. Module 4 moves from a Parsons problem, to filling in missing lines, to a version with most of the lines left blank. Module 5 starts with a worked debugging example, then gives faulty code to fix with less help (#189). A student who passes a short check is meant to be able to skip a worked example, because guidance that helps beginners can slow down stronger students [10]. The checks are written but not yet shown (SE document FR-8.2, #31).
 
 ## The review path for “Not yet” results
 
@@ -702,7 +702,7 @@ Table: Our main instructional choices and their trade-offs.
 Applying the module's frameworks to the design (Sections 4.5 to 4.8, 5.5, 6.1, 7.1 and 7.3) showed gaps that we had not seen when we used our own research alone:
 
 - **Reflection and integration are thin.** Kolb's reflective-observation stage and Merrill's integration principle are the weakest parts of every module. The application asks students to do and to check, but seldom to explain or think back.
-- **What is built lags what is designed.** Narrated videos, module 5, skippable worked examples and bonus quests are in the design but not on staging; trace tables reached staging on 11 November (SE document FR-6.6). This document now marks them as planned where it mentions them, so that its claims match what a student can use on staging.
+- **What is built lags what is designed.** Narrated videos, skippable worked examples and bonus quests are in the design but not on staging; trace tables reached staging on 11 November (SE document FR-6.6) and module 5 on 12 November (#189). This document now marks them as planned where it mentions them, so that its claims match what a student can use on staging.
 - **Two CS2023 topics are only half covered.** The adjacency matrix (AL-Foundational 8.a) and BFS's running time are taught only briefly: one short text segment each, with no practice item yet (Section 1.2).
 - **Results are close to right or wrong.** Three states per objective are better than one mark, but they do not yet use the lecture's differentiated descriptors or report which misconception a student holds (Section 7.3).
 - **The evaluation can show less than we first claimed.** The team pilot is a usability walkthrough, and learning needs a separate, delayed post-test with real students (Section 8).

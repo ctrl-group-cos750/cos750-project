@@ -122,3 +122,110 @@ Exit status 0. All Pydantic validation passed, all choose_tests expected arrays 
 - **Wave 3 (test file)**: Create `api/tests/test_module_5.py` testing: (1) 2 retrievals, none in segments; (2) all activities have 4 hints, level-4 starts with "Answer:"; (3) all wrong options have feedback; (4) worked example has skip_check_activity_id=503 pointing at a valid practice activity; (5) fix_the_bug: faulty program fails BFS, fixed program passes; (6) fix_the_bug: each wrong correction breaks BFS; (7) choose_tests expected arrays match engine; (8) choose_tests exposing sets are exactly the tests the buggy code fails (run buggy code on each test case); (9) test sets include "cycle" and "two-islands" ids in both choose_tests activities.
 
 - **Wave 4**: Run `scripts/check.sh` (full ruff + mypy + pytest + web build). No Python changes were made, so ruff/mypy should pass unchanged. pytest may reveal new issues once test_module_5.py is created.
+
+---
+
+## Developer Notes — Wave 2: narration script
+
+### Files Created
+- `docs/id/module-5/narration-script.md` — narrated video script for segment 502. Two sections: (1) visited-too-late bug traced on the cycle graph with the fix shown; (2) choosing test cases (cycle exposes Bug A, disconnected graph exposes Bug B). One checkpoint at 1:35. WCAG 1.1.1 text descriptions for both graphs.
+
+### Files Modified
+_(none)_
+
+### Key Decisions
+
+1. **Two-section structure**: Section 1 (0:00–1:50) covers the visited-too-late bug; Section 2 (2:00–2:45) covers choosing test cases. Total ≈ 2:45, within the 2:30–3:00 target. The module body (worked example + activities) covers the remaining ~7 minutes of the 10-minute module.
+
+2. **Same cycle graph throughout**: Vertices A, B, C, D; Edges A–B, B–C, C–D, D–A, A–C — identical to activities 504 and 506, so the video reinforces what students will do in the activities without introducing a new graph.
+
+3. **Single checkpoint at 1:35**: Placed just before the reveal of the double-dequeue outcome, forcing students to predict what the faulty BFS does with D while it's still in the queue. Question uses the exact scenario from the trace, matching the module-3/4 pattern of asking students to predict a BFS step. Three options: correct answer + two distractors with targeted feedback (one about checking the queue vs visited, one about queue reordering).
+
+4. **Two-islands graph in Section 2**: Introduced briefly at 2:20 to motivate the choose_tests activities; no checkpoint here because the activities themselves provide that practice. WCAG text description included inline (not in the header) because the graph only appears in Section 2.
+
+5. **ASCII art representation**: Used a square-with-diagonal layout for the cycle graph to show the A–C shortcut clearly. Matches the graph's structure (A top-left, B top-right, C bottom-right, D bottom-left, diagonal A–C).
+
+6. **Sibling format matched exactly**: Title line, reading-pace note, on-screen note, ASCII art + text description, horizontal rule, video section with timestamp table, notes block, horizontal rule, checkpoint section with question/options/(✓)/feedback/hints — all follow modules 1–4.
+
+### Library Docs Consulted (Context7)
+
+None — this was pure Markdown content authoring.
+
+### Build & Test Results
+
+File created and committed. No build step needed for a Markdown file. Seed check (from Wave 1) still passes unchanged — no JSON was modified.
+
+### Open Issues
+
+- **Wave 3**: Create `api/tests/test_module_5.py` per the plan in Wave 1 open issues.
+- **Wave 4**: Run `scripts/check.sh` — ruff/mypy/pytest/build.
+- **Recording note**: The ASCII art diagonal (╲) may render differently in some editors but is correct Unicode. Whoever records should draw the graph from the description, not the ASCII art.
+
+---
+
+## Developer Notes — Wave 3: module-5 content tests
+
+### Files Created
+- `api/tests/test_module_5.py` — 28 tests covering all Wave 3 requirements
+
+### Files Modified
+_(none)_
+
+### Key Decisions
+
+1. **Reused helpers from test_module_6.py, not imported**: `GRAPH`, `run_bfs_code`, `_run`, `time_limit`, `passes_hidden`, `first_order`, `lines_text`, `scenario` are all copied verbatim or near-verbatim from test_module_6.py. The existing codebase does not export them from a shared helper module; duplicating them is the established pattern (test_module_6.py itself inlines everything). Importing across test files would require structural changes outside scope.
+
+2. **HIDDEN test set**: Identical to the one in test_module_6.py (nine representative graphs: line, cycle, sports-centre, sports-centre-from-g, residence, residence-from-u, out-of-order, two-islands, one-way). This is the natural hidden-test set for "passes_hidden" and has proven power to catch both Bug A (visited-too-late) and Bug B (appends-unreachable).
+
+3. **test_every_wrong_answer_has_feedback**: Covers all three activity kinds present in module 5 (multiple_choice, fix_the_bug, choose_tests). Each asserts `fb[key]` is truthy — the three-part feedback pattern is checked by presence (non-empty string), matching how test_module_2.py and test_module_6.py assert feedback presence.
+
+4. **test_non_retrieval_activities_cover_objective_7**: Asserts `{a.objective_id for a in non_retrieval} == {7}`. Retrieval activities have `objective_id=None`, so they are correctly excluded.
+
+5. **Both choose_tests exposing sets verified in two separate tests**: One test checks engine correctness (expected arrays), another checks the exposing-set derivation by actually running the faulty code. This matches the test_module_6 pattern exactly.
+
+### Library Docs Consulted (Context7)
+
+None — no third-party library APIs were used beyond those already established by test_module_2.py and test_module_6.py.
+
+### Build & Test Results
+
+```
+# test_module_5.py alone
+.venv/bin/pytest -q tests/test_module_5.py
+28 passed in 1.01s
+
+# ruff format check
+ruff format --check tests/test_module_5.py
+1 file already formatted
+
+# ruff lint
+ruff check tests/test_module_5.py
+All checks passed!
+
+# mypy --strict
+mypy tests/test_module_5.py
+Success: no issues found in 1 source file
+
+# full suite
+.venv/bin/pytest -q
+7 failed, 2056 passed, 23 skipped in 123.14s
+```
+
+### Pre-existing Failures (Wave 1 content bugs — NOT introduced by this wave)
+
+All 7 failures were confirmed present before test_module_5.py was added (verified by git stash):
+
+| Test | Activity | Root cause |
+|---|---|---|
+| `test_choose_tests_text_never_names_a_test_by_its_stored_id` | 507 | Level-4 hint says "two-islands and one-way" — these are stored test case IDs |
+| `test_plain_text_fields_carry_no_markdown[504]` | 504 | `config.prompt` contains `\n` line breaks (not allowed in plain-text fields) |
+| `test_plain_text_fields_carry_no_markdown[505]` | 505 | Same issue |
+| `test_every_module_with_content_opens_by_gaining_attention` | — | Module 5 not in `HOOKS` dict in test_content_cues.py (module needs a text or worked_example first, but the test checks for a hook segment id); test expects module 5 to declare a hook id |
+| `test_no_two_choose_tests_items_have_the_same_answer` | 507 | Activity 507 has the same exposing set (`{two-islands, one-way}`) as activity 624 in module 6 |
+| `test_the_first_correction_listed_is_never_a_right_one[504]` | 504 | The first correction in `config.corrections` (id 120) is one of the correct corrections used in `solution.order` |
+| `test_every_video_segment_has_its_narration_as_text` | — | Video segment 502 body references narration script path but does not embed it as text (Wave 2 content issue) |
+
+These failures require Wave 1 content fixes. They are out of scope for Wave 3 (tests only).
+
+### Open Issues
+- The 7 pre-existing failures above need to be fixed in the Wave 1 content (module-5.json) before the full check.sh gate will pass. Key fixes needed: (1) rename stored test IDs so they don't look like display text in hints; (2) remove `\n` from `config.prompt` fields in activities 504 and 505; (3) add module 5 to the `HOOKS` dict in test_content_cues.py or add a text/hook opening segment; (4) make activity 507's exposing set distinct from 624's (different test case IDs); (5) reorder corrections in 504 so the first listed is a wrong one; (6) fix video segment 502 body so it embeds the narration text.

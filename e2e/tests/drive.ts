@@ -7,7 +7,7 @@ import {
   type Activity,
   type ActivityOf,
 } from './content'
-import { expect, type ModuleDetail } from './fixtures'
+import { expect, shownPositions, type ModuleDetail } from './fixtures'
 import { tabTo } from './helpers'
 
 /**
@@ -240,10 +240,13 @@ export async function walkModule(
       .getByRole('button', { name: i === recall.length - 1 ? 'Start module' : 'Next question' })
       .click()
   }
-  const total = module.segments.length
-  for (let i = module.currentSegmentPosition; i < total; i++) {
+  // "Segment N of M" counts only the segments the student is shown (#172).
+  const shown = shownPositions(module)
+  const total = shown.length
+  for (const [n, i] of shown.entries()) {
+    if (i < module.currentSegmentPosition) continue
     const segment = module.segments[i]
-    await expect(page.getByText(`Segment ${i + 1} of ${total}`, { exact: true })).toBeVisible()
+    await expect(page.getByText(`Segment ${n + 1} of ${total}`, { exact: true })).toBeVisible()
     const region = segmentRegion(page, segment.title)
     await expect(region).toBeVisible()
     if (segment.kind === 'activity' && segment.activityId !== null && !segment.done) {
@@ -251,8 +254,8 @@ export async function walkModule(
       await beforeAnswer?.(a)
       await answerActivity(page, region, a, answerFor(a))
     }
-    await onSegment?.(`module ${module.number}, segment ${i + 1} (${segment.kind})`)
-    const last = i === total - 1
+    await onSegment?.(`module ${module.number}, segment ${n + 1} (${segment.kind})`)
+    const last = n === total - 1
     const next = page
       .getByRole('navigation', { name: 'Segment navigation' })
       .getByRole('button', { name: last ? 'Finish module' : /^Next/ })

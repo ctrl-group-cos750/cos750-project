@@ -54,7 +54,7 @@ test('a module activity left open for two hours still takes an answer', async ({
   course,
 }) => {
   const module = await course.module(0)
-  const index = module.segments.findIndex((s) => s.kind === 'activity')
+  const index = module.segments.findIndex((s) => s.kind === 'activity' && s.shown !== false)
   await course.walk(0, index)
   await page.clock.install()
   await page.goto(`/modules/${module.id}`)

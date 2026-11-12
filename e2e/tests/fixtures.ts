@@ -36,9 +36,17 @@ export type ModuleDetail = {
     activityId: number | null
     videoId: number | null
     done: boolean
+    /** False for support this student isn't shown (FR-8.4, #172): it stays in the list, done,
+     * and the page skips it and doesn't count it. Absent before #172. */
+    shown?: boolean
   }[]
   retrieval: { id: number; answered: boolean }[]
 }
+/** The positions (0-based) of the segments the student is shown, in order. */
+export function shownPositions(module: ModuleDetail): number[] {
+  return module.segments.flatMap((s, i) => (s.shown === false ? [] : [i]))
+}
+
 type ModuleSummary = { id: number; number: number; status: string; segmentCount: number }
 
 /** The API allows a student 60 answers a minute (#139). The course walk stays under it, and
@@ -141,10 +149,15 @@ export class Course {
     for (const item of module.retrieval) if (!item.answered) await this.answer(item.id)
     if (module.segments.length === 0) return // nothing to do yet (FR-2.1; "coming soon", #146)
     module = await this.module(number)
-    const last = stopAt ?? module.segments.length - 1
-    for (let position = module.currentSegmentPosition + 1; position <= last; position++) {
-      await this.doSegment(module, position - 1)
-      module = await this.save(module, position)
+    // On from segment to segment shown, over support this student isn't shown (#172).
+    const shown = () => shownPositions(module)
+    const last = stopAt ?? shown()[shown().length - 1]
+    let position = module.currentSegmentPosition
+    while (position < last) {
+      await this.doSegment(module, position)
+      const next = shown().find((p) => p > position) ?? last
+      module = await this.save(module, next)
+      position = next
     }
     if (stopAt === undefined) {
       await this.doSegment(module, last)

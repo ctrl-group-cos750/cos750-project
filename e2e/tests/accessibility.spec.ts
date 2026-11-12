@@ -112,18 +112,30 @@ for (const colorScheme of ['light', 'dark'] as const) {
     })
 
     for (const kind of KINDS) {
-      test(`a ${kind} activity: unanswered, wrong with hints and the warning, then right`, async ({
+      test(`a ${kind} activity: unanswered, with hints, answered wrong, then right`, async ({
         page,
         course,
       }) => {
         const a = firstOfKind(kind)
         await course.openModuleOf(a)
         const main = page.getByRole('main')
-        await check(page, `/activities/${a.id}`)
-        await answerActivity(page, main, a, 'wrong')
         const nextHint = main.getByRole('button', { name: 'Show next hint' })
+        await check(page, `/activities/${a.id}`)
         // Each hint is on screen before the next is asked for.
         await expect(main.getByText('Hint 1', { exact: true })).toHaveCount(0)
+        if (a.purpose === 'mastery') {
+          // Some kinds are only in the mastery check: two hints at most, and one answer, which
+          // only says it was recorded (#144).
+          await nextHint.click()
+          await expect(main.getByText('Hint 1', { exact: true })).toBeVisible()
+          await nextHint.click()
+          await expect(main.getByText('Hint 2', { exact: true })).toBeVisible()
+          await expectNoViolations(page, `${kind} (mastery), two hints`)
+          await answerActivity(page, main, a, 'wrong')
+          await expectNoViolations(page, `${kind} (mastery), answered`)
+          return
+        }
+        await answerActivity(page, main, a, 'wrong')
         await nextHint.click()
         await expect(main.getByText('Hint 1', { exact: true })).toBeVisible()
         await nextHint.click()

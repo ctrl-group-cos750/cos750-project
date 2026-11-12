@@ -1,6 +1,6 @@
 import { activity, wrongOption, type ActivityOf } from './content'
 import { result, segmentRegion } from './drive'
-import { expect, test } from './fixtures'
+import { expect, shownPositions, test } from './fixtures'
 import { chooseRadio, expectVisibleFocus, press, tabTo } from './helpers'
 
 // NFR-A1 (issue #35: "one module completed with the keyboard only"; SE document §14.1): module 0
@@ -20,8 +20,10 @@ test('module 0, from the map to "Finish module", with the keyboard only', async 
   await expect(page.getByRole('heading', { level: 1, name: new RegExp(module.title) })).toBeVisible()
 
   let firstActivity = true
-  for (const [i, segment] of module.segments.entries()) {
-    await expect(page.getByText(`Segment ${i + 1} of ${module.segments.length}`)).toBeVisible()
+  // The segments the student is shown (#172), as "Segment N of M" counts them.
+  const segments = shownPositions(module).map((i) => module.segments[i])
+  for (const [i, segment] of segments.entries()) {
+    await expect(page.getByText(`Segment ${i + 1} of ${segments.length}`)).toBeVisible()
     const region = segmentRegion(page, segment.title)
     await expect(region).toBeVisible()
     if (segment.kind === 'activity' && segment.activityId !== null) {
@@ -43,7 +45,7 @@ test('module 0, from the map to "Finish module", with the keyboard only', async 
       await press(page, checkAnswer)
       await expect(result(region)).toContainText('Correct')
     }
-    const last = i === module.segments.length - 1
+    const last = i === segments.length - 1
     const next = page.getByRole('button', { name: last ? 'Finish module' : /^Next/ })
     // Blocked until the module, fetched again after the answer, says the segment is done.
     await expect(next).not.toHaveAttribute('aria-disabled', 'true')
@@ -64,7 +66,7 @@ test('every control in a module activity shows a visible focus indicator', async
   course,
 }) => {
   const module = await course.module(0)
-  const index = module.segments.findIndex((s) => s.kind === 'activity')
+  const index = module.segments.findIndex((s) => s.kind === 'activity' && s.shown !== false)
   await course.walk(0, index)
   await page.goto(`/modules/${module.id}`)
   const region = segmentRegion(page, module.segments[index].title)

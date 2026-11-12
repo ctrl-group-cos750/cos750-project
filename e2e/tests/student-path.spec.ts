@@ -106,7 +106,7 @@ test('module 4: a code activity answered wrong, then right, then the rest of the
   await course.completeBefore(4)
   const module = await course.module(4)
   const index = module.segments.findIndex(
-    (s) => s.activityId !== null && CODE_KINDS.has(activity(s.activityId).kind),
+    (s) => s.shown !== false && s.activityId !== null && CODE_KINDS.has(activity(s.activityId).kind),
   )
   expect(index, 'module 4 has a Parsons or fill-in activity').toBeGreaterThanOrEqual(0)
   await course.walk(4, index)

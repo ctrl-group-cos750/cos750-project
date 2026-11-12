@@ -6,14 +6,20 @@
         {
           "id": 1101,
           "kind": "worked_example",
-          "title": "Review: Data structures, algorithms, graphs and traversals",
-          "body": "A **data structure** stores data (a queue, a dictionary, a graph). An **algorithm** is a list of steps (BFS, sorting). A **graph** is vertices joined by edges. A **graph traversal** visits the vertices by following edges, and BFS is one.\n\nGo back to module 1: the video “From a map to a graph” and “Key terms”."
+          "title": "Review: worked example, the four terms in a delivery app",
+          "body": "**Worked example.** A food-delivery app has four parts. Here is how to sort them into the four terms, one at a time.\n\n**1. The orders waiting for a driver.** The app keeps them in a queue: the first order in is the first order out. A queue **stores** data, so it is a **data structure**.\n\n**2. How a driver picks the next job.** Take the oldest order, collect it at the restaurant, drop it at the customer, then repeat. That is a fixed list of steps, so it is an **algorithm**.\n\n**3. The app's map.** Restaurants and homes are joined by streets. Things joined by connections make a **graph**: the restaurants and homes are its vertices, and the streets are its edges.\n\n**4. Checking which homes a restaurant can serve.** The app starts at the restaurant and follows the streets out from it, one street at a time, until it reaches nothing new. Visiting the vertices of a graph by following its edges is a **graph traversal**.\n\nThe test for each term: does it **store** something (data structure), is it a **list of steps** (algorithm), is it **things and connections** (graph), or does it **move through a graph along its edges** (graph traversal)? A traversal is also an algorithm, but one that works on a graph."
         },
         {
           "id": 1102,
           "kind": "activity",
           "title": "Review practice: data structures, algorithms, graphs and traversals",
           "activity_id": 1101
+        },
+        {
+          "id": 1150,
+          "kind": "activity",
+          "title": "Review practice: match each term to part of a library",
+          "activity_id": 1150
         },
         {
           "id": 1103,
@@ -53,14 +59,20 @@
         {
           "id": 1201,
           "kind": "worked_example",
-          "title": "Review: Vertices, edges and direction",
-          "body": "**Vertices** are the circles (the things). **Edges** are the lines (the connections), named by their two ends. If edges have **arrows**, the graph is **directed**; plain lines mean **undirected**. Two arrows between the same pair still make it directed.\n\nGo back to module 1: “Worked example: reading a graph”, “Label the bus-stop graph”, the video “One-way or two-way?” and “Directed or undirected?”."
+          "title": "Review: worked example, reading a food chain as a graph",
+          "body": "**Worked example.** A food chain on the savanna: grass (G) is eaten by zebras (Z), and zebras are eaten by lions (L) and by hyenas (H). Read it as a graph in three steps.\n\n**1. Find the vertices.** The things are the living things: grass, zebra, lion and hyena. Those are the four vertices, G, Z, L and H.\n\n**2. Find the edges.** Each “is eaten by” joins two of them, so each is an edge, named by its two ends: G → Z, Z → L and Z → H. That is three edges. The lion and the hyena have no edge between them, because neither eats the other here.\n\n**3. Decide the direction.** Grass is eaten by the zebra, but the zebra is not eaten by the grass. Each edge goes one way only, from food to eater, so each is an arrow and the graph is **directed**.\n\n**Compare.** Now draw which animals drink at the same waterhole: the zebra, the lion and the hyena all do. “Drinks at the same waterhole as” works both ways, so Z–L, Z–H and L–H are plain lines and that graph is **undirected**.\n\nTo read any graph: the things are vertices, the connections are edges named by their two ends, and arrows (one way) make it directed. Two arrows, one each way, are still two directed edges."
         },
         {
           "id": 1202,
           "kind": "activity",
           "title": "Review practice: vertices, edges and direction",
           "activity_id": 1201
+        },
+        {
+          "id": 1250,
+          "kind": "activity",
+          "title": "Review practice: label the train graph",
+          "activity_id": 1250
         },
         {
           "id": 1203,
@@ -94,8 +106,8 @@
         {
           "id": 1301,
           "kind": "worked_example",
-          "title": "Review: Modelling a real situation as a graph",
-          "body": "Ask three questions. What are the **things**? They're the vertices. What **connects** them? Those are the edges. Does each connection work **both ways**? If not, the graph is directed.\n\nGo back to module 1: “Build the campus graph” and “Closing task: graphs in real life”."
+          "title": "Review: worked example, modelling trails in a nature reserve",
+          "body": "**Worked example.** A nature reserve has a gate, three huts and a waterfall. Trails join the gate and hut 1, hut 1 and hut 2, hut 2 and the waterfall, and the gate and hut 3. Hikers walk every trail both ways. There is also a zip line, which carries hikers from hut 3 down to the waterfall and never back up. Model the reserve with the three questions.\n\n**1. What are the things?** The places a hiker can stand: the gate, hut 1, hut 2, hut 3 and the waterfall. These five are the **vertices**.\n\n**2. What connects them?** The four trails and the zip line. Each joins two places, so each is an **edge**: five edges.\n\n**3. Does each connection work both ways?** The trails do, but the zip line goes one way only. One one-way connection is enough to make the graph **directed**. Each two-way trail becomes two arrows, one each way, and the zip line is a single arrow from hut 3 to the waterfall.\n\n**Two common slips.** Making the hikers the vertices: hikers move through the graph, they aren't part of it. And calling the graph undirected because most connections are two-way: a single one-way connection makes it directed."
         },
         {
           "id": 1302,
@@ -135,8 +147,8 @@
         {
           "id": 1401,
           "kind": "worked_example",
-          "title": "Review: When BFS is the right tool",
-          "body": "BFS is good for two jobs: finding the route with the **fewest edges**, and finding **everything reachable** from a start. It isn't for problems without connections, or where edges have different costs or lengths.\n\nGo back to module 3: the video “Why BFS? The fewest walkways” and “When is BFS the right tool?”."
+          "title": "Review: worked example, is BFS the right tool?",
+          "body": "**Worked example.** For each problem, ask two questions. Is there a graph: things joined by connections? And does the problem want the **fewest edges** between two vertices, or **everything reachable** from a start? BFS fits only when both answers are yes.\n\n**1. A robot vacuum starts at its dock. Which rooms can it reach through open doors?** Rooms are vertices and open doors are edges. The question is everything reachable from the dock, so BFS fits: it finds every room joined to the dock, and none that isn't.\n\n**2. From Cape Town, which airports can you reach with the fewest changes of plane?** Airports are vertices and direct flights are edges. Fewest changes means fewest edges, so BFS fits: it reaches airports in rings, one flight away, then two, and so on.\n\n**3. Which route from Cape Town to Lusaka has the cheapest tickets?** There is a graph, but each flight has its own price. BFS counts edges and ignores prices, so it can choose a route with fewer but dearer flights. BFS isn't the tool here.\n\n**4. What is the average price of a ticket this month?** There are no connections to follow, so there is no graph at all. Not BFS.\n\nBFS fits when there is a graph and every edge counts the same: one edge is one step."
         },
         {
           "id": 1402,
@@ -176,14 +188,20 @@
         {
           "id": 1501,
           "kind": "worked_example",
-          "title": "Review: Tracing BFS by hand",
-          "body": "Each step: take the vertex at the **front** of the queue; it is now **visited**. Then add its neighbours that haven't been **found** yet to the **back**, in alphabetical order. A vertex is found as it joins the queue, so one that is still waiting is never added again. Repeat until the queue is empty.\n\nGo back to module 3: the video “BFS step by step on the campus”, “Your turn: predict every step”, “Worked example: filling in a trace table” and “Your turn: a trace table”."
+          "title": "Review: worked example, tracing BFS on a garden",
+          "body": "**Worked example.** Five garden beds, K, L, M, N and O, are joined by paths. The paths are K–L, K–N, L–O, M–N and M–O, and each can be walked both ways, so the graph is undirected. We trace BFS from **K**, taking neighbours in alphabetical order. A vertex is **found** when it joins the queue, and BFS never adds a vertex it has already found. It is **visited** when it leaves the queue, which is when it joins the order.\n\n| Step | Current vertex | Queue after the step | Visited | Order so far |\n|---|---|---|---|---|\n| start | – | K | – | – |\n| 1 | K | L, N | K | K |\n| 2 | L | N, O | K, L | K, L |\n| 3 | N | O, M | K, L, N | K, L, N |\n| 4 | O | M | K, L, N, O | K, L, N, O |\n| 5 | M | (empty) | K, L, N, O, M | K, L, N, O, M |\n\n**Step 1.** K leaves the queue, so it is visited. Its neighbours, L and N, haven't been found, so both join the back, L first.\n\n**Step 2.** L has waited longest, so L leaves. K has been found already. O is new, so O joins the back, behind N.\n\n**Step 3.** N leaves. K has been found; M is new and joins the back.\n\n**Step 4.** O leaves. Its neighbours are L and M. L has been found, and so has M: it is still waiting in the queue. A vertex that is waiting never joins again, so nothing joins.\n\n**Step 5.** M leaves. Both its neighbours have been found, and the queue is now empty, so BFS stops.\n\nThe order is **K, L, N, O, M**. M comes last although it is first in the alphabet: alphabetical order only decides which of one vertex's new neighbours joins first, not the order of the whole traversal."
         },
         {
           "id": 1502,
           "kind": "activity",
           "title": "Review practice: tracing BFS by hand",
           "activity_id": 1501
+        },
+        {
+          "id": 1550,
+          "kind": "activity",
+          "title": "Review practice: trace BFS from T, one row each time a vertex leaves the queue",
+          "activity_id": 1550
         },
         {
           "id": 1503,
@@ -199,8 +217,8 @@
         {
           "id": 1601,
           "kind": "worked_example",
-          "title": "Review: Writing BFS in Python",
-          "body": "Before the loop: `visited = {start}`, `queue = deque([start])`, `order = []`. In the loop: `v = queue.popleft()`, `order.append(v)`, then for each `n` in `sorted(graph.adjacency[v])`, if it isn't in `visited` yet (the set of vertices found so far), add it to `visited` and `queue`. Return `order`.\n\nGo back to module 4 (Build BFS)."
+          "title": "Review: worked example, from a plan to BFS in Python",
+          "body": "**Worked example.** Here BFS is written from its plan, one part at a time, with new names: `seen` is the set of vertices found so far, `todo` is the queue, `here` is the vertex that leaves it, and `nxt` is one of its neighbours.\n\n**1. Before the loop**, the start is found and waiting, and nothing has been visited yet. So `seen` holds the start, `todo` holds the start, and `order` is empty.\n\n**2. While anything is waiting**, take the vertex that has waited longest, from the front, and add it to the order: `here = todo.popleft()`, then `order.append(here)`.\n\n**3. For each neighbour of `here`**, in alphabetical order: if it isn't in `seen` yet, it is found now, so add it to `seen` and to the back of `todo`.\n\n**4. When nothing is waiting**, the order is complete, so return it.\n\n```python\nfrom collections import deque\n\n\ndef bfs(graph, start):\n    seen = {start}\n    todo = deque([start])\n    order = []\n    while todo:\n        here = todo.popleft()\n        order.append(here)\n        for nxt in sorted(graph.adjacency[here]):\n            if nxt not in seen:\n                seen.add(nxt)\n                todo.append(nxt)\n    return order\n```\n\n**Running it** on a directed graph with the edges D → B, D → A, A → C and C → D, starting at D:\n\n| `here` | Its neighbours, sorted | `todo` after | `order` after |\n|---|---|---|---|\n| D | A, B | A, B | D |\n| A | C | B, C | D, A |\n| B | none | C | D, A, B |\n| C | D, already in `seen` | (empty) | D, A, B, C |\n\nThe result is **D, A, B, C**. The edge C → D leads back to the start, but D has been in `seen` since the first line, so it never joins `todo` again."
         },
         {
           "id": 1602,
@@ -209,9 +227,27 @@
           "activity_id": 1601
         },
         {
+          "id": 1650,
+          "kind": "activity",
+          "title": "Review practice: put BFS in order",
+          "activity_id": 1650
+        },
+        {
+          "id": 1652,
+          "kind": "activity",
+          "title": "Review practice: fill in the missing parts of BFS",
+          "activity_id": 1652
+        },
+        {
+          "id": 1651,
+          "kind": "activity",
+          "title": "Objective 6 · fresh item 1 of 2: put BFS in order",
+          "activity_id": 1651
+        },
+        {
           "id": 1603,
           "kind": "activity",
-          "title": "Objective 6 · fresh item: fill in the missing parts of BFS",
+          "title": "Objective 6 · fresh item 2 of 2: fill in the missing parts of BFS",
           "activity_id": 1602
         }
       ]
@@ -222,14 +258,26 @@
         {
           "id": 1701,
           "kind": "worked_example",
-          "title": "Review: Testing and debugging BFS",
-          "body": "A good test builds a small graph, calls `bfs`, and asserts the **exact** list it should return. Two graphs catch most BFS bugs: one with a **cycle** (catches vertices visited twice) and one that's **disconnected** (catches vertices that shouldn't be reached).\n\nGo back to module 5 (Test and debug)."
+          "title": "Review: worked example, testing and fixing a faulty BFS",
+          "body": "**Worked example.** This BFS has a bug. Find it with tests, then fix it.\n\n```python\ndef bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        for n in sorted(graph.adjacency[start]):\n            if n not in visited:\n                visited.add(n)\n                queue.append(n)\n    return order\n```\n\n**1. Choose tests.** A test is a graph, a start vertex and the exact order a correct BFS gives. Choose graphs that are different shapes:\n\n| Test | Graph (undirected) | Start | Correct order |\n|---|---|---|---|\n| 1, a star | A–B, A–C, A–D | A | A, B, C, D |\n| 2, a chain | A–B, B–C | A | A, B, C |\n| 3, two islands | A–B, C–D | A | A, B |\n\n**2. Run each test by hand.** On the star, every vertex is a neighbour of A, so the faulty version still finds them all and gives A, B, C, D: test 1 **passes**. On the chain, B joins the queue. Then B leaves, but the loop looks at A's neighbours again, not B's, so C is never found. The result is A, B: test 2 **fails**. On the two islands, the result is A, B: test 3 **passes**.\n\n**3. Find the line.** Test 2 fails at the first vertex two edges from the start, so the faulty version never gets past the start's neighbours. The loop that finds new vertices reads `graph.adjacency[start]`: the start's neighbours, every time.\n\n**4. Fix it and run the tests again.** Loop over `sorted(graph.adjacency[v])`, the neighbours of the vertex that just left the queue. Test 2 now gives A, B, C, and all three tests pass.\n\nTest 1 passes with or without the bug, so on its own it proves little. A useful test fails on the faulty version and passes on the fixed one."
         },
         {
           "id": 1702,
           "kind": "activity",
           "title": "Review practice: testing and debugging BFS",
           "activity_id": 1701
+        },
+        {
+          "id": 1750,
+          "kind": "activity",
+          "title": "Review practice: fix the faulty BFS",
+          "activity_id": 1750
+        },
+        {
+          "id": 1751,
+          "kind": "activity",
+          "title": "Review practice: choose the tests that catch the bug",
+          "activity_id": 1751
         },
         {
           "id": 1703,
@@ -1654,12 +1702,12 @@
     {
       "id": 1602,
       "kind": "fill_in",
-      "title": "Objective 6 · fresh item: fill in the missing parts of BFS",
+      "title": "Objective 6 · fresh item 2 of 2: fill in the missing parts of BFS",
       "module_id": null,
       "purpose": "mastery",
       "objective_id": 6,
       "config": {
-        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    # Return the vertices in the order BFS visits them from start,\n    # taking neighbours in alphabetical order.\n    visited = {start}\n    queue = deque([__1__])\n    order = []\n    while queue:\n        v = queue.popleft()\n        __2__.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n __3__ visited:\n                visited.add(n)\n                queue.__4__(n)\n    return order",
+        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    # Return the vertices in the order BFS visits them from start,\n    # taking neighbours in alphabetical order.\n    discovered = {start}\n    lineup = deque([__1__])\n    order = []\n    while len(lineup) > 0:\n        here = lineup.popleft()\n        __2__.append(here)\n        for nbr in sorted(graph.adjacency[here]):\n            if nbr __3__ discovered:\n                discovered.add(nbr)\n                lineup.__4__(nbr)\n    return order",
         "blanks": [
           1,
           2,
@@ -1670,7 +1718,7 @@
           "start",
           "[]",
           "order",
-          "visited",
+          "discovered",
           "not in",
           "in",
           "append",
@@ -1689,13 +1737,13 @@
             "[]": "Not quite. deque([[]]) puts an empty list in the queue, not the start vertex, so BFS never starts from start. The queue starts with the start vertex."
           },
           "2": {
-            "visited": "Not quite. visited already holds every vertex found, and a set has no append. Each vertex that leaves the queue joins the order list."
+            "discovered": "Not quite. discovered holds every vertex found so far, and a set has no append. Each vertex that leaves the queue joins the order list."
           },
           "3": {
-            "in": "Not quite. With in, only vertices already found would be queued, so BFS never finds anything new. Queue a neighbour only if it is not in visited."
+            "in": "Not quite. With in, only vertices already found would be queued, so BFS never finds anything new. Queue a neighbour only if it is not in discovered."
           },
           "4": {
-            "appendleft": "Not quite. appendleft puts a new vertex at the front, so it is taken next and BFS goes deep instead of wide. BFS takes vertices from the front of the queue and adds new ones to the back. Check you use popleft() and append()."
+            "appendleft": "Not quite. appendleft puts a new vertex at the front, so it is taken next and BFS goes deep instead of wide. BFS takes vertices from the front of the queue and adds new ones to the back."
           }
         }
       },
@@ -2512,6 +2560,869 @@
         {
           "level": 4,
           "body": "Answer: Tests 1, 2 and 3. The faulty version passes the other three."
+        }
+      ]
+    },
+    {
+      "id": 1550,
+      "kind": "trace",
+      "title": "Review practice: trace BFS from T, one row each time a vertex leaves the queue",
+      "module_id": null,
+      "purpose": "review",
+      "objective_id": 5,
+      "config": {
+        "directed": false,
+        "vertices": [
+          "R",
+          "S",
+          "T",
+          "V",
+          "W",
+          "Y"
+        ],
+        "edges": [
+          {
+            "source": "T",
+            "target": "W"
+          },
+          {
+            "source": "T",
+            "target": "R"
+          },
+          {
+            "source": "R",
+            "target": "S"
+          },
+          {
+            "source": "W",
+            "target": "S"
+          },
+          {
+            "source": "W",
+            "target": "Y"
+          },
+          {
+            "source": "S",
+            "target": "V"
+          }
+        ],
+        "start_vertex": "T"
+      },
+      "solution": {},
+      "hints": [
+        {
+          "level": 1,
+          "body": "Each row starts by taking the vertex at the front of the previous queue."
+        },
+        {
+          "level": 2,
+          "body": "Add the current vertex's neighbours that haven't been found yet to the back of the queue, in alphabetical order. A vertex is found when it joins the queue and visited when it leaves."
+        },
+        {
+          "level": 3,
+          "body": "The first row: T leaves; the queue becomes R, W."
+        },
+        {
+          "level": 4,
+          "body": "Answer: order T, R, W, S, Y, V. Queues after each row: [R, W]; [W, S]; [S, Y]; [Y, V]; [V]; []."
+        }
+      ]
+    },
+    {
+      "id": 1650,
+      "kind": "parsons",
+      "title": "Review practice: put BFS in order",
+      "module_id": null,
+      "purpose": "review",
+      "objective_id": 6,
+      "config": {
+        "lines": [
+          {
+            "id": 9,
+            "text": "        for nb in sorted(graph.adjacency[cur]):"
+          },
+          {
+            "id": 21,
+            "text": "    reached = set()"
+          },
+          {
+            "id": 4,
+            "text": "    todo = deque([start])"
+          },
+          {
+            "id": 13,
+            "text": "    return order"
+          },
+          {
+            "id": 1,
+            "text": "from collections import deque"
+          },
+          {
+            "id": 22,
+            "text": "                order.append(nb)"
+          },
+          {
+            "id": 7,
+            "text": "        cur = todo.popleft()"
+          },
+          {
+            "id": 11,
+            "text": "                reached.add(nb)"
+          },
+          {
+            "id": 5,
+            "text": "    order = []"
+          },
+          {
+            "id": 20,
+            "text": "        cur = todo.pop()"
+          },
+          {
+            "id": 2,
+            "text": "def bfs(graph, start):"
+          },
+          {
+            "id": 10,
+            "text": "            if nb not in reached:"
+          },
+          {
+            "id": 6,
+            "text": "    while len(todo) > 0:"
+          },
+          {
+            "id": 23,
+            "text": "    return reached"
+          },
+          {
+            "id": 12,
+            "text": "                todo.append(nb)"
+          },
+          {
+            "id": 3,
+            "text": "    reached = {start}"
+          },
+          {
+            "id": 8,
+            "text": "        order.append(cur)"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "The start is found and waiting before the loop. While the queue isn't empty, the vertex at the front leaves and joins the order, and each neighbour not reached yet is added to reached, then to the back of the queue.",
+        "order": [
+          1,
+          2,
+          [
+            3,
+            4,
+            5
+          ],
+          6,
+          7,
+          8,
+          9,
+          10,
+          [
+            11,
+            12
+          ],
+          13
+        ]
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Before the loop you need three things: the set of vertices reached (found) so far, the queue of vertices to do, and the order list."
+        },
+        {
+          "level": 2,
+          "body": "While the queue isn't empty, take the vertex at the front and add it to the order."
+        },
+        {
+          "level": 3,
+          "body": "For each neighbour nb of cur, in sorted order, that isn't in reached yet: add it to reached, then to the back of todo. Four lines don't belong: pop(), set(), order.append(nb) and return reached."
+        },
+        {
+          "level": 4,
+          "body": "Answer: from collections import deque; def bfs(graph, start):; reached = {start}; todo = deque([start]); order = []; while len(todo) > 0:; cur = todo.popleft(); order.append(cur); for nb in sorted(graph.adjacency[cur]):; if nb not in reached:; reached.add(nb); todo.append(nb); return order."
+        }
+      ]
+    },
+    {
+      "id": 1651,
+      "kind": "parsons",
+      "title": "Objective 6 · fresh item 1 of 2: put BFS in order",
+      "module_id": null,
+      "purpose": "mastery",
+      "objective_id": 6,
+      "config": {
+        "lines": [
+          {
+            "id": 4,
+            "text": "    pending = deque([start])"
+          },
+          {
+            "id": 12,
+            "text": "                pending.append(other)"
+          },
+          {
+            "id": 22,
+            "text": "        for other in sorted(graph.adjacency[start]):"
+          },
+          {
+            "id": 1,
+            "text": "from collections import deque"
+          },
+          {
+            "id": 8,
+            "text": "        order.append(node)"
+          },
+          {
+            "id": 3,
+            "text": "    known = {start}"
+          },
+          {
+            "id": 20,
+            "text": "            if other in known:"
+          },
+          {
+            "id": 13,
+            "text": "    return order"
+          },
+          {
+            "id": 6,
+            "text": "    while pending:"
+          },
+          {
+            "id": 10,
+            "text": "            if other not in known:"
+          },
+          {
+            "id": 23,
+            "text": "    pending = deque()"
+          },
+          {
+            "id": 2,
+            "text": "def bfs(graph, start):"
+          },
+          {
+            "id": 11,
+            "text": "                known.add(other)"
+          },
+          {
+            "id": 9,
+            "text": "        for other in sorted(graph.adjacency[node]):"
+          },
+          {
+            "id": 21,
+            "text": "                pending.appendleft(other)"
+          },
+          {
+            "id": 5,
+            "text": "    order = []"
+          },
+          {
+            "id": 7,
+            "text": "        node = pending.popleft()"
+          }
+        ]
+      },
+      "solution": {
+        "order": [
+          1,
+          2,
+          [
+            3,
+            4,
+            5
+          ],
+          6,
+          7,
+          8,
+          9,
+          10,
+          [
+            11,
+            12
+          ],
+          13
+        ]
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Before the loop you need three things: the set of vertices known (found) so far, the queue of vertices pending, and the order list."
+        },
+        {
+          "level": 2,
+          "body": "While a vertex is pending, take the one at the front of the queue and add it to the order."
+        },
+        {
+          "level": 3,
+          "body": "Loop over the sorted neighbours of node, the vertex that just left, not of start. A neighbour that isn't in known yet joins known, then the back of pending. Four lines don't belong: deque(), appendleft, the loop over start's neighbours and if other in known."
+        },
+        {
+          "level": 4,
+          "body": "Answer: from collections import deque; def bfs(graph, start):; known = {start}; pending = deque([start]); order = []; while pending:; node = pending.popleft(); order.append(node); for other in sorted(graph.adjacency[node]):; if other not in known:; known.add(other); pending.append(other); return order."
+        }
+      ]
+    },
+    {
+      "id": 1750,
+      "kind": "fix_the_bug",
+      "title": "Review practice: fix the faulty BFS",
+      "module_id": null,
+      "purpose": "review",
+      "objective_id": 7,
+      "config": {
+        "prompt": "This BFS gives the wrong order whenever a vertex finds two or more new neighbours at once. Replace the faulty line with a correction.",
+        "lines": [
+          {
+            "id": 1,
+            "text": "from collections import deque"
+          },
+          {
+            "id": 2,
+            "text": "def bfs(graph, start):"
+          },
+          {
+            "id": 3,
+            "text": "    visited = {start}"
+          },
+          {
+            "id": 4,
+            "text": "    queue = deque([start])"
+          },
+          {
+            "id": 5,
+            "text": "    order = []"
+          },
+          {
+            "id": 6,
+            "text": "    while queue:"
+          },
+          {
+            "id": 7,
+            "text": "        v = queue.popleft()"
+          },
+          {
+            "id": 8,
+            "text": "        order.append(v)"
+          },
+          {
+            "id": 9,
+            "text": "        for n in sorted(graph.adjacency[v]):"
+          },
+          {
+            "id": 10,
+            "text": "            if n not in visited:"
+          },
+          {
+            "id": 11,
+            "text": "                visited.add(n)"
+          },
+          {
+            "id": 12,
+            "text": "                queue.appendleft(n)"
+          },
+          {
+            "id": 13,
+            "text": "    return order"
+          }
+        ],
+        "corrections": [
+          {
+            "id": 21,
+            "text": "                queue.append(v)"
+          },
+          {
+            "id": 22,
+            "text": "                queue.insert(0, n)"
+          },
+          {
+            "id": 20,
+            "text": "                queue.append(n)"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "popleft() takes a vertex from the front of the queue, so new vertices must join at the back with append(n). Then the vertex that has waited longest always leaves next.",
+        "order": [
+          1,
+          2,
+          [
+            3,
+            4,
+            5
+          ],
+          6,
+          7,
+          8,
+          9,
+          10,
+          [
+            11,
+            20
+          ],
+          13
+        ],
+        "feedback": {
+          "12": "Not quite. appendleft puts a new vertex at the front of the queue, where popleft takes it straight back out, so the newest vertex leaves next and BFS goes deep instead of wide. New vertices wait their turn at the back."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Run it on a star: A joined to B, C and D, starting at A. Which vertex leaves the queue after A?"
+        },
+        {
+          "level": 2,
+          "body": "Look at the line that adds a new vertex to the queue."
+        },
+        {
+          "level": 3,
+          "body": "The vertex leaves from the front with popleft, and appendleft also puts the new vertex at the front."
+        },
+        {
+          "level": 4,
+          "body": "Answer: change queue.appendleft(n) to queue.append(n)."
+        }
+      ]
+    },
+    {
+      "id": 1751,
+      "kind": "choose_tests",
+      "title": "Review practice: choose the tests that catch the bug",
+      "module_id": null,
+      "purpose": "review",
+      "objective_id": 7,
+      "config": {
+        "prompt": "This BFS has a bug: it puts each new vertex at the front of the queue. Choose every test case it fails: each one is a graph, a start vertex and the order a correct BFS visits it in.",
+        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                visited.add(n)\n                queue.appendleft(n)\n    return order",
+        "tests": [
+          {
+            "id": "chain",
+            "directed": false,
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "B",
+                "target": "C"
+              },
+              {
+                "source": "C",
+                "target": "D"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          {
+            "id": "star",
+            "directed": false,
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "A",
+                "target": "C"
+              },
+              {
+                "source": "A",
+                "target": "D"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          {
+            "id": "split",
+            "directed": false,
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "C",
+                "target": "D"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B"
+            ]
+          },
+          {
+            "id": "ring",
+            "directed": true,
+            "vertices": [
+              "A",
+              "B",
+              "C"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "B",
+                "target": "C"
+              },
+              {
+                "source": "C",
+                "target": "A"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "id": "square",
+            "directed": false,
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "B",
+                "target": "C"
+              },
+              {
+                "source": "C",
+                "target": "D"
+              },
+              {
+                "source": "D",
+                "target": "A"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B",
+              "D",
+              "C"
+            ]
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "The bug only shows when one vertex finds two or more new neighbours at once: the last one found then leaves first. That happens at A in Tests 2 and 5, and nowhere in the others.",
+        "exposing": [
+          "star",
+          "square"
+        ],
+        "feedback": {
+          "chain": "Each vertex in a chain finds at most one new neighbour, so front and back are the same place: the faulty version passes it.",
+          "star": "A finds B, C and D at once. The faulty version puts each at the front, so D leaves first and the order is A, D, C, B: it fails this test.",
+          "split": "A finds only B, and C and D are never reached, so the faulty version passes it.",
+          "ring": "Each vertex finds at most one new vertex, so the faulty version passes it.",
+          "square": "A finds B and D at once. The faulty version puts D in front of B, so D leaves first: it fails this test."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "The faulty version takes vertices from the front of the queue, and puts new ones at the front too."
+        },
+        {
+          "level": 2,
+          "body": "That only changes anything when two or more vertices are waiting at the same time."
+        },
+        {
+          "level": 3,
+          "body": "Look for a test where one vertex finds two or more new neighbours when it leaves the queue."
+        },
+        {
+          "level": 4,
+          "body": "Answer: Tests 2 and 5. The faulty version passes the other three."
+        }
+      ]
+    },
+    {
+      "id": 1652,
+      "kind": "fill_in",
+      "title": "Review practice: fill in the missing parts of BFS",
+      "module_id": null,
+      "purpose": "review",
+      "objective_id": 6,
+      "config": {
+        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    # Return the vertices in the order BFS visits them from start,\n    # taking neighbours in alphabetical order.\n    reached = __1__\n    todo = deque([start])\n    order = []\n    while len(todo) > 0:\n        cur = __2__\n        order.append(__3__)\n        for nb in sorted(graph.adjacency[cur]):\n            if nb not in __4__:\n                reached.add(nb)\n                todo.append(nb)\n    return order",
+        "blanks": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "options": [
+          "{start}",
+          "set()",
+          "[start]",
+          "todo.popleft()",
+          "todo.pop()",
+          "cur",
+          "nb",
+          "reached",
+          "todo"
+        ]
+      },
+      "solution": {
+        "explanation": "The start is reached before the loop. The vertex that has waited longest leaves from the front and joins the order, and a neighbour joins the queue only if it hasn't been reached yet.",
+        "answers": {
+          "1": "{start}",
+          "2": "todo.popleft()",
+          "3": "cur",
+          "4": "reached"
+        },
+        "feedback": {
+          "1": {
+            "set()": "Not quite. The start vertex is in the queue but not in reached, so a neighbour can add it to the queue again and it is visited twice. Start with the start vertex already in reached.",
+            "[start]": "Not quite. [start] is a list, and a list has no add, so reached.add(nb) stops with an error. A set holding the start vertex is written {start}."
+          },
+          "2": {
+            "todo.pop()": "Not quite. pop() takes the newest vertex, from the back of the queue, so BFS goes deep instead of wide. Take the vertex that has waited longest, from the front, with popleft()."
+          },
+          "3": {
+            "nb": "Not quite. No neighbour has been looked at yet on this line, so nb doesn't exist and the line stops with an error. The vertex that just left the queue joins the order."
+          },
+          "4": {
+            "todo": "Not quite. todo holds only the vertices still waiting. A vertex that has already left would join the queue again, so BFS never stops. Check against every vertex reached so far."
+          }
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Before the loop, the start vertex is already reached, and it waits in the queue."
+        },
+        {
+          "level": 2,
+          "body": "BFS takes the vertex that has waited longest, from the front of the queue, and that vertex joins the order."
+        },
+        {
+          "level": 3,
+          "body": "A neighbour joins the queue only if it isn't among the vertices reached so far, including the ones still waiting."
+        },
+        {
+          "level": 4,
+          "body": "Answer: blank 1 is {start}, blank 2 is todo.popleft(), blank 3 is cur, and blank 4 is reached."
+        }
+      ]
+    },
+    {
+      "id": 1150,
+      "kind": "matching",
+      "title": "Review practice: match each term to part of a library",
+      "module_id": null,
+      "purpose": "review",
+      "objective_id": 1,
+      "config": {
+        "prompt": "A school library has shelves, corridors between them, a desk and a returns trolley. Match each term to the part of the library that is an example of it. One example matches no term.",
+        "left": [
+          {
+            "id": "t1",
+            "label": "Data structure"
+          },
+          {
+            "id": "t2",
+            "label": "Algorithm"
+          },
+          {
+            "id": "t3",
+            "label": "Graph"
+          },
+          {
+            "id": "t4",
+            "label": "Graph traversal"
+          }
+        ],
+        "right": [
+          {
+            "id": "x3",
+            "label": "Walking from the desk along the corridors until every shelf you can reach has been checked"
+          },
+          {
+            "id": "x1",
+            "label": "The shelves as dots, with a line for each corridor that joins two of them"
+          },
+          {
+            "id": "x5",
+            "label": "The colour of the paint on the front door of the library"
+          },
+          {
+            "id": "x2",
+            "label": "The trolley of returned books, where the oldest book goes back first"
+          },
+          {
+            "id": "x4",
+            "label": "The steps for lending a book: scan the card, scan the book, stamp the date"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "The trolley stores books, so it is a data structure. The lending steps are an algorithm. Shelves joined by corridors are a graph, and walking the corridors to reach every shelf is a graph traversal.",
+        "pairs": {
+          "t1": "x2",
+          "t2": "x4",
+          "t3": "x1",
+          "t4": "x3"
+        },
+        "feedback": {
+          "t1": "Check “data structure”. A data structure stores things in an organised way, like a queue. Find the example that holds things and decides which comes out first.",
+          "t2": "Check “algorithm”. An algorithm is a list of steps. A traversal is one too, but it belongs with graph traversal here. Find the steps that use no corridors at all.",
+          "t3": "Check “graph”. A graph is things joined by connections, drawn as dots and lines. Find the example made of dots and lines.",
+          "t4": "Check “graph traversal”. A traversal moves through a graph along its edges. Find the example that follows the corridors."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Ask of each example: does it store things, list steps, show things and connections, or move along connections?"
+        },
+        {
+          "level": 2,
+          "body": "The paint colour is none of the four. Each other example matches one term."
+        },
+        {
+          "level": 3,
+          "body": "The trolley stores books, so it is the data structure. Walking along the corridors is the traversal."
+        },
+        {
+          "level": 4,
+          "body": "Answer: data structure → the trolley of returned books; algorithm → the steps for lending a book; graph → the shelves as dots and lines; graph traversal → walking the corridors to every shelf."
+        }
+      ]
+    },
+    {
+      "id": 1250,
+      "kind": "matching",
+      "title": "Review practice: label the train graph",
+      "module_id": null,
+      "purpose": "review",
+      "objective_id": 2,
+      "config": {
+        "prompt": "Train stations, joined by tracks. The stations are the airport (P), the city (Q), the harbour (R) and the stadium (S). Tracks join P–Q, Q–R and Q–S, and trains run both ways. Each marker below describes one part of this graph. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
+        "left": [
+          {
+            "id": "1",
+            "label": "Marker 1: the track between the harbour and the city"
+          },
+          {
+            "id": "2",
+            "label": "Marker 2: the stadium"
+          },
+          {
+            "id": "3",
+            "label": "Marker 3: what joins the airport and the city"
+          }
+        ],
+        "right": [
+          {
+            "id": "vP",
+            "label": "Vertex P"
+          },
+          {
+            "id": "vQ",
+            "label": "Vertex Q"
+          },
+          {
+            "id": "vR",
+            "label": "Vertex R"
+          },
+          {
+            "id": "vS",
+            "label": "Vertex S"
+          },
+          {
+            "id": "ePQ",
+            "label": "Edge P–Q"
+          },
+          {
+            "id": "eQR",
+            "label": "Edge Q–R"
+          },
+          {
+            "id": "eQS",
+            "label": "Edge Q–S"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "Stations are vertices and tracks are edges, each named by the stations at its two ends. The harbour is R and the city is Q, so their track is Q–R; the stadium is S; the airport is P, so its track to the city is P–Q.",
+        "pairs": {
+          "1": "eQR",
+          "2": "vS",
+          "3": "ePQ"
+        },
+        "feedback": {
+          "1": "Check marker 1. It describes a track between two stations, so it is an edge, named by the letters of its two ends. Look up both names in the prompt.",
+          "2": "Check marker 2. It describes one station, so it is a vertex. Look up its letter in the prompt.",
+          "3": "Check marker 3. Something that joins two stations is a track, so it is an edge, named by the letters of its two ends. Look up both names in the prompt."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Stations are vertices. Tracks are edges."
+        },
+        {
+          "level": 2,
+          "body": "Name an edge by the two vertices at its ends."
+        },
+        {
+          "level": 3,
+          "body": "Look up each name's letter in the prompt: the harbour is R and the city is Q. Then use the track list."
+        },
+        {
+          "level": 4,
+          "body": "Answer: 1 = Edge Q–R, 2 = Vertex S, 3 = Edge P–Q."
         }
       ]
     }

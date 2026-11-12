@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from support import wrong_answer
 
 from app.models import (
     Activity,
@@ -775,18 +776,10 @@ def test_hint_3_on_a_fresh_item_makes_it_met_with_support(
 
 
 def wrong_submission(activity: Activity) -> dict[str, Any]:
-    """An answer to any committed item that gets every part wrong. Never blank: the server
-    refuses a blank answer without recording it (#143)."""
-    wrong: dict[str, dict[str, Any]] = {
-        "multiple_choice": {"selected": "not-an-option"},
-        "matching": {"pairs": {"no-such-item": "no-such-match"}},
-        "parsons": {"order": [-1]},
-        "fix_the_bug": {"order": [-1]},
-        "fill_in": {"answers": {-1: "no-such-token"}},
-        "choose_tests": {"selected": ["no-such-test"]},
-        "trace": {"rows": [{"visitedVertex": "Z", "queue": [], "visited": [], "order": []}]},
-    }
-    return wrong[activity.kind]
+    """An answer to any committed item that gets it wrong, made only of what the item offers
+    (tests/support.py). Never blank: the server refuses a blank answer without recording it
+    (#143), and one naming what the item doesn't offer too (#139)."""
+    return wrong_answer(activity)
 
 
 def test_every_committed_objective_has_a_review_path_that_teaches_then_tests() -> None:

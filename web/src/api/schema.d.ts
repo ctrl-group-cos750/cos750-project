@@ -90,7 +90,9 @@ export interface paths {
      * Get Activity
      * @description The activity to render. `ActivityOut` has no `solution`, so the answer never reaches the
      *     browser (FR-5.3, NFR-S2). `solved` says whether this student has already answered it
-     *     correctly, so the page stops offering hints after a refresh too (#158).
+     *     correctly, so the page stops offering hints after a refresh too (#158). 403 while the
+     *     activity's module is locked or its review path is closed, 404 if it doesn't exist or is no
+     *     longer part of the course.
      */
     get: operations['get_activity_api_activities__activity_id__get']
     put?: never
@@ -119,9 +121,16 @@ export interface paths {
      *     choice, `{"order": [...]}` for Parsons, `{"answers": {...}}` for fill-in, and
      *     `{"rows": [{"visitedVertex", "queue", "visited", "order"}, ...]}` for a trace table, one row
      *     per BFS step (graded against the engine, so a trace has no stored solution). A submission in the
-     *     wrong shape, or one that answers nothing (no option, line, token, pair, test or row), is 422
-     *     and isn't recorded. No student code is executed: `check_activity` compares the submission with
+     *     wrong shape is 422. No student code is executed: `check_activity` compares the submission with
      *     the solution, which stays in this process (NFR-S7).
+     *
+     *     Each kind's shape bounds its lengths, and the request body is at most `MAX_SUBMISSION_BYTES`
+     *     bytes (413 past it). A matching pair or fill-in blank sent as "" (a reset select) counts as
+     *     unanswered. A submission that answers nothing (no option, line, token, pair, test or row), or
+     *     one naming an option, line, blank, token, test case or vertex the activity doesn't have, is
+     *     422 and not recorded. 403 and 404 as for GET. 429 with `Retry-After` past 60 answers a minute
+     *     from one student. Two answers sent at once are recorded one after the other
+     *     (app/services/locks.py).
      */
     post: operations['submit_attempt_api_activities__activity_id__attempts_post']
     delete?: never
@@ -141,7 +150,7 @@ export interface paths {
      * Get Revealed Hints
      * @description Every hint level this student has already unlocked on this activity (FR-4.4, FR-4.5).
      *
-     *     Returns an empty list if they have not asked for any hints yet.
+     *     Returns an empty list if they have not asked for any hints yet. 403 and 404 as for GET.
      */
     get: operations['get_revealed_hints_api_activities__activity_id__hints_get']
     put?: never
@@ -153,6 +162,9 @@ export interface paths {
      *     or once the student has answered correctly, it is 409. When `nextCountsAsSupport` is true,
      *     warn the student before calling again: a correct answer after hint 3 or 4 counts as "met
      *     with support" (ID document §7.4).
+     *
+     *     403 and 404 as for GET. 429 with `Retry-After` past 30 reveals a minute from one student. Two
+     *     requests sent at once reveal two levels in turn, never the same level twice.
      */
     post: operations['reveal_hint_api_activities__activity_id__hints_post']
     delete?: never
@@ -326,7 +338,7 @@ export interface paths {
      * Get Review Path
      * @description The objective's review path: its steps in order, and which the student has answered
      *     (FR-7.5). 404 if the objective has no path; 403 until module 6 marks it "not yet", so the
-     *     fresh items stay unseen until the student needs them.
+     *     fresh items stay unseen until the student needs them. Staff may always open it, to preview.
      */
     get: operations['get_review_path_api_me_review__objective_id__get']
     put?: never
@@ -495,6 +507,9 @@ export interface paths {
      * @description Everything the player needs in one call (FR-3): media and captions paths, the transcript,
      *     and each checkpoint with its activity (without the answer) and whether this student has
      *     passed it. Answer a checkpoint with `POST /api/activities/{activityId}/attempts`.
+     *
+     *     403 while the segment that plays the video is in a locked module or a closed review path
+     *     (#137); a video on no segment yet is open. Its checkpoint questions follow the video.
      */
     get: operations['get_video_api_videos__video_id__get']
     put?: never
@@ -1148,6 +1163,7 @@ export interface components {
     /**
      * AttemptIn
      * @description A submission: only the student's choices (line ids, chosen tokens), never free-form code.
+     *     `submitted` is checked against the activity kind's shape above when it is graded.
      */
     AttemptIn: {
       /** Submitted */

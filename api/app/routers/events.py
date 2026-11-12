@@ -5,6 +5,7 @@ from app.auth import CurrentUser
 from app.db import DbSession
 from app.rate_limit import RateLimiter
 from app.schemas.base import ApiModel
+from app.schemas.ids import DB_INT_MAX
 from app.services.events import ClientEvent, log_client_event
 from app.services.modules import segment_locked
 
@@ -21,7 +22,7 @@ class EventIn(ApiModel):
     (the graph, with `correct`: whether the predicted vertex was the one BFS takes next)."""
 
     type: ClientEvent
-    target_id: int = Field(gt=0)
+    target_id: int = Field(gt=0, le=DB_INT_MAX)
     correct: bool | None = None
 
 

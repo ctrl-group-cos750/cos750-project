@@ -22,6 +22,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from app.auth import CurrentUser
 from app.db import DbSession
+from app.schemas.ids import RowId
 from app.schemas.modules import CourseLengthOut, ModuleDetailOut, ModuleOut, PositionIn
 from app.services.modules import (
     ModuleLocked,
@@ -62,7 +63,7 @@ def course_length(session: DbSession) -> CourseLengthOut:
 
 
 @router.get("/{module_id}")
-def get_module(module_id: int, user: CurrentUser, session: DbSession) -> ModuleDetailOut:
+def get_module(module_id: RowId, user: CurrentUser, session: DbSession) -> ModuleDetailOut:
     """One module with its full ordered segment list and the student's status.
 
     Returns 404 if the module does not exist; 403 if it is locked for this
@@ -79,7 +80,7 @@ def get_module(module_id: int, user: CurrentUser, session: DbSession) -> ModuleD
 
 @router.post("/{module_id}/position")
 def save_module_position(
-    module_id: int, body: PositionIn, user: CurrentUser, session: DbSession
+    module_id: RowId, body: PositionIn, user: CurrentUser, session: DbSession
 ) -> ModuleDetailOut:
     """Record the student's current segment position and return the updated module.
 

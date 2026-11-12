@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { refusalMessage } from '../../api/client.ts'
 import type { AttemptInput, AttemptResult, Hint, MultipleChoiceActivity } from './video.types.ts'
 
 type CheckpointQuestionProps = {
@@ -42,8 +43,8 @@ export function CheckpointQuestion(props: CheckpointQuestionProps) {
         answer: { selectedOptionId },
       })
       setResult(nextResult)
-    } catch {
-      setError('We could not check your answer. Please try again.')
+    } catch (failure) {
+      setError(refusalMessage(failure, 'We could not check your answer. Please try again.'))
     } finally {
       setSubmitting(false)
     }
@@ -60,8 +61,8 @@ export function CheckpointQuestion(props: CheckpointQuestionProps) {
     try {
       const hint = await props.onHint({ activityId: props.activity.id })
       setHints((currentHints) => [...currentHints, hint])
-    } catch {
-      setError('We could not load a hint. Please try again.')
+    } catch (failure) {
+      setError(refusalMessage(failure, 'We could not load a hint. Please try again.'))
     }
   }
 

@@ -1,4 +1,4 @@
-"""Per-client rate limits for login and registration (NFR-S6).
+"""Per-client rate limits for login, registration and answer submission (NFR-S6).
 
 Counts live in memory, which is right for the single API process we run. With several processes
 or replicas each would count separately, and this would need a shared store.
@@ -56,11 +56,16 @@ class RateLimiter:
     """Allows `limit` requests per key in any `window` seconds (a sliding window)."""
 
     def __init__(
-        self, limit: int, window: float, clock: Callable[[], float] = time.monotonic
+        self,
+        limit: int,
+        window: float,
+        clock: Callable[[], float] = time.monotonic,
+        message: str = "Too many attempts. Wait a minute and try again.",
     ) -> None:
         self.limit = limit
         self.window = window
         self.clock = clock
+        self.message = message
         self._hits: defaultdict[str, deque[float]] = defaultdict(deque)
 
     def hit(self, key: str) -> float | None:
@@ -80,7 +85,7 @@ class RateLimiter:
         if wait is not None:
             raise HTTPException(
                 status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Too many attempts. Wait a minute and try again.",
+                detail=self.message,
                 headers={"Retry-After": str(math.ceil(wait))},
             )
 

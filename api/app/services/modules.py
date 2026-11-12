@@ -28,7 +28,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from datetime import UTC, datetime
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import Activity, Attempt, Checkpoint, Hint, Module, ModuleProgress, Segment, Video
@@ -142,54 +142,9 @@ def _locked(session: Session, user_id: int, module_ids: set[int]) -> bool:
     return all(statuses.get(module_id, "locked") == "locked" for module_id in module_ids)
 
 
-def activity_locked(session: Session, user_id: int, activity: Activity) -> bool:
-    """Whether this student may not open the activity yet, because every module it belongs to
-    is still locked (FR-2.1). It belongs to its own module, to every module whose segment shows it
-    (or uses it as a skip check), and, for a video's checkpoint question, to the module whose
-    segment plays that video. So module 6's mastery items stay unseen until module 6 opens
-    (FR-7.1). An activity that belongs to no module (a review path's, which has its own rule, or a
-    checkpoint of a video that isn't in a module yet) is never locked here."""
-    homes: set[int] = set()
-    if activity.module_id is not None:
-        homes.add(activity.module_id)
-    homes.update(
-        m
-        for m in session.scalars(
-            select(Segment.module_id).where(
-                or_(
-                    Segment.activity_id == activity.id,
-                    Segment.skip_check_activity_id == activity.id,
-                ),
-                Segment.module_id.is_not(None),
-            )
-        )
-        if m is not None
-    )
-    homes.update(
-        m
-        for m in session.scalars(
-            select(Segment.module_id)
-            .join(Video, Video.segment_id == Segment.id)
-            .join(Checkpoint, Checkpoint.video_id == Video.id)
-            .where(Checkpoint.activity_id == activity.id, Segment.module_id.is_not(None))
-        )
-        if m is not None
-    )
-    return _locked(session, user_id, homes)
-
-
 def segment_locked(session: Session, user_id: int, segment_id: int) -> bool:
     """Whether this segment is in a module still locked for this student."""
     module_id = session.scalar(select(Segment.module_id).where(Segment.id == segment_id))
-    return module_id is not None and _locked(session, user_id, {module_id})
-
-
-def video_locked(session: Session, user_id: int, video: Video) -> bool:
-    """Whether the module whose segment plays this video is still locked for this student. A
-    video in no module yet (staff have just made it) is never locked."""
-    if video.segment_id is None:
-        return False
-    module_id = session.scalar(select(Segment.module_id).where(Segment.id == video.segment_id))
     return module_id is not None and _locked(session, user_id, {module_id})
 
 
@@ -478,8 +433,12 @@ def save_position(
     Raises `RetrievalIncomplete` until the student has answered the module's retrieval questions
     (FR-2.4), unless the module is already complete: a student who finished it before its
     questions were added can still go back over it.
+
+    Takes the student's write lock first (app/services/locks.py): the `FOR UPDATE` on the
+    progress row below locks nothing before the first save has made that row, so two first saves
+    at once (a double-clicked "Next") both inserted one and the second failed with a 500 (#138).
     """
-    lock_student(session, user_id)  # a double-clicked Next must not insert progress twice (#138)
+    lock_student(session, user_id)
     status = _status(session, user_id, module_id)
     if status == "locked":
         raise ModuleLocked(module_id)

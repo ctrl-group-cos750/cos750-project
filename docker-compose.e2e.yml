@@ -10,7 +10,9 @@ services:
 
   tls:
     image: caddy:2-alpine
-    command: caddy reverse-proxy --from https://localhost:8443 --to http://web:80 --internal-certs
+    # e2e/Caddyfile: HTTPS with a local certificate, and the tests' X-Forwarded-For kept.
+    volumes:
+      - ./e2e/Caddyfile:/etc/caddy/Caddyfile:ro
     ports:
       - "8443:8443"
     depends_on:

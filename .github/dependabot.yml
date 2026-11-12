@@ -11,6 +11,16 @@ updates:
       web-minor:
         update-types: [minor, patch]
 
+  # The end-to-end tests. CI installs the browsers that match the locked @playwright/test
+  # (`npx playwright install`), so a bump can't leave them on an older browser build.
+  - package-ecosystem: npm
+    directory: /e2e
+    target-branch: staging
+    schedule: { interval: monthly }
+    groups:
+      e2e-minor:
+        update-types: [minor, patch]
+
   - package-ecosystem: pip
     directory: /api
     target-branch: staging

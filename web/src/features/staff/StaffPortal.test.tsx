@@ -147,6 +147,10 @@ describe('staff members page', () => {
     await userEvent.click(within(matches).getByRole('button', { name: 'Make Ada staff' }))
 
     expect(await screen.findByText('Ada is a team member')).toBeInTheDocument()
+    // The results went: focus is on the message, not the page (A9).
+    await waitFor(() =>
+      expect(screen.getByText('Ada is a team member').closest('[role="alert"]')).toHaveFocus(),
+    )
     expect(api.callsTo('POST /api/staff/members')[0]?.body).toEqual({ email: 'ada@example.com' })
     expect(await screen.findByText('ada@example.com')).toBeInTheDocument() // now in the team
     expect(search).toHaveValue('')
@@ -165,14 +169,21 @@ describe('staff members page', () => {
     const row = (await screen.findByText('ada@example.com')).closest('li')!
 
     await userEvent.click(within(row).getByRole('button', { name: 'Remove access' }))
+    // Focus moves into the question, and back to the row's button on Cancel (A9).
+    expect(within(row).getByRole('button', { name: 'Remove access' })).toHaveFocus()
     await userEvent.click(within(row).getByRole('button', { name: 'Cancel' }))
+    expect(within(row).getByRole('button', { name: 'Remove access' })).toHaveFocus()
     expect(api.callsTo('DELETE /api/staff/members/1')).toHaveLength(0)
 
     await userEvent.click(within(row).getByRole('button', { name: 'Remove access' }))
     expect(within(row).getByText("Remove Ada's staff access?")).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    expect(within(row).queryByText("Remove Ada's staff access?")).not.toBeInTheDocument()
+    await userEvent.click(within(row).getByRole('button', { name: 'Remove access' }))
     await userEvent.click(within(row).getByRole('button', { name: 'Remove access' }))
 
     await waitFor(() => expect(screen.queryByText('ada@example.com')).not.toBeInTheDocument())
+    expect(screen.getByRole('heading', { name: 'Current team members' })).toHaveFocus()
     expect(api.callsTo('DELETE /api/staff/members/1')).toHaveLength(1)
   })
 })

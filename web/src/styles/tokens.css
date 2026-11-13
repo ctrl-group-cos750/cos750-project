@@ -83,6 +83,9 @@
   --badge-bronze-soft: #f5d3ce;
   --badge-gold: #8a6b00;
   --badge-gold-soft: #fff0b5;
+  /* Silver is only a module medal (#214): a cool grey, 5.9:1 on white, 4.6:1 on its fill. */
+  --badge-silver: #5b6570;
+  --badge-silver-soft: #e3e7eb;
 
   /* Type */
   --font-display: 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif;
@@ -133,4 +136,6 @@
   --badge-bronze-soft: #5a2622;
   --badge-gold: #f6c155;
   --badge-gold-soft: #4a3a14;
+  --badge-silver: #c9d1da;
+  --badge-silver-soft: #343b43;
 }

@@ -360,6 +360,32 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/me/skills': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get Skills
+     * @description The logged-in student's skill profile and module medals (FR-9.7, FR-9.8; #214).
+     *
+     *     For each learning objective: how many of its practice items they have answered correctly, of
+     *     how many, and its mastery result once the mastery check (or a review path) has decided it.
+     *     For each module with activities to mark: its medal once complete, and the medal the answers so
+     *     far are heading for. Worked out from attempts on each request (app/services/skills.py), so it
+     *     follows the current content and rules. Only ever the student's own.
+     */
+    get: operations['get_skills_api_me_skills_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/me/avatar': {
     parameters: {
       query?: never
@@ -1278,6 +1304,11 @@ export interface components {
       withheld: boolean
       /** Hintlevel */
       hintLevel: number
+      /**
+       * Points
+       * @default 0
+       */
+      points: number
     }
     /**
      * AvatarIn
@@ -1972,6 +2003,33 @@ export interface components {
       retrieval: components['schemas']['RetrievalActivityOut'][]
     }
     /**
+     * ModuleMedalOut
+     * @description A module's medal (FR-9.8): `medal` once the module is complete (gold, every activity right
+     *     first time without hint 3 or 4; silver, every activity right without them; bronze, finished),
+     *     and `headingFor`, what the answers so far are on course for. Never counts time or speed.
+     *     `objectives` are the learning objectives its activities practise.
+     */
+    ModuleMedalOut: {
+      /** Moduleid */
+      moduleId: number
+      /** Complete */
+      complete: boolean
+      /** Firsttime */
+      firstTime: number
+      /** Onyourown */
+      onYourOwn: number
+      /** Answered */
+      answered: number
+      /** Total */
+      total: number
+      /** Medal */
+      medal: ('gold' | 'silver' | 'bronze') | null
+      /** Headingfor */
+      headingFor: ('gold' | 'silver' | 'bronze') | null
+      /** Objectives */
+      objectives: number[]
+    }
+    /**
      * ModuleOut
      * @description A module as it appears on the module map.
      *
@@ -2261,6 +2319,44 @@ export interface components {
        * @default false
        */
       optional: boolean
+    }
+    /**
+     * SkillOut
+     * @description One objective on the skill profile (FR-9.7). `level` is practice progress in three coarse
+     *     steps (not started, practising, secure: every practice item answered and at least 80% right
+     *     without hint 3 or 4); the counts are the evidence behind it, of `total` practice items.
+     *     `result` is the mastery result once the mastery check (or a review path) has decided it.
+     */
+    SkillOut: {
+      /** Id */
+      id: number
+      /** Text */
+      text: string
+      /** Answered */
+      answered: number
+      /** Correct */
+      correct: number
+      /** Onyourown */
+      onYourOwn: number
+      /** Total */
+      total: number
+      /**
+       * Level
+       * @enum {string}
+       */
+      level: 'not_started' | 'practising' | 'secure'
+      /** Result */
+      result: ('not_attempted' | 'met_independently' | 'met_with_support' | 'not_yet') | null
+    }
+    /**
+     * SkillsOut
+     * @description The logged-in student's skill profile and module medals. Only ever their own.
+     */
+    SkillsOut: {
+      /** Objectives */
+      objectives: components['schemas']['SkillOut'][]
+      /** Modules */
+      modules: components['schemas']['ModuleMedalOut'][]
     }
     /**
      * StaffCheckpointIn
@@ -2969,6 +3065,37 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['ReviewPathOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  get_skills_api_me_skills_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SkillsOut']
         }
       }
       /** @description Validation Error */

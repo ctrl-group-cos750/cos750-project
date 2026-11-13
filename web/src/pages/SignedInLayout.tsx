@@ -14,11 +14,9 @@ export function SignedInLayout() {
   const logout = useLogout()
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  // One-thing pages sit in a centred column; the map, the visualiser and the staff portal use
-  // the full width.
-  const width = /^\/(report|review|badges|profile|activities|videos)(\/|$)/.test(pathname)
-    ? 'page'
-    : 'wide'
+  // One-thing pages sit in a centred column; the map, the visualiser, the staff portal and an
+  // activity (which has the progress panel beside it, #214) use the full width.
+  const width = /^\/(report|review|badges|profile|videos)(\/|$)/.test(pathname) ? 'page' : 'wide'
 
   return (
     <AppShell

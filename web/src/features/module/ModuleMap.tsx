@@ -6,6 +6,12 @@ import type { TagTone } from '../../components'
 import type { ModuleSummary } from './module.types.ts'
 import { fetchModules } from './module.api.ts'
 import { minutesProgress } from './minutes.ts'
+import { useSkills } from '../progress/hooks.ts'
+import { Medal } from '../progress/Medal.tsx'
+import { medalText } from '../progress/medals.ts'
+import type { Medal as MedalTier } from '../progress/skills.api.ts'
+import { SkillProfileCard } from '../progress/SkillProfileCard.tsx'
+import { useRewards } from '../rewards/hooks.ts'
 import styles from './ModuleMap.module.css'
 
 /** A module with nothing to work through yet (no segments, so it can't be completed). It doesn't
@@ -103,7 +109,7 @@ function NextUp({ modules, next }: { modules: ModuleSummary[]; next: ModuleSumma
 }
 
 /** A single module row on the map. Locked modules are shown but not interactive. */
-function ModuleRow({ module }: { module: ModuleSummary }) {
+function ModuleRow({ module, medal }: { module: ModuleSummary; medal?: MedalTier | null }) {
   const { tone, label, icon } = statusDisplay(module)
   const isLocked = module.status === 'locked'
 
@@ -124,6 +130,9 @@ function ModuleRow({ module }: { module: ModuleSummary }) {
       </div>
       <span className={styles.meta}>
         <span className={styles.duration}>{formatDuration(module.estimatedMinutes)}</span>
+        {medal && module.status === 'complete' && (
+          <Medal tier={medal} label={`Module ${module.number}: ${medalText(medal)}`} />
+        )}
         <Tag tone={tone} icon={icon}>
           {label}
         </Tag>
@@ -159,6 +168,8 @@ function findContinueTarget(modules: ModuleSummary[]): ModuleSummary | undefined
  */
 export function ModuleMap() {
   const query = useQuery({ queryKey: ['modules'], queryFn: fetchModules })
+  const skills = useSkills()
+  const rewards = useRewards()
 
   if (query.isPending) return <Spinner label="Loading modules" />
   if (query.isError) return <Alert tone="danger">{query.error.message}</Alert>
@@ -166,6 +177,12 @@ export function ModuleMap() {
   const modules = query.data
   const continueTarget = findContinueTarget(modules)
   const minutes = minutesProgress(modules)
+  // A finished module's medal (#214), unless points and badges are hidden (FR-9.5).
+  const medals = new Map(
+    rewards.data?.hideRewards === false
+      ? (skills.data?.modules ?? []).map((m) => [m.moduleId, m.medal] as const)
+      : [],
+  )
 
   return (
     <div className={styles.page}>
@@ -191,6 +208,7 @@ export function ModuleMap() {
 
       <div className={styles.side}>
         <NextUp modules={modules} next={continueTarget} />
+        <SkillProfileCard />
       </div>
 
       <section aria-labelledby="all-modules" className={styles.all}>
@@ -199,7 +217,7 @@ export function ModuleMap() {
         </h2>
         <ul className={styles.list}>
           {modules.map((m) => (
-            <ModuleRow key={m.id} module={m} />
+            <ModuleRow key={m.id} module={m} medal={medals.get(m.id)} />
           ))}
         </ul>
       </section>

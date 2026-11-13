@@ -6,6 +6,7 @@ import { ApiError } from '../../api/client.ts'
 import { retryUnlessRefused } from '../../api/retry.ts'
 import { Alert, Spinner } from '../../components'
 import { BackLink } from '../../components/BackLink.tsx'
+import { ProgressPanel } from '../progress/ProgressPanel.tsx'
 import { useRefreshRewards } from '../rewards/hooks.ts'
 import {
   fetchActivity,
@@ -153,12 +154,19 @@ export function ActivityPage() {
   // Opened from a review path's step: the way back to the path (#146); from anywhere else (a
   // bookmark, a link in a module's text), back to the modules. At the top, where a back link is
   // looked for, in the same centred column as a module.
+  // The progress panel (#214) beside it on wide screens, under it on narrow ones.
   return (
-    <div className="mx-auto grid w-full max-w-3xl justify-items-start gap-4">
-      <BackLink fallback={{ backTo: '/', backLabel: 'Your modules' }} />
-      <div className="w-full">
-        <ActivityView key={activityId} activityId={activityId} />
+    <div className="grid w-full items-start gap-6 lg:grid-cols-[minmax(0,1fr)_19rem] lg:gap-8">
+      <div className="mx-auto grid w-full max-w-3xl justify-items-start gap-4">
+        <BackLink fallback={{ backTo: '/', backLabel: 'Your modules' }} />
+        <div className="w-full">
+          <ActivityView key={activityId} activityId={activityId} />
+        </div>
+        <div className="w-full">
+          <ProgressPanel placement="below" />
+        </div>
       </div>
+      <ProgressPanel placement="beside" />
     </div>
   )
 }

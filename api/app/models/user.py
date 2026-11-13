@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, false, func
+from sqlalchemy import DateTime, LargeBinary, String, false, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -35,5 +35,18 @@ class User(Base):
     hide_rewards: Mapped[bool] = mapped_column(default=False, server_default=false())
     # The profile picture the student chose from the team's set (FR-1.6): an id from
     # app/schemas/profile.py, drawn by web/src/components/Avatar.tsx. None shows their initial.
-    # Never an uploaded photo, so it holds nothing personal.
     avatar: Mapped[str | None] = mapped_column(String(20))
+    # A picture the student uploaded instead (FR-1.6): a square image of at most 256 px, made in
+    # their browser (which drops the photo's metadata) and checked to be a PNG, JPEG or WebP here.
+    # Personal information under POPIA, so only they can fetch it (GET /api/me/picture), removing it
+    # deletes it, and it goes with the account. Deferred: loaded only when the image is asked for.
+    picture: Mapped[bytes | None] = mapped_column(LargeBinary, deferred=True)
+    picture_type: Mapped[str | None] = mapped_column(String(20))
+    # When it was uploaded: part of its URL, so a new picture is never an old cached one.
+    picture_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    @property
+    def picture_url(self) -> str | None:
+        if self.picture_at is None:
+            return None
+        return f"/api/me/picture?v={int(self.picture_at.timestamp())}"

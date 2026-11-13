@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { ada, fakeApi, renderApp } from '../../test/app.tsx'
 import type { ReviewPath } from './mastery.api.ts'
-import { Prose } from './Prose.tsx'
+import { MemoryRouter } from 'react-router'
+import { Markdown } from '../../components'
 
 const PATH: ReviewPath = {
   objectiveId: 5,
@@ -130,15 +131,21 @@ describe('ReviewPage', () => {
   })
 })
 
-describe('Prose', () => {
-  it('renders paragraphs, bold and code, and never runs the content as HTML', () => {
+describe('Review step text', () => {
+  it('renders code blocks and tables, and never runs the content as HTML', async () => {
     const { container } = render(
-      <Prose markdown={'One **two** `three`\n\n<img src=x onerror=alert(1)>\n\n'} />,
+      <MemoryRouter>
+        <Markdown>
+          {
+            'One **two** `three`\n\n```python\nqueue = deque()\n```\n\n| A | B |\n|---|---|\n| 1 | 2 |\n\n<img src=x onerror=alert(1)>'
+          }
+        </Markdown>
+      </MemoryRouter>,
     )
-    expect(container.querySelectorAll('p')).toHaveLength(2)
     expect(container.querySelector('strong')).toHaveTextContent('two')
-    expect(container.querySelector('code')).toHaveTextContent('three')
+    expect(container.querySelector('pre')).toHaveTextContent('queue = deque()')
+    expect(container.querySelector('table')).not.toBeNull()
     expect(container.querySelector('img')).toBeNull()
-    expect(container).toHaveTextContent('<img src=x onerror=alert(1)>')
+    expect(container).not.toHaveTextContent('```')
   })
 })

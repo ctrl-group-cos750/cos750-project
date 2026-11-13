@@ -371,10 +371,44 @@ export interface paths {
     /**
      * Set Avatar
      * @description Choose a profile picture from the team's set, or none (FR-1.6). Only the student sees it.
+     *     An uploaded picture is deleted: the student has chosen something else.
      */
     put: operations['set_avatar_api_me_avatar_put']
     post?: never
     delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/me/picture': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get Picture
+     * @description The student's own uploaded picture. Its URL changes with each upload (`?v=`), so the browser
+     *     may keep it; never anyone else's, and never served as anything but an image.
+     */
+    get: operations['get_picture_api_me_picture_get']
+    /**
+     * Upload Picture
+     * @description Upload a profile picture of their own (FR-1.6), shown instead of the team's pictures.
+     *
+     *     The browser makes it a small square first (which also drops a photo's location and camera
+     *     details); the server keeps it only if its bytes really are a PNG, JPEG or WebP of at most
+     *     200 kB. It is personal information (POPIA), so only the student can fetch it.
+     */
+    put: operations['upload_picture_api_me_picture_put']
+    post?: never
+    /**
+     * Delete Picture
+     * @description Delete the uploaded picture; the student's initial shows until they choose another.
+     */
+    delete: operations['delete_picture_api_me_picture_delete']
     options?: never
     head?: never
     patch?: never
@@ -1970,6 +2004,15 @@ export interface components {
       newPassword: string
     }
     /**
+     * PictureIn
+     * @description An uploaded profile picture as a data URL ("data:image/png;base64,…"): JSON like every other
+     *     request that changes something (NFR-S6), so a form on another site can't send one.
+     */
+    PictureIn: {
+      /** Image */
+      image: string
+    }
+    /**
      * PositionIn
      * @description Request body for ``POST /api/modules/{moduleId}/position`` (FR-2.5).
      *
@@ -2269,6 +2312,8 @@ export interface components {
       isStaff: boolean
       /** Avatar */
       avatar?: string | null
+      /** Pictureurl */
+      pictureUrl?: string | null
     }
     /** ValidationError */
     ValidationError: {
@@ -2867,6 +2912,132 @@ export interface operations {
         'application/json': components['schemas']['AvatarIn']
       }
     }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['UserOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  get_picture_api_me_picture_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'image/png': unknown
+          'image/jpeg': unknown
+          'image/webp': unknown
+        }
+      }
+      /** @description No picture uploaded. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  upload_picture_api_me_picture_put: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PictureIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['UserOut']
+        }
+      }
+      /** @description Not a PNG, JPEG or WebP, or over 200 kB. */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description More than 10 uploads in a minute. */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorOut']
+        }
+      }
+    }
+  }
+  delete_picture_api_me_picture_delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
     responses: {
       /** @description Successful Response */
       200: {

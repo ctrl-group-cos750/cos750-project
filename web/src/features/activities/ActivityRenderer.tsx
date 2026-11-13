@@ -176,7 +176,9 @@ export function ActivityRenderer(props: ActivityRendererProps) {
       onLevel={onLevel}
     />
   )
-  const title = props.showTitle !== false && <Title>{props.activity.title}</Title>
+  const title = props.showTitle !== false && (
+    <Title className="text-2xl font-semibold">{props.activity.title}</Title>
+  )
 
   if (!pictures) {
     return (

@@ -84,4 +84,9 @@ for modules 1 to 4 on the way to module 5, so his session is still close to full
   data page (`/staff/pilot`): attempts, hints, events and objective results. To make an account
   staff, in the api container's terminal on Coolify: `python -m app.staff grant <email>`.
 - The survey responses are exported from the form.
+- Put the four CSV files in one folder (outside the repository: they are student data) and run
+  `python3 scripts/pilot-analysis.py <folder> > pilot-results.md`. It gives time per module
+  against the minutes the app shows, each item's first-time success, attempts and use of hints
+  3 and 4, the mastery items' difficulty and discrimination, and how many participants ended in
+  each state per objective. Paste its tables into the write-up.
 - The analysis follows ID document §8.4; the write-up is #76.

@@ -4,9 +4,23 @@ import { describe, expect, it } from 'vitest'
 import { ada, fakeApi, renderApp } from './test/app.tsx'
 
 describe('routing', () => {
-  it('sends a visitor who is not logged in to the log-in page', async () => {
+  it('shows a visitor who is not logged in the landing page, with the way in', async () => {
     fakeApi()
     renderApp('/')
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Learn graphs and breadth-first search before your lecture',
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Log in' })).toHaveAttribute('href', '/login')
+    for (const link of screen.getAllByRole('link', { name: /Create a free account|Sign up/ }))
+      expect(link).toHaveAttribute('href', '/register')
+  })
+
+  it('sends a visitor who is not logged in from any other page to the log-in page', async () => {
+    fakeApi()
+    renderApp('/report')
     expect(await screen.findByRole('heading', { name: 'Log in' })).toBeInTheDocument()
   })
 
@@ -98,5 +112,14 @@ describe('logging out', () => {
     expect(
       screen.getByRole('heading', { name: 'Graphs and breadth-first search' }),
     ).toBeInTheDocument()
+  })
+})
+
+describe('page titles (WCAG 2.4.2)', () => {
+  it('names the browser tab after the page', async () => {
+    fakeApi({ user: ada })
+    renderApp('/badges')
+    await screen.findByRole('heading', { name: 'Your badges' })
+    expect(document.title).toBe('Badges · Ctrl Academy')
   })
 })

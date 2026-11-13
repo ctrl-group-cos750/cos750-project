@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { AchievementBadge, Button } from '../../components'
-import { useMarkRewardsSeen, useRewards } from './hooks.ts'
+import { useMarkRewardsSeen, useRewards, useRewardsSettings } from './hooks.ts'
 import { unseen, type ShelfItem } from './shelf.ts'
 import styles from './BadgeAnnouncer.module.css'
 
@@ -60,6 +60,9 @@ export function BadgeAnnouncer() {
   const markSeen = useMarkRewardsSeen()
   const [notes, setNotes] = useState<ShelfItem[]>([])
   const [celebrate, setCelebrate] = useState<ShelfItem | null>(null)
+  // Set once the student turns badges off from a note: says where to turn them back on.
+  const [turnedOff, setTurnedOff] = useState(false)
+  const settings = useRewardsSettings()
   const announced = useRef(new Set<string>())
   const { mutate } = markSeen
 
@@ -78,6 +81,19 @@ export function BadgeAnnouncer() {
   }, [data, mutate])
 
   const dismiss = (key: string) => setNotes((shown) => shown.filter((n) => n.key !== key))
+  // Right where the first badge appears, not only in the profile (FR-9.5): a student who finds
+  // badges distracting or childish shouldn't have to hunt for the setting (overjustification:
+  // Deci, Koestner & Ryan 1999; L05). Everything is still earned and comes back when turned on.
+  const turnOff = () =>
+    settings.mutate(
+      { hideRewards: true },
+      {
+        onSuccess: () => {
+          setNotes([])
+          setTurnedOff(true)
+        },
+      },
+    )
 
   return (
     <>
@@ -104,9 +120,19 @@ export function BadgeAnnouncer() {
             <div className={styles.text}>
               <strong>{announcement(item)}</strong>
               <span>{item.achievement.description}</span>
-              <Link to="/badges" className={styles.link} onClick={() => dismiss(item.key)}>
-                See your badges
-              </Link>
+              <span className={styles.links}>
+                <Link to="/badges" className={styles.link} onClick={() => dismiss(item.key)}>
+                  See your badges
+                </Link>
+                <button
+                  type="button"
+                  className={styles.off}
+                  disabled={settings.isPending}
+                  onClick={turnOff}
+                >
+                  Turn off badges
+                </button>
+              </span>
             </div>
             <Button
               variant="ghost"
@@ -118,6 +144,36 @@ export function BadgeAnnouncer() {
             </Button>
           </div>
         ))}
+        {turnedOff && (
+          <div className={styles.note}>
+            <div className={styles.text}>
+              <strong>Badges and points are off</strong>
+              <span>
+                You still earn them. Turn them back on in your{' '}
+                <Link to="/profile" className={styles.link} onClick={() => setTurnedOff(false)}>
+                  profile
+                </Link>
+                .
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="Dismiss"
+              onClick={() => setTurnedOff(false)}
+            >
+              ×
+            </Button>
+          </div>
+        )}
+        {settings.isError && (
+          <div className={styles.note}>
+            <div className={styles.text}>
+              <strong>Badges are still on</strong>
+              <span>{settings.error.message}</span>
+            </div>
+          </div>
+        )}
       </output>
       {celebrate && <Celebration item={celebrate} onClose={() => setCelebrate(null)} />}
     </>

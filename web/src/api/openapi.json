@@ -888,7 +888,7 @@
           "profile"
         ],
         "summary": "Set Avatar",
-        "description": "Choose a profile picture from the team's set, or none (FR-1.6). Only the student sees it.",
+        "description": "Choose a profile picture from the team's set, or none (FR-1.6). Only the student sees it.\nAn uploaded picture is deleted: the student has chosen something else.",
         "operationId": "set_avatar_api_me_avatar_put",
         "parameters": [
           {
@@ -918,6 +918,190 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/picture": {
+      "put": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Upload Picture",
+        "description": "Upload a profile picture of their own (FR-1.6), shown instead of the team's pictures.\n\nThe browser makes it a small square first (which also drops a photo's location and camera\ndetails); the server keeps it only if its bytes really are a PNG, JPEG or WebP of at most\n200 kB. It is personal information (POPIA), so only the student can fetch it.",
+        "operationId": "upload_picture_api_me_picture_put",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PictureIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Not a PNG, JPEG or WebP, or over 200 kB.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "More than 10 uploads in a minute.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Get Picture",
+        "description": "The student's own uploaded picture. Its URL changes with each upload (`?v=`), so the browser\nmay keep it; never anyone else's, and never served as anything but an image.",
+        "operationId": "get_picture_api_me_picture_get",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "image/png": {},
+              "image/jpeg": {},
+              "image/webp": {}
+            }
+          },
+          "404": {
+            "description": "No picture uploaded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Delete Picture",
+        "description": "Delete the uploaded picture; the student's initial shows until they choose another.",
+        "operationId": "delete_picture_api_me_picture_delete",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -5524,6 +5708,22 @@
         ],
         "title": "PasswordChangeIn"
       },
+      "PictureIn": {
+        "properties": {
+          "image": {
+            "type": "string",
+            "maxLength": 266730,
+            "title": "Image"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "image"
+        ],
+        "title": "PictureIn",
+        "description": "An uploaded profile picture as a data URL (\"data:image/png;base64,…\"): JSON like every other\nrequest that changes something (NFR-S6), so a form on another site can't send one."
+      },
       "PositionIn": {
         "properties": {
           "segmentPosition": {
@@ -6217,6 +6417,17 @@
               }
             ],
             "title": "Avatar"
+          },
+          "pictureUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pictureurl"
           }
         },
         "additionalProperties": false,

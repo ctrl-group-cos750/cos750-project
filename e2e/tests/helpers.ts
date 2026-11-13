@@ -37,7 +37,7 @@ export async function register(page: Page, account: { email: string; displayName
   await page.getByRole('button', { name: 'Create account' }).click()
   // The module map, where a new student starts on module 0 (FR-2.1, FR-2.6).
   await expect(page).toHaveURL(/\/$/)
-  await expect(page.getByRole('button', { name: /^Continue module 0/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^(Start|Continue) module 0/ })).toBeVisible()
 }
 
 /** Presses Tab (or Shift+Tab) until `target` has focus, as a keyboard user would, never by

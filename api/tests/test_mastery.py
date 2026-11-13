@@ -465,7 +465,7 @@ def test_the_committed_mastery_check_can_be_passed(client: TestClient, db: Sessi
     report = client.get("/api/me/report").json()
     assert {o["state"] for o in report["objectives"]} == {"met_independently"}
     assert report["ready"] is True
-    assert len(report["objectives"]) == 7
+    assert len(report["objectives"]) == 8
 
 
 # One accepted order of module 6's Parsons item that is not the worked example's: the starting
@@ -832,7 +832,7 @@ def test_the_committed_review_paths_can_take_a_student_to_ready(
     for item in check:
         answer(client, item.id, {"submitted": wrong_submission(item)})
     assert set(states(client).values()) == {"not_yet"}
-    for objective in range(1, 8):
+    for objective in range(1, 9):
         for step in client.get(f"/api/me/review/{objective}").json()["steps"]:
             if step["purpose"] == "mastery":
                 item = db.get_one(Activity, step["activityId"])

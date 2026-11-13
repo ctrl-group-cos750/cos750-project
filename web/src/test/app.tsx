@@ -11,6 +11,7 @@ export const ada: User = {
   displayName: 'Ada',
   isStaff: false,
   avatar: null,
+  pictureUrl: null,
 }
 
 type Call = { method: string; path: string; body: unknown }

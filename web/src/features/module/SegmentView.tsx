@@ -48,7 +48,7 @@ export function SegmentView({ segment, onAnswered, intro }: SegmentViewProps) {
       const picture = pictureForSegment(segment.id)
       return (
         <section aria-label={segment.title} className="grid gap-4">
-          <h2 className="text-xl font-semibold" tabIndex={-1} data-focus-heading>
+          <h2 className="mb-0 text-xl font-semibold" tabIndex={-1} data-focus-heading>
             {segment.title}
           </h2>
           {introLine}
@@ -69,7 +69,7 @@ export function SegmentView({ segment, onAnswered, intro }: SegmentViewProps) {
     case 'video':
       return (
         <section aria-label={segment.title} className="grid gap-4">
-          <h2 className="text-xl font-semibold" tabIndex={-1} data-focus-heading>
+          <h2 className="mb-0 text-xl font-semibold" tabIndex={-1} data-focus-heading>
             {segment.title}
           </h2>
           {introLine}
@@ -90,7 +90,7 @@ export function SegmentView({ segment, onAnswered, intro }: SegmentViewProps) {
     case 'activity':
       return (
         <section aria-label={segment.title} className="grid gap-4">
-          <h2 className="text-xl font-semibold" tabIndex={-1} data-focus-heading>
+          <h2 className="mb-0 text-xl font-semibold" tabIndex={-1} data-focus-heading>
             {segment.title}
           </h2>
           {introLine}

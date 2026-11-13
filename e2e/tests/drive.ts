@@ -31,11 +31,17 @@ export function result(scope: Locator) {
  * "Correct" or "Not quite" like any other activity. */
 export async function check(scope: Locator, answer: Answer, a?: Activity) {
   const button = scope.getByRole('button', { name: 'Check answer' })
-  // No result yet: whatever shows after the click is this answer's.
-  await expect(result(scope)).toHaveCount(0)
+  // Coming back to an activity shows the last answer's result (#171), so wait for a result with a
+  // new id: whatever shows after the click with another id is this answer's.
+  const before =
+    (await result(scope).count()) > 0 ? await result(scope).getAttribute('data-result-id') : null
   await clickOrExplain(button)
   const verdict = answer === 'right' ? 'Correct' : 'Not quite'
   const shown = result(scope)
+  await expect(shown).toHaveAttribute(
+    'data-result-id',
+    before === null ? /^\d+$/ : new RegExp(`^(?!${before}$)\\d+$`),
+  )
   if (a?.purpose === 'mastery') {
     await expect(shown).toContainText(new RegExp(`${verdict}|Answer recorded`))
     if ((await shown.textContent())?.includes('Answer recorded')) {
@@ -53,6 +59,9 @@ export async function check(scope: Locator, answer: Answer, a?: Activity) {
 
 /** Fill in the activity's controls with a right or a wrong answer, and check it. */
 export async function answerActivity(page: Page, scope: Locator, a: Activity, answer: Answer) {
+  // The drivers read the screen before they change it (the restored answer, #171), so wait for
+  // the activity to load first: its Check answer button is there once it has.
+  await expect(scope.getByRole('button', { name: 'Check answer' })).toBeVisible()
   switch (a.kind) {
     case 'multiple_choice':
       await multipleChoice(scope, a, answer)
@@ -100,16 +109,28 @@ async function multipleChoice(scope: Locator, a: ActivityOf<'multiple_choice'>, 
 
 /** The Parsons lines, moved with the arrow keys only (NFR-A1): each line of one accepted order
  * is brought up to its place with ArrowUp, and lines not in it are removed. Wrong: one line of
- * the answer removed, so the program is missing it. */
+ * the answer left out, so the program is missing it. Starts from whatever the screen shows: every
+ * line in the content's order on a fresh activity, or the student's last answer, with the lines
+ * it left out under "Available lines", when they come back to it (#171). */
 async function parsons(page: Page, scope: Locator, a: ActivityOf<'parsons'>, answer: Answer) {
   const answerList = scope.getByRole('list', { name: 'Your answer, in order' })
   const rows = answerList.getByRole('listitem')
-  // The screen starts with every line in the answer, in the order the content gives them.
-  const shown = a.config.lines.map((line) => line.id)
+  const ids = (list: 'answer' | 'available') =>
+    scope
+      .locator(`[data-list="${list}"]`)
+      .evaluateAll((lines) => lines.map((line) => Number((line as HTMLElement).dataset.line)))
+  const shown = await ids('answer')
   const target = firstOrder(a.solution.order)
-  const unwanted = shown.filter((id) => !target.includes(id))
-  if (answer === 'wrong') unwanted.push(target[0])
-  for (const id of unwanted) {
+  // The lines the answer should hold: the accepted order's, or, for a wrong answer, all of them
+  // but its first line.
+  const wanted = new Set(answer === 'right' ? target : target.slice(1))
+  for (const id of await ids('available')) {
+    if (!wanted.has(id)) continue
+    // "Add" puts the line at the end of the answer.
+    await scope.locator(`[data-list="available"][data-line="${id}"]`).click()
+    shown.push(id)
+  }
+  for (const id of shown.filter((line) => !wanted.has(line))) {
     await rows
       .nth(shown.indexOf(id))
       .getByRole('button', { name: /^Remove/ })
@@ -132,12 +153,18 @@ async function parsons(page: Page, scope: Locator, a: ActivityOf<'parsons'>, ans
 
 /** The trace table: one step per vertex that leaves the queue, from the BFS the engine runs.
  * Wrong: every step's current vertex is another vertex, so every row is wrong (a single wrong
- * row still meets objective 5's criterion, "at most one error"). */
+ * row still meets objective 5's criterion, "at most one error"). Starts from whatever the screen
+ * shows: one empty step on a fresh activity, or the rows last sent (#171), grown or shrunk to the
+ * number of steps, and every cell filled again. */
 async function trace(scope: Locator, a: ActivityOf<'trace'>, answer: Answer) {
   const steps = bfsSteps(a.config)
   const { vertices } = a.config
-  for (let i = 1; i < steps.length; i++)
+  const currentCells = scope.getByLabel(/^Step \d+, current vertex$/)
+  for (let n = await currentCells.count(); n < steps.length; n++)
     await clickOrExplain(scope.getByRole('button', { name: 'Add a step' }))
+  for (let n = await currentCells.count(); n > steps.length; n--)
+    await clickOrExplain(scope.getByRole('button', { name: 'Remove the last step' }))
+  await expect(currentCells).toHaveCount(steps.length)
   for (const [i, step] of steps.entries()) {
     const n = i + 1
     const current =
@@ -151,31 +178,61 @@ async function trace(scope: Locator, a: ActivityOf<'trace'>, answer: Answer) {
   }
 }
 
-/** Fix the bug with the screen's own controls: each correction goes in place of a line that
- * doesn't belong (or is inserted as a new line), lines left over are removed, then lines are
- * moved with Up and Down until the program is one accepted order. */
+/** Fix the bug with the screen's own controls: lines of the answer that are missing are put
+ * back (or kept, where a correction has taken their place), each correction goes in place of a
+ * line that doesn't belong (or is inserted as a new line), lines left over are removed, then
+ * lines are moved with Up and Down until the program is one accepted order. Starts from whatever
+ * the screen shows: the faulty program on a fresh activity, or the program last sent (#171). The
+ * rows are read again after every change, since a line put back goes where it was. */
 async function fixTheBug(scope: Locator, a: ActivityOf<'fix_the_bug'>) {
   const target = firstOrder(a.solution.order)
   const originals = a.config.lines.map((line) => line.id)
-  // What each row holds, in screen order; at first, the faulty program's lines.
-  const rows = [...originals]
-  const spare = originals.filter((id) => !target.includes(id))
-  for (const id of target.filter((t) => !originals.includes(t))) {
-    const row = spare.shift()
-    if (row !== undefined) {
-      const index = rows.indexOf(row)
+  const program = scope.getByRole('list', { name: 'Your fixed program' })
+  const lineSelects = program.getByRole('combobox')
+  // What each row holds, in screen order.
+  const read = () =>
+    lineSelects.evaluateAll((selects) => selects.map((s) => Number((s as HTMLSelectElement).value)))
+  // Each row's own faulty line ("Keep this line"), or null for a correction inserted as a line.
+  const homes = () =>
+    lineSelects.evaluateAll((selects) =>
+      selects.map((s) => {
+        const keep = [...(s as HTMLSelectElement).options].find((o) => o.text === 'Keep this line')
+        return keep ? Number(keep.value) : null
+      }),
+    )
+  let rows = await read()
+  for (const id of target.filter((t) => originals.includes(t) && !rows.includes(t))) {
+    const home = (await homes()).indexOf(id)
+    if (home >= 0) {
+      await scope.getByLabel(`Line ${home + 1}`, { exact: true }).selectOption(String(id))
+    } else {
+      const text = a.config.lines.find((line) => line.id === id)?.text.trim() ?? ''
+      await scope
+        .getByRole('region', { name: 'Removed lines' })
+        .getByRole('listitem')
+        .filter({ hasText: text })
+        .getByRole('button', { name: /^Put back/ })
+        .click()
+    }
+    await expect(lineSelects).toHaveCount(rows.length + (home >= 0 ? 0 : 1))
+    rows = await read()
+  }
+  for (const id of target.filter((t) => !rows.includes(t))) {
+    const index = rows.findIndex((row) => !target.includes(row))
+    if (index >= 0) {
       await scope.getByLabel(`Line ${index + 1}`, { exact: true }).selectOption(String(id))
-      rows[index] = id
     } else {
       await scope.getByLabel('Correction', { exact: true }).selectOption(String(id))
       await scope.getByRole('button', { name: 'Insert line' }).click()
-      rows.push(id)
+      await expect(lineSelects).toHaveCount(rows.length + 1)
     }
+    rows = await read()
   }
-  for (const id of spare) {
-    const index = rows.indexOf(id)
+  for (let index = rows.findIndex((row) => !target.includes(row)); index >= 0;) {
     await scope.getByRole('button', { name: `Remove line ${index + 1}`, exact: true }).click()
-    rows.splice(index, 1)
+    await expect(lineSelects).toHaveCount(rows.length - 1)
+    rows = await read()
+    index = rows.findIndex((row) => !target.includes(row))
   }
   for (const [place, id] of target.entries()) {
     for (let from = rows.indexOf(id); from > place; from--) {
@@ -184,21 +241,22 @@ async function fixTheBug(scope: Locator, a: ActivityOf<'fix_the_bug'>) {
       rows.splice(from - 1, 0, id)
     }
   }
-  await expect(
-    scope.getByRole('list', { name: 'Your fixed program' }).getByRole('listitem'),
-  ).toHaveCount(target.length)
+  await expect(program.getByRole('listitem')).toHaveCount(target.length)
+  expect(await read()).toEqual(target)
 }
 
-/** Tick the test cases that expose the bug. Wrong: one that doesn't, instead. */
+/** Tick the test cases that expose the bug, and only those (coming back, the last answer's
+ * ticks are on screen, #171). Wrong: one that doesn't, instead. */
 async function chooseTests(scope: Locator, a: ActivityOf<'choose_tests'>, answer: Answer) {
   const exposing = new Set(a.solution.exposing)
   const pick =
     answer === 'right'
       ? a.config.tests.filter((t) => exposing.has(t.id))
       : [a.config.tests.find((t) => !exposing.has(t.id)) ?? a.config.tests[0]]
-  for (const t of pick) {
-    const n = a.config.tests.indexOf(t) + 1
-    await scope.getByRole('checkbox', { name: new RegExp(`^Test ${n}:`) }).check()
+  for (const [i, t] of a.config.tests.entries()) {
+    await scope
+      .getByRole('checkbox', { name: new RegExp(`^Test ${i + 1}:`) })
+      .setChecked(pick.includes(t))
   }
 }
 

@@ -62,7 +62,7 @@ If the video is ever recorded again, use the text in segment 502.
 
 ### Notes for whoever records
 
-- Show exactly the faulty and fixed code from the worked example, so it matches activity 504.
+- Show exactly the faulty code from the worked example (segment 501) and the fix activity 504 asks for. The worked example stops before the fixed code, so the student makes the fix in 504.
 - The diamond graph must match activity 506: vertices A, B, C, D; edges A–B, A–C, B–D, C–D.
 - The two-islands graph must match activity 507: vertices A, B, C, D, E; edges A–B, B–C, D–E.
 - Pause the recording at the checkpoint time; the player pauses there automatically (FR-3.3).

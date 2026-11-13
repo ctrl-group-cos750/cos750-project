@@ -141,8 +141,8 @@ A student is ready for the lecture when no objective is marked "Not yet". The st
 | No. | Level | CS2023 skill | Evidence the application collects | Criterion for success |
 |---|---|---|---|---|
 | 1 | Remember, understand | Explain | Matching and multiple-choice items on the key terms. | At least 4 of 5 items correct. |
-| 2 | Understand | Explain | Labelling vertices and edges on 3 diagrams. Classifying 4 graphs as directed or undirected. | At least 80% of the labels and classifications correct. |
-| 3 | Apply | Apply | Matching 4 real-world situations to a graph model. The student names the vertices, the edges and the direction. | At least 3 of 4 situations modelled correctly. |
+| 2 | Understand | Explain | Labelling vertices and edges on 3 diagrams. Classifying 4 situations as directed or undirected from what each connection means. | At least 80% of the labels and classifications correct. |
+| 3 | Apply | Apply | Choosing the graph model for 4 real-world situations. The student decides what the vertices and edges are, and works out the direction from what each connection means: the situation doesn't state it. | At least 3 of 4 situations modelled correctly. |
 | 4 | Understand | Explain | Choosing when BFS is suitable in 4 short scenarios. The student picks the correct reason for each choice. | At least 3 of 4 choices and reasons correct. |
 | 5 | Apply | Apply | Tracing BFS on an unseen graph of 6 to 8 vertices by filling in a table. | Correct queue, visited set and next vertex at every step, with at most one error. |
 | 6 | Apply | Apply | Constructing BFS on the student's own graph class by ordering shuffled lines and filling in missing tokens. | The ordered and completed code matches the reference solution, including the expected traversal order. |

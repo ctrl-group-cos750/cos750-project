@@ -78,7 +78,7 @@ def events_of(db: Session, user_id: int) -> list[tuple[str, str, dict[str, Any]]
 
 
 def test_the_types_are_split_between_server_and_browser() -> None:
-    assert {"hint_shown", "result_changed", "module_completed"} == SERVER_EVENTS
+    assert {"hint_shown", "result_changed", "module_completed", "module_restarted"} == SERVER_EVENTS
     assert {
         "video_started",
         "video_completed",

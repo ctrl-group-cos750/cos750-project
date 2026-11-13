@@ -48,6 +48,12 @@ class ModuleOut(ApiModel):
     shown_segment_count: int
     # How many of those shown segments come before `current_segment_position`.
     shown_segments_passed: int
+    # The student restarted it to redo its questions (app/services/restart.py), so it opens at
+    # its start rather than at the first question left undone.
+    restarted: bool = False
+    # Whether "Restart module" is offered: a module they have started, other than the mastery
+    # check, where only the first answer counts (FR-7.1).
+    can_restart: bool = False
 
 
 class CourseLengthOut(ApiModel):

@@ -67,7 +67,7 @@
 /* One width for the header and the page, so their edges line up. In rem, so it grows with the
  * root font size on big screens (base.css). */
 .wide {
-  max-width: 84rem;
+  max-width: 100rem;
 }
 
 .page {

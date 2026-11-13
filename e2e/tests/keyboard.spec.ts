@@ -25,7 +25,7 @@ test('module 0, from the map to "Finish module", with the keyboard only', async 
   // The segments the student is shown (#172), as "Segment N of M" counts them.
   const segments = shownPositions(module).map((i) => module.segments[i])
   for (const [i, segment] of segments.entries()) {
-    await expect(page.getByText(`Segment ${i + 1} of ${segments.length}`)).toBeVisible()
+    await expect(page.getByText(`Step ${i + 1} of ${segments.length}`)).toBeVisible()
     const region = segmentRegion(page, segment.title)
     await expect(region).toBeVisible()
     if (segment.kind === 'activity' && segment.activityId !== null) {

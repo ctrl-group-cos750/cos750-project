@@ -304,7 +304,7 @@ export async function walkModule(
   for (const [n, i] of shown.entries()) {
     if (i < module.currentSegmentPosition) continue
     const segment = module.segments[i]
-    await expect(page.getByText(`Segment ${n + 1} of ${total}`, { exact: true })).toBeVisible()
+    await expect(page.getByText(`Step ${n + 1} of ${total}`, { exact: true })).toBeVisible()
     const region = segmentRegion(page, segment.title)
     await expect(region).toBeVisible()
     if (segment.kind === 'activity' && segment.activityId !== null && !segment.done) {

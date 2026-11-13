@@ -195,7 +195,10 @@ test('module 1: two wrong answers and the student may move on, marked to look at
   )
   await expect(next).not.toHaveAttribute('aria-disabled', 'true')
   await next.click()
-  await expect(page.getByText(`Segment ${index + 2} of`)).toBeVisible()
+  // Steps count only the segments shown: support the student isn't shown comes before this one
+  // now that module 1's opening puzzle is a diagnostic item, not practice.
+  const shown = module.segments.filter((s) => s.shown !== false).map((s) => s.id)
+  await expect(page.getByText(`Step ${shown.indexOf(segment.id) + 2} of`)).toBeVisible()
   // Moving on earns nothing: the activity is still not right.
   expect(await points()).toBe(before)
   // It is listed to look at again, and the link opens it (#215 review).

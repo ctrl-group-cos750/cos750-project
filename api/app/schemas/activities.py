@@ -426,10 +426,10 @@ class ActivityOut(ApiModel):
     mastery_check: bool = False
     # This student has answered this mastery check item, so it takes no more answers or hints.
     answered: bool = False
-    # This student's latest answer and the result they were shown, so coming back to an activity
-    # shows it instead of a blank form (#171). None before they answer, and on a response that
-    # isn't about one student (a video's checkpoints). On a mastery check item the result is
-    # withheld, as when they answered (#144).
+    # This student's latest answer and the result for it, as marked now (after a regrade, #202,
+    # the new mark), so coming back to an activity shows it instead of a blank form (#171). None
+    # before they answer, and on a response that isn't about one student (a video's checkpoints).
+    # On a mastery check item the result is withheld, as when they answered (#144).
     last_attempt: "LastAttemptOut | None" = None
 
 
@@ -460,7 +460,7 @@ class AttemptOut(ApiModel):
 
 class LastAttemptOut(ApiModel):
     """A student's latest answer to an activity (#171): what they chose, in the kind's shape (as
-    sent in `AttemptIn.submitted`), and the result they were shown for it."""
+    sent in `AttemptIn.submitted`), and the result for it, as marked now."""
 
     submitted: dict[str, Any]
     result: AttemptOut

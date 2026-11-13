@@ -147,7 +147,7 @@ export type TraceRow = {
  * and hints 1 and 2 only. `answered` says this student has given that answer. */
 export type MasteryCheckFlags = { masteryCheck?: boolean; answered?: boolean }
 
-/** The student's latest answer and the result they were shown for it (#171): what each kind
+/** The student's latest answer and the result for it, as marked now (#171): what each kind
  * sends, as in `Submission`, and the check's result (withheld on a mastery check item). */
 export type LastAttempt = {
   submitted: {

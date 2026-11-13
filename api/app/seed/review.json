@@ -1846,7 +1846,7 @@
         },
         {
           "level": 2,
-          "body": "That needs a cycle."
+          "body": "That needs two routes to the same vertex. In an undirected graph, that means a cycle."
         },
         {
           "level": 3,

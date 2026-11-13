@@ -2185,7 +2185,7 @@
       "module_id": 6,
       "purpose": "retrieval",
       "config": {
-        "prompt": "Which graph is useful for checking that BFS does not visit a vertex repeatedly?",
+        "prompt": "A BFS marks a vertex as found only when it leaves the queue. Which test graph would show that it can visit a vertex twice?",
         "options": [
           {
             "id": "single",
@@ -2202,11 +2202,11 @@
         ]
       },
       "solution": {
-        "explanation": "In a graph with a cycle, BFS can meet a vertex again along a second path, so it shows whether BFS adds it twice.",
+        "explanation": "Correct. In a graph with a cycle, some vertex can be reached along two routes, so a second vertex can find it while it still waits in the queue, and this BFS adds it twice.",
         "correct": "cycle",
         "feedback": {
-          "single": "A single vertex cannot reveal repeated visits through a cycle.",
-          "line": "A path is useful for order, but a cycle is needed to expose missing visited checks."
+          "single": "Not quite. With one vertex there is nothing to find twice. Look for a graph where two vertices can both find the same vertex.",
+          "line": "Not quite. On a path there is only one route to each vertex, so this bug can't add one twice. Look for a graph where two vertices can both find the same vertex."
         }
       },
       "hints": [
@@ -2216,11 +2216,11 @@
         },
         {
           "level": 2,
-          "body": "It needs a way back to a vertex BFS has already found."
+          "body": "This BFS only counts a vertex as found once it leaves the queue, so a vertex still waiting can be found again."
         },
         {
           "level": 3,
-          "body": "Only a loop of edges, a cycle, leads back to a vertex BFS has found."
+          "body": "That needs two routes to the same vertex. In an undirected graph, two routes to a vertex mean a cycle."
         },
         {
           "level": 4,

@@ -53,6 +53,13 @@ Plays at the start of module 5, before the worked example.
 | 2:35 | Both graphs side by side with labels | So: choose a **cycle graph** to expose a visited-too-late bug. Choose a **disconnected graph** — one with two separate islands — to expose a bug that adds unreachable vertices. One test cannot do both jobs; that is why you need more than one. |
 | 2:45 | "Your turn" card | Now you'll practise both: fixing the bugs and choosing the tests yourself. |
 
+**Correction (#214, 13 Nov 2026).** Two sentences in this section are wrong, and the recorded narration can't be redone, so the segment's text version (segment 502) carries the corrected wording:
+
+- At 2:10, "only surfaces when a graph has a cycle": the bug shows whenever a vertex can be reached along two routes while it still waits in the queue. A directed diamond (A → B, A → C, B → D, C → D) has no cycle and still exposes it; a directed cycle that only leads back to the start doesn't. In an undirected graph, two routes to a vertex do mean a cycle.
+- At 2:35, "One test cannot do both jobs": one graph can. A diamond with a separate island exposes both bugs. The point is that each shape exposes a different bug, so a good set of tests has both.
+
+If the video is ever recorded again, use the text in segment 502.
+
 ### Notes for whoever records
 
 - Show exactly the faulty and fixed code from the worked example, so it matches activity 504.

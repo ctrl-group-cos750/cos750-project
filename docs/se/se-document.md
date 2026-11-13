@@ -763,8 +763,8 @@ The components as they are on `staging`, organised by feature as in `web/src/fea
   - `LoginPage`, `RegisterPage` (with `PasswordChecklist`, NFR-S1), `RequireAuth` (sends visitors to log in, then back), `GuestOnly` (sends logged-in students past the log-in page), `RequireStaff` (the staff portal).
 - **Modules**
   - `ModuleMap` (the home page): the modules with their state, duration and minutes done (FR-2.6).
-  - `ModulePage`: the module's goals, its retrieval questions (FR-2.4), then its segments one at a time; saves the position and holds **Next** until the segment is done (FR-2.7), or says the student may move on after two answers. At the top it offers the quick check, or says the module was tested out (FR-8.2).
-  - `QuickCheckPage` (`/modules/:id/check`): the quick check's four questions on one page, then the result, what to look at and where to go next (FR-8.2). It skips support segments the student doesn't need, and opens a run of support with one short, kind line (FR-8.4).
+  - `ModulePage`: the module's goals, its retrieval questions (FR-2.4), then its segments one at a time; saves the position and holds **Next** until the segment is done (FR-2.7), or says the student may move on after two answers. It skips support segments the student doesn't need, and opens a run of support with one short, kind line (FR-8.4). At the top it offers the quick check, or says the module was tested out (FR-8.2).
+  - `QuickCheckPage` (`/modules/:id/check`): the quick check's four questions on one page, then the result, what to look at and where to go next (FR-8.2).
   - `SegmentView`: picks the view for a segment. Text, worked examples and refreshers are rendered as Markdown; a worked example has no skip check: a student skips a whole module with its quick check instead (FR-8.2). Videos use `VideoView`, activities `ActivityView` (from `ActivityPage.tsx`), which wraps `ActivityRenderer`.
 - **Narrated video**
   - `NarratedVideoPlayer`: wraps the HTML5 video element with captions on by default, enforces checkpoint pauses and the seek limit (`checkpointGate.ts`, FR-3), shows the transcript below the video and reports the video events (FR-10.1).

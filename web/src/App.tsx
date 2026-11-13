@@ -19,6 +19,7 @@ import { StaffObjectiveEditorPage } from './features/staff/content/StaffObjectiv
 import { StaffLayout } from './features/staff/StaffLayout.tsx'
 import { StaffMembersPage } from './features/staff/StaffMembersPage.tsx'
 import { StaffPilotPage } from './features/staff/StaffPilotPage.tsx'
+import { StaffReadinessPage } from './features/staff/StaffReadinessPage.tsx'
 import { StaffPortalPage } from './features/staff/StaffPortalPage.tsx'
 import { StaffVideoImportPage } from './features/staff/StaffVideoImportPage.tsx'
 import { StaffVideoEditorPage } from './features/staff/StaffVideoEditorPage.tsx'
@@ -93,6 +94,7 @@ function App() {
             <Route path="content/graphs/:graphId" element={<StaffGraphEditorPage />} />
             <Route path="accounts" element={<StaffAccountsPage />} />
             <Route path="accounts/:accountId" element={<StaffAccountPage />} />
+            <Route path="readiness" element={<StaffReadinessPage />} />
             <Route path="pilot" element={<StaffPilotPage />} />
             <Route path="members" element={<StaffMembersPage />} />
           </Route>

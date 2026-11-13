@@ -37,6 +37,26 @@
   font-weight: 600;
 }
 
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+}
+
+.off {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.off:hover {
+  color: var(--color-text);
+}
+
 .backdrop {
   position: fixed;
   inset: 0;

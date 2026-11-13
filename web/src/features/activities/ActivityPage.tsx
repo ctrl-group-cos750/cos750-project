@@ -134,11 +134,15 @@ export function ActivityPage() {
   if (!validActivityId)
     return <Alert tone="danger">The activity identifier must be a positive number.</Alert>
 
-  // Opened from a review path's step: the way back to the path (#146).
+  // Opened from a review path's step: the way back to the path (#146); from anywhere else (a
+  // bookmark, a link in a module's text), back to the modules. At the top, where a back link is
+  // looked for, in the same centred column as a module.
   return (
-    <>
-      <ActivityView key={activityId} activityId={activityId} />
-      <BackLink />
-    </>
+    <div className="mx-auto grid w-full max-w-3xl justify-items-start gap-4">
+      <BackLink fallback={{ backTo: '/', backLabel: 'Your modules' }} />
+      <div className="w-full">
+        <ActivityView key={activityId} activityId={activityId} />
+      </div>
+    </div>
   )
 }

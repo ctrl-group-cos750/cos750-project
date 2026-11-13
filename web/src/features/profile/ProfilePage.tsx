@@ -1,4 +1,4 @@
-import { useId, useState, type FormEvent } from 'react'
+import { useId, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { ApiError } from '../../api/client.ts'
 import type { User } from '../../auth/api.ts'
@@ -18,7 +18,8 @@ import {
 } from '../../components'
 import { useReport } from '../mastery/hooks.ts'
 import { useRewards, useRewardsSettings } from '../rewards/hooks.ts'
-import { useChangePassword, useSetAvatar } from './hooks.ts'
+import { useChangePassword, useDeletePicture, useSetAvatar, useUploadPicture } from './hooks.ts'
+import { squarePicture } from './squarePicture.ts'
 import styles from './ProfilePage.module.css'
 
 /** Points, badges and objectives met (FR-1.7): the student's own, never anyone else's. Points and
@@ -59,18 +60,81 @@ function Stats() {
   )
 }
 
-/** Choose a picture from the team's set (FR-1.6); saved as soon as it is picked. */
+/** Upload a picture of their own, or choose one from the team's set (FR-1.6). Saved at once. */
 function Picture({ user }: { user: User }) {
   const setAvatar = useSetAvatar()
+  const upload = useUploadPicture()
+  const remove = useDeletePicture()
+  const [problem, setProblem] = useState<string | null>(null)
+  const [preparing, setPreparing] = useState(false)
+  const fileInput = useRef<HTMLInputElement>(null)
   const name = useId()
   const choices: (AvatarId | null)[] = [null, ...AVATARS]
+  const busy = setAvatar.isPending || upload.isPending || remove.isPending || preparing
   // Show the picked picture straight away, while it saves; the saved one again if saving fails.
-  const shown = setAvatar.isPending ? setAvatar.variables : user.avatar
+  const shown = setAvatar.isPending ? setAvatar.variables : user.pictureUrl ? 'own' : user.avatar
+  const error = problem ?? (setAvatar.error ?? upload.error ?? remove.error)?.message
+  const saved = setAvatar.isSuccess || upload.isSuccess || remove.isSuccess
+
+  async function choose(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = '' // choosing the same file again still uploads it
+    if (!file) return
+    setProblem(null)
+    setPreparing(true)
+    try {
+      upload.mutate(await squarePicture(file))
+    } catch (e) {
+      setProblem(e instanceof Error ? e.message : 'This picture could not be used.')
+    } finally {
+      setPreparing(false)
+    }
+  }
+
   return (
     <section aria-labelledby="picture-heading" className={styles.section}>
       <h2 id="picture-heading">Profile picture</h2>
+      <div className={styles.upload}>
+        <Avatar
+          avatar={user.avatar}
+          picture={user.pictureUrl}
+          name={user.displayName}
+          size={64}
+          label="Your picture"
+        />
+        <div className={styles.uploadActions}>
+          <input
+            ref={fileInput}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="visually-hidden"
+            tabIndex={-1}
+            aria-hidden="true"
+            onChange={(e) => void choose(e)}
+          />
+          <Button
+            variant="secondary"
+            loading={preparing || upload.isPending}
+            disabled={busy}
+            onClick={() => fileInput.current?.click()}
+          >
+            Upload a picture
+          </Button>
+          {user.pictureUrl && (
+            <Button
+              variant="ghost"
+              loading={remove.isPending}
+              disabled={busy}
+              onClick={() => remove.mutate()}
+            >
+              Remove it
+            </Button>
+          )}
+        </div>
+      </div>
+      <p className={styles.muted}>Or choose one of ours:</p>
       <fieldset className={styles.pictures}>
-        <legend className="visually-hidden">Choose a profile picture</legend>
+        <legend className="visually-hidden">Choose one of our pictures</legend>
         {choices.map((choice) => {
           const label = choice ? avatarName(choice) : 'Your initial'
           return (
@@ -79,7 +143,7 @@ function Picture({ user }: { user: User }) {
                 type="radio"
                 name={name}
                 checked={shown === choice}
-                disabled={setAvatar.isPending}
+                disabled={busy}
                 onChange={() => setAvatar.mutate(choice)}
               />
               <Avatar avatar={choice} name={user.displayName} size={48} />
@@ -89,9 +153,9 @@ function Picture({ user }: { user: User }) {
         })}
       </fieldset>
       <output className={styles.muted}>
-        {setAvatar.isSuccess ? 'Saved.' : 'Only you see your picture.'}
+        {saved && !error ? 'Saved.' : 'Only you see your picture.'}
       </output>
-      {setAvatar.isError && <Alert tone="danger">{setAvatar.error.message}</Alert>}
+      {error && <Alert tone="danger">{error}</Alert>}
     </section>
   )
 }
@@ -240,7 +304,7 @@ export function ProfilePage() {
   return (
     <>
       <div className={styles.heading}>
-        <Avatar avatar={user.avatar} name={user.displayName} size={72} />
+        <Avatar avatar={user.avatar} picture={user.pictureUrl} name={user.displayName} size={72} />
         <div>
           <h1>{user.displayName}</h1>
           <p className={styles.muted}>{user.email}</p>

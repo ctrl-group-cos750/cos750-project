@@ -8,7 +8,7 @@ version: Draft 1
 
 ## Purpose of the application
 
-Ctrl Academy is a pre-lecture, tutor-style application for COS212 students. It teaches one data structure, graphs, and one algorithm, Breadth-First Search (BFS). Students use it before they attend the COS212 lecture on this topic, and it assumes no prior knowledge of graphs or BFS. A full session is planned to take about 75 minutes, split into seven short modules (0 to 6); the content as written takes longer (Section 4.4). Students can stop after any module and continue later.
+Ctrl Academy is a pre-lecture, tutor-style application for COS212 students. It teaches one data structure, graphs, and one algorithm, Breadth-First Search (BFS). Students use it before they attend the COS212 lecture on this topic, and it assumes no prior knowledge of graphs or BFS. The course takes about three hours, split into seven modules (0 to 6) of 5 to 55 minutes; it was planned at 75 minutes, and Section 4.4 explains the difference. Students can stop after any module and continue later.
 This document describes how the application teaches: who the learners are, what they must learn, how the lessons are designed, and how we will check that the design works. The SE document describes how the application is built. Both documents describe the same prototype.
 
 ## Why we chose graphs and BFS
@@ -126,7 +126,7 @@ Each objective follows the form the module teaches: an action verb, a topic and 
 
 The levels follow Thompson et al.'s reading of Bloom for programming [53]. Tracing code and implementing a known algorithm are processes the student applies, so objectives 5 and 6 are Apply [53, pp. 156, 158]. Judging whether code meets its requirements through a testing strategy is Evaluate [53, p. 158], which is what objective 7 asks. Table 1 also gives the CS2023 skill level for each objective. CS2023 groups Remember and Understand as Explain, and Analyse and Evaluate as Evaluate [40, pp. 31–32]. CS2023 lists "test" and "debug" as Apply verbs. We keep objective 7 at Evaluate, because the student must choose the test that tells a faulty version from a correct one, not only run a given test.
 
-Objective 8 has no row in Table 1 yet. It is taught in passing in modules 1 and 3, but nothing assesses it. The team decides whether to keep it (#70).
+Objective 8 is Apply and Understand: the student applies BFS to find a shortest route, and explains why BFS guarantees it. CS2023 lists shortest-path algorithms among the core graph algorithms of its Algorithmic Foundations area, with Dijkstra's and Floyd's as examples [40]. BFS gives the shortest route when every edge counts the same: the simplest case, and the step before Dijkstra's algorithm. Asking for the reason, not only the route, answers Fritz's point that a working answer does not prove understanding [54]. Module 3 teaches it with a worked example on the campus graph ("found by", walked back from the goal, and why the rings guarantee the fewest edges), a practice question, support for a student who struggles, and the closing task (#70).
 
 ## What counts as successful performance?
 
@@ -147,6 +147,7 @@ A student is ready for the lecture when no objective is marked "Not yet". The st
 | 5 | Apply | Apply | Tracing BFS on an unseen graph of 6 to 8 vertices by filling in a table. | Correct queue, visited set and next vertex at every step, with at most one error. |
 | 6 | Apply | Apply | Constructing BFS on the student's own graph class by ordering shuffled lines and filling in missing tokens. | The ordered and completed code matches the reference solution, including the expected traversal order. |
 | 7 | Analyse, evaluate | Evaluate | Fixing 2 faulty versions of BFS by selecting and ordering the corrections. Choosing, for a disconnected graph and a graph with a cycle, the test cases that expose each bug. | Both faulty versions corrected to match the solution. For each bug, a chosen test case fails the faulty version and passes the correct one. |
+| 8 | Apply, understand | Apply | 4 multiple-choice items on unseen graphs: the fewest edges between two vertices, the route BFS records by following "found by" back from the goal, and two items that ask why BFS guarantees the fewest edges. | At least 3 of 4 items correct. |
 
 Table: Level, CS2023 skill level, evidence and success criterion for each learning objective.
 
@@ -196,27 +197,27 @@ Table: Gagné's nine events applied to the BFS lessons.
 
 ## Lesson sequence
 
-The application has seven short modules, each focused on one main idea. This keeps every part small enough to complete in one sitting. The planned total is about 75 minutes (74 in Table 4). Students can stop after any module and the application saves their progress. Table 4 shows each module, the objectives it covers and its activities.
+The application has seven short modules, each focused on one main idea. Each module except the mastery check fits in under half an hour. The course was planned at about 75 minutes; as written it takes about 180, and Table 4 shows both. Students can stop after any module and the application saves their progress. Table 4 shows each module, the objectives it covers and its activities.
 
 Constructive alignment means that objectives, learning activities and assessment point to the same skill [4]. For example, learning objective 6 asks students to implement BFS. So the activity is constructing BFS — ordering shuffled lines and filling in the missing tokens — and the assessment compares the result with the reference solution. Parsons problems are a validated proxy for code-writing ability (§5.3), so this keeps the objective at its level while running no student-written code. A multiple-choice question about BFS would not show that a student can build it. The alignment keeps the application honest about what it teaches and what it measures.
 
 > **Revision (3 November 2026).** Code activities were changed from free-text code writing to ordering (Parsons) and fill-in-the-blank, checked by comparison with the solution. This was a software-security decision (the freeform code runner was removed; see SE document §15.3): it removes all execution of untrusted student code. The learning objectives and their Bloom's levels are unchanged. Objective 7 uses two activities of the same kind. In *fix the bug*, the student marks each faulty line of a BFS and chooses its correction from a given set, or moves a line that is in the wrong place. In *choose tests*, the student selects every test case (a small graph, a start vertex and the expected order) that the faulty version fails and the correct version passes.
 
-| Module | Learning objectives | Main learning activities | Assessment evidence | Duration (minutes) |
-|---|---|---|---|---|
-| 0. Warm-up and queue refresher | Prior knowledge | Short quiz on queues and basic Python. The application is designed to pick the refreshers the student needs; not yet built, so every student sees every refresher (#31). | Diagnostic score | 5 |
-| 1. What is a graph? | 1, 2, 3 | Build a campus graph by matching each walkway to the two buildings it joins (designed as adding vertices and edges by hand; not built). Classify directed and undirected graphs. Match real situations to graphs. | Labelling and matching checkpoints | 12 |
-| 2. A graph in Python | 2, 6 | Complete `add_vertex` and `add_edge` in a `Graph` class by filling in missing tokens. Make the class handle directed and undirected edges. | Completed code checked against the solution | 10 |
-| 3. Meet BFS | 4, 5 | Watch BFS on the campus graph. Predict the next vertex. Fill in the queue, the visited set and the traversal order. | Trace checkpoints | 12 |
-| 4. Build BFS | 6 | Put shuffled lines of code in order (Parsons). Fill in the missing tokens. | Line order and tokens checked against the solution | 15 |
-| 5. Test and debug | 7 | Find and fix bugs in faulty BFS code by selecting and ordering the corrections. Choose the test cases (a disconnected graph, a graph with a cycle) that expose each bug. | Fixes and test choices checked against the solution | 10 |
-| 6. Mastery check and report | 1–7 | Unseen items on every objective. Each item is answered once, with hints up to level 2; results are shown in the report when the check is finished. A report for each objective with next steps. | Criteria in Table 1 | 10 |
+| Module | Learning objectives | Main learning activities | Assessment evidence | Planned (minutes) | As written (minutes) |
+|---|---|---|---|---|---|
+| 0. Warm-up and queue refresher | Prior knowledge | Short quiz on queues and basic Python. The application is designed to pick the refreshers the student needs; not yet built, so every student sees every refresher (#31). | Diagnostic score | 5 | 5 |
+| 1. What is a graph? | 1, 2, 3 | Build a campus graph by matching each walkway to the two buildings it joins (designed as adding vertices and edges by hand; not built). Classify directed and undirected graphs. Match real situations to graphs. | Labelling and matching checkpoints | 12 | 25 |
+| 2. A graph in Python | 2, 6 | Complete `add_vertex` and `add_edge` in a `Graph` class by filling in missing tokens. Make the class handle directed and undirected edges. | Completed code checked against the solution | 10 | 20 |
+| 3. Meet BFS | 4, 5, 8 | Watch BFS on the campus graph. Predict the next vertex. Fill in the queue, the visited set and the traversal order. Find the fewest walkways by walking "found by" back from the goal, and say why BFS guarantees them. | Trace checkpoints; the fewest walkways | 12 | 25 |
+| 4. Build BFS | 6 | Put shuffled lines of code in order (Parsons). Fill in the missing tokens. | Line order and tokens checked against the solution | 15 | 25 |
+| 5. Test and debug | 7 | Find and fix bugs in faulty BFS code by selecting and ordering the corrections. Choose the test cases (a disconnected graph, a graph with a cycle) that expose each bug. | Fixes and test choices checked against the solution | 10 | 25 |
+| 6. Mastery check and report | 1–8 | Unseen items on every objective. Each item is answered once, with hints up to level 2; results are shown in the report when the check is finished. A report for each objective with next steps. | Criteria in Table 1 | 10 | 55 |
 
 Table: The lesson sequence, in which each row links objectives, activities and evidence. This follows constructive alignment [4].
 
-The timings are the plan; the Duration column is unchanged. Our own estimate of the content as written, at about a minute per multiple-choice item and the video lengths in the scripts, is about 145 minutes against the 75 planned, now that the support and evidence-based items are in (#150, #173). Module 6 alone, with 24 items, takes about 52 minutes against 10 planned. Module 5's content (#189) adds about 20 minutes against 10 planned: a video of about three minutes in its script, a worked example of about 480 words (nearly four minutes at the scripts' 130 words a minute), two retrieval questions and four code items at about three minutes each. That brings the estimate to about 165 minutes. The pilot's timings will decide what to cut (Section 8.5).
+The plan gave the course about 75 minutes. As written it takes about 180, and the application now shows that figure, module by module ("As written" in Table 4), on the register page and the module map. The estimate reads text and the narration scripts at 130 words a minute and adds a fixed time to answer each kind of activity: half a minute for a multiple-choice item beyond reading it, three minutes for a trace table, two for a fix-the-bug item. Support segments and bonus quests are left out, because only some students see them. A test keeps each module's minutes within a third of this estimate as the content changes (`api/tests/test_minutes.py`).
 
-The application shows students the planned times, which are the modules' estimated minutes in the content: 74 minutes in total, on the register page and the module map alike (#146; the plan's "about 75" is the same figure, rounded). So the application tells students less than half the time the content takes. When the pilot's timings are written up (#76), either the estimated minutes are changed to the measured times or the content is cut to fit the plan. The SE document lists this as a known limitation (§15.5).
+Showing the real figure is a design choice. A student told 74 minutes who is still working after two hours learns not to trust the application, and loses the sense of control that the ARCS model's confidence category asks us to support (the "Motivation" section) [37]. The course is also longer than one sitting, which the application already allows: progress is saved after every segment, and each module except the mastery check fits in under half an hour. The pilot's timings (#76) will show whether the estimate is right and what to cut; module 6, with 28 items in about 55 minutes, is the first candidate.
 
 Each checkpoint is small and focused on one key idea. Here is an example from module 2. The lesson explains that an undirected edge must be stored in both directions. The student then completes the method below.
 
@@ -323,7 +324,7 @@ New ideas stick best when they link to what students already know. Ausubel argue
 
 Recalling information strengthens memory. Roediger and Karpicke found that taking memory tests led to better long-term retention than repeated study [18]. For this reason each module opens with one or two questions on earlier modules. This practice helps students remember. It also shows them which ideas are still weak.
 
-Students need to trace code before they can write it well. Lister and colleagues found that many novice programmers could not trace short pieces of code correctly. They suggested that reading and tracing are skills students need before they write code [13]. For this reason students trace BFS by hand in module 3, before they build it in module 4. On staging they predict each step in the visualiser and read a worked trace table; then they fill in a trace table of their own, with feedback for each step.
+Students need to trace code before they can write it well. Lister and colleagues found that many novice programmers could not trace short pieces of code correctly. They suggested that reading and tracing are skills students need before they write code [13]. For this reason students trace BFS by hand in module 3, before they build it in module 4. On staging they predict each step in the visualiser and read a worked trace table; then they fill in a trace table of their own, with feedback for each step. Each row is marked from the student's own previous row as well as against the true trace, as a hand trace is marked in an exam: a slip early in the table costs one step, not every step after it. Without this, objective 5's "at most one error" would be failed by one early slip.
 
 Showing BFS on screen helps only if students take part. Hundhausen, Douglas and Stasko found that how students use a visualisation matters more than what it shows [9]. Naps and colleagues reached a similar view. They concluded that visualisations help when they make learners active [16]. For this reason students predict the next vertex before the animation shows it. The animation then confirms or corrects the prediction.
 
@@ -520,10 +521,10 @@ The lecture plans assessment in a table with five columns: the learning activity
 | Module 0: warm-up and queue refresher | Prior knowledge: queues (COS110), Python lists and loops | Answers three diagnostic questions: one on a queue, two on Python lists and loops. | Diagnostic and formative. The diagnostic is designed to choose the refreshers each student needs (SE document FR-8.1); on staging every student sees every refresher. | Activate prior knowledge; refreshers with short examples. |
 | Module 1: what is a graph? | 1, 2, 3 | Table 1, objectives 1 to 3 | Formative: multiple-choice and matching practice with three-part feedback and the hint ladder. | Problem first (the campus puzzle), then a worked example, then practice. A narrated video is scripted, not yet recorded (#37). |
 | Module 2: a graph in Python | 2, 6 | The completed `Graph` methods match the solution. | Formative: fill-in-the-blank code checked blank by blank; retrieval questions at the start. | Worked example, then three fill-in tasks (two, four and three blanks). |
-| Module 3: meet BFS | 4, 5 | Table 1, objectives 4 and 5 | Formative: matching, multiple choice, and predicting each step in the visualiser. Filling in a trace table, with feedback for each step. | Demonstration (worked trace table; narrated videos scripted, not yet recorded, #37), then prediction with immediate feedback. |
+| Module 3: meet BFS | 4, 5, 8 | Table 1, objectives 4, 5 and 8 | Formative: matching, multiple choice, and predicting each step in the visualiser. Filling in a trace table, with feedback for each step. | Demonstration (worked trace table; narrated videos scripted, not yet recorded, #37), then prediction with immediate feedback. |
 | Module 4: build BFS | 6 | Table 1, objective 6 | Formative: Parsons problem and fill-in code checked against the solution. | Worked example, then Parsons, then three blanks, then nine blanks (fading). |
 | Module 5: test and debug | 7 | Table 1, objective 7 | Formative: two retrieval questions, then two fix-the-bug and two choose-tests items with three-part feedback and the hint ladder (#189). | A narrated video (scripted, not yet recorded, #37) and a worked debugging example on a graph with a cycle, then practice. |
-| Module 6: mastery check | 1 to 7 | Table 1, all criteria. Only the first attempt at each item counts. | Summative within the application and criterion-referenced: one state per objective. | Unseen items; a report with the next step for each objective. |
+| Module 6: mastery check | 1 to 8 | Table 1, all criteria. Only the first attempt at each item counts. | Summative within the application and criterion-referenced: one state per objective. | Unseen items; a report with the next step for each objective. |
 | Review path | The objective marked "Not yet" | The same criterion as in Table 1, on fresh items | Formative practice, then re-assessment of that objective only. | Teach again with a new worked example, practice of the same kind as the assessed items with the full hint ladder, then fresh items (Section 7.6). |
 
 Table: Assessment plan in the lecturer's format [52].
@@ -556,7 +557,7 @@ This affects our assessment in three ways:
 - **The process is logged.** The event and attempt export records time, hint levels and every answer (SE document FR-10). An answer that arrives too quickly, with no hints or earlier attempts, could be flagged. We do not do this yet.
 - **The final check is human.** The lecture that follows uses the same skills without the application.
 
-Fritz makes a related point: a working program does not prove mastery, because it can be copied or bought. She replaces some programming assignments with work where the student explains their solution, such as short videos, posters and essay questions [54]. Our application has no such item: nothing asks the student to explain. Objective 8, "explain why BFS guarantees" the shortest route, would be the natural place for one (#70).
+Fritz makes a related point: a working program does not prove mastery, because it can be copied or bought. She replaces some programming assignments with work where the student explains their solution, such as short videos, posters and essay questions [54]. Objective 8 is where our application asks for the reason: two of its four mastery items ask the student why BFS guarantees the fewest edges, not only what the route is (#70). These are multiple choice, so they test recognising a correct explanation rather than producing one; a free-text explanation would need human marking.
 
 ### Formative assessment as elicit, interpret, respond
 
@@ -621,6 +622,32 @@ We use the first two levels of Kirkpatrick’s model: reaction (did students fin
 The same data serves the lecturer before the lecture. Just-in-Time Teaching has students work on short web exercises before class, and the lecturer reads their answers to decide where the class starts [68]. The staff portal's "Before the lecture" page does this from the mastery check: how many students are ready, each objective's results across the class, and on each mastery question the wrong option most students chose first, with the content's explanation of why it is wrong. A lecture that opens with the misconception most of the class holds builds on where the students are, which is the reason the application exists.
 
 The lecture divides ADDIE's Evaluate phase into formative evaluation, done while the material is being built so that it can still change, and summative evaluation, done at the end to improve the next presentation [58, p. 31]. The team pilot (Section 8.2) is formative evaluation. A study with real COS212 students, with a separate post-test (Section 8.4), would be summative evaluation. Table 19 gives the Kirkpatrick level of each measure.
+
+## Formative evaluation so far
+
+Three kinds of formative evaluation have run while the application was built, and each changed it.
+
+**Accessibility, automatically.** The end-to-end tests run axe-core on every page and on every activity kind (unanswered, with hints, wrong and right), in the light and the dark theme, in Chromium, Firefox and WebKit, and check the keyboard path and visible focus through a module. They report no WCAG 2.1 AA violations; the failures they found while being written (focus rings, contrast in dark mode, a page caught mid-fade) were fixed before they merged (SE document §14.1).
+
+**The content, automatically.** Every answer in the content is checked by running it: traces through the BFS engine, code through the checkers. The mastery items are also checked for cues a student could use without the skill: dozens of surface strategies (always the longest option, the option that repeats the question's words, the one that echoes the hints, and combinations of them) must not meet any objective. Several items were rewritten when one did.
+
+**An expert review of the interface (12 November).** One member, with an AI assistant (Section 10), walked every page on staging as a visitor, as each demo student and as staff, at five screen widths from a phone to a 4K monitor, in both themes. Each finding is classed below by the usability heuristic it breaks [69]. Of 33 findings, 23 are fixed in pull requests opened the same night; the other ten stay open: most are in the staff portal or cosmetic, and two (a standalone activity page that sizes badly, and a finished module that reopens on its last question) affect students.
+
+| Heuristic | Findings | Examples, and what changed |
+|---|---|---|
+| Visibility of system status | 4 | Progress on the module map disagreed with the module page; every tab was titled "Ctrl Academy". Both fixed. |
+| Match with the real world | 2 | A review path showed raw Markdown (code fences, table pipes) to students. Fixed. |
+| User control and freedom | 3 | Badges could only be turned off deep in the profile; now from the badge note itself. After logging in, a student lost the page they had asked for. Fixed. |
+| Consistency and standards | 6 | Two button styles (square and rounded), mixed fonts, a 404 page outside the app's frame. Fixed. |
+| Recognition rather than recall | 3 | The report's verdict was small grey text, with no next step; it now has a tally and one button to the next step. |
+| Flexibility and efficiency | 5 | On a large monitor the page filled a third of the screen; it now scales and uses two columns. Staff content lists have no search (open). |
+| Aesthetic and minimalist design | 8 | A header of outlined buttons; the module goals repeated on every segment; a public visitor met a bare login form instead of a landing page. Fixed. |
+| Help users recover from errors | 1 | The hint button looked as important as "Check answer"; it is now quieter. |
+| Help and documentation | 1 | Locked badges' "how to earn" lines looked like links. Fixed. |
+
+Table: The expert review's findings by heuristic.
+
+An expert review finds problems a designer can see; it cannot show whether a novice learns, which is what the pilot and, later, a study with real students are for. The pilot planned for 10 and 11 November had not been run when this was written (13 November).
 
 ## Pilot
 
@@ -739,8 +766,39 @@ If the pilot shows that our choices do not work as intended, the first thing we 
 | 1 Nov 2026 | "okay, for the se doc, what is the next thing we need to add/ make desisions on or correct" | SE document: alignment with this document |
 | 1 Nov 2026 | "yes lets carry on with the nes things we need to do in the se doc. ask me questions if the asnswer requires inout" | SE document: testing strategy and diagrams |
 | 1 Nov 2026 | "okay lets continue building it. ask me questions you need imput on" | SE document: stakeholders, wireframes, references; the Sprint 0 record |
+| 2 Nov 2026 | "okay now lets start on the login logout work." | Registration, login and logout (FR-1) |
+| 2 Nov 2026 | "lets try see if we can break it. try any sort of attack to bypass the auth or steal someones auth / impernonate someone else." | Security testing of authentication, repeated after each fix (SE §14.6) |
+| 2 Nov 2026 | "don have a list of passwords to not accept rather just have password rules and ui for password rules." | Password rules and the checklist on the register page (NFR-S1) |
+| 3 Nov 2026 | "what if a student tries to kill the sever by running an infinate loop or loading pakages or things like this. how do we stop this." | The code sandbox's limits, later removed (SE §15.3) |
+| 3 Nov 2026 | "this is too formal i want something like, hi guys, i have been working on the code sandbox today and i think we should rather pivit from it because xyz and rtaher do abc" | Drafting the team message proposing to drop the sandbox; the team decided |
+| 3 Nov 2026 | "first remove all of the code from staging regard it, save in in a local stash incase i want to bring it back. then update the 2 docs to record the change." | Removing the code runner; recording the decision in both documents |
+| 3 Nov 2026 | "i think we should use some sort of inline documentation or something." | Docstrings and the OpenAPI schema as code documentation (NFR-M2) |
+| 5 Nov 2026 | "build the staff portal on the navbar, in here it will be where all the staff can setup everything, for example the videos configuration page." | The staff portal (FR-10, FR-11) |
+| 5 Nov 2026 | "begin research on how badges and achievements work in educational software development. based on the lecture slides additional papers research in the field, the bible app, duolingo, khan academy etc." | Research for the badge design (ID document, Motivation) |
+| 5 Nov 2026 | "lets build what is decided then. How are we going to get icons or images for the badges, lets geneare the images for the 12 badges" | The badge artwork and the rewards feature (FR-9) (GUI) |
+| 6 Nov 2026 | "can we not generate a better colour pallete based on the logo for readbility? in both darkmode and light mode." | Colour palette options for readability, given to the frontend developer (GUI) |
+| 7 Nov 2026 | "lets generate all of the screens based on his new ui chnages" | Screen mock-ups for the SE document's wireframes (GUI) |
+| 7 Nov 2026 | "do we have a ticket for the user profile/ dropdown. this is where the pagedges section will be wheere the user can set a profile picture chnage password see their stats etc" | The profile page and account menu (FR-1.5–FR-1.7) (GUI) |
+| 8–10 Nov 2026 | "review pr 105", "begin the review on #122" and similar, then "make the chnages and push to the branch" | Drafting reviews of team members' pull requests; the reviewer read, edited and posted them |
+| 11 Nov 2026 | "What is still assigned to me and not in staging yet? All of this needs to be resolved asap." | Navigation, mastery-check rules, review paths that teach again (#146, #144, #148); module 1's drawn graph answers (#155); evidence-based content edits and support items (#150, #173) |
+| 12 Nov 2026 | "look at savys branch and ours. compare them to ensure the final version is as rock solida as possible" | Combining the two end-to-end test branches (#35) |
+| 12 Nov 2026 | "before we waste money please try this properly locally so we know if it fails beforehand" and "the end to end test should only run on github for a pr to master from staging" | Running the end-to-end tests locally; the CI rule (#194) |
+| 12 Nov 2026 | "I will give you a few small examples, but your job will be to find everything else ... look at the research material on educational software devlopment ... read the spec of this exam again and ensure we have met all of the requirements." | A UI, research and specification audit; the landing page, header, layout and profile pictures (#198, #199) |
+| 12 Nov 2026 | "you job is to do all i have assigend you. keep checking discord and prs and make any contnent that is missing." | Objective 8's assessment (#70), honest module timings, the stand-up record (#79), this prompt record (#74) |
 
 Table: Generative AI prompts for the software engineering work.
+
+The prompts above are Matthew Els's, taken from his assistant's session logs (1 to 12 November). Prompts that only asked for a status, approved a step ("push it", "open a pr") or contained a teammate's message are left out.
+
+**Course content made with the assistant.** Some of what students see was drafted with the same tool from the prompts above, then checked by the automated content tests (`api/tests/`: every answer is run through the BFS engine or the checker, mastery items are checked for answer cues, support items for overlap with assessed items) and reviewed in pull requests: module 1's drawn graph answers and their images (#155), the evidence-based edits and support items (#150, #173), the review paths' worked examples and practice (#148), the narration as text (#149) and objective 8's items (#70). The narration scripts for modules 1 to 4 were generated by Matthew Els before this record starts; the prompt he used is to be added (#74).
+
+### Ayanda Juqu
+
+To be added by Ayanda Juqu (#74): the tool and the main prompts, or a statement that none was used.
+
+### Reece Schmidt
+
+To be added by Reece Schmidt (#74): the tool and the main prompts, or a statement that none was used.
 
 ## Instructional design
 
@@ -910,5 +968,7 @@ Marcelo Pias, Susan Reiser, Christian Servin, Rahul Simha, Titus Winters, and Qi
 [67]	A. Tilanterä et al. Investigating students' misconceptions of Dijkstra's algorithm: Exploration of algorithm simulation traces. 2025. https://doi.org/10.1145/3724363.3729081 (venue and full author list not verified)
 
 [68]	G. M. Novak, E. T. Patterson, A. D. Gavrin, and W. Christian. *Just-in-Time Teaching: Blending Active Learning with Web Technology*. Prentice Hall, Upper Saddle River, NJ, 1999.
+
+[69]	J. Nielsen. Enhancing the explanatory power of usability heuristics. In *Proceedings of the SIGCHI Conference on Human Factors in Computing Systems (CHI '94)*, pages 152–158. ACM, 1994.
 
 </div>

@@ -4,7 +4,7 @@
       "id": 1,
       "slug": "what-is-a-graph",
       "title": "What is a graph?",
-      "estimated_minutes": 12,
+      "estimated_minutes": 25,
       "goals": [
         "Say what a data structure, an algorithm, a graph and a graph traversal are, with an example of each.",
         "Point out the vertices and edges in a graph, and tell a directed graph from an undirected one.",

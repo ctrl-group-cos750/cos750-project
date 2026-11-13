@@ -96,3 +96,16 @@
   gap: var(--space-3);
   max-width: 28rem;
 }
+
+.upload {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.uploadActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

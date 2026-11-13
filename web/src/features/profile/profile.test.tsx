@@ -1,9 +1,10 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { User } from '../../auth/api.ts'
 import { ada, fakeApi, renderApp } from '../../test/app.tsx'
 import type { MasteryReport } from '../mastery/mastery.api.ts'
+import * as picture from './squarePicture.ts'
 
 function report(states: string[]): MasteryReport {
   return {
@@ -47,6 +48,14 @@ function setup({
         me = { ...me, ...(body as { avatar: User['avatar'] }) }
         return Response.json(me)
       },
+      'PUT /api/me/picture': () => {
+        me = { ...me, avatar: null, pictureUrl: '/api/me/picture?v=1' }
+        return Response.json(me)
+      },
+      'DELETE /api/me/picture': () => {
+        me = { ...me, pictureUrl: null }
+        return Response.json(me)
+      },
       'POST /api/me/password': password,
     },
   })
@@ -63,14 +72,17 @@ describe('account menu', () => {
     expect(trigger).toHaveAttribute('aria-expanded', 'false')
     await userEvent.click(trigger)
     expect(trigger).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByRole('link', { name: 'Profile' })).toHaveAttribute('href', '/profile')
+    expect(screen.getByRole('link', { name: 'Profile and settings' })).toHaveAttribute(
+      'href',
+      '/profile',
+    )
     expect(screen.getByRole('link', { name: 'Badges' })).toHaveAttribute('href', '/badges')
     expect(screen.getByRole('button', { name: 'Log out' })).toBeVisible()
 
     await userEvent.keyboard('{Escape}')
     expect(trigger).toHaveAttribute('aria-expanded', 'false')
     expect(trigger).toHaveFocus()
-    expect(screen.queryByRole('link', { name: 'Profile' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Profile and settings' })).toBeNull()
   })
 
   it('closes on a click outside it, and after choosing a page', async () => {
@@ -78,12 +90,12 @@ describe('account menu', () => {
     renderApp('/')
     await openMenu()
     await userEvent.click(screen.getByRole('heading', { name: 'Graphs and breadth-first search' }))
-    expect(screen.queryByRole('link', { name: 'Profile' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Profile and settings' })).toBeNull()
 
     await openMenu()
-    await userEvent.click(screen.getByRole('link', { name: 'Profile' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Profile and settings' }))
     expect(await screen.findByRole('heading', { name: 'Ada' })).toBeVisible()
-    expect(screen.queryByRole('link', { name: 'Profile' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Profile and settings' })).toBeNull()
   })
 })
 
@@ -178,5 +190,46 @@ describe('changing the password', () => {
     expect(await screen.findByText('Your current password is not right.')).toBeVisible()
     expect(field('Current password')).toHaveAttribute('aria-invalid', 'true')
     expect(field('Current password')).toHaveFocus()
+  })
+})
+
+describe('an uploaded picture (FR-1.6)', () => {
+  it('uploads the picture, shows it here and in the menu, and removes it', async () => {
+    const calls = setup()
+    // jsdom has no canvas: the square is made by a real browser (e2e); here, the upload itself.
+    const square = vi
+      .spyOn(picture, 'squarePicture')
+      .mockResolvedValue('data:image/webp;base64,AA==')
+    renderApp('/profile')
+    await screen.findByRole('heading', { name: 'Profile picture' })
+    expect(screen.queryByRole('button', { name: 'Remove it' })).toBeNull()
+
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]')!
+    await userEvent.upload(input, new File(['x'], 'me.jpg', { type: 'image/jpeg' }))
+    await screen.findByRole('button', { name: 'Remove it' })
+    expect(calls.callsTo('PUT /api/me/picture')[0]?.body).toEqual({
+      image: 'data:image/webp;base64,AA==',
+    })
+    expect(screen.getByRole('img', { name: 'Your picture' })).toHaveAttribute(
+      'src',
+      '/api/me/picture?v=1',
+    )
+    expect(screen.getByText('Saved.')).toBeVisible()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remove it' }))
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Remove it' })).toBeNull())
+    square.mockRestore()
+  })
+
+  it('refuses a file that is not a picture, saying why', async () => {
+    setup()
+    renderApp('/profile')
+    await screen.findByRole('heading', { name: 'Profile picture' })
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]')
+    expect(input).not.toBeNull()
+    await userEvent.upload(input!, new File(['hello'], 'notes.txt', { type: 'text/plain' }), {
+      applyAccept: false,
+    })
+    expect(await screen.findByText(/Choose a picture/)).toBeVisible()
   })
 })

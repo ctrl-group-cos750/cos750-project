@@ -217,7 +217,8 @@ def test_module_6_opens_with_what_the_check_is_then_only_mastery_items() -> None
 
 
 def test_activity_ids_are_in_their_ranges() -> None:
-    assert [a.id for a in CHECK] == list(range(601, 601 + len(CHECK)))
+    # 601-624, then objective 8's 626-629 (#70): 625 was already a module 6 retrieval item.
+    assert [a.id for a in CHECK] == [*range(601, 625), *range(626, 630)]
     for o, path in PATHS.items():
         base = 1000 + 100 * o
         assert all(base < s.id < base + 100 for s in path.segments)
@@ -254,6 +255,7 @@ def test_the_kinds_follow_table_1() -> None:
         5: ["trace"],
         6: ["fill_in", "parsons"],
         7: ["choose_tests", "fix_the_bug"],
+        8: ["multiple_choice"],
     }
     # Objective 2: three diagrams labelled, four graphs classified.
     assert [len(a.config["left"]) for a in items_of("module 6", 2)] == [3, 3, 3, 4]

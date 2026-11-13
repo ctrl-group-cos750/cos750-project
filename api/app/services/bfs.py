@@ -37,6 +37,12 @@ def _adjacency(scenario: GraphScenarioOut) -> dict[str, list[str]]:
     return {vertex: sorted(targets) for vertex, targets in neighbours.items()}
 
 
+def neighbours(scenario: GraphScenarioOut) -> dict[str, list[str]]:
+    """Each vertex's neighbours in the order BFS takes them (alphabetical), for code that steps
+    BFS from a state of its own, such as follow-through marking of a trace table."""
+    return _adjacency(scenario)
+
+
 def _validate(scenario: GraphScenarioOut) -> None:
     if len(set(scenario.vertices)) != len(scenario.vertices):
         raise InvalidGraph(DUPLICATE_VERTEX)

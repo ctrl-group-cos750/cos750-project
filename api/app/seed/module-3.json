@@ -730,33 +730,33 @@
       "purpose": "practice",
       "objective_id": 8,
       "config": {
-        "prompt": "In a small network, H links to J and K, both J and K link to L, and L links to M. Starting BFS at H, how many steps lie on the shortest route to M?",
+        "prompt": "In a small network, H links to J and K, both J and K link to L, and L links to M. Starting BFS at H, how many edges lie on the shortest route to M?",
         "options": [
           {
             "id": "a",
-            "label": "Two steps"
+            "label": "2 edges from H"
           },
           {
             "id": "b",
-            "label": "Five steps, one per vertex on the way"
+            "label": "5 edges from H"
           },
           {
             "id": "c",
-            "label": "Four steps"
+            "label": "4 edges from H"
           },
           {
             "id": "d",
-            "label": "Three steps"
+            "label": "3 edges from H"
           }
         ]
       },
       "solution": {
-        "explanation": "BFS from H finds J and K (1 step), then L (2), then M (3). The route H → J → L → M has 3 steps.",
+        "explanation": "BFS from H finds J and K (1 edge away), then L (2), then M (3). The route H → J → L → M has 3 edges.",
         "correct": "d",
         "feedback": {
-          "a": "Not quite. M links only to L, and L is 2 steps from H, so M is one more. Ask: who found M, and who found that vertex?",
-          "b": "Not quite. Count the steps between vertices, not the vertices: and the route H, J, L, M has only 4 vertices anyway. Walk back from M.",
-          "c": "Not quite. 4 is the number of vertices on the route H, J, L, M. The steps between them are one fewer."
+          "a": "Not quite. M links only to L, and L is 2 edges from H, so M is one more. Ask: who found M, and who found that vertex?",
+          "b": "Not quite. 5 is M's place in the visit order H, J, K, L, M, not how many edges away it is. Walk back from M and count the edges.",
+          "c": "Not quite. 4 is the number of vertices on the route H, J, L, M. The edges between them are one fewer, so count the edges."
         }
       },
       "hints": [
@@ -774,7 +774,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: 3 steps, H → J → L → M."
+          "body": "Answer: 3 edges, H → J → L → M."
         }
       ]
     },

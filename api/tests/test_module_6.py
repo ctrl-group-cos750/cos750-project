@@ -660,3 +660,23 @@ def test_the_tests_include_a_disconnected_graph_and_a_graph_with_a_cycle() -> No
 def test_every_hidden_test_graph_runs_on_the_engine() -> None:
     for directed, vertices, edges, start in HIDDEN.values():
         assert run_bfs(scenario(directed, vertices, edges, start)).order
+
+
+def test_objective_8_items_ask_for_the_fewest_edges_not_the_quickest() -> None:
+    """626 asked for the "quickest" trip, which module 3 (worked example 392) teaches BFS can't
+    find when edges take different times (#214 C10)."""
+    for a in (a for a in EVERY if a.objective_id == 8):
+        assert not re.search(r"quickest|fastest|shortest time", str(a.config.get("prompt", "")))
+
+
+def test_objective_4_hint_3_is_a_partial_solution_for_its_own_item() -> None:
+    """All eight objective 4 items had the same hints 1 to 3, and hint 3 repeated hint 2 as a
+    question, yet opening it marks the answer "met with support" (#214 C12)."""
+    items = [a for a in EVERY if a.objective_id == 4 and a.purpose == "mastery"]
+    assert len(items) == 8
+    for level in (2, 3):
+        bodies = [a.hints[level - 1].body for a in items]
+        assert len(set(bodies)) == len(bodies), level
+    for a in items:
+        assert a.hints[2].body != a.hints[1].body
+        assert "Does this problem ask for one of those two jobs?" not in a.hints[2].body

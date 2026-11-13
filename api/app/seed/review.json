@@ -1427,11 +1427,11 @@
         },
         {
           "level": 2,
-          "body": "BFS is good at two jobs: the fewest edges, and reaching everything from a start."
+          "body": "There is a graph: positions joined by moves. What does the problem want as small as possible?"
         },
         {
           "level": 3,
-          "body": "Does this problem ask for one of those two jobs?"
+          "body": "It wants the fewest moves, and each move is one edge. BFS explores in rings, one edge further out each time. Does that give the fewest edges?"
         },
         {
           "level": 4,
@@ -1477,11 +1477,11 @@
         },
         {
           "level": 2,
-          "body": "BFS is good at two jobs: the fewest edges, and reaching everything from a start."
+          "body": "There is a graph: towns joined by roads. Does the problem want the fewest edges, or something else?"
         },
         {
           "level": 3,
-          "body": "Does this problem ask for one of those two jobs?"
+          "body": "It wants the longest trip. BFS finds the shortest route to each town first. Does a tool for the shortest route give the longest one?"
         },
         {
           "level": 4,
@@ -1527,11 +1527,11 @@
         },
         {
           "level": 2,
-          "body": "BFS is good at two jobs: the fewest edges, and reaching everything from a start."
+          "body": "There is a graph: people joined by contacts. Which people does the clinic want: everyone, or those within a few edges of the patient?"
         },
         {
           "level": 3,
-          "body": "Does this problem ask for one of those two jobs?"
+          "body": "It wants the patient's contacts, then their contacts: the first ring, then the second. In what order does BFS reach vertices?"
         },
         {
           "level": 4,
@@ -1577,11 +1577,11 @@
         },
         {
           "level": 2,
-          "body": "BFS is good at two jobs: the fewest edges, and reaching everything from a start."
+          "body": "Is there a graph here? What would join one student number to another?"
         },
         {
           "level": 3,
-          "body": "Does this problem ask for one of those two jobs?"
+          "body": "Nothing joins one number to another: it's a list to be put in order. Is that a job for following edges?"
         },
         {
           "level": 4,
@@ -3658,7 +3658,7 @@
           },
           {
             "id": "c",
-            "label": "4 edges: F, H, K and J, then one more"
+            "label": "4 edges"
           }
         ]
       },
@@ -3666,7 +3666,7 @@
         "correct": "b",
         "feedback": {
           "a": "Not quite. J isn't joined to G or H, so it can't be 2 edges from F. Ask: which ring of BFS is J in?",
-          "c": "Not quite. Routes such as F, G, I, J have 3 edges. Count the steps between the vertices."
+          "c": "Not quite. 4 is the number of vertices on a route such as F, G, I, J. Count the edges between them."
         }
       },
       "hints": [

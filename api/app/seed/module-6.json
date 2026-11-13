@@ -1054,11 +1054,11 @@
         },
         {
           "level": 2,
-          "body": "BFS is good at two jobs: the fewest edges, and reaching everything from a start."
+          "body": "Think of a graph where one letter-change joins two words. What does the puzzle want as small as possible?"
         },
         {
           "level": 3,
-          "body": "Does this problem ask for one of those two jobs?"
+          "body": "It wants the fewest changes, and each change is one edge. BFS reaches vertices in rings, one edge further out each time. Does that give the fewest edges?"
         },
         {
           "level": 4,
@@ -1104,11 +1104,11 @@
         },
         {
           "level": 2,
-          "body": "BFS is good at two jobs: the fewest edges, and reaching everything from a start."
+          "body": "There is a graph: airports joined by flights. But what is the problem trying to make smallest: the number of flights, or something else?"
         },
         {
           "level": 3,
-          "body": "Does this problem ask for one of those two jobs?"
+          "body": "It wants the lowest total price, and each flight has its own price. BFS counts flights, not prices. Could two cheap flights cost less than one dear one?"
         },
         {
           "level": 4,
@@ -1154,11 +1154,11 @@
         },
         {
           "level": 2,
-          "body": "BFS is good at two jobs: the fewest edges, and reaching everything from a start."
+          "body": "Is this about the fewest edges, or about whether something can be reached at all?"
         },
         {
           "level": 3,
-          "body": "Does this problem ask for one of those two jobs?"
+          "body": "It asks which computers can be reached from the server. BFS from the server finds exactly those. What happens to a computer with no path from the server?"
         },
         {
           "level": 4,
@@ -1204,11 +1204,11 @@
         },
         {
           "level": 2,
-          "body": "BFS is good at two jobs: the fewest edges, and reaching everything from a start."
+          "body": "Is there a graph here? What would join one mark to another?"
         },
         {
           "level": 3,
-          "body": "Does this problem ask for one of those two jobs?"
+          "body": "The marks are just numbers in a list: nothing joins one mark to another. Does the problem need edges to follow?"
         },
         {
           "level": 4,
@@ -2251,12 +2251,8 @@
       "purpose": "mastery",
       "objective_id": 8,
       "config": {
-        "prompt": "A bus network joins stops with these routes, each one bus ride: P–Q, P–R, Q–S, R–S, R–T, S–U, T–U and U–V. How many rides does the quickest trip from P to V take?",
+        "prompt": "A bus network joins stops with these routes, each one bus ride: P–Q, P–R, Q–S, R–S, R–T, S–U, T–U and U–V. How many rides does the trip from P to V take, at the fewest?",
         "options": [
-          {
-            "id": "a",
-            "label": "5 rides, one for each stop on the trip"
-          },
           {
             "id": "b",
             "label": "3 rides"
@@ -2264,6 +2260,14 @@
           {
             "id": "c",
             "label": "4 rides"
+          },
+          {
+            "id": "a",
+            "label": "5 rides"
+          },
+          {
+            "id": "d",
+            "label": "6 rides"
           }
         ]
       },
@@ -2271,7 +2275,8 @@
         "correct": "c",
         "feedback": {
           "b": "Not quite. V is joined only to U, and U is 3 rides from P, so V is one more. Ask: in which ring of BFS does V appear?",
-          "a": "Not quite. A trip such as P, Q, S, U, V has 5 stops but 4 rides between them. Count the edges, not the vertices."
+          "a": "Not quite. 5 counts the stops on a trip such as P, Q, S, U, V, not the rides between them. Each ride is one edge. Count the edges.",
+          "d": "Not quite. 6 is how many stops BFS visits before V (P, Q, R, S, T, U), not how far V is. Ask: in which ring does V appear?"
         }
       },
       "hints": [

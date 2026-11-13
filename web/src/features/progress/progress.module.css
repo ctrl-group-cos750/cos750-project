@@ -54,7 +54,8 @@
 }
 
 .here .skill {
-  background: var(--color-accent-soft);
+  background: color-mix(in srgb, var(--color-accent-soft) 55%, transparent);
+  box-shadow: inset 3px 0 0 var(--color-primary);
 }
 
 .summary {

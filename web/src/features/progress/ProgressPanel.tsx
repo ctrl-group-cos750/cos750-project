@@ -46,7 +46,9 @@ function MedalLine({ medal }: { medal: ModuleMedal | undefined }) {
       <Medal tier={tier} size={32} />
       <p>
         <strong>
-          {medal.medal ? `${MEDAL_NAMES[tier]} medal` : `Heading for ${MEDAL_NAMES[tier]}`}
+          {medal.medal
+            ? `${MEDAL_NAMES[tier]} medal`
+            : `Heading for ${MEDAL_NAMES[tier].toLowerCase()}`}
         </strong>
         <span className={styles.muted}>
           {MEDAL_RULES[tier].charAt(0).toUpperCase() + MEDAL_RULES[tier].slice(1)}.

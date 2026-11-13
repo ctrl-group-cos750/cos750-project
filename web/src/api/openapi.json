@@ -2214,6 +2214,56 @@
         }
       }
     },
+    "/api/staff/readiness": {
+      "get": {
+        "tags": [
+          "staff"
+        ],
+        "summary": "Readiness",
+        "description": "For the lecturer, before the lecture (FR-10): how many students who took the mastery check\nare ready, each objective's results across them, and the most common wrong first answers on\nthe assessed multiple-choice items (module 6 and the review paths' fresh items), each with the\ncontent's explanation of why it is wrong. Real students only; counts only, no names.",
+        "operationId": "readiness_api_staff_readiness_get",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/staff/content": {
       "get": {
         "tags": [
@@ -4039,6 +4089,70 @@
         ],
         "title": "ChoiceOption"
       },
+      "CommonWrongAnswer": {
+        "properties": {
+          "activityId": {
+            "type": "integer",
+            "title": "Activityid"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "objectiveId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objectiveid"
+          },
+          "answered": {
+            "type": "integer",
+            "title": "Answered"
+          },
+          "wrong": {
+            "type": "integer",
+            "title": "Wrong"
+          },
+          "option": {
+            "type": "string",
+            "title": "Option"
+          },
+          "chosenBy": {
+            "type": "integer",
+            "title": "Chosenby"
+          },
+          "whyWrong": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Whywrong"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "activityId",
+          "title",
+          "objectiveId",
+          "answered",
+          "wrong",
+          "option",
+          "chosenBy",
+          "whyWrong"
+        ],
+        "title": "CommonWrongAnswer",
+        "description": "The wrong option chosen most often, at first answer, on one multiple-choice assessed item:\nthe misconception to address in the lecture."
+      },
       "CourseLengthOut": {
         "properties": {
           "minutes": {
@@ -5599,6 +5713,41 @@
         "title": "ModuleOut",
         "description": "A module as it appears on the module map.\n\n``status`` is computed per-student at query time (never stored directly on the\nmodule); it is one of: locked | open | in_progress | complete.\n``segment_count`` and ``current_segment_position`` let the map show a progress\nbar without loading the full segment list."
       },
+      "ObjectiveReadiness": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "metIndependently": {
+            "type": "integer",
+            "title": "Metindependently"
+          },
+          "metWithSupport": {
+            "type": "integer",
+            "title": "Metwithsupport"
+          },
+          "notYet": {
+            "type": "integer",
+            "title": "Notyet"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "metIndependently",
+          "metWithSupport",
+          "notYet"
+        ],
+        "title": "ObjectiveReadiness",
+        "description": "How the class stands on one objective, among students who have answered the mastery check."
+      },
       "ObjectiveReportOut": {
         "properties": {
           "id": {
@@ -5739,6 +5888,42 @@
         ],
         "title": "PositionIn",
         "description": "Request body for ``POST /api/modules/{moduleId}/position`` (FR-2.5).\n\nThe client sends the zero-based position of the segment the student just\nreached. The server keeps the furthest one, and refuses a position more than one past it,\nso a module can't be finished by jumping to its end.\n\n``ge=0`` rejects negative values at the API boundary: a negative position stored in\n``ModuleProgress.current_segment_position`` would cause ``segments[-1]`` (undefined\nin JavaScript) on resume, crashing the ModulePage render."
+      },
+      "Readiness": {
+        "properties": {
+          "students": {
+            "type": "integer",
+            "title": "Students"
+          },
+          "ready": {
+            "type": "integer",
+            "title": "Ready"
+          },
+          "objectives": {
+            "items": {
+              "$ref": "#/components/schemas/ObjectiveReadiness"
+            },
+            "type": "array",
+            "title": "Objectives"
+          },
+          "commonWrongAnswers": {
+            "items": {
+              "$ref": "#/components/schemas/CommonWrongAnswer"
+            },
+            "type": "array",
+            "title": "Commonwronganswers"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "students",
+          "ready",
+          "objectives",
+          "commonWrongAnswers"
+        ],
+        "title": "Readiness",
+        "description": "Before the lecture (Just-in-Time Teaching, Novak et al. 1999): who is ready, how the class\nstands on each objective, and the wrong answers the lecture should address first."
       },
       "RegisterIn": {
         "properties": {

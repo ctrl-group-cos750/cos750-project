@@ -791,6 +791,29 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/staff/readiness': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Readiness
+     * @description For the lecturer, before the lecture (FR-10): how many students who took the mastery check
+     *     are ready, each objective's results across them, and the most common wrong first answers on
+     *     the assessed multiple-choice items (module 6 and the review paths' fresh items), each with the
+     *     content's explanation of why it is wrong. Real students only; counts only, no names.
+     */
+    get: operations['readiness_api_staff_readiness_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/staff/content': {
     parameters: {
       query?: never
@@ -1329,6 +1352,29 @@ export interface components {
       id: string
       /** Label */
       label: string
+    }
+    /**
+     * CommonWrongAnswer
+     * @description The wrong option chosen most often, at first answer, on one multiple-choice assessed item:
+     *     the misconception to address in the lecture.
+     */
+    CommonWrongAnswer: {
+      /** Activityid */
+      activityId: number
+      /** Title */
+      title: string
+      /** Objectiveid */
+      objectiveId: number | null
+      /** Answered */
+      answered: number
+      /** Wrong */
+      wrong: number
+      /** Option */
+      option: string
+      /** Chosenby */
+      chosenBy: number
+      /** Whywrong */
+      whyWrong: string | null
     }
     /**
      * CourseLengthOut
@@ -1960,6 +2006,22 @@ export interface components {
       shownSegmentsPassed: number
     }
     /**
+     * ObjectiveReadiness
+     * @description How the class stands on one objective, among students who have answered the mastery check.
+     */
+    ObjectiveReadiness: {
+      /** Id */
+      id: number
+      /** Text */
+      text: string
+      /** Metindependently */
+      metIndependently: number
+      /** Metwithsupport */
+      metWithSupport: number
+      /** Notyet */
+      notYet: number
+    }
+    /**
      * ObjectiveReportOut
      * @description One objective on the mastery report (FR-7.2, FR-7.3). `answered` of `total` is how many of
      *     its module 6 items the student has answered; the result stays `not_attempted` until all are.
@@ -2027,6 +2089,21 @@ export interface components {
     PositionIn: {
       /** Segmentposition */
       segmentPosition: number
+    }
+    /**
+     * Readiness
+     * @description Before the lecture (Just-in-Time Teaching, Novak et al. 1999): who is ready, how the class
+     *     stands on each objective, and the wrong answers the lecture should address first.
+     */
+    Readiness: {
+      /** Students */
+      students: number
+      /** Ready */
+      ready: number
+      /** Objectives */
+      objectives: components['schemas']['ObjectiveReadiness'][]
+      /** Commonwronganswers */
+      commonWrongAnswers: components['schemas']['CommonWrongAnswer'][]
     }
     /** RegisterIn */
     RegisterIn: {
@@ -3674,6 +3751,37 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['Insights']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  readiness_api_staff_readiness_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['Readiness']
         }
       }
       /** @description Validation Error */

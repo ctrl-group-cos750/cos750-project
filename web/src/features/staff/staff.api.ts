@@ -176,6 +176,33 @@ export type Insights = {
 }
 
 export const getInsights = () => api<Insights>('/api/staff/insights')
+
+/** "Before the lecture" (api/app/schemas/evaluation.py Readiness): counts over student accounts. */
+export type Readiness = {
+  /** Students who have answered at least one mastery item. */
+  students: number
+  /** Of them, how many met every objective. */
+  ready: number
+  objectives: {
+    id: number
+    text: string
+    metIndependently: number
+    metWithSupport: number
+    notYet: number
+  }[]
+  commonWrongAnswers: {
+    activityId: number
+    title: string
+    objectiveId: number | null
+    answered: number
+    wrong: number
+    option: string
+    chosenBy: number
+    whyWrong: string | null
+  }[]
+}
+
+export const getReadiness = () => api<Readiness>('/api/staff/readiness')
 /** CSV downloads: a plain link, so the browser saves the file with the session cookie. */
 export type ExportTable = 'attempts' | 'hints' | 'events' | 'objective_results'
 export const exportUrl = (table: ExportTable) => `/api/staff/export/${table}.csv`

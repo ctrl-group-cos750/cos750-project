@@ -743,7 +743,7 @@
       "title": "Closing task: how many introductions?",
       "module_id": 5,
       "purpose": "practice",
-      "objective_id": 4,
+      "objective_id": 8,
       "config": {
         "prompt": "Use your trace. At the fewest, how many introductions does Thandi (T) need to meet Ofentse (O)? Each introduction crosses one edge.",
         "options": [
@@ -770,7 +770,7 @@
         "correct": "a",
         "feedback": {
           "b": "Not quite. 5 is how many people BFS visits before Ofentse, not how many edges lie between Thandi and Ofentse. Follow who found whom, back from O to T.",
-          "c": "Not quite. A longer chain exists, but BFS finds the shortest first: Thandi's neighbours are one introduction away, Kagiso two and Ofentse three. Count the rings, not every route.",
+          "c": "Not quite. 4 counts the people on the chain, T, L, K and O, not the introductions between them, and each introduction is one edge. Follow who found whom, back from O to T, and count the edges.",
           "d": "Not quite. Neither Lebo nor Sipho has worked with Ofentse, so Ofentse isn't two introductions away. It takes one more step, through Kagiso."
         }
       },

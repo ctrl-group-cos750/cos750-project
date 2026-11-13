@@ -196,7 +196,8 @@ def on_objective_result(
 def on_bonus_quest(
     session: Session, user_id: int, quest_id: int, *, all_quests_done: bool
 ) -> Earned:
-    """A bonus quest finished (#31): its points and its own badge, and All Quests with the last."""
+    """A bonus quest finished (#31, #87): its points and its own badge, and All Quests with the
+    last. `quest_id` is the quest's activity id, so a badge keeps naming the same quest."""
     earned = _add_points(session, user_id, "bonus_quest", f"quest:{quest_id}")
     earned += _award(session, user_id, QUEST, ref=str(quest_id))
     if all_quests_done:

@@ -239,7 +239,8 @@ def test_every_activity_is_shown_by_exactly_one_segment_or_is_a_retrieval_item()
 
 
 # The course's closing transfer task (#87, Gagné event 9) ends module 5: BFS on a new problem, so it
-# practises objectives 5 (the trace) and 4 (what the trace answers), not module 5's own objective.
+# practises objectives 5 (the trace) and 8 (the fewest edges, read from the trace, and why BFS
+# guarantees it), not module 5's own objective.
 CLOSING_TASK = {581, 582}
 
 
@@ -255,7 +256,7 @@ def test_module_5_ends_with_the_closing_transfer_task() -> None:
     ids = {a.id: a for a in ACTIVITIES}
     assert {(ids[i].purpose, ids[i].objective_id) for i in CLOSING_TASK} == {
         ("practice", 5),
-        ("practice", 4),
+        ("practice", 8),
     }
 
 

@@ -103,6 +103,7 @@ describe('a bonus quest segment (#87)', () => {
     renderSegment(quest)
     expect(screen.getByText(/Optional bonus quest/)).toBeInTheDocument()
     expect(screen.getByText(/never affects your results/)).toBeInTheDocument()
+    expect(screen.getByText(/after them it earns no points or badge/)).toBeInTheDocument()
   })
 
   it('an ordinary activity segment has no such line', () => {

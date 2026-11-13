@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, Hint, HintView
+from app.models import Activity, Attempt, Hint, HintView, Segment
 from app.schemas.activities import CheckResult
 from app.services.checking import check_activity, is_blank
 from app.services.events import log_event
@@ -37,30 +37,50 @@ class AlreadyAnswered(ValueError):
     """A one-answer item (the mastery check, #144) that this student has answered already."""
 
 
-def reward_bonus_quest(session: Session, user_id: int, activity: Activity) -> None:
-    """A bonus quest answered correctly (FR-8.3, FR-9.3; #87): its 20 points and its Quest badge,
-    once, and All Quests once every bonus quest in the course is answered correctly. Quests are
-    numbered in the course's order of their ids ("Quest 1", "Quest 2"), which the badge shelf
-    shows. Never touches mastery: a bonus item counts towards no objective."""
-    quests = list(
+def bonus_quests(session: Session) -> list[int]:
+    """The course's bonus quests (FR-8.3, #87): visible bonus activities that a module segment
+    shows, in id order. A hidden or unplaced one can't be reached, so it never counts towards All
+    Quests."""
+    placed = select(Segment.activity_id).where(
+        Segment.module_id.is_not(None), Segment.activity_id.is_not(None)
+    )
+    return list(
         session.scalars(
-            select(Activity.id).where(Activity.purpose == "bonus").order_by(Activity.id)
+            select(Activity.id)
+            .where(
+                Activity.purpose == "bonus",
+                Activity.visible.is_(True),
+                Activity.id.in_(placed),
+            )
+            .order_by(Activity.id)
         )
     )
-    solved = set(
+
+
+def reward_bonus_quest(session: Session, user_id: int, activity: Activity) -> None:
+    """A bonus quest answered correctly before the hints gave it away (FR-8.3, FR-9.3; #87): its
+    20 points and its Quest badge, once, and All Quests once every quest in the course is earned.
+    The badge's ref is the quest's activity id, so it keeps pointing at the same quest if another
+    is retired; the badge shelf numbers them for display. Never touches mastery: a bonus item
+    counts towards no objective."""
+    quests = bonus_quests(session)
+    if activity.id not in quests:  # hidden or unplaced: only staff can answer it, as a preview
+        return
+    earned = set(
         session.scalars(
             select(Attempt.activity_id).where(
                 Attempt.user_id == user_id,
                 Attempt.activity_id.in_(quests),
                 Attempt.correct.is_(True),
+                Attempt.hint_level < SUPPORT_LEVEL,
             )
         )
     )
     on_bonus_quest(
         session,
         user_id,
-        quests.index(activity.id) + 1,
-        all_quests_done=set(quests) <= solved,
+        activity.id,
+        all_quests_done=set(quests) <= earned,
     )
 
 
@@ -105,8 +125,10 @@ def record_attempt(
     session.add(attempt)
     session.flush()
     if activity.purpose == "bonus":
-        # A bonus quest earns its own points and badge instead of an activity's (FR-8.3, #87).
-        if result.correct:
+        # A bonus quest earns its own points and badge instead of an activity's (FR-8.3, #87),
+        # and only for real work: hints 3 and 4 give the answer away, so after them it earns
+        # nothing (ID doc: badges mark real progress).
+        if result.correct and attempt.hint_level < SUPPORT_LEVEL:
             reward_bonus_quest(session, user_id, activity)
     elif not in_check(activity):  # a module 6 item's points wait for the end of the check (#144)
         on_attempt(session, attempt)  # points for a first correct answer (FR-9.1, FR-9.2)

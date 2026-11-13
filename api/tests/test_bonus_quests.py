@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Module, ModuleProgress, ObjectiveResult, PointsEntry
+from app.models import Activity, Module, ModuleProgress, ObjectiveResult, PointsEntry, Segment
 from app.seed import load
 
 STUDENT = {"email": "ada@example.com", "password": "Correct horse 1", "displayName": "Ada"}
@@ -51,13 +51,17 @@ def test_a_right_answer_earns_the_quest_and_both_earn_all_quests(
     open_through(db, log_in(client), 5)
 
     answer(client, 380, "a")
-    # The quest's 20 points, and no activity points on top of them.
+    # The quest's 20 points, and no activity points on top of them. The badge's ref is the
+    # quest's activity id; the shelf numbers quests for display (#196 review).
     assert client.get("/api/rewards").json()["points"] == 20
-    assert badges(client) == [("quest", "1")]
+    assert badges(client) == [("quest", "380")]
 
     answer(client, 480, "a")
     assert client.get("/api/rewards").json()["points"] == 40
-    assert sorted(badges(client)) == [("all-quests", ""), ("quest", "1"), ("quest", "2")]
+    assert sorted(badges(client)) == [("all-quests", ""), ("quest", "380"), ("quest", "480")]
+
+    answer(client, 480, "a")  # once: a repeat earns nothing more
+    assert client.get("/api/rewards").json()["points"] == 40
 
 
 def test_a_wrong_answer_earns_nothing_and_no_quest_touches_mastery(
@@ -72,4 +76,56 @@ def test_a_wrong_answer_earns_nothing_and_no_quest_touches_mastery(
     answer(client, 480, "a")
     assert db.scalars(select(ObjectiveResult).where(ObjectiveResult.user_id == user_id)).all() == []
     refs = db.scalars(select(PointsEntry.ref).where(PointsEntry.user_id == user_id)).all()
-    assert sorted(refs) == ["quest:1", "quest:2"]
+    assert sorted(refs) == ["quest:380", "quest:480"]
+
+
+def test_a_quest_answered_after_the_hints_give_it_away_earns_nothing(
+    client: TestClient, db: Session
+) -> None:
+    """Hints 3 and 4 give the answer away, so a quest answered after them earns no points or
+    badge (badges mark real progress), and the hint before them warns that it will (#196)."""
+    load(db)
+    open_through(db, log_in(client), 5)
+    shown = [client.post("/api/activities/480/hints").json() for _ in range(4)]
+    assert [h["nextCountsAsSupport"] for h in shown] == [False, True, True, False]
+    assert shown[-1]["body"] == "Answer: F."
+    answer(client, 480, "a")
+    assert client.get("/api/rewards").json()["points"] == 0
+    assert badges(client) == []
+
+
+def test_a_clean_right_answer_earns_20_points_and_the_badge_once(
+    client: TestClient, db: Session
+) -> None:
+    load(db)
+    open_through(db, log_in(client), 5)
+    assert client.post("/api/activities/480/hints").status_code == 201  # hint 1 still counts
+    answer(client, 480, "a")
+    answer(client, 480, "a")
+    assert client.get("/api/rewards").json()["points"] == 20
+    assert badges(client) == [("quest", "480")]
+
+
+def test_all_quests_counts_only_quests_a_student_can_reach(client: TestClient, db: Session) -> None:
+    """A hidden or unplaced bonus activity would make All Quests impossible, so it isn't counted."""
+    load(db)
+    open_through(db, log_in(client), 5)
+    hidden = db.get_one(Activity, 380)
+    db.add(
+        Activity(
+            id=990,
+            kind=hidden.kind,
+            title="An unplaced bonus quest",
+            visible=True,
+            config=hidden.config,
+            solution=hidden.solution,
+            module_id=3,
+            purpose="bonus",
+        )
+    )
+    hidden.visible = False
+    db.commit()
+    assert db.scalars(select(Segment).where(Segment.activity_id == 990)).all() == []
+
+    answer(client, 480, "a")
+    assert sorted(badges(client)) == [("all-quests", ""), ("quest", "480")]

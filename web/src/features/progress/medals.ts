@@ -5,7 +5,7 @@ import type { Medal as MedalTier } from './skills.api.ts'
 export const MEDAL_RULES: Record<MedalTier, string> = {
   gold: 'every activity right first time, without a hint',
   silver: 'every activity right first time, without hint 3 or 4',
-  finished: 'the module finished, with at least one activity right on your own',
+  finished: 'at least one activity right on your own',
 }
 
 export const MEDAL_NAMES: Record<MedalTier, string> = {

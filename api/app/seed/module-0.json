@@ -86,14 +86,14 @@
         "explanation": "A queue is first in, first out. Ama joined first, so she is at the front and is served first.",
         "correct": "a",
         "feedback": {
-          "b": "Cebo joined last, so Cebo is served last. A queue is first in, first out.",
-          "c": "Ben is in the middle. In a queue the person who joined first is at the front, and is served first."
+          "b": "Not quite. Cebo joined last, so Cebo is served last. A queue is first in, first out. Ask: who joined first?",
+          "c": "Not quite. Ben is in the middle. In a queue the person who joined first is at the front, and is served first. Ask: who has waited longest?"
         }
       },
       "hints": [
         { "level": 1, "body": "A queue works like a real line of people. Who gets served first in a line?" },
         { "level": 2, "body": "A queue is first in, first out: the item that was added first comes out first." },
-        { "level": 3, "body": "Picture the line: who has been waiting the longest?" },
+        { "level": 3, "body": "Ama joined before Ben and Cebo." },
         { "level": 4, "body": "Answer: Ama. She joined first, so she is at the front and is served first." }
       ]
     },
@@ -115,8 +115,8 @@
         "explanation": "Python counts list positions from 0. items[0] is \"B\", so items[1] is the second item, \"C\".",
         "correct": "a",
         "feedback": {
-          "b": "\"B\" is items[0]: a list is indexed from 0, so index 1 is the second item.",
-          "c": "items[1] reads a single item at that index, not a slice of the list."
+          "b": "Not quite. \"B\" is items[0]: a list is indexed from 0, so index 1 is the second item. Count from 0 along the list.",
+          "c": "Not quite. items[1] reads a single item at that index, not a slice of the list. Count from 0 to find the item at index 1."
         }
       },
       "hints": [
@@ -144,8 +144,8 @@
         "explanation": "The loop takes each item in turn and prints it, so you get B, then C, then D, one per line.",
         "correct": "a",
         "feedback": {
-          "b": "x is the loop variable: each time round it holds the next item, so it prints the items, not the letter x.",
-          "c": "The loop runs its body once per item and prints each one on its own line, not the whole list at once."
+          "b": "Not quite. x is the loop variable: each time round it holds the next item, so the loop prints the items, not the letter x. Ask: what does x hold the first time round?",
+          "c": "Not quite. The loop runs its body once per item and prints each one on its own line, not the whole list at once. Ask: how many times does print(x) run?"
         }
       },
       "hints": [

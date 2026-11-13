@@ -40,7 +40,11 @@ OBJECTIVES = {o.id: o for o in CONTENT.objectives}
 PATHS: dict[int, ReviewPathFixture] = {r.objective_id: r for r in CONTENT.review_paths}
 CHECK = [ACTIVITIES[s.activity_id] for s in MODULE.segments if s.activity_id is not None]
 FRESH = {
-    o: [ACTIVITIES[s.activity_id] for s in p.segments if s.activity_id is not None][1:]
+    o: [
+        ACTIVITIES[s.activity_id]
+        for s in p.segments
+        if s.activity_id is not None and ACTIVITIES[s.activity_id].purpose == "mastery"
+    ]
     for o, p in PATHS.items()
 }
 PRACTICE = [
@@ -213,7 +217,8 @@ def test_module_6_opens_with_what_the_check_is_then_only_mastery_items() -> None
 
 
 def test_activity_ids_are_in_their_ranges() -> None:
-    assert [a.id for a in CHECK] == list(range(601, 601 + len(CHECK)))
+    # 601-624, then objective 8's 626-629 (#70): 625 was already a module 6 retrieval item.
+    assert [a.id for a in CHECK] == [*range(601, 625), *range(626, 630)]
     for o, path in PATHS.items():
         base = 1000 + 100 * o
         assert all(base < s.id < base + 100 for s in path.segments)
@@ -250,6 +255,7 @@ def test_the_kinds_follow_table_1() -> None:
         5: ["trace"],
         6: ["fill_in", "parsons"],
         7: ["choose_tests", "fix_the_bug"],
+        8: ["multiple_choice"],
     }
     # Objective 2: three diagrams labelled, four graphs classified.
     assert [len(a.config["left"]) for a in items_of("module 6", 2)] == [3, 3, 3, 4]
@@ -262,6 +268,7 @@ def test_the_fresh_items_are_not_the_module_6_items() -> None:
             + str(a.config.get("left", ""))
             + str(a.config.get("code", ""))
             + str(a.config.get("vertices", ""))
+            + str(a.config.get("lines", ""))  # a Parsons item shows only its lines
         )
 
     check = {seen(a) for a in CHECK}
@@ -327,8 +334,9 @@ CLASSIFYING = [
 
 
 def test_objective_2_has_three_labelling_items_and_one_classifying_item_in_each_set() -> None:
-    assert len(LABELLING) == 6
-    assert len(CLASSIFYING) == 2
+    mastery = [a for a in LABELLING + CLASSIFYING if a.purpose == "mastery"]
+    assert len([a for a in mastery if a in LABELLING]) == 6
+    assert len([a for a in mastery if a in CLASSIFYING]) == 2
 
 
 NAMED = re.compile(r"(?:are|,|and|:)\s+(?:the\s+)?([^,():.]+?) \(([A-Z])\)")
@@ -416,12 +424,19 @@ def test_each_marker_names_the_part_its_answer_names(a: ActivityFixture) -> None
 
 
 @pytest.mark.parametrize("a", CLASSIFYING, ids=lambda a: str(a.id))
-def test_each_graph_is_classified_by_how_its_edges_are_written(a: ActivityFixture) -> None:
-    for item in a.config["left"]:
-        arrows = {arrow for _, arrow, _ in EDGE.findall(item["label"])}
-        want = "Directed" if arrows == {"→"} else "Undirected"
-        assert arrows in ({"→"}, {DASH})
-        assert right_label(a, item["id"]) == want, item["id"]
+def test_each_graph_is_classified_by_what_its_connections_mean(a: ActivityFixture) -> None:
+    """609 and 1205 printed each graph's edges as arrows or plain lines, so spotting a "→" answered
+    them (#214 C4). Now no edge is written out: the student decides from what each connection
+    means, and one directed graph has every connection returned (two arrows are still directed)."""
+    for text in [a.config["prompt"]] + [item["label"] for item in a.config["left"]]:
+        assert not EDGE.search(text), text
+        assert "→" not in text
+    answers = [right_label(a, item["id"]) for item in a.config["left"]]
+    assert sorted(set(answers)) == ["Directed", "Undirected"]
+    for message in a.solution["feedback"].values():
+        assert "how the edges are written" not in message
+        assert message.startswith("Not quite.")
+    assert "each other" in a.hints[2].body or "every pair" in a.hints[2].body
 
 
 # --- Objective 5: tracing ---------------------------------------------------------------------------
@@ -642,6 +657,87 @@ def test_the_tests_include_a_disconnected_graph_and_a_graph_with_a_cycle() -> No
         assert "two-islands" in exposed
 
 
+def test_the_recall_item_names_two_routes_not_a_cycle() -> None:
+    """625 said "a graph containing a cycle" shows the visited-too-late bug, which set the student
+    up to get 623 wrong: there a directed cycle passes and a fork-join with no cycle fails (round 2
+    review of #215, content 1)."""
+    recall = ACTIVITIES[625]
+    key = next(
+        o["label"] for o in recall.config["options"] if o["id"] == recall.solution["correct"]
+    )
+    assert "two routes" in key
+    assert "cycle" not in key
+    verdicts = ACTIVITIES[623]
+    fails = set(verdicts.solution["exposing"])
+    cyclic = {t["id"] for t in verdicts.config["tests"] if t["id"] in ("cycle", "back-to-start")}
+    assert "fork-join" in fails  # no cycle, two routes to D
+    assert cyclic - fails == {"back-to-start"}  # a cycle, one route to each vertex
+
+
 def test_every_hidden_test_graph_runs_on_the_engine() -> None:
     for directed, vertices, edges, start in HIDDEN.values():
         assert run_bfs(scenario(directed, vertices, edges, start)).order
+
+
+def test_objective_8_items_ask_for_the_fewest_edges_not_the_quickest() -> None:
+    """626 asked for the "quickest" trip, which module 3 (worked example 392) teaches BFS can't
+    find when edges take different times (#214 C10)."""
+    for a in (a for a in EVERY if a.objective_id == 8):
+        assert not re.search(r"quickest|fastest|shortest time", str(a.config.get("prompt", "")))
+
+
+def test_objective_4_hint_3_is_a_partial_solution_for_its_own_item() -> None:
+    """All eight objective 4 items had the same hints 1 to 3, and hint 3 repeated hint 2 as a
+    question, yet opening it marks the answer "met with support" (#214 C12)."""
+    items = [a for a in EVERY if a.objective_id == 4 and a.purpose == "mastery"]
+    assert len(items) == 8
+    for level in (2, 3):
+        bodies = [a.hints[level - 1].body for a in items]
+        assert len(set(bodies)) == len(bodies), level
+    for a in items:
+        assert a.hints[2].body != a.hints[1].body
+        assert "Does this problem ask for one of those two jobs?" not in a.hints[2].body
+
+
+def test_a_review_fill_in_is_as_hard_as_the_module_6_one() -> None:
+    """1602 blanked parts with two tokens each that fit, the next line giving one away, so a
+    student met objective 6 again without the skill 620 found missing (#214 C13). Now each blank
+    has at least two wrong tokens of its own kind, each with feedback, as in 620."""
+    for a in (a for a in FRESH[6] + CHECK if a.kind == "fill_in"):
+        for blank in a.config["blanks"]:
+            assert len(a.solution["feedback"][str(blank)]) >= 2, (a.id, blank)
+
+
+def test_the_review_fill_in_blanks_other_parts_than_620() -> None:
+    """1602 was 620 with renamed variables: the same four blanks, the same tokens (round 2 review
+    of #215). Now it blanks other parts of BFS: building the queue, whose neighbours, which vertex
+    is marked found, and where it joins."""
+    names = {"discovered": "visited", "lineup": "queue", "here": "v", "nbr": "n"}
+
+    def blanked(a: ActivityFixture) -> set[str]:
+        lines = {line.strip() for line in a.config["code"].splitlines() if BLANK.search(line)}
+        for old, new in names.items():
+            lines = {re.sub(rf"\b{old}\b", new, line) for line in lines}
+        return {BLANK.sub("__", line) for line in lines}
+
+    def answers(a: ActivityFixture) -> set[str]:
+        found = set(a.solution["answers"].values())
+        for old, new in names.items():
+            found = {re.sub(rf"\b{old}\b", new, x) for x in found}
+        return found
+
+    assert not blanked(ACTIVITIES[1602]) & blanked(ACTIVITIES[620])
+    assert not answers(ACTIVITIES[1602]) & answers(ACTIVITIES[620])
+
+
+@pytest.mark.parametrize("a", LABELLING, ids=lambda a: str(a.id))
+def test_the_places_letters_are_not_their_initials(a: ActivityFixture) -> None:
+    """The kitchen was K and the river corner R in 607 and 1204, so the letter lookup was a free
+    lexical link (#214 C15); 606 and 1203 already used other letters."""
+    named = NAMED.findall(a.config["prompt"])
+    initials = [
+        (name, letter)
+        for name, letter in named
+        if letter in {w[0].upper() for w in name.removeprefix("the ").split()}
+    ]
+    assert len(initials) <= 1, initials  # one by chance (606's shed tap is S), not a pattern

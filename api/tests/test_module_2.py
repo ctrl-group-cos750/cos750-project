@@ -1,7 +1,7 @@
 """Module 2 (A graph in Python, #84): the code the module teaches really does what it says.
 
-The three code activities are fill-in-the-blank: filled in with their answers, the Graph class
-passes the tests below (the hidden tests from the module's design), and each token a wrong-answer
+The code activities (three, and a support item from #173) are fill-in-the-blank: filled in with
+their answers, the Graph class passes the tests below (the hidden tests from the module's design), and each token a wrong-answer
 message is written for really breaks one of them, so the message describes a real mistake. Every
 other answer (the dictionaries, the worked example's table, the closing task) is what the
 finished class produces. Plus the content rules from issue #84: four hint levels on every
@@ -20,7 +20,9 @@ from app.seed import ActivityFixture, FixtureFile, read_fixtures
 CONTENT: FixtureFile = read_fixtures()
 CAMPUS = next(g for g in CONTENT.graphs if g.id == 4)
 MODULE = next(m for m in CONTENT.modules if m.id == 2)
-ACTIVITIES = [a for a in CONTENT.activities if a.module_id == 2]
+# The module's quick check (FR-8.2, #214) is checked in test_quick_check_content.py.
+QUICK_CHECK = [a for a in CONTENT.activities if a.module_id == 2 and a.purpose == "test_out"]
+ACTIVITIES = [a for a in CONTENT.activities if a.module_id == 2 and a.purpose != "test_out"]
 BLANK = re.compile(r"__(\d+)__")
 DASH = "\N{EN DASH}"  # the content joins an undirected edge's ends with it
 EDGE = re.compile(rf"\b([A-Z]) ?({DASH}|→) ?([A-Z])\b")
@@ -58,11 +60,20 @@ TESTS = {
         'g = Graph(directed=True)\ng.add_edge("A", "D")\ng.add_edge("D", "G")\n'
         'g.add_edge("G", "A")\nassert g.adjacency == {"A": ["D"], "D": ["G"], "G": ["A"]}',
     ],
+    # The support item for objective 6 (#173): the whole class, with the worked example's calls.
+    291: [
+        'g = Graph()\ng.add_edge("P", "R")\ng.add_edge("R", "T")\n'
+        'assert g.adjacency == {"P": ["R"], "R": ["P", "T"], "T": ["R"]}',
+        'g = Graph(directed=True)\ng.add_edge("P", "R")\ng.add_edge("R", "T")\n'
+        'assert g.adjacency == {"P": ["R"], "R": ["T"], "T": []}',
+        'g = Graph()\ng.add_edge("K", "L")\ng.add_vertex("L")\ng.add_edge("L", "M")\n'
+        'assert g.adjacency["L"] == ["K", "M"]',
+    ],
 }
 
 
 def activity(activity_id: int) -> ActivityFixture:
-    return next(a for a in ACTIVITIES if a.id == activity_id)
+    return next(a for a in ACTIVITIES + QUICK_CHECK if a.id == activity_id)
 
 
 def chosen_label(activity_id: int) -> str:
@@ -104,11 +115,11 @@ def run(calls: str) -> dict[str, list[str]]:
 
 def test_every_activity_is_shown_once_and_every_objective_has_one() -> None:
     shown = [s.activity_id for s in MODULE.segments if s.activity_id is not None]
-    skip_checks = [s.skip_check_activity_id for s in MODULE.segments if s.skip_check_activity_id]
+    skip_checks = [a.id for a in QUICK_CHECK]  # asked in the quick check, in no segment
     # The recall questions are asked before the segments (FR-2.4), not in one.
     recall = [a.id for a in ACTIVITIES if a.purpose == "retrieval"]
     assert recall == [201, 202]
-    assert sorted(shown + skip_checks + recall) == sorted(a.id for a in ACTIVITIES)
+    assert sorted(shown + skip_checks + recall) == sorted(a.id for a in ACTIVITIES + QUICK_CHECK)
     assert {a.objective_id for a in ACTIVITIES} == {None, 2, 6}
 
 
@@ -198,7 +209,7 @@ def test_each_graph_matches_the_dictionary_the_class_builds() -> None:
 
 def test_the_worked_example_rows_are_what_the_class_does() -> None:
     worked = next(s for s in MODULE.segments if s.kind == "worked_example")
-    assert worked.skip_check_activity_id == 203
+    assert worked.skip_check_activity_id is None  # its check is the quick check now (FR-8.2, #214)
     rows = re.findall(r"^\| `(.+?)` \| `(.+?)` \|", worked.body, re.M)
     assert len(rows) == 5
     calls = []
@@ -224,3 +235,13 @@ def test_the_add_edge_feedback_only_names_the_items_own_vertices() -> None:
     for messages in activity(207).solution["feedback"].values():
         for text in messages.values():
             assert not EDGE.search(text), text  # its vertices are a and b, never capitals
+
+
+def test_hint_3_of_the_dictionaries_item_names_the_one_that_matches_nothing() -> None:
+    """Hint 3 said "the fourth dictionary" matches nothing, but the fourth one shown is graph 3's
+    answer (#214 C11). It now quotes the spare dictionary."""
+    a = next(x for x in CONTENT.activities if x.id == 204)
+    used = set(a.solution["pairs"].values())
+    (spare,) = [r["label"] for r in a.config["right"] if r["id"] not in used]
+    assert spare in a.hints[2].body
+    assert "fourth" not in a.hints[2].body

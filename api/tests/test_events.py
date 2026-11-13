@@ -10,7 +10,17 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Checkpoint, Event, Hint, Module, Segment, User, Video
+from app.models import (
+    Activity,
+    Checkpoint,
+    Event,
+    GraphScenario,
+    Hint,
+    Module,
+    Segment,
+    User,
+    Video,
+)
 from app.seed import load
 from app.services.events import CLIENT_EVENTS, EVENT_TYPES, SERVER_EVENTS, log_event
 
@@ -68,12 +78,19 @@ def events_of(db: Session, user_id: int) -> list[tuple[str, str, dict[str, Any]]
 
 
 def test_the_types_are_split_between_server_and_browser() -> None:
-    assert {"hint_shown", "result_changed", "module_completed"} == SERVER_EVENTS
+    assert {
+        "hint_shown",
+        "result_changed",
+        "module_completed",
+        "module_restarted",
+        "quick_check_taken",
+    } == SERVER_EVENTS
     assert {
         "video_started",
         "video_completed",
         "checkpoint_reached",
         "segment_viewed",
+        "prediction_made",
     } == CLIENT_EVENTS
     assert EVENT_TYPES == SERVER_EVENTS | CLIENT_EVENTS
 
@@ -130,10 +147,34 @@ def test_an_event_about_something_that_does_not_exist_is_404(
 ) -> None:
     content(db)
     user = log_in(client)
-    for type in ("video_started", "checkpoint_reached", "segment_viewed"):
+    for type in ("video_started", "checkpoint_reached", "segment_viewed", "prediction_made"):
         response = client.post("/api/events", json={"type": type, "targetId": 9999})
         assert response.status_code == 404
     assert events_of(db, user) == []
+
+
+def test_a_prediction_in_the_visualiser_is_logged_with_whether_it_was_right(
+    client: TestClient, db: Session
+) -> None:
+    """Prediction mode (FR-6.4) is recorded: each prediction, about the graph (#146)."""
+    graph = GraphScenario(
+        name="Campus", vertices=["A", "B"], edges=[{"source": "A", "target": "B"}], start_vertex="A"
+    )
+    db.add(graph)
+    db.commit()
+    user = log_in(client)
+    for correct in (True, False):
+        body = {"type": "prediction_made", "targetId": graph.id, "correct": correct}
+        assert client.post("/api/events", json=body).status_code == 204
+    # `correct` is kept only for a prediction.
+    video = content(db)["video"]
+    body = {"type": "video_started", "targetId": video, "correct": True}
+    assert client.post("/api/events", json=body).status_code == 204
+    assert events_of(db, user) == [
+        ("prediction_made", f"graph:{graph.id}", {"correct": True}),
+        ("prediction_made", f"graph:{graph.id}", {"correct": False}),
+        ("video_started", f"video:{video}", {}),
+    ]
 
 
 def test_a_runaway_loop_is_stopped(client: TestClient, db: Session) -> None:
@@ -210,7 +251,8 @@ def test_a_result_changing_is_logged_with_where_it_came_from(
     body = {"submitted": {"selected": "b"}}
     assert client.post("/api/activities/601/attempts", json=body).status_code == 201
     body = {"submitted": {"selected": "a"}}
-    assert client.post("/api/activities/601/attempts", json=body).status_code == 201  # no change
+    # A mastery check item takes one answer (#144).
+    assert client.post("/api/activities/601/attempts", json=body).status_code == 409
     assert client.post("/api/activities/1102/attempts", json=body).status_code == 201
     assert events_of(db, user) == [
         (

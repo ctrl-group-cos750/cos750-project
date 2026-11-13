@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { ada, fakeApi, renderApp } from '../../test/app.tsx'
 import type { EarnedBadge, Rewards } from './rewards.api.ts'
 import { buildShelf, unseen } from './shelf.ts'
@@ -38,30 +38,54 @@ function withRewards(rewards: Rewards) {
 describe('buildShelf', () => {
   it('shows every badge, earned or not, with how to earn the locked ones', () => {
     const shelf = buildShelf([badge('lo5', { tier: 'gold' }), badge('lo2', { tier: 'bronze' })])
-    expect(shelf.objective).toHaveLength(7)
+    expect(shelf.objective).toHaveLength(8)
     const states = Object.fromEntries(shelf.objective.map((i) => [i.achievement.id, i.state]))
     expect(states).toMatchObject({ lo5: 'gold', lo2: 'bronze', lo1: 'locked' })
     expect(shelf.objective.find((i) => i.achievement.id === 'lo1')?.next).toBe(
       'Meet learning objective 1.',
     )
     expect(shelf.objective.find((i) => i.achievement.id === 'lo2')?.next).toBe(
-      'Meet it again on your own for gold.',
+      'Met with support. Gold is for meeting it without hint 3 or 4.',
     )
     expect(shelf.milestone.map((i) => i.state)).toEqual(['locked', 'locked', 'locked', 'locked'])
   })
 
-  it('leaves off a badge the course cannot award yet, unless the student has it (#147)', () => {
-    const ids = (earned: Parameters<typeof buildShelf>[0]) =>
-      buildShelf(earned).objective.map((i) => i.achievement.id)
-    expect(ids([])).not.toContain('lo8')
-    expect(ids([])).toEqual(['lo1', 'lo2', 'lo3', 'lo4', 'lo5', 'lo6', 'lo7'])
-    expect(ids([badge('lo8', { tier: 'bronze' })])).toContain('lo8')
+  it('offers Shortcut Finder now that objective 8 is assessed (#70)', () => {
+    const ids = buildShelf([]).objective.map((i) => i.achievement.id)
+    expect(ids).toEqual(['lo1', 'lo2', 'lo3', 'lo4', 'lo5', 'lo6', 'lo7', 'lo8'])
+    expect(buildShelf([]).objective.find((i) => i.achievement.id === 'lo8')?.next).toBe(
+      'Meet learning objective 8.',
+    )
   })
 
-  it('gives each finished quest its own badge', () => {
-    const shelf = buildShelf([badge('quest', { ref: '1' }), badge('quest', { ref: '3' })])
-    expect(shelf.quest.map((i) => i.title)).toEqual(['Quest 1', 'Quest 3', 'All Quests'])
+  it('gives each finished quest its own badge, numbered in course order', () => {
+    // A quest badge's ref is the quest's activity id; the shelf numbers them for display (#196).
+    const shelf = buildShelf([badge('quest', { ref: '480' }), badge('quest', { ref: '380' })])
+    expect(shelf.quest.map((i) => i.title)).toEqual(['Quest 1', 'Quest 2', 'All Quests'])
+    expect(shelf.quest.map((i) => i.key)).toEqual(['quest:380', 'quest:480', 'all-quests'])
     expect(buildShelf([]).quest.map((i) => i.state)).toEqual(['locked', 'locked'])
+  })
+
+  it('announces a new quest by its number', () => {
+    const fresh = unseen([
+      badge('quest', { ref: '380' }),
+      badge('quest', { ref: '480', seen: false }),
+    ])
+    expect(fresh.map((i) => i.title)).toEqual(['Quest 2'])
+  })
+
+  it('says First Module needs a right answer before hint 3, not just a finished module', () => {
+    // Module 0's diagnostic earns no module reward, so the badge comes with the first module
+    // answered right on your own, which isn't always module 1 (#212 review).
+    const firstModule = (earned: EarnedBadge[]) =>
+      buildShelf(earned).milestone.find((i) => i.achievement.id === 'first-module')
+    expect(firstModule([])?.next).toBe(
+      'Finish a module with at least one answer right before hint 3.',
+    )
+    expect(firstModule([])?.achievement.description).toBe(
+      'You worked all the way through a module and got answers right on your own.',
+    )
+    expect(firstModule([badge('first-module')])?.next).toBeUndefined()
   })
 
   it('ignores badge ids the app does not know', () => {
@@ -160,6 +184,42 @@ describe('Badge announcements', () => {
     expect(dialog).toHaveFocus()
     await userEvent.click(within(dialog).getByRole('button', { name: 'Close' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    // Focus goes back to the page, not <body> (A1).
+    expect(screen.getByRole('heading', { level: 1 })).toHaveFocus()
+  })
+
+  it('moves focus to the next note when one is dismissed, then back to the page (A5)', async () => {
+    withRewards({
+      hideRewards: false,
+      points: 30,
+      badges: ['lo4', 'lo5'].map((id) => badge(id, { tier: 'bronze', seen: false })),
+    })
+    renderApp('/')
+    const first = await screen.findByRole('button', { name: 'Dismiss Queue Tracer' })
+    first.focus()
+    await userEvent.keyboard('{Enter}')
+    const next = screen.getByRole('button', { name: /^Dismiss / })
+    expect(next).toHaveFocus()
+    await userEvent.keyboard('{Enter}')
+    expect(screen.queryByRole('button', { name: /^Dismiss / })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveFocus()
+  })
+
+  it('shows a phone one card for a burst of badges (D9)', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === '(max-width: 480px)',
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }))
+    withRewards({
+      hideRewards: false,
+      points: 75,
+      badges: ['lo1', 'lo2', 'lo3'].map((id) => badge(id, { tier: 'bronze', seen: false })),
+    })
+    renderApp('/')
+    expect(await screen.findByText('3 new badges')).toBeVisible()
+    expect(screen.queryByText('Queue Tracer')).not.toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: /^Dismiss/ })).toHaveLength(1)
   })
 
   it('announces nothing while rewards are hidden', async () => {
@@ -173,5 +233,20 @@ describe('Badge announcements', () => {
     await waitFor(() => expect(api.callsTo('GET /api/rewards')).toHaveLength(1))
     expect(screen.queryByText('Queue Tracer')).not.toBeInTheDocument()
     expect(api.callsTo('POST /api/rewards/seen')).toHaveLength(0)
+  })
+
+  it('can turn badges off from the note, and says where to turn them back on', async () => {
+    const api = withRewards({
+      hideRewards: false,
+      points: 15,
+      badges: [badge('lo5', { tier: 'bronze', seen: false })],
+    })
+    renderApp('/')
+    expect(await screen.findByText('Queue Tracer')).toBeVisible()
+    await userEvent.click(screen.getByRole('button', { name: 'Turn off badges' }))
+    expect(await screen.findByText('Badges and points are off')).toBeVisible()
+    expect(api.callsTo('PUT /api/rewards/settings')[0]!.body).toEqual({ hideRewards: true })
+    expect(screen.queryByText('Queue Tracer')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'profile' })).toHaveAttribute('href', '/profile')
   })
 })

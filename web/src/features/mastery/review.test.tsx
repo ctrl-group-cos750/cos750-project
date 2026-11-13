@@ -1,8 +1,10 @@
 import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { ada, fakeApi, renderApp } from '../../test/app.tsx'
 import type { ReviewPath } from './mastery.api.ts'
-import { Prose } from './Prose.tsx'
+import { MemoryRouter } from 'react-router'
+import { Markdown } from '../../components'
 
 const PATH: ReviewPath = {
   objectiveId: 5,
@@ -52,6 +54,23 @@ function step(title: string) {
 }
 
 describe('ReviewPage', () => {
+  it('opens a step whose page leads back to the path (#146)', async () => {
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/me/review/5': () => Response.json(PATH),
+        'GET /api/activities/1502': () =>
+          Response.json({ detail: 'Activity not found.' }, { status: 404 }),
+      },
+    })
+    renderApp('/review/5')
+    await userEvent.click(await screen.findByRole('link', { name: 'Answer: Fresh trace' }))
+    expect(await screen.findByRole('link', { name: /Back to the review path/ })).toHaveAttribute(
+      'href',
+      '/review/5',
+    )
+  })
+
   it('teaches the objective again, then practice, then the fresh questions', async () => {
     withPath(() => Response.json(PATH))
     renderApp('/review/5')
@@ -112,15 +131,21 @@ describe('ReviewPage', () => {
   })
 })
 
-describe('Prose', () => {
-  it('renders paragraphs, bold and code, and never runs the content as HTML', () => {
+describe('Review step text', () => {
+  it('renders code blocks and tables, and never runs the content as HTML', async () => {
     const { container } = render(
-      <Prose markdown={'One **two** `three`\n\n<img src=x onerror=alert(1)>\n\n'} />,
+      <MemoryRouter>
+        <Markdown>
+          {
+            'One **two** `three`\n\n```python\nqueue = deque()\n```\n\n| A | B |\n|---|---|\n| 1 | 2 |\n\n<img src=x onerror=alert(1)>'
+          }
+        </Markdown>
+      </MemoryRouter>,
     )
-    expect(container.querySelectorAll('p')).toHaveLength(2)
     expect(container.querySelector('strong')).toHaveTextContent('two')
-    expect(container.querySelector('code')).toHaveTextContent('three')
+    expect(container.querySelector('pre')).toHaveTextContent('queue = deque()')
+    expect(container.querySelector('table')).not.toBeNull()
     expect(container.querySelector('img')).toBeNull()
-    expect(container).toHaveTextContent('<img src=x onerror=alert(1)>')
+    expect(container).not.toHaveTextContent('```')
   })
 })

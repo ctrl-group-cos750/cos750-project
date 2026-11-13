@@ -26,13 +26,11 @@ describe('log-in page', () => {
 
   it('logs in and returns to the page the student asked for', async () => {
     const api = fakeApi()
-    renderApp('/')
+    renderApp('/badges')
     await userEvent.type(await screen.findByLabelText('Email'), ' ada@example.com ')
     await userEvent.type(screen.getByLabelText('Password'), 'Correct horse 1')
     await userEvent.click(screen.getByRole('button', { name: 'Log in' }))
-    expect(
-      await screen.findByRole('heading', { name: 'Graphs and breadth-first search' }),
-    ).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Your badges' })).toBeInTheDocument()
     expect(api.callsTo('POST /api/auth/login')[0].body).toEqual({
       email: 'ada@example.com',
       password: 'Correct horse 1',
@@ -50,7 +48,8 @@ describe('log-in page', () => {
     await userEvent.type(await screen.findByLabelText('Email'), 'ada@example.com')
     await userEvent.type(screen.getByLabelText('Password'), 'wrong horse')
     await userEvent.click(screen.getByRole('button', { name: 'Log in' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent(detail)
+    // The message takes focus, so it is read and focus isn't lost (A7).
+    expect(await screen.findByRole('group', { name: detail })).toHaveFocus()
     expect(screen.getByRole('heading', { name: 'Log in' })).toBeInTheDocument()
   })
 
@@ -62,9 +61,11 @@ describe('log-in page', () => {
     await userEvent.type(await screen.findByLabelText('Email'), 'ada@example.com')
     await userEvent.type(screen.getByLabelText('Password'), 'Correct horse 1')
     await userEvent.click(screen.getByRole('button', { name: 'Log in' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      "Can't reach Ctrl Academy. Check your connection and try again.",
-    )
+    expect(
+      await screen.findByRole('group', {
+        name: "Can't reach Ctrl Academy. Check your connection and try again.",
+      }),
+    ).toHaveFocus()
   })
 
   it('links to the register page', async () => {
@@ -214,5 +215,23 @@ describe('register page', () => {
     renderApp('/register')
     await userEvent.click(await screen.findByRole('link', { name: 'Log in' }))
     expect(screen.getByRole('heading', { name: 'Log in' })).toBeInTheDocument()
+  })
+})
+
+describe('register page length', () => {
+  it('says how long the course takes, from the modules’ estimates (#146)', async () => {
+    fakeApi({ overrides: { 'GET /api/modules/length': () => Response.json({ minutes: 74 }) } })
+    renderApp('/register')
+    expect(
+      await screen.findByText(/^About 74 minutes of graphs and breadth-first search/),
+    ).toBeInTheDocument()
+  })
+
+  it('leaves the length out when it can’t be loaded', async () => {
+    fakeApi()
+    renderApp('/register')
+    expect(
+      await screen.findByText(/^Graphs and breadth-first search, at your own pace/),
+    ).toBeInTheDocument()
   })
 })

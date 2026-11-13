@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render } from '@testing-library/react'
-import { MemoryRouter } from 'react-router'
+import { createMemoryRouter, RouterProvider } from 'react-router'
 import { vi } from 'vitest'
 import App from '../App.tsx'
 import type { User } from '../auth/api.ts'
@@ -11,6 +11,7 @@ export const ada: User = {
   displayName: 'Ada',
   isStaff: false,
   avatar: null,
+  pictureUrl: null,
 }
 
 type Call = { method: string; path: string; body: unknown }
@@ -68,6 +69,7 @@ export function fakeApi({
     'GET /api/health': () => Response.json({ status: 'ok', database: 'ok' }),
     'GET /api/modules': () => Response.json([]),
     'GET /api/rewards': () => Response.json({ hideRewards: false, points: 0, badges: [] }),
+    'GET /api/me/skills': () => Response.json({ objectives: [], modules: [] }),
     // Default handlers for parameterised module routes (overridable)
     'GET /api/modules/:id': () => Response.json({ detail: 'Not Found' }, { status: 404 }),
     'POST /api/modules/:id/position': () => Response.json({ detail: 'Not Found' }, { status: 404 }),
@@ -119,9 +121,9 @@ export function renderApp(path = '/') {
   })
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[path]}>
-        <App />
-      </MemoryRouter>
+      <RouterProvider
+        router={createMemoryRouter([{ path: '*', element: <App /> }], { initialEntries: [path] })}
+      />
     </QueryClientProvider>,
   )
 }

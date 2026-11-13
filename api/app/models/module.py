@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -30,3 +30,29 @@ class ModuleProgress(Base):
     current_segment_position: Mapped[int] = mapped_column(default=0, server_default="0")
     # When the student first reached the last segment (FR-2.6).
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # The student restarted the module to redo its questions (app/services/restart.py): only
+    # answers and hints since then show. The module stays complete, and nothing is deleted.
+    restarted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # The newest attempt id when it was restarted: attempts are append-only, so "since the
+    # restart" is every attempt with a higher id (exact, unlike comparing timestamps).
+    restarted_after_attempt: Mapped[int | None] = mapped_column()
+    # How many times they have restarted it: the round each hint view belongs to.
+    restarts: Mapped[int] = mapped_column(default=0, server_default="0")
+
+
+class ShownSegment(Base):
+    """A conditional segment the server has shown this student (FR-8.4, #172): a module's support
+    segment for an objective (`Segment.support_for`). Once a row is here the segment stays shown
+    to them for good, whatever a later re-grade or staff edit would decide, so nothing they were
+    offered disappears from under them. Written by app/services/support.py when the student saves
+    a position while the segment is shown; deleted with its segment. Designed so module 0's
+    refreshers (FR-8.1, #31) can record their choice here too.
+    """
+
+    __tablename__ = "shown_segments"
+    __table_args__ = (UniqueConstraint("user_id", "segment_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    segment_id: Mapped[int] = mapped_column(ForeignKey("segments.id", ondelete="CASCADE"))
+    shown_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

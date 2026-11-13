@@ -10,8 +10,9 @@ export function ThemeToggle() {
   return (
     <Button
       type="button"
-      variant="outline"
+      variant="ghost"
       size="icon-lg"
+      className="rounded-full"
       aria-label="Dark mode"
       aria-pressed={dark}
       title={dark ? 'Switch to light mode' : 'Switch to dark mode'}

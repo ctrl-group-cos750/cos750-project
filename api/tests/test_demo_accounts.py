@@ -37,7 +37,7 @@ from app.seed.demo_accounts import (
 from app.services.checking import check_activity
 from app.services.history import history_tables
 from app.services.mastery import evaluate, is_ready
-from app.services.modules import get_modules_for_user
+from app.services.modules import get_module_detail, get_modules_for_user
 
 PASSWORD = "Demo pass 2026!"  # noqa: S105 (test only)
 API_DIR = Path(__file__).resolve().parent.parent
@@ -228,11 +228,11 @@ def test_once_every_module_has_segments_each_map_matches_its_stage(tmp_path: Pat
         assert notes == []
         assert statuses(session, "new@demo.example.com") == {
             0: "open",
-            1: "locked",
-            2: "locked",
-            3: "locked",
-            4: "locked",
-            5: "locked",
+            1: "open",
+            2: "open",
+            3: "open",
+            4: "open",
+            5: "open",
             6: "locked",
         }
         assert statuses(session, "mid@demo.example.com") == {
@@ -240,8 +240,8 @@ def test_once_every_module_has_segments_each_map_matches_its_stage(tmp_path: Pat
             1: "complete",
             2: "complete",
             3: "in_progress",
-            4: "locked",
-            5: "locked",
+            4: "open",
+            5: "open",
             6: "locked",
         }
         for key in ("not-yet", "ready"):
@@ -252,7 +252,9 @@ def test_once_every_module_has_segments_each_map_matches_its_stage(tmp_path: Pat
                 ModuleProgress.user_id == mid.id, ModuleProgress.module_id == 3
             )
         ).one()
-        assert module_3.current_segment_position == 3  # the fourth segment, 0-based
+        # The fourth segment it is shown (support it doesn't need is skipped, FR-8.4).
+        shown = [s.position for s in get_module_detail(session, mid.id, 3).segments if s.shown]
+        assert module_3.current_segment_position == shown[3]
     fresh.dispose()
 
 
@@ -265,7 +267,7 @@ def test_the_mid_account_can_open_module_3_through_the_api(
     module = client.get("/api/modules/3")
     assert module.status_code == 200
     assert module.json()["status"] == "in_progress"
-    assert client.get("/api/modules/4").status_code == 403  # still locked
+    assert client.get("/api/modules/6").status_code == 403  # the mastery check: still locked
 
 
 def test_a_rerun_rebuilds_progress_instead_of_adding_to_it(tmp_path: Path, db: Session) -> None:
@@ -393,6 +395,7 @@ def test_the_reset_covers_every_table_of_student_history() -> None:
         "module_progress",
         "objective_results",
         "points_entries",
+        "shown_segments",
         "user_badges",
     ]
 
@@ -442,16 +445,16 @@ def test_a_demo_account_problem_never_stops_the_seed(tmp_path: Path) -> None:
 def test_progress_into_a_module_still_locked_stops_there_and_says_so(
     tmp_path: Path, db: Session
 ) -> None:
-    # Module 3 straight away, without module 0 first: module 3 is still locked, as for a student.
+    # Module 6 straight away, without modules 1 to 5: it is still locked, as for a student.
     load(db)
     notes: list[str] = []
-    path = write(tmp_path, [account(progress=[{"module": 3}])])
+    path = write(tmp_path, [account(progress=[{"module": 6}])])
     load_demo_accounts(db, PASSWORD, path, notes=notes)
     assert notes == [
-        "mid@demo.example.com: stopped at module 3, which is still locked because the module "
-        "before it isn't complete"
+        "mid@demo.example.com: stopped at module 6, which is still locked because modules 1 to 5 "
+        "aren't each complete or tested out"
     ]
-    assert statuses(db, "mid@demo.example.com")[3] == "locked"
+    assert statuses(db, "mid@demo.example.com")[6] == "locked"
 
 
 def test_the_walk_passes_a_video_s_checkpoints_before_moving_past_it(

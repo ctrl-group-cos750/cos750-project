@@ -16,10 +16,10 @@ export type ShelfItem = {
 const howToEarn: Record<string, string> = {
   'ready-for-lecture': 'Meet every objective, with or without support.',
   'came-back-stronger': 'Meet an objective through its review path.',
-  'solo-run': 'Meet your bronze objectives again on your own.',
+  'solo-run': 'Meet every objective on your own, without hint 3 or 4.',
   quest: 'Finish a bonus quest.',
   'all-quests': 'Finish the bonus quests you have left.',
-  'first-module': 'Work through a whole module.',
+  'first-module': 'Finish a module with at least one answer right before hint 3.',
 }
 
 function stateOf(achievement: Achievement, earned?: EarnedBadge): AchievementState {
@@ -28,9 +28,24 @@ function stateOf(achievement: Achievement, earned?: EarnedBadge): AchievementSta
   return 'earned'
 }
 
-function item(achievement: Achievement, earned?: EarnedBadge): ShelfItem {
+/**
+ * A quest badge is numbered by the quest's place in the course ("Quest 1" is always the module 3
+ * quest), which the server sends, so a badge never changes name when another quest is finished
+ * first (13 Nov audit). A quest no longer in the course falls back to the order the student earned.
+ */
+function questNumbers(earned: EarnedBadge[]): Map<string, number> {
+  const quests = earned
+    .filter((e) => e.badge === 'quest')
+    .sort((a, b) => Number(a.ref) - Number(b.ref) || a.ref.localeCompare(b.ref))
+  return new Map(quests.map((e, index) => [e.ref, e.questNumber ?? index + 1]))
+}
+
+function item(achievement: Achievement, earned?: EarnedBadge, number?: number): ShelfItem {
   const state = stateOf(achievement, earned)
-  const title = achievement.id === 'quest' && earned ? `Quest ${earned.ref}` : achievement.name
+  const title =
+    achievement.id === 'quest' && earned && number !== undefined
+      ? `Quest ${number}`
+      : achievement.name
   let next: string | undefined
   if (state === 'locked') {
     next =
@@ -38,7 +53,7 @@ function item(achievement: Achievement, earned?: EarnedBadge): ShelfItem {
         ? `Meet learning objective ${achievement.objective}.`
         : howToEarn[achievement.id]
   } else if (state === 'bronze') {
-    next = 'Meet it again on your own for gold.'
+    next = 'Met with support. Gold is for meeting it without hint 3 or 4.'
   }
   return {
     key: earned ? `${achievement.id}:${earned.ref}` : achievement.id,
@@ -64,10 +79,16 @@ export function buildShelf(earned: EarnedBadge[]) {
     quest: [],
     hidden: [],
   }
+  const numbers = questNumbers(earned)
   for (const achievement of ACHIEVEMENTS) {
     const mine = held(achievement.id)
     if (achievement.offered === false && mine.length === 0) continue
-    const items = mine.length > 0 ? mine.map((e) => item(achievement, e)) : [item(achievement)]
+    const order = (e: EarnedBadge) => numbers.get(e.ref) ?? 0
+    mine.sort((a, b) => order(a) - order(b))
+    const items =
+      mine.length > 0
+        ? mine.map((e) => item(achievement, e, numbers.get(e.ref)))
+        : [item(achievement)]
     groups[achievement.kind].push(...items)
   }
   return groups
@@ -75,10 +96,11 @@ export function buildShelf(earned: EarnedBadge[]) {
 
 /** Badges earned (or raised to gold) that the student has not been shown yet. */
 export function unseen(earned: EarnedBadge[]): ShelfItem[] {
+  const numbers = questNumbers(earned)
   return earned
     .filter((e) => !e.seen)
     .flatMap((e) => {
       const achievement = ACHIEVEMENTS.find((a) => a.id === e.badge)
-      return achievement ? [item(achievement, e)] : []
+      return achievement ? [item(achievement, e, numbers.get(e.ref))] : []
     })
 }

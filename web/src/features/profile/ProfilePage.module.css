@@ -9,6 +9,10 @@
   margin: 0;
 }
 
+.heading > div {
+  min-width: 0;
+}
+
 .section {
   max-width: var(--reading-width);
   margin-bottom: var(--space-6);
@@ -19,6 +23,8 @@
   margin: var(--space-1) 0 0;
   color: var(--color-text-muted);
   font-size: var(--text-sm);
+  /* A long email address breaks rather than running off a phone (WCAG 1.4.10, 1.4.12). */
+  overflow-wrap: anywhere;
 }
 
 .tiles {
@@ -85,6 +91,10 @@
   font-weight: 600;
 }
 
+.nextToggle {
+  margin-top: var(--space-4);
+}
+
 .toggle input {
   width: 1.25rem;
   height: 1.25rem;
@@ -95,4 +105,46 @@
   display: grid;
   gap: var(--space-3);
   max-width: 28rem;
+}
+
+.upload {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.uploadActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Phones: the picture above the name, so a long name gets the whole width at a smaller size, and
+ * the numbers side by side instead of one card each. */
+@media (max-width: 40rem) {
+  .heading {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .heading h1 {
+    font-size: var(--text-2xl);
+  }
+
+  .tiles {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+  }
+
+  .tiles .tile {
+    padding: var(--space-3) var(--space-2);
+  }
+
+  .tile dd {
+    font-size: var(--text-xl);
+  }
 }

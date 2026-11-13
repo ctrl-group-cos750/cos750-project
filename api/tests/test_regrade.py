@@ -150,6 +150,49 @@ def test_a_second_run_changes_nothing(db: Session) -> None:
     assert rewards_held(db, one) == held
 
 
+def test_an_attempt_on_an_activity_staff_edited_is_left_alone_and_listed(db: Session) -> None:
+    """After #128 an edited activity may ask a different question than the stored answer
+    answered: the re-grade skips it and names it, and changes nothing else for it."""
+    from datetime import UTC, datetime
+
+    load(db)
+    one = student(db, 1)
+    attempt = take_module_6(db, one, EQUIVALENT)
+    activity = db.get_one(Activity, attempt.activity_id)
+    activity.edited_at = datetime.now(UTC)
+    db.commit()
+    stored = (attempt.correct, attempt.score, attempt.detail)
+    report = regrade.regrade(db)
+    db.commit()
+    db.refresh(attempt)
+    assert report.edited == [attempt.id]
+    assert attempt.id not in [c[0] for c in report.changed]
+    assert (attempt.correct, attempt.score, attempt.detail) == stored
+    assert "edited by staff (skipped): 1" in report.lines()[0]
+    assert f"edited by staff: attempts [{attempt.id}]" in report.lines()
+
+
+def test_a_student_deleted_before_their_turn_is_passed_over(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.services.locks import StudentGone, lock_student
+
+    load(db)
+    one, two = student(db, 1), student(db, 2)
+    take_module_6(db, one, EQUIVALENT)
+    take_module_6(db, two, EQUIVALENT)
+    db.commit()
+
+    def lock_gone_for_one(session: Session, user_id: int) -> None:
+        if user_id == one:
+            raise StudentGone(user_id)
+        lock_student(session, user_id)
+
+    monkeypatch.setattr("app.regrade.lock_student", lock_gone_for_one)
+    report = regrade.regrade(db, "commit")
+    assert {c[1] for c in report.changed} == {two}
+
+
 def test_a_correct_attempt_is_never_lowered_and_rewards_stay(db: Session) -> None:
     """An attempt stored as correct that today's content would mark wrong (say, a solution
     edited since) is kept as it was, and so is everything it earned."""
@@ -283,3 +326,38 @@ def test_a_student_answering_during_the_regrade_waits_and_both_succeed(
         ).all()
         assert len(rows) == 1
         assert state(session, one, 6) == "not_attempted"  # the other module 6 items: unanswered
+
+
+def test_a_quick_check_that_passes_once_re_marked_marks_the_module_tested_out(db: Session) -> None:
+    """A quick check answer key fixed after students took it: the re-grade re-marks their answers
+    and, where the check now passes, marks the module tested out as taking it would have
+    (#215 review, API 6). Nothing is earned."""
+    from app.models import ModuleProgress
+    from app.services import quick_check
+
+    load(db)
+    user = student(db, 1)
+    questions = quick_check.items(db, 1)
+    chosen = []
+    for index, activity in enumerate(questions):
+        right_id = activity.solution["correct"]
+        wrong_id = next(o["id"] for o in activity.config["options"] if o["id"] != right_id)
+        chosen.append(quick_check.Answer(activity.id, right_id if index < 2 else wrong_id))
+    result = quick_check.take(db, user, 1, chosen)
+    db.commit()
+    assert (result.passed, result.correct) == (False, 2)
+    # The key had the third question wrong: the answer the student chose is the right one.
+    third = questions[2]
+    third.solution = {**third.solution, "correct": chosen[2].selected}
+    db.commit()
+
+    report = regrade.regrade(db, "commit")
+    assert report.tested_out == [(user, 1)]
+    row = db.scalars(
+        select(ModuleProgress).where(ModuleProgress.user_id == user, ModuleProgress.module_id == 1)
+    ).one()
+    assert row.status == "tested_out"
+    assert quick_check.passed(db, user) == {1}
+    assert db.scalar(select(func.count()).select_from(PointsEntry)) == 0
+    # A second run changes nothing.
+    assert regrade.regrade(db, "commit").tested_out == []

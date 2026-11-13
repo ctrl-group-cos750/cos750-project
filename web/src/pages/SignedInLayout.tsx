@@ -1,40 +1,29 @@
-import { NavLink, Outlet, useNavigate } from 'react-router'
-import { buttonVariants } from '@/components/ui/button-variants'
-import { cn } from '@/lib/utils'
+import { Outlet, useLocation, useNavigate } from 'react-router'
 import { useCurrentUser, useLogout } from '../auth/hooks.ts'
 import { Alert, AppShell } from '../components'
+import { setPreferenceOwner } from '../features/progress/preferences.ts'
 import { BadgeAnnouncer } from '../features/rewards/BadgeAnnouncer.tsx'
 import { ThemeToggle } from '../theme/ThemeToggle.tsx'
 import { AccountMenu } from './AccountMenu.tsx'
 
-const navClass = ({ isActive }: { isActive: boolean }) =>
-  cn(buttonVariants({ variant: isActive ? 'secondary' : 'ghost', size: 'lg' }), 'text-foreground')
-
-/** Every signed-in page: the header (Modules, Report, the staff portal link for team members, and the
- * account menu with the student's profile, badges and Log out), then the page, and new badges
- * announced as they are earned. */
+/** Every signed-in page: the header (the logo, which goes to the modules; the theme switch; the
+ * account menu with the report, badges, profile, the staff portal for team members and Log out),
+ * then the page, and new badges announced as they are earned. No row of nav buttons: the modules
+ * are home, and everything else is one click away in the menu. */
 export function SignedInLayout() {
   const { data: user } = useCurrentUser()
   const logout = useLogout()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
+  // The feedback switches (confetti, comments) are this student's on this device (#215 review).
+  setPreferenceOwner(user?.id ?? null)
+  // One-thing pages sit in a centred column; the map, the visualiser, the staff portal and an
+  // activity (which has the progress panel beside it, #214) use the full width.
+  const width = /^\/(report|review|badges|profile|videos)(\/|$)/.test(pathname) ? 'page' : 'wide'
 
   return (
     <AppShell
-      nav={
-        <>
-          <NavLink to="/" end className={navClass}>
-            Modules
-          </NavLink>
-          <NavLink to="/report" className={navClass}>
-            Report
-          </NavLink>
-          {user?.isStaff && (
-            <NavLink to="/staff" className={navClass}>
-              Staff portal
-            </NavLink>
-          )}
-        </>
-      }
+      width={width}
       actions={
         user && (
           <>

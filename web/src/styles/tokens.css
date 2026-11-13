@@ -53,6 +53,8 @@
   --color-danger: var(--destructive, #c93b31);
   --color-danger-soft: var(--destructive-soft, rgb(255, 232, 232));
   --shadow-card: var(--shadow-sm, 0 1px 4px rgb(0 0 0 / 5%));
+  /* Behind a modal dialog (its ::backdrop): dims the page so the dialog is the one thing in view. */
+  --overlay: rgb(15 23 42 / 55%);
   --focus-ring:
     0 0 0 3px var(--background, var(--brand-paper)), 0 0 0 5px var(--ring, var(--brand-accent));
 
@@ -83,6 +85,9 @@
   --badge-bronze-soft: #f5d3ce;
   --badge-gold: #8a6b00;
   --badge-gold-soft: #fff0b5;
+  /* Silver is only a module medal (#214): a cool grey, 5.9:1 on white, 4.6:1 on its fill. */
+  --badge-silver: #5b6570;
+  --badge-silver-soft: #e3e7eb;
 
   /* Type */
   --font-display: 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif;
@@ -133,4 +138,7 @@
   --badge-bronze-soft: #5a2622;
   --badge-gold: #f6c155;
   --badge-gold-soft: #4a3a14;
+  --badge-silver: #c9d1da;
+  --badge-silver-soft: #343b43;
+  --overlay: rgb(0 0 0 / 70%);
 }

@@ -93,3 +93,121 @@ def test_0016_keeps_each_hint_level_s_first_view(tmp_path: Path) -> None:
         assert [tuple(row) for row in kept] == [(1, 1), (3, 2)]
     finally:
         engine.dispose()
+
+
+def test_0017_upgrades_a_staging_database_without_moving_anyone(tmp_path: Path) -> None:
+    """A database built on staging (at 0016) keeps its segments and every student's place: no
+    segment becomes support and nothing is recorded as shown until the fixtures say so (#172)."""
+    url = f"sqlite:///{tmp_path / 'support.db'}"
+    cfg = alembic_config(url)
+    command.upgrade(cfg, "0016")
+    engine = create_engine(url)
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    "INSERT INTO users (id, email, display_name, password_hash)"
+                    " VALUES (1, 'ada@example.com', 'Ada', 'x')"
+                )
+            )
+            conn.execute(
+                text(
+                    "INSERT INTO modules (id, slug, title, goals, estimated_minutes, position)"
+                    " VALUES (2, 'graphs', 'Graphs', '[]', 10, 2)"
+                )
+            )
+            for segment_id, position in ((201, 0), (202, 1), (203, 2)):
+                conn.execute(
+                    text(
+                        "INSERT INTO segments (id, module_id, position, kind, title, body)"
+                        " VALUES (:id, 2, :position, 'text', 'S', '')"
+                    ),
+                    {"id": segment_id, "position": position},
+                )
+            conn.execute(
+                text(
+                    "INSERT INTO module_progress (user_id, module_id, status,"
+                    " current_segment_position) VALUES (1, 2, 'in_progress', 1)"
+                )
+            )
+        command.upgrade(cfg, "0017")
+        with engine.connect() as conn:
+            segments = conn.execute(
+                text("SELECT id, position, support_for FROM segments ORDER BY id")
+            ).all()
+            place = conn.execute(
+                text("SELECT current_segment_position, status FROM module_progress")
+            ).one()
+            shown = conn.execute(text("SELECT COUNT(*) FROM shown_segments")).scalar()
+        assert [tuple(row) for row in segments] == [(201, 0, None), (202, 1, None), (203, 2, None)]
+        assert tuple(place) == (1, "in_progress")
+        assert shown == 0
+        command.downgrade(cfg, "0016")  # and it can be undone
+        with engine.connect() as conn:
+            assert conn.execute(text("SELECT COUNT(*) FROM segments")).scalar() == 3
+    finally:
+        engine.dispose()
+
+
+def test_0019_marks_old_hints_and_its_downgrade_deletes_nothing(tmp_path: Path) -> None:
+    """Existing hint views get the student's newest attempt by their time, so a hint counts only
+    against the answers after it; the downgrade refuses, rather than deleting, while a restarted
+    module's hint views exist (#211 review)."""
+    url = f"sqlite:///{tmp_path / 'restart.db'}"
+    cfg = alembic_config(url)
+    command.upgrade(cfg, "0018")
+    engine = create_engine(url)
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    "INSERT INTO users (id, email, display_name, password_hash)"
+                    " VALUES (1, 'ada@example.com', 'Ada', 'x')"
+                )
+            )
+            conn.execute(
+                text(
+                    "INSERT INTO activities (id, kind, title, config, solution)"
+                    " VALUES (1, 'multiple_choice', 'Q', '{}', '{}')"
+                )
+            )
+            for attempt_id, at in ((1, "2026-11-01 10:00:00"), (2, "2026-11-01 12:00:00")):
+                conn.execute(
+                    text(
+                        "INSERT INTO attempts (id, user_id, activity_id, submitted, correct,"
+                        " score, detail, created_at)"
+                        " VALUES (:id, 1, 1, '{}', 0, 0, '{}', :at)"
+                    ),
+                    {"id": attempt_id, "at": at},
+                )
+            for view_id, level, at in (
+                (1, 1, "2026-11-01 09:00:00"),
+                (2, 2, "2026-11-01 11:00:00"),
+                (3, 3, "2026-11-01 13:00:00"),
+            ):
+                conn.execute(
+                    text(
+                        "INSERT INTO hint_views (id, user_id, activity_id, level, created_at)"
+                        " VALUES (:id, 1, 1, :level, :at)"
+                    ),
+                    {"id": view_id, "level": level, "at": at},
+                )
+        command.upgrade(cfg, "0019")
+        with engine.begin() as conn:
+            marked = conn.execute(text("SELECT id, after_attempt FROM hint_views ORDER BY id"))
+            assert [tuple(row) for row in marked] == [(1, 0), (2, 1), (3, 2)]
+            conn.execute(
+                text(
+                    "INSERT INTO hint_views (id, user_id, activity_id, level, round)"
+                    " VALUES (4, 1, 1, 1, 1)"
+                )
+            )
+        with pytest.raises(RuntimeError, match="won't delete"):
+            command.downgrade(cfg, "0018")
+        with engine.connect() as conn:
+            assert conn.execute(text("SELECT COUNT(*) FROM hint_views")).scalar() == 4
+        with engine.begin() as conn:
+            conn.execute(text("DELETE FROM hint_views WHERE round > 0"))
+        command.downgrade(cfg, "0018")  # nothing of a later round: it goes down
+    finally:
+        engine.dispose()

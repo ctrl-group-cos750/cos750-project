@@ -11,8 +11,9 @@ import app.main
 from app.db import Base, get_session
 from app.main import app as fastapi_app
 from app.rate_limit import login_account_limiter, login_address_limiter, register_limiter
+from app.routers.activities import attempts_limiter, hints_limiter
 from app.routers.events import events_limiter
-from app.routers.profile import password_change_limiter
+from app.routers.profile import password_change_limiter, picture_limiter
 
 TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL")
 
@@ -31,6 +32,9 @@ def fresh_rate_limits() -> None:
     register_limiter.reset()
     events_limiter.reset()
     password_change_limiter.reset()
+    picture_limiter.reset()
+    attempts_limiter.reset()
+    hints_limiter.reset()
 
 
 @pytest.fixture

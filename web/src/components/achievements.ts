@@ -40,8 +40,7 @@ export type Achievement = {
   /** What the badge means, in words that praise the skill or the strategy, not the student. */
   description: string
   /**
-   * False while the course has nothing that earns it, so the shelf doesn't ask for it. Shortcut
-   * Finder waits on objective 8, which the course doesn't assess yet (#70).
+   * False while the course has nothing that earns it, so the shelf doesn't ask for it.
    */
   offered?: boolean
 }
@@ -112,7 +111,6 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     glyph: 'shortcut-finder',
     objective: 8,
     description: 'You used BFS to find the shortest route, and can say why it is the shortest.',
-    offered: false,
   },
   {
     id: 'ready-for-lecture',
@@ -133,7 +131,7 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     name: 'First Module',
     kind: 'milestone',
     glyph: 'first-module',
-    description: 'You worked all the way through your first module.',
+    description: 'You worked all the way through a module and got answers right on your own.',
   },
   {
     id: 'solo-run',

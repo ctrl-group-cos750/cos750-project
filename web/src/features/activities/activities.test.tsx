@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Link, MemoryRouter, Route, Routes } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
@@ -9,9 +9,18 @@ import { ActivityRenderer } from './ActivityRenderer.tsx'
 import { FeedbackPanel } from './FeedbackPanel.tsx'
 import { FillInCode } from './FillInCode.tsx'
 import { HintLadder } from './HintLadder.tsx'
+import { Matching } from './Matching.tsx'
 import { CodeLine, ParsonsProblem } from './ParsonsProblem.tsx'
 import { indentLabel, lineName } from './codeLines.ts'
-import type { CodeActivity, FillInActivity, Hint, ParsonsActivity } from './activities.types.ts'
+import type {
+  CodeActivity,
+  FillInActivity,
+  Hint,
+  MasteryCheckFlags,
+  MatchingActivity,
+  ParsonsActivity,
+  Submission,
+} from './activities.types.ts'
 
 const parsons: ParsonsActivity = {
   id: 7,
@@ -55,6 +64,25 @@ describe('code activities', () => {
     await user.click(screen.getByRole('button', { name: 'Check answer' }))
 
     expect(onSubmit).toHaveBeenCalledWith([3, 1, 2])
+  })
+
+  it('leaves a blank set back to its placeholder out of the answer', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi
+      .fn<(answers: Record<number, string>) => Promise<void>>()
+      .mockResolvedValue(undefined)
+    const twoBlanks: FillInActivity = {
+      ...fillIn,
+      config: { ...fillIn.config, code: 'a = __1__\nb = __2__', blanks: [1, 2] },
+    }
+    render(
+      <FillInCode activity={twoBlanks} result={undefined} submitting={false} onSubmit={onSubmit} />,
+    )
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Blank 1' }), 'queue')
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Blank 2' }), 'visited')
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Blank 2' }), 'blank 2') // reset
+    await user.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(onSubmit).toHaveBeenCalledWith({ 1: 'queue' })
   })
 
   it('submits token selections rather than editable code', async () => {
@@ -101,6 +129,34 @@ describe('code activities', () => {
     })
   })
 
+  it('checks for new badges after a wrong answer too (one can still meet an objective)', async () => {
+    const api = fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/activities/7': () => Response.json(parsons),
+        'GET /api/activities/7/hints': () => Response.json([]),
+        'POST /api/activities/7/attempts': () =>
+          Response.json({
+            id: 11,
+            activityId: 7,
+            correct: false,
+            score: 0,
+            parts: [{ ref: 0, correct: false, message: 'Wrong place.' }],
+            feedback: '0 of 1 correct.',
+            hintLevel: 0,
+          }),
+      },
+    })
+    const user = userEvent.setup()
+    renderApp('/activities/7')
+    const check = await screen.findByRole('button', { name: 'Check answer' })
+    await waitFor(() => expect(api.callsTo('GET /api/rewards').length).toBeGreaterThan(0))
+    const before = api.callsTo('GET /api/rewards').length
+    await user.click(check)
+    await waitFor(() => expect(api.callsTo('POST /api/activities/7/attempts')).toHaveLength(1))
+    await waitFor(() => expect(api.callsTo('GET /api/rewards').length).toBeGreaterThan(before))
+  })
+
   it('resets attempt result and unlocks when navigating to a new activity', async () => {
     fakeApi({
       user: ada,
@@ -140,6 +196,10 @@ describe('code activities', () => {
     // Submit correct answer on activity 7
     await user.click(await screen.findByRole('button', { name: 'Check answer' }))
     await screen.findByText('All correct!')
+    // A correct line says so in words, not only by colour (A13).
+    expect(
+      within(screen.getByRole('list', { name: 'Your answer, in order' })).getByText('Correct'),
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Check answer' })).toBeDisabled()
 
     // Navigate to activity 8
@@ -786,5 +846,311 @@ describe('hints once an activity is solved (#158)', () => {
     rerender(<HintLadder activityId={7} solved loadHints={loadHints} requestHint={requestHint} />)
     expect(screen.queryByText(/The next hint gives a lot away/)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Show next hint' })).not.toBeInTheDocument()
+  })
+})
+
+describe('the mastery check (#144)', () => {
+  const checkItem: ParsonsActivity & MasteryCheckFlags = {
+    ...parsons,
+    masteryCheck: true,
+    answered: false,
+  }
+  const withheld = {
+    id: 21,
+    activityId: 7,
+    correct: null,
+    score: null,
+    parts: [],
+    feedback:
+      'Answer recorded. Your results are in your mastery report once every question in the check is answered.',
+    hintLevel: 0,
+    withheld: true,
+  }
+
+  it('says the answer was recorded, never right or wrong, and takes no second answer', async () => {
+    let item = checkItem
+    const api = fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/activities/7': () => Response.json(item),
+        'GET /api/activities/7/hints': () => Response.json([]),
+        'POST /api/activities/7/attempts': () => {
+          item = { ...checkItem, answered: true }
+          return Response.json(withheld)
+        },
+      },
+    })
+    const user = userEvent.setup()
+    renderApp('/activities/7')
+
+    expect(await screen.findByText(/Only your first answer counts/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Check answer' }))
+
+    expect(await screen.findByText('Answer recorded')).toBeInTheDocument()
+    expect(screen.queryByText('Correct')).not.toBeInTheDocument()
+    expect(screen.queryByText('Not quite')).not.toBeInTheDocument()
+    // The answer can't be sent again, and no more hints are offered.
+    expect(screen.queryByRole('button', { name: 'Check answer' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Show next hint' })).not.toBeInTheDocument()
+    expect(api.callsTo('POST /api/activities/7/attempts')).toHaveLength(1)
+  })
+
+  it('says an item answered before is answered, without showing the form again', async () => {
+    render(
+      <ActivityRenderer
+        activity={{ ...checkItem, answered: true }}
+        result={undefined}
+        submitting={false}
+        onSubmit={vi.fn<(submitted: Submission) => Promise<void>>()}
+        requestHint={vi.fn<(activityId: number) => Promise<Hint>>()}
+        loadHints={() => Promise.resolve([])}
+      />,
+    )
+    expect(screen.getByText('Answer recorded')).toBeInTheDocument()
+    expect(screen.getByText(/it can't be changed/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Check answer' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Show next hint' })).toBeNull()
+  })
+
+  it('stops at hint 2 and points to the review path', async () => {
+    const loadHints = vi.fn<(activityId: number) => Promise<readonly Hint[]>>().mockResolvedValue([
+      { level: 1, body: 'First hint.', hasMore: true, nextCountsAsSupport: false },
+      {
+        level: 2,
+        body: 'Second hint.',
+        hasMore: false,
+        nextCountsAsSupport: false,
+        limitReached: true,
+      },
+    ])
+    render(
+      <HintLadder
+        activityId={7}
+        loadHints={loadHints}
+        requestHint={vi.fn<(activityId: number) => Promise<Hint>>()}
+      />,
+    )
+
+    expect(await screen.findByText('Second hint.')).toBeInTheDocument()
+    expect(screen.getByText('No more hints in the mastery check')).toBeInTheDocument()
+    expect(screen.getByText(/review path/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Show next hint' })).not.toBeInTheDocument()
+  })
+})
+
+describe('coming back to an answered activity (#171)', () => {
+  const choice = {
+    id: 41,
+    kind: 'multiple_choice',
+    title: 'Which leaves first?',
+    visible: true,
+    config: {
+      prompt: 'Which leaves the queue first?',
+      options: [
+        { id: 'a', label: 'The first to join' },
+        { id: 'b', label: 'The last to join' },
+      ],
+    },
+  }
+  const wrongResult = {
+    id: 9,
+    activityId: 41,
+    correct: false,
+    score: 0,
+    parts: [{ ref: 0, correct: false, message: 'A queue is first in, first out.' }],
+    feedback: 'Not quite. A queue is first in, first out.',
+    hintLevel: 0,
+    withheld: false,
+  }
+
+  it('shows the answer the student gave and its result, without moving focus', async () => {
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/activities/41': () =>
+          Response.json({
+            ...choice,
+            lastAttempt: { submitted: { selected: 'b' }, result: wrongResult },
+          }),
+        'GET /api/activities/41/hints': () => Response.json([]),
+      },
+    })
+    renderApp('/activities/41')
+
+    expect(await screen.findByLabelText('The last to join')).toBeChecked()
+    expect(screen.getByText('Not quite. A queue is first in, first out.')).toBeInTheDocument()
+    expect(document.activeElement).toBe(document.body) // a page load never moves focus
+  })
+
+  it('shows an answered mastery item read-only, with no Check answer', async () => {
+    const withheld = { ...wrongResult, correct: null, score: null, parts: [], withheld: true }
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/activities/41': () =>
+          Response.json({
+            ...choice,
+            masteryCheck: true,
+            answered: true,
+            lastAttempt: { submitted: { selected: 'a' }, result: withheld },
+          }),
+        'GET /api/activities/41/hints': () => Response.json([]),
+      },
+    })
+    renderApp('/activities/41')
+
+    const option = await screen.findByLabelText('The first to join')
+    expect(option).toBeChecked()
+    expect(option).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Check answer' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Correct')).not.toBeInTheDocument()
+    // Coming back, it still says why the answer can't be changed (#171 review).
+    expect(screen.getByText(/Only your first answer counts, so it can't be changed/)).toBeVisible()
+  })
+
+  it('keeps showing a mastery answer just given, read-only (#171 review)', async () => {
+    const withheld = { ...wrongResult, correct: null, score: null, parts: [], withheld: true }
+    let answered = false
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/activities/41': () =>
+          Response.json({ ...choice, masteryCheck: true, answered, lastAttempt: null }),
+        'GET /api/activities/41/hints': () => Response.json([]),
+        'POST /api/activities/41/attempts': () => {
+          answered = true
+          return Response.json(withheld)
+        },
+      },
+    })
+    const user = userEvent.setup()
+    renderApp('/activities/41')
+
+    await user.click(await screen.findByLabelText('The last to join'))
+    await user.click(screen.getByRole('button', { name: 'Check answer' }))
+
+    expect(await screen.findByText('Answer recorded')).toBeInTheDocument()
+    const option = screen.getByLabelText('The last to join')
+    expect(option).toBeChecked()
+    expect(option).toBeDisabled()
+    expect(screen.getByLabelText('The first to join')).not.toBeChecked()
+    expect(screen.getByText(/Only your first answer counts, so it can't be changed/)).toBeVisible()
+  })
+
+  it('an answered Parsons item can be neither dragged nor changed (#171 review)', () => {
+    render(
+      <ParsonsProblem
+        activity={parsons}
+        result={undefined}
+        submitting={false}
+        onSubmit={vi.fn<(order: number[]) => Promise<void>>()}
+        previous={[3, 1]}
+        readOnly
+      />,
+    )
+    const line = screen.getByRole('button', { name: 'third()' })
+    expect(line).toBeDisabled()
+    expect(line).toHaveAttribute('draggable', 'false')
+    expect(screen.getByRole('button', { name: /Add:\s*second\(\)/ })).toHaveAttribute(
+      'draggable',
+      'false',
+    )
+  })
+
+  it('a Parsons problem shows a line left out as available again', () => {
+    render(
+      <ParsonsProblem
+        activity={parsons}
+        result={undefined}
+        submitting={false}
+        onSubmit={vi.fn<(order: number[]) => Promise<void>>()}
+        previous={[3, 1]}
+      />,
+    )
+    const answer = screen.getByRole('list', { name: 'Your answer, in order' })
+    expect(answer.querySelectorAll('li')).toHaveLength(2)
+    const available = screen.getByRole('region', { name: 'Available lines' })
+    expect(available).toHaveTextContent('second()')
+    expect(available).not.toHaveTextContent('first()')
+  })
+
+  it('fill in the code starts from the options the student chose', async () => {
+    const onSubmit = vi
+      .fn<(answers: Record<number, string>) => Promise<void>>()
+      .mockResolvedValue(undefined)
+    render(
+      <FillInCode
+        activity={fillIn}
+        result={undefined}
+        submitting={false}
+        onSubmit={onSubmit}
+        previous={{ 1: 'visited' }}
+      />,
+    )
+    expect(screen.getByRole('combobox', { name: 'Blank 1' })).toHaveValue('visited')
+    await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(onSubmit).toHaveBeenCalledWith({ 1: 'visited' })
+  })
+
+  it('matching starts from the pairs the student made, with their marks', async () => {
+    const matching: MatchingActivity = {
+      id: 42,
+      kind: 'matching',
+      title: 'Match the terms',
+      visible: true,
+      config: {
+        prompt: 'Match each term to what it means.',
+        left: [
+          { id: 'queue', label: 'Queue' },
+          { id: 'visited', label: 'Visited' },
+        ],
+        right: [
+          { id: 'fifo', label: 'First in, first out' },
+          { id: 'left', label: 'Has left the queue' },
+        ],
+      },
+    }
+    const onSubmit = vi
+      .fn<(pairs: Record<string, string>) => Promise<void>>()
+      .mockResolvedValue(undefined)
+    render(
+      <Matching
+        activity={matching}
+        result={{
+          ...wrongResult,
+          activityId: 42,
+          parts: [
+            { ref: 0, correct: true, message: null },
+            { ref: 1, correct: false, message: 'Visited means it has left the queue.' },
+          ],
+        }}
+        submitting={false}
+        onSubmit={onSubmit}
+        previous={{ queue: 'fifo', visited: 'fifo' }}
+      />,
+    )
+    expect(screen.getByLabelText('Queue')).toHaveValue('fifo')
+    expect(screen.getByLabelText('Visited')).toHaveValue('fifo')
+    // The restored marks are about these pairs, so they show.
+    expect(screen.getByLabelText('Visited')).toHaveAccessibleDescription(
+      /Visited means it has left the queue/,
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(onSubmit).toHaveBeenCalledWith({ queue: 'fifo', visited: 'fifo' })
+  })
+
+  it('a Parsons problem keeps the student’s order instead of starting afresh', async () => {
+    const onSubmit = vi.fn<(order: number[]) => Promise<void>>().mockResolvedValue(undefined)
+    render(
+      <ParsonsProblem
+        activity={parsons}
+        result={undefined}
+        submitting={false}
+        onSubmit={onSubmit}
+        previous={[3, 1]}
+      />,
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(onSubmit).toHaveBeenCalledWith([3, 1])
   })
 })

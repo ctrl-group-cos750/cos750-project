@@ -67,6 +67,62 @@ afterEach(() => {
 })
 
 describe('BfsPage', () => {
+  it('leads back to the module it was opened from, else to the map (#146)', async () => {
+    stubGraphApi()
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const fromModule = { backTo: '/modules/3', backLabel: 'Back to module 3' }
+    const { unmount } = render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={[{ pathname: '/graphs/2', state: fromModule }]}>
+          <Routes>
+            <Route path="/graphs/:scenarioId" element={<BfsPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(await screen.findByRole('link', { name: /Back to module 3/ })).toHaveAttribute(
+      'href',
+      '/modules/3',
+    )
+    unmount()
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/graphs/2']}>
+          <Routes>
+            <Route path="/graphs/:scenarioId" element={<BfsPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(await screen.findByRole('link', { name: /Back to your modules/ })).toHaveAttribute(
+      'href',
+      '/',
+    )
+  })
+
+  it('records each prediction as an event, with whether it was right (#146)', async () => {
+    stubGraphApi()
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/graphs/2']}>
+          <Routes>
+            <Route path="/graphs/:scenarioId" element={<BfsPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(await screen.findByRole('heading', { name: 'Short path' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Step forward' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'A' }))
+    const fetchMock = vi.mocked(fetch)
+    const posted = fetchMock.mock.calls
+      .filter(([url]) => String(url) === '/api/events')
+      .map(([, init]) => JSON.parse(String(init?.body)) as unknown)
+    expect(posted).toEqual([{ type: 'prediction_made', targetId: 2, correct: true }])
+  })
+
   it('starts a shorter graph at its first step instead of crashing on the old step position', async () => {
     stubGraphApi()
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -105,5 +161,42 @@ describe('BfsPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Short path' })).toBeInTheDocument()
     expect(screen.getByText('Step 1 of 3')).toBeInTheDocument()
+  })
+
+  it('keeps focus through a prediction and at either end of the steps (A3)', async () => {
+    stubGraphApi()
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/graphs/2']}>
+          <Routes>
+            <Route path="/graphs/:scenarioId" element={<BfsPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(await screen.findByRole('heading', { name: 'Short path' })).toBeInTheDocument()
+    // The graph's text alternative names its edges, not only the queue.
+    expect(screen.getByRole('img', { name: /Edges: A–B\./ })).toBeInTheDocument()
+
+    const back = screen.getByRole('button', { name: 'Step back' })
+    expect(back).toHaveAttribute('aria-disabled', 'true')
+    const forward = screen.getByRole('button', { name: 'Step forward' })
+    forward.focus()
+    await userEvent.keyboard('{Enter}')
+    // The question takes focus, then the feedback, then Step forward again after Continue.
+    expect(screen.getByRole('button', { name: 'A' })).toHaveFocus()
+    await userEvent.keyboard('{Enter}')
+    expect(screen.getByRole('alert')).toHaveFocus()
+    await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    expect(forward).toHaveFocus()
+
+    // Last step: Step forward is aria-disabled but keeps focus.
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Prediction mode' }))
+    forward.focus()
+    await userEvent.keyboard('{Enter}')
+    expect(screen.getByText('Step 3 of 3')).toBeInTheDocument()
+    expect(forward).toHaveAttribute('aria-disabled', 'true')
+    expect(forward).toHaveFocus()
   })
 })

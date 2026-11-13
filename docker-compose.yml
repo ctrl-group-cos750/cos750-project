@@ -25,6 +25,9 @@ services:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-ctrl}:${POSTGRES_PASSWORD:?}@db:5432/${POSTGRES_DB:-ctrl}
       # Signs session cookies. Unset, the API makes a random one and everyone is logged out on restart.
       SECRET_KEY: ${SECRET_KEY:-}
+      # Keys the pilot's pseudonyms (FR-10.3, app/services/pseudonym.py), apart from SECRET_KEY so
+      # changing that never renames every student in the CSV files. Unset, SECRET_KEY is used.
+      PILOT_PSEUDONYM_KEY: ${PILOT_PSEUDONYM_KEY:-}
       # "off" in production: hides /api/docs and /api/openapi.json. Staging keeps them for the team.
       API_DOCS: ${API_DOCS:-on}
       # The password of every seeded demo account (FR-1.4, app/seed/demo_accounts.py). Unset, none

@@ -8,6 +8,10 @@ type ParsonsProblemProps = {
   result: AttemptResult | undefined
   submitting: boolean
   onSubmit: (order: number[]) => Promise<void>
+  /** The student's last answer, to start from when they come back to the activity (#171). */
+  previous?: number[]
+  /** Show the answer only, with no Check answer: an answered mastery item (#144, #171). */
+  readOnly?: boolean
 }
 
 type DraggedLine = { id: number; fromAnswer: boolean }
@@ -51,9 +55,23 @@ export function CodeLine({ text }: { text: string }) {
  * single-pointer alternative to dragging for mouse and touch users (WCAG 2.2 SC 2.5.7), and
  * every control is at least 24 by 24 px (SC 2.5.8).
  */
-export function ParsonsProblem({ activity, result, submitting, onSubmit }: ParsonsProblemProps) {
-  const [answerOrder, setAnswerOrder] = useState(() => activity.config.lines.map((line) => line.id))
-  const [available, setAvailable] = useState<number[]>([])
+export function ParsonsProblem({
+  activity,
+  result,
+  submitting,
+  onSubmit,
+  previous,
+  readOnly,
+}: ParsonsProblemProps) {
+  // Coming back: the student's own order, not a fresh one, and the lines they left out (#171).
+  const [answerOrder, setAnswerOrder] = useState(
+    () => previous ?? activity.config.lines.map((line) => line.id),
+  )
+  const [available, setAvailable] = useState<number[]>(() =>
+    previous
+      ? activity.config.lines.map((line) => line.id).filter((id) => !previous.includes(id))
+      : [],
+  )
   const [dragged, setDragged] = useState<DraggedLine>()
   const [announcement, setAnnouncement] = useState('')
   const [cleared, setCleared] = useState(false)
@@ -78,7 +96,8 @@ export function ParsonsProblem({ activity, result, submitting, onSubmit }: Parso
   }
 
   const lines = new Map(activity.config.lines.map((line) => [line.id, line]))
-  const disabled = submitting || result?.correct === true
+  // Read-only too: a disabled fieldset around it doesn't stop dragging (#171).
+  const disabled = submitting || result?.correct === true || !!readOnly
   // How a line is announced after a move: its code, which is what the student sees (the id isn't).
   const said = (lineId: number) => {
     const line = lines.get(lineId)
@@ -226,7 +245,14 @@ export function ParsonsProblem({ activity, result, submitting, onSubmit }: Parso
                   Remove <span className="visually-hidden">{lineName(line.text)}</span>
                 </Button>
               </span>
-              {part?.message && (
+              {/* A checked line says whether it is right in words, not only by its colour
+                  (WCAG 1.4.1), as matching and choose tests do. */}
+              {part?.correct && (
+                <span className="basis-full text-sm text-success">
+                  <span aria-hidden="true">✓ </span>Correct
+                </span>
+              )}
+              {part && !part.correct && part.message && (
                 <span className="basis-full text-sm text-warning">{part.message}</span>
               )}
             </li>
@@ -266,18 +292,20 @@ export function ParsonsProblem({ activity, result, submitting, onSubmit }: Parso
           </ul>
         </section>
       )}
-      <div>
-        {/* Focusable while the answer is checked, so a failed check leaves focus here and a
-            result can take it from here (WCAG 2.4.3). */}
-        <Button
-          type="submit"
-          loading={submitting}
-          keepFocusWhileLoading
-          disabled={result?.correct === true}
-        >
-          Check answer
-        </Button>
-      </div>
+      {!readOnly && (
+        <div>
+          {/* Focusable while the answer is checked, so a failed check leaves focus here and a
+              result can take it from here (WCAG 2.4.3). */}
+          <Button
+            type="submit"
+            loading={submitting}
+            keepFocusWhileLoading
+            disabled={result?.correct === true}
+          >
+            Check answer
+          </Button>
+        </div>
+      )}
     </form>
   )
 }

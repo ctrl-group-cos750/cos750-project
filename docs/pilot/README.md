@@ -66,7 +66,19 @@ for modules 1 to 4 on the way to module 5, so his session is still close to full
 - Each participant gets a code, **P1 to P7**, and gives only that code in the survey, never their
   name. One member keeps a private list of which code is which account's email, so the survey can
   be joined to the pilot data. The list is never committed or shared outside the team.
-- After the pilot, the data identifies students by an internal id only (SE document FR-10.3).
+- After the pilot, the data identifies students by a pseudonym only, never by their account id
+  (SE document FR-10.3), and the staff portal doesn't show it, so nobody can put a name to a CSV
+  row from there. To join the survey, the member with the code list runs, in the staging api
+  container (Coolify: the `api` service's terminal):
+
+  ```
+  python -m app.pilot_name p1-email@example.com p2-email@example.com ...
+  ```
+
+  It prints `<email>,<pseudonym>` for each, and nothing else is written. They write the
+  pseudonym next to each code in their private list, and the files are joined on it. The
+  pseudonyms stay the same as long as `PILOT_PSEUDONYM_KEY` does (docs/deploy/coolify.md):
+  don't change it until the analysis is done.
 
 ## Running a session
 
@@ -84,4 +96,13 @@ for modules 1 to 4 on the way to module 5, so his session is still close to full
   data page (`/staff/pilot`): attempts, hints, events and objective results. To make an account
   staff, in the api container's terminal on Coolify: `python -m app.staff grant <email>`.
 - The survey responses are exported from the form.
+- Put the four CSV files in one folder (outside the repository: they are student data) and run
+  `python3 scripts/pilot-analysis.py <folder> > pilot-results.md`. It gives time per module
+  against the minutes the app shows, each item's first-time success, attempts and use of hints
+  3 and 4, the mastery items' difficulty and discrimination, and how many participants ended in
+  each state per objective. Paste its tables into the write-up.
 - The analysis follows ID document §8.4; the write-up is #76.
+- Points are not in the export and the analysis doesn't use them. If they are ever compared, note
+  that since 13 November 2026 (PR #212) module 0, the diagnostic warm-up, no longer earns its 25
+  points: a pilot participant who finished it before then has 25 more than a student who finishes
+  it now (SE document FR-9.1).

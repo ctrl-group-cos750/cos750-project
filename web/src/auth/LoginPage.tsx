@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { Alert, Button, TextField } from '../components'
 import { AuthLayout } from './AuthLayout.tsx'
@@ -17,6 +17,12 @@ export function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [errors, setErrors] = useState<FieldErrors<Field>>({})
+  // A refused login (wrong password) takes focus to the message, so it is read and the student
+  // isn't left on the page (WCAG 2.4.3, 3.3.1).
+  const errorRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (login.error) errorRef.current?.focus()
+  }, [login.error])
 
   function onSubmit(event: FormEvent) {
     event.preventDefault()
@@ -45,7 +51,11 @@ export function LoginPage() {
         </>
       }
     >
-      {login.error && <Alert tone="danger">{login.error.message}</Alert>}
+      {login.error && (
+        <Alert tone="danger" announce="focus" ref={errorRef}>
+          {login.error.message}
+        </Alert>
+      )}
       <form onSubmit={onSubmit} noValidate className={styles.form}>
         <TextField
           id={ids.email}
@@ -65,7 +75,7 @@ export function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           error={errors.password}
         />
-        <Button type="submit" loading={login.isPending}>
+        <Button type="submit" loading={login.isPending} keepFocusWhileLoading>
           Log in
         </Button>
       </form>

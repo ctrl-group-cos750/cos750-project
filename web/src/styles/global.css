@@ -48,10 +48,11 @@
   --sidebar-accent-foreground: rgb(13, 79, 165);
   --sidebar-border: rgb(230, 230, 230);
   --sidebar-ring: rgb(17, 102, 212);
-  --font-sans: 'Inter', 'Segoe UI', 'Helvetica Neue', sans-serif;
+  --font-sans: 'Geist Variable', 'Segoe UI', 'Helvetica Neue', sans-serif;
   --font-serif: Georgia, 'Times New Roman', serif;
   --font-mono: monospace;
-  --radius: 0.125rem;
+  /* Rounded, not square: shadcn's buttons, inputs and menus take their corners from this. */
+  --radius: 0.75rem;
   --shadow-2xs: 0 1px 4px rgb(0 0 0 / 3%);
   --shadow-xs: 0 1px 4px rgb(0 0 0 / 3%);
   --shadow-sm: 0 1px 4px rgb(0 0 0 / 5%), 0 1px 2px -1px rgb(0 0 0 / 5%);
@@ -80,8 +81,11 @@
   --muted-foreground: rgb(166, 166, 166);
   --accent: rgb(0, 48, 102);
   --accent-foreground: rgb(179, 214, 255);
-  --destructive: rgb(223, 32, 32);
-  --destructive-foreground: rgb(255, 255, 255);
+  /* Light enough to read as text on the dark surfaces and on its own 20% tint (shadcn's
+     destructive button), so text on it is dark, as on --primary. rgb(223, 32, 32) was 3.1:1 on
+     the card (#35's axe tests). */
+  --destructive: rgb(255, 138, 138);
+  --destructive-foreground: rgb(31, 31, 31);
   --border: rgb(64, 64, 64);
   --input: rgb(120, 120, 120); /* 3.4:1 on the dark card, 3.7:1 on the dark page */
   --ring: rgb(128, 187, 255);
@@ -178,4 +182,20 @@
     @apply bg-background text-foreground;
     letter-spacing: var(--tracking-normal);
   }
+}
+
+/* Module 1's map illustrations (#155) get a dark palette in dark mode instead of staying light
+ * pictures on a dark page: lightness inverted, hues kept (the grass stays green, the bus stops
+ * blue). Graph drawings need none of this: they are drawn in the theme's own tokens. */
+:is(.dark, [data-theme='dark']) .situation-map {
+  filter: invert(0.9) hue-rotate(180deg) saturate(0.85);
+}
+
+/* Radios and checkboxes draw their own focus ring (WCAG 2.4.7). The global :focus-visible ring is
+   a box-shadow, which a native radio in WebKit doesn't show, and WebKit's own ring there is painted
+   by the platform theme, so a keyboard user could lose track of the focused option (#35, WebKit
+   in CI). On :focus, not only :focus-visible: WebKit drops focus-visible once Space checks a radio. */
+input:is([type='radio'], [type='checkbox']):focus {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }

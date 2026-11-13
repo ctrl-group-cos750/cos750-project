@@ -9,6 +9,7 @@ const grace: User = {
   displayName: 'Grace',
   isStaff: true,
   avatar: null,
+  pictureUrl: null,
 }
 
 const insights = {

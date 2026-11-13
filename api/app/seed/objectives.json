@@ -48,6 +48,13 @@
       "text": "Test and debug a BFS implementation using suitable test cases, including a disconnected graph or a graph containing a cycle.",
       "criterion": "Both faulty versions corrected to match the solution. For each bug, a chosen test case fails the faulty version and passes the correct one.",
       "pass_fraction": 1.0
+    },
+    {
+      "id": 8,
+      "bloom_level": "Apply, understand",
+      "text": "Use BFS to find the shortest route, measured in number of edges, between two vertices in an unweighted graph, and explain why BFS guarantees it.",
+      "criterion": "At least 3 of 4 items correct: finding the fewest edges and the route BFS records, and explaining why BFS guarantees it.",
+      "pass_fraction": 0.75
     }
   ]
 }

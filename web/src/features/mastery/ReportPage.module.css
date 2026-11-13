@@ -72,3 +72,56 @@
     grid-column: 2;
   }
 }
+
+/* How many objectives are in each state. */
+.tally {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+}
+
+.tile {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.tile dt {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.tile dd {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The skill profile (#214), after the list it sums up. */
+.profile {
+  margin-top: var(--space-4);
+}
+
+/* The one next step, before the list. */
+.next_action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  border-color: color-mix(in srgb, var(--color-accent-text) 35%, var(--color-line));
+}
+
+.nextText {
+  margin: 0;
+}
+
+@media (max-width: 40rem) {
+  .tally {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

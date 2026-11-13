@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Checkpoint, Module, ModuleProgress, User, Video
+from app.models import Activity, Checkpoint, Module, ModuleProgress, Segment, User, Video
 from app.seed import load
 
 STUDENT = {"email": "ada@example.com", "password": "Correct horse 1", "displayName": "Ada"}
@@ -53,22 +53,26 @@ def test_mastery_items_stay_locked_until_module_6_opens(client: TestClient, db: 
     assert client.post(f"/api/activities/{item.id}/hints").status_code == 201
 
 
-def test_a_module_s_activities_open_with_the_module(client: TestClient, db: Session) -> None:
+def test_modules_0_to_5_are_open_from_the_start(client: TestClient, db: Session) -> None:
+    """The student chooses where to start (#214): every activity of modules 0 to 5 opens for a
+    brand-new student, but the quick check items, which are only asked in the quick check."""
     load(db)
-    user_id = log_in(client)
-    first = db.scalars(
-        select(Activity).where(Activity.module_id == 0).order_by(Activity.id)
-    ).first()
-    later = db.scalars(
-        select(Activity).where(Activity.module_id == 1).order_by(Activity.id)
-    ).first()
-    assert first is not None
-    assert later is not None
+    log_in(client)
+    support = set(db.scalars(select(Segment.activity_id).where(Segment.support_for.is_not(None))))
+    for activity in db.scalars(
+        select(Activity).where(Activity.module_id.in_(range(6))).order_by(Activity.id)
+    ):
+        if activity.id in support:  # shown only to a student who needs it (FR-8.4)
+            continue
+        expected = 403 if activity.purpose == "test_out" else 200
+        assert client.get(f"/api/activities/{activity.id}").status_code == expected, activity.id
+    assert client.get(f"/api/activities/{mastery_item(db).id}").status_code == 403
 
-    assert client.get(f"/api/activities/{first.id}").status_code == 200  # module 0 is always open
-    assert client.get(f"/api/activities/{later.id}").status_code == 403
-    complete(db, user_id, before=1)
-    assert client.get(f"/api/activities/{later.id}").status_code == 200
+
+def module_6_segment(db: Session) -> int:
+    return db.scalars(
+        select(Segment.id).where(Segment.module_id == 6).order_by(Segment.position)
+    ).first()  # type: ignore[return-value]
 
 
 def _video_with_checkpoint(db: Session, segment_id: int | None) -> tuple[Video, Activity]:
@@ -101,7 +105,7 @@ def test_a_checkpoint_question_is_locked_with_the_module_that_plays_its_video(
     client: TestClient, db: Session
 ) -> None:
     load(db)
-    video, question = _video_with_checkpoint(db, segment_id=103)  # module 1's first video
+    video, question = _video_with_checkpoint(db, segment_id=module_6_segment(db))
     user_id = log_in(client)
 
     assert client.get(f"/api/videos/{video.id}").status_code == 403
@@ -110,7 +114,7 @@ def test_a_checkpoint_question_is_locked_with_the_module_that_plays_its_video(
         client.post(f"/api/activities/{question.id}/attempts", json=ANY_ANSWER).status_code == 403
     )
 
-    complete(db, user_id, before=1)
+    complete(db, user_id, before=6)
     assert client.get(f"/api/videos/{video.id}").status_code == 200
     assert (
         client.post(f"/api/activities/{question.id}/attempts", json=ANY_ANSWER).status_code == 201

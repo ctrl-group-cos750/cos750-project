@@ -7,6 +7,10 @@ type FillInCodeProps = {
   result: AttemptResult | undefined
   submitting: boolean
   onSubmit: (answers: Record<number, string>) => Promise<void>
+  /** The student's last answer, to start from when they come back to the activity (#171). */
+  previous?: Record<number, string>
+  /** Show the answer only, with no Check answer: an answered mastery item (#144, #171). */
+  readOnly?: boolean
 }
 
 const PYTHON_TOKEN =
@@ -40,9 +44,16 @@ function HighlightedText({ text }: { text: string }) {
 }
 
 /** Read-only highlighted Python with token-only blank controls; no free-form code can be entered. */
-export function FillInCode({ activity, result, submitting, onSubmit }: FillInCodeProps) {
-  const [answers, setAnswers] = useState<Record<number, string>>({})
-  const disabled = submitting || result?.correct === true
+export function FillInCode({
+  activity,
+  result,
+  submitting,
+  onSubmit,
+  previous,
+  readOnly,
+}: FillInCodeProps) {
+  const [answers, setAnswers] = useState<Record<number, string>>(previous ?? {})
+  const disabled = submitting || result?.correct === true || !!readOnly
   const partsByBlank = new Map(result?.parts.map((part) => [part.ref, part]))
   const lineOccurrences = new Map<string, number>()
 
@@ -60,7 +71,7 @@ export function FillInCode({ activity, result, submitting, onSubmit }: FillInCod
           aria-label={`Blank ${blankId}`}
           value={answers[blankId] ?? ''}
           disabled={disabled}
-          className={`mx-1 rounded border bg-background px-1 py-0.5 font-mono text-sm ${part ? (part.correct ? 'border-success' : 'border-warning') : 'border-primary'}`}
+          className={`mx-1 rounded border bg-background px-1 py-0.5 font-mono text-base sm:pointer-fine:text-sm ${part ? (part.correct ? 'border-success' : 'border-warning') : 'border-primary'}`}
           onChange={(event) =>
             setAnswers((current) => ({ ...current, [blankId]: event.target.value }))
           }
@@ -84,7 +95,13 @@ export function FillInCode({ activity, result, submitting, onSubmit }: FillInCod
       className="grid gap-4"
       onSubmit={(event) => {
         event.preventDefault()
-        void onSubmit(answers)
+        // A blank set back to its placeholder ("") is a blank not filled, as the API counts it.
+        void onSubmit(
+          Object.fromEntries(Object.entries(answers).filter(([, token]) => token !== '')) as Record<
+            number,
+            string
+          >,
+        )
       }}
     >
       {/* The code keeps its indentation (whitespace-pre): in Python it is the program, and the
@@ -124,18 +141,20 @@ export function FillInCode({ activity, result, submitting, onSubmit }: FillInCod
           })}
         </ul>
       )}
-      <div>
-        {/* Focusable while the answer is checked, so a failed check leaves focus here and a
-            result can take it from here (WCAG 2.4.3). */}
-        <Button
-          type="submit"
-          loading={submitting}
-          keepFocusWhileLoading
-          disabled={result?.correct === true}
-        >
-          Check answer
-        </Button>
-      </div>
+      {!readOnly && (
+        <div>
+          {/* Focusable while the answer is checked, so a failed check leaves focus here and a
+              result can take it from here (WCAG 2.4.3). */}
+          <Button
+            type="submit"
+            loading={submitting}
+            keepFocusWhileLoading
+            disabled={result?.correct === true}
+          >
+            Check answer
+          </Button>
+        </div>
+      )}
     </form>
   )
 }

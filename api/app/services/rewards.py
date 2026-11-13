@@ -21,10 +21,11 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Literal
 
-from sqlalchemy import func, select
+from sqlalchemy import ColumnElement, and_, exists, func, select
 from sqlalchemy.orm import Session
 
-from app.models import Attempt, PointsEntry, PointsRule, User, UserBadge
+from app.models import Attempt, HintView, PointsEntry, PointsRule, User, UserBadge
+from app.services.locks import lock_student
 
 Mastery = Literal["independent", "supported", "not_yet"]
 Tier = Literal["bronze", "gold"]
@@ -34,6 +35,40 @@ OBJECTIVES: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7, 8)
 
 # Hint level 3 or 4 makes a correct answer "met with support" (FR-7.2).
 SUPPORT_LEVEL = 3
+
+
+def answer_given_away(
+    session: Session, user_id: int, activity_id: int, before: int | None = None
+) -> bool:
+    """Whether this student had been shown hint 3 or 4 on this activity, in any round, before
+    their attempt with id `before` (any time, if None). Restarting a module
+    (app/services/restart.py) starts its hint ladder again, but not its rewards: an answer once
+    given away stays given away (13 Nov audit). A hint opened after an answer never counts against
+    that answer, so hints on a restarted module's questions take nothing from what the first round
+    earned (#211 review)."""
+    query = select(HintView.id).where(
+        HintView.user_id == user_id,
+        HintView.activity_id == activity_id,
+        HintView.level >= SUPPORT_LEVEL,
+    )
+    if before is not None:
+        query = query.where(HintView.after_attempt < before)
+    return session.scalar(query.limit(1)) is not None
+
+
+def real_work() -> ColumnElement[bool]:
+    """The SQL condition for an attempt that counts as real work for a reward: answered without
+    hint 3 or 4 shown before it, in its round or any earlier one (`answer_given_away`)."""
+    return and_(
+        Attempt.hint_level < SUPPORT_LEVEL,
+        ~exists().where(
+            HintView.user_id == Attempt.user_id,
+            HintView.activity_id == Attempt.activity_id,
+            HintView.level >= SUPPORT_LEVEL,
+            HintView.after_attempt < Attempt.id,
+        ),
+    )
+
 
 # Used when a rule's row is missing, so a deleted row never breaks submitting an answer.
 DEFAULT_POINTS = {
@@ -126,7 +161,9 @@ def on_attempt(session: Session, attempt: Attempt) -> Earned:
     (FR-9.2). A wrong answer, or a correct one to an activity already rewarded, earns nothing."""
     if not attempt.correct:
         return Earned()
-    supported = attempt.hint_level >= SUPPORT_LEVEL
+    supported = attempt.hint_level >= SUPPORT_LEVEL or answer_given_away(
+        session, attempt.user_id, attempt.activity_id, before=attempt.id
+    )
     event = "activity_correct_supported" if supported else "activity_correct"
     return _add_points(session, attempt.user_id, event, f"activity:{attempt.activity_id}")
 
@@ -195,7 +232,8 @@ def on_objective_result(
 def on_bonus_quest(
     session: Session, user_id: int, quest_id: int, *, all_quests_done: bool
 ) -> Earned:
-    """A bonus quest finished (#31): its points and its own badge, and All Quests with the last."""
+    """A bonus quest finished (#31, #87): its points and its own badge, and All Quests with the
+    last. `quest_id` is the quest's activity id, so a badge keeps naming the same quest."""
     earned = _add_points(session, user_id, "bonus_quest", f"quest:{quest_id}")
     earned += _award(session, user_id, QUEST, ref=str(quest_id))
     if all_quests_done:
@@ -210,6 +248,21 @@ def total_points(session: Session, user_id: int) -> int:
     return int(total or 0)
 
 
+def activity_refs(activity_id: int) -> tuple[str, ...]:
+    """The points refs an answer to this activity can earn: its own, or a bonus quest's."""
+    return (f"activity:{activity_id}", f"quest:{activity_id}")
+
+
+def points_for_refs(session: Session, user_id: int, refs: Collection[str]) -> int:
+    """This student's points for these refs, so a route can tell what one answer earned."""
+    total = session.scalar(
+        select(func.coalesce(func.sum(PointsEntry.points), 0)).where(
+            PointsEntry.user_id == user_id, PointsEntry.ref.in_(refs)
+        )
+    )
+    return int(total or 0)
+
+
 def badges_of(session: Session, user_id: int) -> list[UserBadge]:
     return list(
         session.scalars(
@@ -219,7 +272,10 @@ def badges_of(session: Session, user_id: int) -> list[UserBadge]:
 
 
 def mark_seen(session: Session, user_id: int) -> None:
-    """The student has been shown every badge they have (not committed)."""
+    """The student has been shown every badge they have (not committed). Takes the student's write
+    lock (app/services/locks.py), so a badge an answer is awarding at the same moment is either
+    marked seen with the rest or announced next time, never half of each."""
+    lock_student(session, user_id)
     now = datetime.now(UTC)
     for badge in badges_of(session, user_id):
         if badge.seen_at is None:

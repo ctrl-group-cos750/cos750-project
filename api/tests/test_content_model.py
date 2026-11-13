@@ -84,12 +84,12 @@ def course(**overrides: Any) -> dict[str, Any]:
 # --- The committed fixtures ---------------------------------------------------------------------
 
 
-def test_the_course_has_modules_0_to_6_and_objectives_1_to_7() -> None:
+def test_the_course_has_modules_0_to_6_and_objectives_1_to_8() -> None:
     content = read_fixtures()
     assert [m.id for m in sorted(content.modules, key=lambda m: m.id)] == list(range(7))
-    assert sorted(o.id for o in content.objectives) == list(range(1, 8))
-    # The ID document's Table 4 puts the whole course at about 75 minutes.
-    assert 70 <= sum(m.estimated_minutes for m in content.modules) <= 80
+    assert sorted(o.id for o in content.objectives) == list(range(1, 9))
+    # The minutes shown follow the content as written (ID document §4.4, test_minutes.py).
+    assert 170 <= sum(m.estimated_minutes for m in content.modules) <= 190
 
 
 def test_modules_0_3_and_6_have_enough_for_the_sprint_1_path() -> None:
@@ -283,4 +283,4 @@ def test_the_committed_course_loads(db: Session) -> None:
     load(db)
     db.commit()
     assert len(db.scalars(select(Module)).all()) == 7
-    assert len(db.scalars(select(Objective)).all()) == 7
+    assert len(db.scalars(select(Objective)).all()) == 8

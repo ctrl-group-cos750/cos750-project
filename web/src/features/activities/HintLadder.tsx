@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { refusalMessage } from '../../api/client.ts'
 import { Alert, Button } from '../../components'
 import { fetchActivityHints } from './activities.api.ts'
 import type { Hint } from './activities.types.ts'
@@ -10,6 +11,11 @@ type HintLadderProps = {
   solved?: boolean
   requestHint: (activityId: number) => Promise<Hint>
   loadHints?: (activityId: number) => Promise<readonly Hint[]>
+  /** Called with the highest hint level shown so far, e.g. so a picture can offer the correct
+   * graph once hint 4 is open (#155). */
+  onLevel?: (level: number) => void
+  /** An optional bonus quest: after hint 3 it earns nothing, rather than counting as support. */
+  bonus?: boolean
 }
 
 /**
@@ -27,6 +33,8 @@ export function HintLadder({
   solved = false,
   requestHint,
   loadHints = fetchActivityHints,
+  onLevel,
+  bonus = false,
 }: HintLadderProps) {
   const [hints, setHints] = useState<readonly Hint[]>([])
   const [error, setError] = useState('')
@@ -67,6 +75,9 @@ export function HintLadder({
   }, [activityId, loadHints])
 
   const lastHint = hints.at(-1)
+  const level = lastHint?.level ?? 0
+  useEffect(() => onLevel?.(level), [level, onLevel])
+
   const hasMore = !solved && !loadFailed && !loadingInitial && (lastHint?.hasMore ?? true)
 
   async function showNextHint() {
@@ -83,8 +94,8 @@ export function HintLadder({
       const hint = await requestHint(activityId)
       focusNewest.current = true
       setHints((current) => [...current, hint])
-    } catch {
-      setError('We could not load a hint. Please try again.')
+    } catch (failure) {
+      setError(refusalMessage(failure, 'We could not load a hint. Please try again.'))
     } finally {
       setLoading(false)
     }
@@ -106,15 +117,25 @@ export function HintLadder({
       {/* Only while another hint is on offer: once solved, there is no button left to press. */}
       {confirmingSupport && hasMore && (
         <Alert tone="warning" title="The next hint gives a lot away">
-          Using it means a later correct answer counts as met with support. Choose “Show next hint”
-          again if you want to continue.
+          {bonus
+            ? 'After it, this quest earns no points or badge. '
+            : 'Using it means a later correct answer counts as met with support. '}
+          Choose “Show next hint” again if you want to continue.
+        </Alert>
+      )}
+      {/* The mastery check gives hints 1 and 2 only (#144). */}
+      {lastHint?.limitReached && !solved && (
+        <Alert tone="info" title="No more hints in the mastery check">
+          Answer as best you can. If this objective comes out “not yet”, your report opens its
+          review path, which teaches it again with every hint.
         </Alert>
       )}
       {error && <Alert tone="danger">{error}</Alert>}
       {hasMore && (
         <div>
           <Button
-            variant="secondary"
+            // Quieter than Check answer: the hint is there when needed, not the obvious next click.
+            variant="ghost"
             onClick={() => void showNextHint()}
             // aria-disabled, not disabled, while an answer is checked: it stays in the tab order,
             // so Tab from a busy "Check answer" still lands here, not off the end of the page.

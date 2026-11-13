@@ -4,12 +4,67 @@
       "id": 5,
       "slug": "test-and-debug",
       "title": "Test and debug",
-      "estimated_minutes": 10,
+      "estimated_minutes": 25,
       "goals": [
         "Find and fix the bugs in a faulty BFS.",
         "Choose test cases, such as a cycle or a disconnected graph, that expose a bug."
       ],
-      "segments": []
+      "segments": [
+        {
+          "id": 502,
+          "kind": "video",
+          "title": "Debugging a faulty BFS",
+          "body": "You have written a BFS and tested it on a simple path: a few vertices in a line. It gives the right answer every time. Then you try it on this graph, and something unexpected happens.\n\n```\n   A ─── B\n   │     │\n   │     │\n   │     │\n   C ─── D\n```\n\nUndirected graph with 4 vertices: A, B, C, D. It has 4 edges: A–B, A–C, B–D, C–D. The edges form a diamond: A at the top, D at the bottom. Every edge can be followed in either direction.\n\nHere is the faulty version. It looks almost right. Spot the difference from the BFS you built in module 4.\n\nFirst difference: visited starts empty. In the correct BFS, visited starts as `{start}`, because the start vertex is already in the queue.\n\nSecond difference: visited.add(v) runs just after popleft, not inside the neighbour loop. A vertex is only marked found when it leaves the queue, not when it joins.\n\nLet's trace it. We start at A. A leaves the queue, and A is marked found. Its neighbours are B and C. Neither is in visited yet, so both join the queue.\n\nB leaves next. A is already found, so we skip it. D is new, so D joins the queue. Queue now: C, D.\n\nC leaves. A is found. But D? D joined the queue when B was processed. However, visited.add(D) has not run yet: D leaves the queue only later. So right now, D is not in visited. C adds D to the queue again. Queue: D, D.\n\nD is dequeued once, then dequeued a second time. The output is A, B, C, D, D: D is visited twice.\n\nSo what has to change? Look again at the two differences above, and at the moment D joined the queue the second time. You'll make the fix yourself in a moment, so hold that thought.\n\nFinding a bug matters, but so does knowing which test case would expose it. Some graphs hide a bug; others bring it right out.\n\nThe visited-too-late bug only shows when some vertex can be reached along two different routes, so that a second vertex finds it while it is still waiting in the queue. In an undirected graph, two routes to a vertex mean a cycle. On a simple path or a tree there is only one route to each vertex, so nothing can be queued twice.\n\nA different bug adds unreachable vertices to the order. The graph below has two islands: A, B, C are connected, but D and E are completely cut off. A BFS from A visits only A, B, C. A bug that appends every vertex BFS never reached would return A, B, C, D, E, which is wrong. This test exposes the bug because some vertices are unreachable.\n\n```\n   A ─── B ─── C        D ─── E\n```\n\nUndirected graph with 5 vertices: A, B, C, D, E. It has 3 edges: A–B, B–C, D–E. Vertices D and E are not connected to A, B or C. Starting BFS from A visits only A, B, C.\n\nSo: to expose the visited-too-late bug, choose a graph where some vertex has two routes to it, such as an undirected graph with a cycle. To expose a bug that adds unreachable vertices, choose a disconnected graph, one with two separate islands. Each of these tests exposes a different bug, so a good set of tests has both shapes: a cycle, and a graph with a separate island.\n\nNow you will practise both: fixing the bugs and choosing the tests yourself."
+        },
+        {
+          "id": 501,
+          "kind": "worked_example",
+          "title": "Worked example: finding and fixing the visited-too-late bug",
+          "body": "A classmate wrote this BFS and tested it on a simple path. It gave the right answer. But on a graph where a vertex can be reached along two routes, it visits that vertex twice. Here is the faulty code, step by step.\n\n**The graph we use.** Vertices: A, B, C, D. Edges: A–B, A–C, B–D, C–D (undirected). They form a diamond, the graph from the video.\n\n**The faulty BFS.**\n\n```python\nfrom collections import deque\n\ndef bfs(graph, start):\n    visited = set()\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        visited.add(v)        # marks v found only after dequeue\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                queue.append(n)\n    return order\n```\n\n**Step 1. Spot what is different from the correct BFS.**\n\nIn the correct BFS, `visited` starts as `{start}` and each neighbour is added to `visited` at the moment it joins the queue, so it can never be queued a second time. Here, `visited = set()` (empty) and `visited.add(v)` runs only when `v` leaves the queue.\n\n**Step 2. Trace it on the diamond.**\n\n| Queue | Action | visited |\n|---|---|---|\n| [A] | A leaves; B and C join (neither visited yet) | {A} |\n| [B, C] | B leaves; A is visited, D joins | {A, B} |\n| [C, D] | C leaves; A is visited, but D is not in visited yet (it joined at step 2 but visited.add(D) hasn't run), so **D joins again** | {A, B, C} |\n| [D, D] | D leaves; B and C are visited, nothing new added | {A, B, C, D} |\n| [D] | **D leaves a second time**: a duplicate visit | {A, B, C, D} |\n\nThe output is `['A', 'B', 'C', 'D', 'D']`, not `['A', 'B', 'C', 'D']`.\n\n**Step 3. Understand why.**\n\nWhen C was processed, D was already in the queue (added by B). But `visited.add(D)` runs only when D leaves the queue. So when C checked `if D not in visited`, D was not in visited yet, and D was enqueued a second time.\n\n**Step 4. Fix it.**\n\nTwo changes fix it: one to how `visited` starts, and one to when a vertex is added to it. Make them yourself in the next activity."
+        },
+        {
+          "id": 503,
+          "kind": "activity",
+          "title": "Fix the bug: the visited-too-late BFS",
+          "activity_id": 504
+        },
+        {
+          "id": 504,
+          "kind": "activity",
+          "title": "Fix the bug: the appends-unreachable BFS",
+          "activity_id": 505
+        },
+        {
+          "id": 505,
+          "kind": "activity",
+          "title": "Choose the tests: visited-too-late bug",
+          "activity_id": 506
+        },
+        {
+          "id": 506,
+          "kind": "activity",
+          "title": "Choose the tests: appends-unreachable bug",
+          "activity_id": 507
+        },
+        {
+          "id": 580,
+          "kind": "text",
+          "title": "Closing task: friends of friends",
+          "body": "You have written BFS, tested it and fixed it. Here is a new problem it solves.\n\nOn a study-group app, two people are joined when they have worked together. Thandi (T) has worked with Lebo (L) and Sipho (S). Lebo has worked with Kagiso (K). Sipho has worked with Kagiso and with Naledi (N). Kagiso has worked with Ofentse (O). Working together goes both ways, so the graph is undirected, with vertices K, L, N, O, S and T and edges K–L, K–O, K–S, L–T, N–S and S–T.\n\nThandi would like to meet Ofentse, through people who can introduce them. BFS from T finds everyone one introduction away first, then everyone two away, and so on. So the first time it reaches O, it has used the fewest introductions. Trace it, then use your trace to answer the question after it."
+        },
+        {
+          "id": 581,
+          "kind": "activity",
+          "title": "Closing task: trace BFS from Thandi (T)",
+          "activity_id": 581
+        },
+        {
+          "id": 582,
+          "kind": "activity",
+          "title": "Closing task: how many introductions?",
+          "activity_id": 582
+        }
+      ]
     }
   ],
   "activities": [
@@ -60,6 +115,1013 @@
         {
           "level": 4,
           "body": "Answer: when it joins the queue."
+        }
+      ]
+    },
+    {
+      "id": 502,
+      "kind": "multiple_choice",
+      "title": "Quick recall: which graphs BFS fits",
+      "module_id": 5,
+      "purpose": "retrieval",
+      "config": {
+        "prompt": "You want to find every page on a website that can be reached from the home page by following links. Is BFS a good fit? Choose the answer with the right reason.",
+        "options": [
+          {
+            "id": "a",
+            "label": "Yes. BFS reaches every vertex it can get to from the start, by following edges."
+          },
+          {
+            "id": "b",
+            "label": "No. BFS only finds pages one click away, not deeper pages."
+          },
+          {
+            "id": "c",
+            "label": "Yes. BFS adds up the number of links on each page, so it finds the page with the most links."
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "BFS reaches every vertex reachable from the start, so it finds every page you can get to by following links.",
+        "correct": "a",
+        "feedback": {
+          "b": "Not quite. BFS visits every vertex reachable from the start, not just the nearest ones. It keeps going until the queue is empty. Think about what is left in the queue after the first ring.",
+          "c": "Not quite. BFS visits vertices by following edges, but it does not count or add up anything about the edges. It just visits every vertex it can reach. Think about what BFS returns."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "BFS is good at two jobs: the fewest edges to somewhere, and reaching everything from a start."
+        },
+        {
+          "level": 2,
+          "body": "Ask: does this problem ask for one of those two jobs?"
+        },
+        {
+          "level": 3,
+          "body": "You want every page reachable from the home page. That is everything reachable from a start."
+        },
+        {
+          "level": 4,
+          "body": "Answer: yes, BFS reaches every vertex it can get to from the start by following edges."
+        }
+      ]
+    },
+    {
+      "id": 503,
+      "kind": "multiple_choice",
+      "title": "Spotting a BFS bug",
+      "module_id": 5,
+      "purpose": "test_out",
+      "objective_id": 7,
+      "config": {
+        "prompt": "This BFS starts with visited = set() and adds v to visited just after popleft, before the neighbour loop. On a graph where some vertex can be reached along two different routes, what goes wrong?",
+        "options": [
+          {
+            "id": "a",
+            "label": "A vertex already in the queue can be added to the queue again, so it is visited twice."
+          },
+          {
+            "id": "b",
+            "label": "The BFS visits vertices in the wrong order, going deep before wide."
+          },
+          {
+            "id": "c",
+            "label": "The BFS misses some vertices entirely and never visits them."
+          },
+          {
+            "id": "d",
+            "label": "The BFS stops after the start vertex and visits nothing else."
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "Because visited.add(v) runs only when v leaves the queue, a vertex already waiting can be found again by a second neighbour and added to the queue a second time.",
+        "correct": "a",
+        "feedback": {
+          "b": "Not quite. The order of dequeuing is still first-in first-out, so the traversal goes wide before deep. The bug is not about order. Think about what happens when two different vertices both try to add the same neighbour.",
+          "c": "Not quite. The bug does the opposite: it visits too many vertices, not too few. A vertex with two paths to it can be found twice. Think about what happens when the same vertex is added to the queue more than once.",
+          "d": "Not quite. The neighbour loop still runs for every vertex taken from the queue, so BFS carries on past the start."
+        }
+      }
+    },
+    {
+      "id": 550,
+      "kind": "multiple_choice",
+      "title": "A test for the visited bug",
+      "module_id": 5,
+      "purpose": "test_out",
+      "objective_id": 7,
+      "config": {
+        "prompt": "A faulty BFS adds a vertex to visited only when it leaves the queue, not when it joins. Which test graph, starting at A, shows the bug?",
+        "options": [
+          {
+            "id": "a",
+            "label": "A path: A–B and B–C"
+          },
+          {
+            "id": "b",
+            "label": "A single vertex A with no edges"
+          },
+          {
+            "id": "c",
+            "label": "A triangle: A–B, A–C and B–C"
+          },
+          {
+            "id": "d",
+            "label": "Two islands: A–B and C–D"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "In the triangle, B and C are both waiting in the queue when B is taken out. C isn't in visited yet, so B adds it again and it is visited twice. The other graphs have no second way to a waiting vertex, so the faulty BFS gets them right.",
+        "correct": "c",
+        "feedback": {
+          "a": "A path has only one way to each vertex, so nothing is added twice: the faulty BFS passes.",
+          "b": "With no edges nothing is ever added, so the faulty BFS passes.",
+          "d": "Each island is a path, with one way to each vertex, so the faulty BFS passes."
+        }
+      }
+    },
+    {
+      "id": 551,
+      "kind": "multiple_choice",
+      "title": "A test for unreachable vertices",
+      "module_id": 5,
+      "purpose": "test_out",
+      "objective_id": 7,
+      "config": {
+        "prompt": "A faulty BFS adds every vertex it didn't reach to the end of its order. Which test graph, starting at A, shows the bug?",
+        "options": [
+          {
+            "id": "a",
+            "label": "A triangle: A–B, A–C and B–C"
+          },
+          {
+            "id": "b",
+            "label": "Two islands: A–B and C–D"
+          },
+          {
+            "id": "c",
+            "label": "A path: A–B and B–C"
+          },
+          {
+            "id": "d",
+            "label": "A single vertex A with no edges"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "Only a disconnected graph has vertices BFS can't reach. From A, C and D are on the other island, so the faulty BFS adds them and returns A, B, C, D instead of A, B.",
+        "correct": "b",
+        "feedback": {
+          "a": "BFS reaches every vertex of the triangle, so there is nothing extra to add.",
+          "c": "BFS reaches every vertex of the path, so there is nothing extra to add.",
+          "d": "A is the only vertex, and BFS reaches it, so there is nothing extra to add."
+        }
+      }
+    },
+    {
+      "id": 552,
+      "kind": "multiple_choice",
+      "title": "What the test should expect",
+      "module_id": 5,
+      "purpose": "test_out",
+      "objective_id": 7,
+      "config": {
+        "prompt": "You test a correct bfs on the undirected graph with edges A–B and C–D, starting at A. What should the test expect bfs(g, \"A\") to return?",
+        "options": [
+          {
+            "id": "a",
+            "label": "[\"A\", \"B\"]"
+          },
+          {
+            "id": "b",
+            "label": "[\"A\", \"B\", \"C\", \"D\"]"
+          },
+          {
+            "id": "c",
+            "label": "[\"A\"]"
+          },
+          {
+            "id": "d",
+            "label": "[\"A\", \"B\", \"C\"]"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "BFS only visits what it can reach from the start. From A it reaches B, and nothing joins A's island to C and D.",
+        "correct": "a",
+        "feedback": {
+          "b": "C and D are on another island, with no edge to A's, so BFS can't reach them.",
+          "c": "A–B is an edge, so BFS reaches B.",
+          "d": "No edge joins B to C, so BFS can't reach C."
+        }
+      }
+    },
+    {
+      "id": 504,
+      "kind": "fix_the_bug",
+      "title": "Fix the bug: the visited-too-late BFS",
+      "module_id": 5,
+      "objective_id": 7,
+      "purpose": "practice",
+      "config": {
+        "prompt": "This BFS visits some vertices twice on the diamond graph from the worked example (undirected edges A–B, A–C, B–D, C–D, starting at A). Fix it: replace the faulty lines with corrections, or leave them out.",
+        "lines": [
+          {
+            "id": 101,
+            "text": "from collections import deque"
+          },
+          {
+            "id": 102,
+            "text": "def bfs(graph, start):"
+          },
+          {
+            "id": 103,
+            "text": "    visited = set()"
+          },
+          {
+            "id": 104,
+            "text": "    queue = deque([start])"
+          },
+          {
+            "id": 105,
+            "text": "    order = []"
+          },
+          {
+            "id": 106,
+            "text": "    while queue:"
+          },
+          {
+            "id": 107,
+            "text": "        v = queue.popleft()"
+          },
+          {
+            "id": 108,
+            "text": "        visited.add(v)"
+          },
+          {
+            "id": 109,
+            "text": "        order.append(v)"
+          },
+          {
+            "id": 110,
+            "text": "        for n in sorted(graph.adjacency[v]):"
+          },
+          {
+            "id": 111,
+            "text": "            if n not in visited:"
+          },
+          {
+            "id": 112,
+            "text": "                queue.append(n)"
+          },
+          {
+            "id": 113,
+            "text": "    return order"
+          }
+        ],
+        "corrections": [
+          {
+            "id": 122,
+            "text": "    visited = []"
+          },
+          {
+            "id": 120,
+            "text": "    visited = {start}"
+          },
+          {
+            "id": 121,
+            "text": "                visited.add(n)"
+          },
+          {
+            "id": 123,
+            "text": "                order.append(n)"
+          }
+        ]
+      },
+      "solution": {
+        "order": [
+          101,
+          102,
+          [
+            120,
+            104,
+            105
+          ],
+          106,
+          107,
+          109,
+          110,
+          111,
+          [
+            121,
+            112
+          ],
+          113
+        ],
+        "explanation": "Marking a vertex found when it joins the queue, not when it leaves, means a vertex that is still waiting can't be added again: on the diamond, B and C both find D, but only B adds it. Starting with visited = {start} does the same for the start vertex, which is in the queue from the beginning.",
+        "feedback": {
+          "103": "Not quite. The start vertex is in the queue but not in visited. A neighbour can find it again and add it to the queue a second time. Start with the start vertex already in visited.",
+          "108": "Not quite. This marks a vertex found only when it leaves the queue. A vertex still waiting in the queue does not count as found, so another vertex can add it again. Mark a vertex found the moment it joins, by putting visited.add(n) inside the if block instead."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Trace the faulty code on the graph. What happens when C is dequeued and looks at its neighbour D?"
+        },
+        {
+          "level": 2,
+          "body": "D joined the queue when B was processed. But visited.add runs only when D leaves the queue, so D is not in visited yet. C adds D to the queue again."
+        },
+        {
+          "level": 3,
+          "body": "The fix needs two changes: start with visited = {start}, and move visited.add(n) inside the if block so a vertex is marked found the moment it joins."
+        },
+        {
+          "level": 4,
+          "body": "Answer: replace visited = set() with visited = {start}, leave out visited.add(v), and add visited.add(n) inside the if, next to queue.append(n). Either of those two inner lines can come first."
+        }
+      ]
+    },
+    {
+      "id": 505,
+      "kind": "fix_the_bug",
+      "title": "Fix the bug: the appends-unreachable BFS",
+      "module_id": 5,
+      "objective_id": 7,
+      "purpose": "practice",
+      "config": {
+        "prompt": "This BFS looks almost right, but it includes vertices that BFS can never reach. The graph has two islands: vertices A, B, C, D, E with undirected edges A-B, B-C and D-E, starting at A. A correct BFS from A visits only A, B, C. On this graph the faulty version returns extra vertices that should not be in the output. Remove the lines that do not belong in the fixed program. Leave out any wrong correction that does not fix the bug.",
+        "lines": [
+          {
+            "id": 151,
+            "text": "from collections import deque"
+          },
+          {
+            "id": 152,
+            "text": "def bfs(graph, start):"
+          },
+          {
+            "id": 153,
+            "text": "    visited = {start}"
+          },
+          {
+            "id": 154,
+            "text": "    queue = deque([start])"
+          },
+          {
+            "id": 155,
+            "text": "    order = []"
+          },
+          {
+            "id": 156,
+            "text": "    while queue:"
+          },
+          {
+            "id": 157,
+            "text": "        v = queue.popleft()"
+          },
+          {
+            "id": 158,
+            "text": "        order.append(v)"
+          },
+          {
+            "id": 159,
+            "text": "        for n in sorted(graph.adjacency[v]):"
+          },
+          {
+            "id": 160,
+            "text": "            if n not in visited:"
+          },
+          {
+            "id": 161,
+            "text": "                visited.add(n)"
+          },
+          {
+            "id": 162,
+            "text": "                queue.append(n)"
+          },
+          {
+            "id": 163,
+            "text": "    for v in graph.adjacency:"
+          },
+          {
+            "id": 164,
+            "text": "        if v not in visited:"
+          },
+          {
+            "id": 165,
+            "text": "            order.append(v)"
+          },
+          {
+            "id": 166,
+            "text": "    return order"
+          }
+        ],
+        "corrections": [
+          {
+            "id": 170,
+            "text": "    for v in sorted(graph.adjacency):"
+          },
+          {
+            "id": 171,
+            "text": "        if v not in order:"
+          }
+        ]
+      },
+      "solution": {
+        "order": [
+          151,
+          152,
+          [
+            153,
+            154,
+            155
+          ],
+          156,
+          157,
+          158,
+          159,
+          160,
+          [
+            161,
+            162
+          ],
+          166
+        ],
+        "explanation": "BFS only visits the vertices it can reach by following edges from the start, so on the two islands it returns A, B, C. The extra loop added every vertex the search never reached, D and E, so without it the program is plain BFS.",
+        "feedback": {
+          "163": "Not quite. This loop runs through every vertex in the graph after BFS finishes. It finds vertices BFS never reached and adds them to the order. BFS should only visit vertices reachable from the start. Remove this loop entirely.",
+          "164": "Not quite. This line checks whether a vertex was not visited, which is the condition for adding an unreachable vertex. It belongs to the faulty extra loop. Remove it along with the loop.",
+          "165": "Not quite. This line adds unreachable vertices to the order. BFS must only return vertices it actually visited. Remove it along with the loop."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Trace the faulty code on the two-islands graph. After the while loop finishes, what does the extra for loop do?"
+        },
+        {
+          "level": 2,
+          "body": "D and E are not reachable from A, so the while loop never adds them. But the for loop finds them and adds them to order anyway."
+        },
+        {
+          "level": 3,
+          "body": "BFS should only return vertices it visited from the start. The three lines of the extra loop all need to go."
+        },
+        {
+          "level": 4,
+          "body": "Answer: remove the three lines of the for loop (for v in graph.adjacency, if v not in visited, order.append(v)). The fixed program ends with return order straight after the while loop."
+        }
+      ]
+    },
+    {
+      "id": 506,
+      "kind": "choose_tests",
+      "title": "Choose the tests: visited-too-late bug",
+      "module_id": 5,
+      "objective_id": 7,
+      "purpose": "practice",
+      "config": {
+        "prompt": "This BFS has a bug: it marks a vertex as found only when it leaves the queue, not when it joins. Choose every test case it fails: each one is a graph, a start vertex and the order a correct BFS visits it in.",
+        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    visited = set()\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        visited.add(v)\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                queue.append(n)\n    return order",
+        "tests": [
+          {
+            "id": "cycle",
+            "directed": false,
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "A",
+                "target": "C"
+              },
+              {
+                "source": "B",
+                "target": "D"
+              },
+              {
+                "source": "C",
+                "target": "D"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          {
+            "id": "two-islands",
+            "directed": false,
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "E"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "B",
+                "target": "C"
+              },
+              {
+                "source": "D",
+                "target": "E"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "id": "line",
+            "directed": false,
+            "vertices": [
+              "V",
+              "W",
+              "X",
+              "Y",
+              "Z"
+            ],
+            "edges": [
+              {
+                "source": "Z",
+                "target": "Y"
+              },
+              {
+                "source": "Y",
+                "target": "X"
+              },
+              {
+                "source": "X",
+                "target": "W"
+              },
+              {
+                "source": "W",
+                "target": "V"
+              }
+            ],
+            "start_vertex": "X",
+            "expected": [
+              "X",
+              "W",
+              "Y",
+              "V",
+              "Z"
+            ]
+          },
+          {
+            "id": "tree",
+            "directed": false,
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "A",
+                "target": "C"
+              },
+              {
+                "source": "B",
+                "target": "D"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          {
+            "id": "one-way",
+            "directed": true,
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "B",
+                "target": "C"
+              },
+              {
+                "source": "C",
+                "target": "A"
+              },
+              {
+                "source": "D",
+                "target": "A"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B",
+              "C"
+            ]
+          }
+        ]
+      },
+      "solution": {
+        "exposing": [
+          "cycle"
+        ],
+        "explanation": "The bug only shows when a vertex can be found a second time while it is still waiting in the queue. In test 1, B and C both find D, so the faulty version visits D twice. On the other graphs no vertex has two ways to be found while it waits, so the faulty version gives the right order.",
+        "feedback": {
+          "cycle": "This graph has a cycle: two paths reach D before it leaves the queue. The faulty version adds D to the queue twice and fails this test.",
+          "two-islands": "D and E are unreachable from A. BFS never tries to add them, so no vertex is found twice. The faulty version passes this test.",
+          "line": "Every vertex on this path has only one way to be reached from the start, so no vertex is added twice. The faulty version passes this test.",
+          "tree": "A tree has no cycle, so no vertex can be reached by two separate paths while it waits. The faulty version passes this test.",
+          "one-way": "The only cycle C to A leads back to A, which is already in visited by then. No other vertex is found twice. The faulty version passes this test."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "This version adds a vertex to visited only when it leaves the queue. When does that cause a problem?"
+        },
+        {
+          "level": 2,
+          "body": "A vertex already waiting in the queue is not yet in visited, so a second neighbour can add it again."
+        },
+        {
+          "level": 3,
+          "body": "That needs two routes to the same vertex, with the second found while the vertex is still waiting. In an undirected graph, two routes to a vertex mean a cycle. A disconnected graph can't do it, because BFS never crosses to the other island."
+        },
+        {
+          "level": 4,
+          "body": "Answer: only the cycle test. On every other graph, no vertex has two routes to it while it waits."
+        }
+      ]
+    },
+    {
+      "id": 507,
+      "kind": "choose_tests",
+      "title": "Choose the tests: appends-unreachable bug",
+      "module_id": 5,
+      "objective_id": 7,
+      "purpose": "practice",
+      "config": {
+        "prompt": "This BFS has a bug: after the main loop it adds every vertex BFS did not reach. Choose every test case it fails: each one is a graph, a start vertex and the order a correct BFS visits it in.",
+        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                visited.add(n)\n                queue.append(n)\n    for v in graph.adjacency:\n        if v not in visited:\n            order.append(v)\n    return order",
+        "tests": [
+          {
+            "id": "cycle",
+            "directed": false,
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "A",
+                "target": "C"
+              },
+              {
+                "source": "B",
+                "target": "D"
+              },
+              {
+                "source": "C",
+                "target": "D"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          {
+            "id": "two-islands",
+            "directed": false,
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "E"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "B",
+                "target": "C"
+              },
+              {
+                "source": "D",
+                "target": "E"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "id": "line",
+            "directed": false,
+            "vertices": [
+              "V",
+              "W",
+              "X",
+              "Y",
+              "Z"
+            ],
+            "edges": [
+              {
+                "source": "Z",
+                "target": "Y"
+              },
+              {
+                "source": "Y",
+                "target": "X"
+              },
+              {
+                "source": "X",
+                "target": "W"
+              },
+              {
+                "source": "W",
+                "target": "V"
+              }
+            ],
+            "start_vertex": "X",
+            "expected": [
+              "X",
+              "W",
+              "Y",
+              "V",
+              "Z"
+            ]
+          },
+          {
+            "id": "tree",
+            "directed": false,
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "A",
+                "target": "C"
+              },
+              {
+                "source": "B",
+                "target": "D"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          {
+            "id": "directed-tree",
+            "directed": true,
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "A",
+                "target": "C"
+              },
+              {
+                "source": "B",
+                "target": "D"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          }
+        ]
+      },
+      "solution": {
+        "exposing": [
+          "two-islands"
+        ],
+        "explanation": "The extra loop only adds vertices that BFS couldn't reach from the start, so it changes the result only on a graph that has some. Test 2 is the only one: D and E are cut off from A, so the faulty version returns A, B, C, D, E instead of A, B, C.",
+        "feedback": {
+          "cycle": "Every vertex in this graph can be reached from A, so the extra loop finds nothing to add. The faulty version passes this test.",
+          "two-islands": "D and E cannot be reached from A. The extra loop finds them and adds them to the order, so the faulty version returns A, B, C, D, E instead of A, B, C, and it fails this test.",
+          "line": "Every vertex can be reached from X. The extra loop adds nothing. The faulty version passes this test.",
+          "tree": "Every vertex can be reached from A. The extra loop adds nothing. The faulty version passes this test.",
+          "directed-tree": "Every vertex can be reached from A by following the directed edges. The extra loop adds nothing. The faulty version passes this test."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Read the extra loop: what does it add to order after the main BFS finishes?"
+        },
+        {
+          "level": 2,
+          "body": "It adds every vertex that BFS never visited, that is, every vertex not reachable from the start."
+        },
+        {
+          "level": 3,
+          "body": "The extra loop only changes the answer when some vertex cannot be reached from the start. That happens in disconnected graphs where islands are cut off from the start vertex."
+        },
+        {
+          "level": 4,
+          "body": "Answer: Test 2. In that graph, at least one vertex cannot be reached from the start, so the extra loop adds it wrongly. The faulty version passes the other tests."
+        }
+      ]
+    },
+    {
+      "id": 581,
+      "kind": "trace",
+      "title": "Closing task: trace BFS from Thandi (T), one row each time a person leaves the queue",
+      "module_id": 5,
+      "purpose": "practice",
+      "objective_id": 5,
+      "config": {
+        "directed": false,
+        "vertices": [
+          "K",
+          "L",
+          "N",
+          "O",
+          "S",
+          "T"
+        ],
+        "edges": [
+          {
+            "source": "K",
+            "target": "L"
+          },
+          {
+            "source": "K",
+            "target": "O"
+          },
+          {
+            "source": "K",
+            "target": "S"
+          },
+          {
+            "source": "L",
+            "target": "T"
+          },
+          {
+            "source": "N",
+            "target": "S"
+          },
+          {
+            "source": "S",
+            "target": "T"
+          }
+        ],
+        "start_vertex": "T"
+      },
+      "solution": {
+        "explanation": "Thandi (T) finds L and S, the two people she knows, and L then finds K. When S leaves, K is already waiting in the queue, so only N joins, and K then finds O. Each person joins the queue once, the first time someone who knows them is visited."
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Start with only T in the queue. Nothing is visited yet. Row 1 is what happens when T leaves."
+        },
+        {
+          "level": 2,
+          "body": "For each row: take the person at the front of the queue. They are now visited and join the order. Then add their neighbours who haven't been found yet, in alphabetical order, at the back of the queue."
+        },
+        {
+          "level": 3,
+          "body": "Row 1: T leaves, and L and S join. Row 2: L leaves, and K joins. Row 3: S leaves. K is already waiting, so only N joins."
+        },
+        {
+          "level": 4,
+          "body": "Answer: the order is T, L, S, K, N, O. The queue after each row is [L, S], [S, K], [K, N], [N, O], [O], []. At row 3, K is not added again because it is already waiting in the queue."
+        }
+      ]
+    },
+    {
+      "id": 582,
+      "kind": "multiple_choice",
+      "title": "Closing task: how many introductions?",
+      "module_id": 5,
+      "purpose": "practice",
+      "objective_id": 8,
+      "config": {
+        "prompt": "Use your trace. At the fewest, how many introductions does Thandi (T) need to meet Ofentse (O)? Each introduction crosses one edge.",
+        "options": [
+          {
+            "id": "d",
+            "label": "2"
+          },
+          {
+            "id": "b",
+            "label": "5"
+          },
+          {
+            "id": "a",
+            "label": "3"
+          },
+          {
+            "id": "c",
+            "label": "4"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "Kagiso found Ofentse, Lebo found Kagiso and Thandi found Lebo: T → L → K → O, three introductions. BFS reaches each person by the fewest edges, so no shorter chain exists.",
+        "correct": "a",
+        "feedback": {
+          "b": "Not quite. 5 is how many people BFS visits before Ofentse, not how many edges lie between Thandi and Ofentse. Follow who found whom, back from O to T.",
+          "c": "Not quite. 4 counts the people on the chain, T, L, K and O, not the introductions between them, and each introduction is one edge. Follow who found whom, back from O to T, and count the edges.",
+          "d": "Not quite. Neither Lebo nor Sipho has worked with Ofentse, so Ofentse isn't two introductions away. It takes one more step, through Kagiso."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Ask: which person added O to the queue?"
+        },
+        {
+          "level": 2,
+          "body": "K added O. Which person added K?"
+        },
+        {
+          "level": 3,
+          "body": "L added K, and T added L. Count those edges."
+        },
+        {
+          "level": 4,
+          "body": "Answer: 3 introductions, T → L → K → O."
         }
       ]
     }

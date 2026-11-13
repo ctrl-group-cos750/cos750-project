@@ -6,14 +6,20 @@
         {
           "id": 1101,
           "kind": "worked_example",
-          "title": "Review: Data structures, algorithms, graphs and traversals",
-          "body": "A **data structure** stores data (a queue, a dictionary, a graph). An **algorithm** is a list of steps (BFS, sorting). A **graph** is vertices joined by edges. A **graph traversal** visits the vertices by following edges, and BFS is one.\n\nGo back to module 1: the video “From a map to a graph” and “Key terms”."
+          "title": "Review: worked example, the four terms in a delivery app",
+          "body": "**Worked example.** A food-delivery app has four parts. Here is how to sort them into the four terms, one at a time.\n\n**1. The orders waiting for a driver.** The app keeps them in a queue: the first order in is the first order out. A queue **stores** data, so it is a **data structure**.\n\n**2. How a driver picks the next job.** Take the oldest order, collect it at the restaurant, drop it at the customer, then repeat. That is a fixed list of steps, so it is an **algorithm**.\n\n**3. The app's map.** Restaurants and homes are joined by streets. Things joined by connections make a **graph**: the restaurants and homes are its vertices, and the streets are its edges.\n\n**4. Checking which homes a restaurant can serve.** The app starts at the restaurant and follows the streets out from it, one street at a time, until it reaches nothing new. Visiting the vertices of a graph by following its edges is a **graph traversal**.\n\nThe test for each term: does it **store** something (data structure), is it a **list of steps** (algorithm), is it **things and connections** (graph), or does it **move through a graph along its edges** (graph traversal)? A traversal is also an algorithm, but one that works on a graph."
         },
         {
           "id": 1102,
           "kind": "activity",
           "title": "Review practice: data structures, algorithms, graphs and traversals",
           "activity_id": 1101
+        },
+        {
+          "id": 1150,
+          "kind": "activity",
+          "title": "Review practice: match each term to part of a library",
+          "activity_id": 1150
         },
         {
           "id": 1103,
@@ -53,14 +59,20 @@
         {
           "id": 1201,
           "kind": "worked_example",
-          "title": "Review: Vertices, edges and direction",
-          "body": "**Vertices** are the circles (the things). **Edges** are the lines (the connections), named by their two ends. If edges have **arrows**, the graph is **directed**; plain lines mean **undirected**. Two arrows between the same pair still make it directed.\n\nGo back to module 1: “Worked example: reading a graph”, “Label the bus-stop graph”, the video “One-way or two-way?” and “Directed or undirected?”."
+          "title": "Review: worked example, reading a food chain as a graph",
+          "body": "**Worked example.** A food chain on the savanna: grass (G) is eaten by zebras (Z), and zebras are eaten by lions (L) and by hyenas (H). Read it as a graph in three steps.\n\n**1. Find the vertices.** The things are the living things: grass, zebra, lion and hyena. Those are the four vertices, G, Z, L and H.\n\n**2. Find the edges.** Each “is eaten by” joins two of them, so each is an edge, named by its two ends: G → Z, Z → L and Z → H. That is three edges. The lion and the hyena have no edge between them, because neither eats the other here.\n\n**3. Decide the direction.** Grass is eaten by the zebra, but the zebra is not eaten by the grass. Each edge goes one way only, from food to eater, so each is an arrow and the graph is **directed**.\n\n**Compare.** Now draw which animals drink at the same waterhole: the zebra, the lion and the hyena all do. “Drinks at the same waterhole as” works both ways, so Z–L, Z–H and L–H are plain lines and that graph is **undirected**.\n\nTo read any graph: the things are vertices, the connections are edges named by their two ends, and arrows (one way) make it directed. Two arrows, one each way, are still two directed edges."
         },
         {
           "id": 1202,
           "kind": "activity",
           "title": "Review practice: vertices, edges and direction",
           "activity_id": 1201
+        },
+        {
+          "id": 1250,
+          "kind": "activity",
+          "title": "Review practice: label the train graph",
+          "activity_id": 1250
         },
         {
           "id": 1203,
@@ -94,8 +106,8 @@
         {
           "id": 1301,
           "kind": "worked_example",
-          "title": "Review: Modelling a real situation as a graph",
-          "body": "Ask three questions. What are the **things**? They're the vertices. What **connects** them? Those are the edges. Does each connection work **both ways**? If not, the graph is directed.\n\nGo back to module 1: “Build the campus graph” and “Closing task: graphs in real life”."
+          "title": "Review: worked example, modelling trails in a nature reserve",
+          "body": "**Worked example.** A nature reserve has a gate, three huts and a waterfall. Trails join the gate and hut 1, hut 1 and hut 2, hut 2 and the waterfall, and the gate and hut 3. Hikers walk every trail both ways. There is also a zip line, which carries hikers from hut 3 down to the waterfall and never back up. Model the reserve with the three questions.\n\n**1. What are the things?** The places a hiker can stand: the gate, hut 1, hut 2, hut 3 and the waterfall. These five are the **vertices**.\n\n**2. What connects them?** The four trails and the zip line. Each joins two places, so each is an **edge**: five edges.\n\n**3. Does each connection work both ways?** The trails do, but the zip line goes one way only. One one-way connection is enough to make the graph **directed**. Each two-way trail becomes two arrows, one each way, and the zip line is a single arrow from hut 3 to the waterfall.\n\n**Two common slips.** Making the hikers the vertices: hikers move through the graph, they aren't part of it. And calling the graph undirected because most connections are two-way: a single one-way connection makes it directed."
         },
         {
           "id": 1302,
@@ -135,8 +147,8 @@
         {
           "id": 1401,
           "kind": "worked_example",
-          "title": "Review: When BFS is the right tool",
-          "body": "BFS is good for two jobs: finding the route with the **fewest edges**, and finding **everything reachable** from a start. It isn't for problems without connections, or where edges have different costs or lengths.\n\nGo back to module 3: the video “Why BFS? The fewest walkways” and “When is BFS the right tool?”."
+          "title": "Review: worked example, is BFS the right tool?",
+          "body": "**Worked example.** For each problem, ask two questions. Is there a graph: things joined by connections? And does the problem want the **fewest edges** between two vertices, or **everything reachable** from a start? BFS fits only when both answers are yes.\n\n**1. A robot vacuum starts at its dock. Which rooms can it reach through open doors?** Rooms are vertices and open doors are edges. The question is everything reachable from the dock, so BFS fits: it finds every room joined to the dock, and none that isn't.\n\n**2. From Cape Town, which airports can you reach with the fewest changes of plane?** Airports are vertices and direct flights are edges. Fewest changes means fewest edges, so BFS fits: it reaches airports in rings, one flight away, then two, and so on.\n\n**3. Which route from Cape Town to Lusaka has the cheapest tickets?** There is a graph, but each flight has its own price. BFS counts edges and ignores prices, so it can choose a route with fewer but dearer flights. BFS isn't the tool here.\n\n**4. What is the average price of a ticket this month?** There are no connections to follow, so there is no graph at all. Not BFS.\n\nBFS fits when there is a graph and every edge counts the same: one edge is one step."
         },
         {
           "id": 1402,
@@ -176,14 +188,20 @@
         {
           "id": 1501,
           "kind": "worked_example",
-          "title": "Review: Tracing BFS by hand",
-          "body": "Each step: take the vertex at the **front** of the queue; it is now **visited**. Then add its neighbours that haven't been **found** yet to the **back**, in alphabetical order. A vertex is found as it joins the queue, so one that is still waiting is never added again. Repeat until the queue is empty.\n\nGo back to module 3: the video “BFS step by step on the campus”, “Your turn: predict every step”, “Worked example: filling in a trace table” and “Your turn: a trace table”."
+          "title": "Review: worked example, tracing BFS on a garden",
+          "body": "**Worked example.** Five garden beds, K, L, M, N and O, are joined by paths. The paths are K–L, K–N, L–O, M–N and M–O, and each can be walked both ways, so the graph is undirected. We trace BFS from **K**, taking neighbours in alphabetical order. A vertex is **found** when it joins the queue, and BFS never adds a vertex it has already found. It is **visited** when it leaves the queue, which is when it joins the order.\n\n| Step | Current vertex | Queue after the step | Visited | Order so far |\n|---|---|---|---|---|\n| start | – | K | – | – |\n| 1 | K | L, N | K | K |\n| 2 | L | N, O | K, L | K, L |\n| 3 | N | O, M | K, L, N | K, L, N |\n| 4 | O | M | K, L, N, O | K, L, N, O |\n| 5 | M | (empty) | K, L, N, O, M | K, L, N, O, M |\n\n**Step 1.** K leaves the queue, so it is visited. Its neighbours, L and N, haven't been found, so both join the back, L first.\n\n**Step 2.** L has waited longest, so L leaves. K has been found already. O is new, so O joins the back, behind N.\n\n**Step 3.** N leaves. K has been found; M is new and joins the back.\n\n**Step 4.** O leaves. Its neighbours are L and M. L has been found, and so has M: it is still waiting in the queue. A vertex that is waiting never joins again, so nothing joins.\n\n**Step 5.** M leaves. Both its neighbours have been found, and the queue is now empty, so BFS stops.\n\nThe order is **K, L, N, O, M**. M comes last although it is first in the alphabet: alphabetical order only decides which of one vertex's new neighbours joins first, not the order of the whole traversal."
         },
         {
           "id": 1502,
           "kind": "activity",
           "title": "Review practice: tracing BFS by hand",
           "activity_id": 1501
+        },
+        {
+          "id": 1550,
+          "kind": "activity",
+          "title": "Review practice: trace BFS from T, one row each time a vertex leaves the queue",
+          "activity_id": 1550
         },
         {
           "id": 1503,
@@ -199,19 +217,37 @@
         {
           "id": 1601,
           "kind": "worked_example",
-          "title": "Review: Writing BFS in Python",
-          "body": "Before the loop: `visited = {start}`, `queue = deque([start])`, `order = []`. In the loop: `v = queue.popleft()`, `order.append(v)`, then for each `n` in `sorted(graph.adjacency[v])`, if it isn't in `visited` yet (the set of vertices found so far), add it to `visited` and `queue`. Return `order`.\n\nGo back to module 4 (Build BFS)."
+          "title": "Review: worked example, from a plan to BFS in Python",
+          "body": "**Worked example.** Here BFS is written from its plan, one part at a time, with new names: `seen` is the set of vertices found so far, `todo` is the queue, `here` is the vertex that leaves it, and `nxt` is one of its neighbours.\n\n**1. Before the loop**, the start is found and waiting, and nothing has been visited yet. So `seen` holds the start, `todo` holds the start, and `order` is empty.\n\n**2. While anything is waiting**, take the vertex that has waited longest, from the front, and add it to the order: `here = todo.popleft()`, then `order.append(here)`.\n\n**3. For each neighbour of `here`**, in alphabetical order: if it isn't in `seen` yet, it is found now, so add it to `seen` and to the back of `todo`.\n\n**4. When nothing is waiting**, the order is complete, so return it.\n\n```python\nfrom collections import deque\n\n\ndef bfs(graph, start):\n    seen = {start}\n    todo = deque([start])\n    order = []\n    while todo:\n        here = todo.popleft()\n        order.append(here)\n        for nxt in sorted(graph.adjacency[here]):\n            if nxt not in seen:\n                seen.add(nxt)\n                todo.append(nxt)\n    return order\n```\n\n**Running it** on a directed graph with the edges D → B, D → A, A → C and C → D, starting at D:\n\n| `here` | Its neighbours, sorted | `todo` after | `order` after |\n|---|---|---|---|\n| D | A, B | A, B | D |\n| A | C | B, C | D, A |\n| B | none | C | D, A, B |\n| C | D, already in `seen` | (empty) | D, A, B, C |\n\nThe result is **D, A, B, C**. The edge C → D leads back to the start, but D has been in `seen` since the first line, so it never joins `todo` again."
         },
         {
           "id": 1602,
           "kind": "activity",
-          "title": "Review practice: writing BFS in python",
+          "title": "Review practice: writing BFS in Python",
           "activity_id": 1601
+        },
+        {
+          "id": 1650,
+          "kind": "activity",
+          "title": "Review practice: put BFS in order",
+          "activity_id": 1650
+        },
+        {
+          "id": 1652,
+          "kind": "activity",
+          "title": "Review practice: fill in the missing parts of BFS",
+          "activity_id": 1652
+        },
+        {
+          "id": 1651,
+          "kind": "activity",
+          "title": "Objective 6 · fresh item 1 of 2: put BFS in order",
+          "activity_id": 1651
         },
         {
           "id": 1603,
           "kind": "activity",
-          "title": "Objective 6 · fresh item: fill in the missing parts of BFS",
+          "title": "Objective 6 · fresh item 2 of 2: fill in the missing parts of BFS",
           "activity_id": 1602
         }
       ]
@@ -222,14 +258,26 @@
         {
           "id": 1701,
           "kind": "worked_example",
-          "title": "Review: Testing and debugging BFS",
-          "body": "A good test builds a small graph, calls `bfs`, and asserts the **exact** list it should return. Two graphs catch most BFS bugs: one with a **cycle** (catches vertices visited twice) and one that's **disconnected** (catches vertices that shouldn't be reached).\n\nGo back to module 5 (Test and debug)."
+          "title": "Review: worked example, testing and fixing a faulty BFS",
+          "body": "**Worked example.** This BFS has a bug. Find it with tests, then fix it.\n\n```python\ndef bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        for n in sorted(graph.adjacency[start]):\n            if n not in visited:\n                visited.add(n)\n                queue.append(n)\n    return order\n```\n\n**1. Choose tests.** A test is a graph, a start vertex and the exact order a correct BFS gives. Choose graphs that are different shapes:\n\n| Test | Graph (undirected) | Start | Correct order |\n|---|---|---|---|\n| 1, a star | A–B, A–C, A–D | A | A, B, C, D |\n| 2, a chain | A–B, B–C | A | A, B, C |\n| 3, two islands | A–B, C–D | A | A, B |\n\n**2. Run each test by hand.** On the star, every vertex is a neighbour of A, so the faulty version still finds them all and gives A, B, C, D: test 1 **passes**. On the chain, B joins the queue. Then B leaves, but the loop looks at A's neighbours again, not B's, so C is never found. The result is A, B: test 2 **fails**. On the two islands, the result is A, B: test 3 **passes**.\n\n**3. Find the line.** Test 2 fails at the first vertex two edges from the start, so the faulty version never gets past the start's neighbours. The loop that finds new vertices reads `graph.adjacency[start]`: the start's neighbours, every time.\n\n**4. Fix it and run the tests again.** Loop over `sorted(graph.adjacency[v])`, the neighbours of the vertex that just left the queue. Test 2 now gives A, B, C, and all three tests pass.\n\nTest 1 passes with or without the bug, so on its own it proves little. A useful test fails on the faulty version and passes on the fixed one."
         },
         {
           "id": 1702,
           "kind": "activity",
           "title": "Review practice: testing and debugging BFS",
           "activity_id": 1701
+        },
+        {
+          "id": 1750,
+          "kind": "activity",
+          "title": "Review practice: fix the faulty BFS",
+          "activity_id": 1750
+        },
+        {
+          "id": 1751,
+          "kind": "activity",
+          "title": "Review practice: choose the tests that catch the bug",
+          "activity_id": 1751
         },
         {
           "id": 1703,
@@ -254,6 +302,47 @@
           "kind": "activity",
           "title": "Objective 7 · fresh item 4 of 4: choose the tests that catch the bug",
           "activity_id": 1705
+        }
+      ]
+    },
+    {
+      "objective_id": 8,
+      "segments": [
+        {
+          "id": 1801,
+          "kind": "worked_example",
+          "title": "Review: worked example, the fewest edges and why BFS finds them",
+          "body": "**Worked example.** An undirected graph has the edges A–B, A–C, B–D, C–D, C–E, D–F and E–F. Find the fewest edges from A to F.\n\n**1. Run BFS from A** and write down who found each vertex:\n\n| Vertex | Found by | Edges from A |\n|---|---|---|\n| A | (the start) | 0 |\n| B | A | 1 |\n| C | A | 1 |\n| D | B | 2 |\n| E | C | 2 |\n| F | D | 3 |\n\nD is found by B, not C, because B leaves the queue first. F is found by D, because D leaves the queue before E.\n\n**2. Walk back from F:** D, then B, then A. The route is A → B → D → F: **3 edges**. (A → C → E → F is also 3 edges: there can be more than one shortest route, and BFS records one of them.)\n\n**3. Why nothing shorter exists.** BFS takes every vertex 1 edge away out of the queue before any vertex 2 away, and every vertex 2 away before any 3 away. If F were 2 edges from A, a vertex 1 edge away would be joined to F and would have put F in the queue during the 1-edge ring. None did, so 3 is the fewest.\n\nThis only holds when every edge counts the same. With lengths on the edges (kilometres, minutes), the route with the fewest edges may not be the shortest."
+        },
+        {
+          "id": 1802,
+          "kind": "activity",
+          "title": "Review practice: the fewest edges",
+          "activity_id": 1801
+        },
+        {
+          "id": 1803,
+          "kind": "activity",
+          "title": "Objective 8 · fresh item 1 of 4: the route BFS records",
+          "activity_id": 1802
+        },
+        {
+          "id": 1804,
+          "kind": "activity",
+          "title": "Objective 8 · fresh item 2 of 4: why it is the shortest",
+          "activity_id": 1803
+        },
+        {
+          "id": 1805,
+          "kind": "activity",
+          "title": "Objective 8 · fresh item 3 of 4: the fewest edges",
+          "activity_id": 1804
+        },
+        {
+          "id": 1806,
+          "kind": "activity",
+          "title": "Objective 8 · fresh item 4 of 4: when the guarantee holds",
+          "activity_id": 1805
         }
       ]
     }
@@ -318,45 +407,45 @@
       "purpose": "mastery",
       "objective_id": 1,
       "config": {
-        "prompt": "Which of these stores data, making it a data structure?",
+        "prompt": "Which of these is an example of a data structure?",
         "options": [
           {
-            "id": "a",
-            "label": "The steps for sorting the names in a list alphabetically"
+            "id": "d",
+            "label": "The seating plan that shows which learner sits in which exam seat"
+          },
+          {
+            "id": "e",
+            "label": "How a cashier works out your change"
           },
           {
             "id": "c",
             "label": "Walking to every shop in a mall along its corridors"
-          },
-          {
-            "id": "b",
-            "label": "A list of the names of everyone in a tutorial group"
           }
         ]
       },
       "solution": {
-        "correct": "b",
+        "correct": "d",
         "feedback": {
-          "a": "Not quite. That's an algorithm. Steps that do something are an algorithm. Find the option that stores information.",
-          "c": "Not quite. That's a traversal. Visiting everything by following connections is a traversal. Find the option that stores information."
+          "e": "Not quite. That's an algorithm: a method the cashier follows. It doesn't hold the information itself. Ask: does it hold information, or is it a method for doing something?",
+          "c": "Not quite. That's a traversal. Visiting everything by following connections is something done, not something kept. Ask: does it hold information, or is it a method for doing something?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "A data structure stores data."
+          "body": "Ask of each: does it hold information, or is it a way of doing something?"
         },
         {
           "level": 2,
-          "body": "Sorting is something you do, so it's an algorithm."
+          "body": "A data structure holds information that can be looked up later. Something you do, step by step, is not one."
         },
         {
           "level": 3,
-          "body": "Which option holds information?"
+          "body": "Which option holds information a program could look up?"
         },
         {
           "level": 4,
-          "body": "Answer: the list of names."
+          "body": "Answer: the seating plan, which holds which learner sits in which seat."
         }
       ]
     },
@@ -368,45 +457,50 @@
       "purpose": "mastery",
       "objective_id": 1,
       "config": {
-        "prompt": "Which of these is a list of steps, making it an algorithm?",
+        "prompt": "Which of these is an example of an algorithm?",
         "options": [
           {
-            "id": "b",
-            "label": "A network of roads between the towns and cities in a province"
+            "id": "d",
+            "label": "A phone's contact list, sorted by surname"
           },
           {
-            "id": "c",
-            "label": "The steps for checking whether a word is in a dictionary"
+            "id": "e",
+            "label": "Long division, the way you learnt it at school"
           },
           {
-            "id": "a",
-            "label": "A dictionary that maps each word to its meaning"
+            "id": "f",
+            "label": "A map of the taxi routes between suburbs"
+          },
+          {
+            "id": "g",
+            "label": "A shopping list, written in the order of the aisles"
           }
         ]
       },
       "solution": {
-        "correct": "c",
+        "correct": "e",
         "feedback": {
-          "a": "Not quite. That's a data structure. A dictionary stores data; it doesn't do anything by itself. Find the option that is a set of steps.",
-          "b": "Not quite. That's a graph. Roads between towns are a graph, which stores connections. Find the option that is a set of steps."
+          "d": "Not quite. The list has been sorted, but the list itself only holds the contacts. Something that holds information is a data structure. Ask: does it hold something, or is it a method for doing something?",
+          "f": "Not quite. That's a graph: suburbs joined by taxi routes. It holds connections; it doesn't work anything out. Ask: is it a method for doing something?",
+          "g": "Not quite. The list is in a useful order, but it only holds the items, and something that holds information is a data structure. Ask: does it hold something, or is it a method for doing something?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "An algorithm is a list of steps."
+          "body": "An algorithm is a method that solves a problem."
         },
         {
           "level": 2,
-          "body": "Dictionaries and road networks store data."
+          "body": "Being sorted, or in a useful order, doesn't make something an algorithm: an algorithm is the method itself."
         },
         {
           "level": 3,
-          "body": "Which option describes doing something?"
+          "body": "Which option is a way of working something out?"
         },
         {
           "level": 4,
-          "body": "Answer: the steps for checking a word."
+          "body": "Answer: long division."
         }
       ]
     },
@@ -418,11 +512,15 @@
       "purpose": "mastery",
       "objective_id": 1,
       "config": {
-        "prompt": "Match each term to an example of it.",
+        "prompt": "Match each term to an example of it. One example matches none of them.",
         "left": [
           {
             "id": "t1",
             "label": "Data structure"
+          },
+          {
+            "id": "t3",
+            "label": "Algorithm"
           },
           {
             "id": "t2",
@@ -433,6 +531,10 @@
           {
             "id": "e2",
             "label": "Finding every friend-of-a-friend by following friend links"
+          },
+          {
+            "id": "e4",
+            "label": "A bar chart of the rainfall in each month"
           },
           {
             "id": "e3",
@@ -447,29 +549,31 @@
       "solution": {
         "pairs": {
           "t1": "e1",
+          "t3": "e3",
           "t2": "e2"
         },
         "feedback": {
-          "t1": "Check “data structure”. A data structure stores data, like a queue of jobs. Find the example that stores things.",
-          "t2": "Check “graph traversal”. A traversal follows connections to visit everything reachable. Find the example that follows links."
+          "t1": "Not quite. A data structure keeps information organised, like a queue of print jobs. Find the example that holds things.",
+          "t3": "Not quite. An algorithm is a method that solves a problem, like a recipe. Find the example that is a way of doing something.",
+          "t2": "Not quite. A traversal follows connections to visit everything it can reach, like following friend links. Find the example that follows links."
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "One example stores things; one follows connections; one is neither."
+          "body": "One example holds things, one is a method, one follows connections, and one is none of these."
         },
         {
           "level": 2,
-          "body": "A recipe is a list of steps, but not one that visits a graph."
+          "body": "A bar chart is the everyday kind of graph, a picture of values: it is none of these terms."
         },
         {
           "level": 3,
-          "body": "Following friend links is moving along edges."
+          "body": "Following friend links is moving along connections."
         },
         {
           "level": 4,
-          "body": "Answer: data structure → queue of print jobs; graph traversal → following friend links."
+          "body": "Answer: data structure → queue of print jobs; algorithm → recipe for pancakes; graph traversal → following friend links."
         }
       ]
     },
@@ -481,45 +585,50 @@
       "purpose": "mastery",
       "objective_id": 1,
       "config": {
-        "prompt": "What is a graph?",
+        "prompt": "A chess club's secretary draws a circle for each member, and a line between every two members who have played each other. What has she made?",
         "options": [
           {
-            "id": "a",
-            "label": "A set of vertices joined by edges"
+            "id": "e",
+            "label": "A graph traversal"
           },
           {
-            "id": "c",
-            "label": "A chart with an x-axis and a y-axis"
+            "id": "d",
+            "label": "A graph"
           },
           {
-            "id": "b",
-            "label": "A list of steps for visiting every vertex and edge"
+            "id": "f",
+            "label": "A bar chart"
+          },
+          {
+            "id": "g",
+            "label": "An algorithm"
           }
         ]
       },
       "solution": {
-        "correct": "a",
+        "correct": "d",
         "feedback": {
-          "b": "Not quite. That's an algorithm. A graph is the thing being visited, not the steps. Think about vertices and edges.",
-          "c": "Not in computer science. Here a graph means vertices and edges, not a plotted chart. Think about the campus map from module 1."
+          "e": "Not quite. A traversal moves along the lines to visit every member. She has only drawn the members and their games. Ask: is this something that is done, or something that is there?",
+          "f": "Not quite. A bar chart plots values against axes. Here there are no axes, only members joined by lines. Ask: what are the circles and the lines?",
+          "g": "Not quite. An algorithm is a method for doing something. The drawing doesn't do anything: it shows members joined by games. Ask: is this a method, or things joined by connections?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Think back to the campus map."
+          "body": "What are the circles, and what are the lines?"
         },
         {
           "level": 2,
-          "body": "Buildings were one part; walkways were the other."
+          "body": "Ask whether it keeps something or does something, and whether it involves things joined by connections."
         },
         {
           "level": 3,
-          "body": "Buildings are vertices; walkways are edges."
+          "body": "Things joined by connections: which term is that?"
         },
         {
           "level": 4,
-          "body": "Answer: a set of vertices joined by edges."
+          "body": "Answer: a graph: the members are vertices and the games are edges."
         }
       ]
     },
@@ -717,7 +826,7 @@
       "purpose": "mastery",
       "objective_id": 2,
       "config": {
-        "prompt": "Lab computers, joined by cables. The computers are the server (E), the laptop (F) and the printer (G). Cables join E–F, F–G and E–G, and data goes both ways along a cable. Each marker below describes one part of this graph. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
+        "prompt": "Lab devices, joined by cables. The devices are the server (E), the laptop (F) and the printer (G). Cables join E–F, F–G and E–G, and data goes both ways along a cable. Each marker below describes one part of this graph. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
         "left": [
           {
             "id": "1",
@@ -774,7 +883,7 @@
       "hints": [
         {
           "level": 1,
-          "body": "Computers are vertices. Cables are edges."
+          "body": "Devices are vertices. Cables are edges."
         },
         {
           "level": 2,
@@ -798,7 +907,7 @@
       "purpose": "mastery",
       "objective_id": 2,
       "config": {
-        "prompt": "One-way streets between four corners: the river corner (R), the school corner (S), the tower corner (T) and the university corner (U). The streets go R → S, S → T and T → U: you can only drive them in that direction. Each marker below describes one part of this graph. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
+        "prompt": "One-way streets between four corners: the river corner (W), the school corner (X), the tower corner (Y) and the university corner (Z). The streets go W → X, X → Y and Y → Z: you can only drive them in that direction. Each marker below describes one part of this graph. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
         "left": [
           {
             "id": "1",
@@ -815,52 +924,52 @@
         ],
         "right": [
           {
-            "id": "vR",
-            "label": "Vertex R"
+            "id": "vW",
+            "label": "Vertex W"
           },
           {
-            "id": "vS",
-            "label": "Vertex S"
+            "id": "vX",
+            "label": "Vertex X"
           },
           {
-            "id": "vT",
-            "label": "Vertex T"
+            "id": "vY",
+            "label": "Vertex Y"
           },
           {
-            "id": "vU",
-            "label": "Vertex U"
+            "id": "vZ",
+            "label": "Vertex Z"
           },
           {
-            "id": "eRS",
-            "label": "Edge R → S"
+            "id": "eWX",
+            "label": "Edge W → X"
           },
           {
-            "id": "eST",
-            "label": "Edge S → T"
+            "id": "eXY",
+            "label": "Edge X → Y"
           },
           {
-            "id": "eTU",
-            "label": "Edge T → U"
+            "id": "eYZ",
+            "label": "Edge Y → Z"
           },
           {
-            "id": "eSR",
-            "label": "Edge S → R"
+            "id": "eXW",
+            "label": "Edge X → W"
           },
           {
-            "id": "eTS",
-            "label": "Edge T → S"
+            "id": "eYX",
+            "label": "Edge Y → X"
           },
           {
-            "id": "eUT",
-            "label": "Edge U → T"
+            "id": "eZY",
+            "label": "Edge Z → Y"
           }
         ]
       },
       "solution": {
         "pairs": {
-          "1": "eST",
-          "2": "vU",
-          "3": "eRS"
+          "1": "eXY",
+          "2": "vZ",
+          "3": "eWX"
         },
         "feedback": {
           "1": "Check marker 1. It describes a one-way street between two places, so it is an edge, named from where it starts to where it ends. Use the names and the list to find both ends and the way it goes.",
@@ -879,11 +988,11 @@
         },
         {
           "level": 3,
-          "body": "Look up each name's letter in the prompt: the school corner is S and the tower corner is T. A one-way edge is named from where it starts to where it ends."
+          "body": "Look up each name's letter in the prompt: the school corner is X and the tower corner is Y. A one-way edge is named from where it starts to where it ends."
         },
         {
           "level": 4,
-          "body": "Answer: 1 = Edge S → T, 2 = Vertex U, 3 = Edge R → S."
+          "body": "Answer: 1 = Edge X → Y, 2 = Vertex Z, 3 = Edge W → X."
         }
       ]
     },
@@ -895,23 +1004,23 @@
       "purpose": "mastery",
       "objective_id": 2,
       "config": {
-        "prompt": "Classify each graph as directed or undirected. An edge written A → B is an arrow that only goes from A to B. An edge written A–B is a plain line that goes both ways.",
+        "prompt": "Is each graph directed or undirected? Decide from what each connection means.",
         "left": [
           {
-            "id": "emails",
-            "label": "Emails (who sent to whom). Vertices: Dineo (D), Ethan (E), Fatima (F). Edges: D → E, E → F, F → D."
+            "id": "results",
+            "label": "A university tournament: who beat whom. Wits beat UJ, Tuks beat Wits, and Tuks beat UJ."
           },
           {
-            "id": "train-tracks-between-stations",
-            "label": "Train tracks between stations. Vertices: Kempton (K), Marlboro (M), Sandton (S). Edges: K–M, M–S."
+            "id": "teammates",
+            "label": "A project: which learners have worked together. Lindi has worked with Neo, and Neo with Omar."
           },
           {
-            "id": "teammates-in-a-project",
-            "label": "Teammates in a project. Vertices: Lindi (L), Neo (N), Omar (O). Edges: L–N, N–O, L–O."
+            "id": "mail",
+            "label": "Emails between Dineo, Ethan and Fatima. Each of them has emailed both of the others, and each email is sent by one person."
           },
           {
-            "id": "a-tournament",
-            "label": "A tournament (who beat whom). Vertices: Wits (W), Tuks (X), UJ (Y). Edges: X → W, W → Y, X → Y."
+            "id": "bluetooth",
+            "label": "A phone, a speaker and a pair of earbuds, and which devices are paired with which by Bluetooth."
           }
         ],
         "right": [
@@ -927,34 +1036,34 @@
       },
       "solution": {
         "pairs": {
-          "emails": "directed",
-          "train-tracks-between-stations": "undirected",
-          "teammates-in-a-project": "undirected",
-          "a-tournament": "directed"
+          "results": "directed",
+          "teammates": "undirected",
+          "mail": "directed",
+          "bluetooth": "undirected"
         },
         "feedback": {
-          "emails": "Check “Emails (who sent to whom)”. Its edges are arrows (→): each connection goes one way, so it's directed. Look at how the edges are written.",
-          "train-tracks-between-stations": "Check “Train tracks between stations”. Its edges are plain lines (–): each connection works both ways, so it's undirected. Look at how the edges are written.",
-          "teammates-in-a-project": "Check “Teammates in a project”. Its edges are plain lines (–): each connection works both ways, so it's undirected. Look at how the edges are written.",
-          "a-tournament": "Check “A tournament (who beat whom)”. Its edges are arrows (→): each connection goes one way, so it's directed. Look at how the edges are written."
+          "results": "Not quite. Beating someone goes one way: Tuks beat Wits, and Wits didn't beat Tuks in that game. Ask: if this connection exists, must the reverse one exist too?",
+          "teammates": "Not quite. If Lindi has worked with Neo, Neo has worked with Lindi. Ask: could this connection exist one way only?",
+          "mail": "Not quite. Each email goes one way, from the sender, even when it's answered, so Dineo → Ethan and Ethan → Dineo are two separate arrows. A graph of one-way links is directed. Ask: is each single connection one-way?",
+          "bluetooth": "Not quite. If the phone is paired with the speaker, the speaker is paired with the phone. Ask: could this connection exist one way only?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Look at how each graph's edges are written."
+          "body": "Ask of each connection: if it joins X to Y, must it also join Y to X?"
         },
         {
           "level": 2,
-          "body": "An edge written A → B is an arrow: it only goes one way. A–B is a plain line."
+          "body": "If the reverse must always exist, the graph is undirected. If one can exist without the other, it is directed."
         },
         {
           "level": 3,
-          "body": "Two arrows between the same pair still make a graph directed."
+          "body": "Watch the emails: every pair has emailed each other, but each email still goes one way."
         },
         {
           "level": 4,
-          "body": "Answer: Emails (who sent to whom) = directed; Train tracks between stations = undirected; Teammates in a project = undirected; A tournament (who beat whom) = directed."
+          "body": "Answer: who beat whom = directed; worked together = undirected; emails = directed; Bluetooth pairing = undirected."
         }
       ]
     },
@@ -966,46 +1075,46 @@
       "purpose": "review",
       "objective_id": 3,
       "config": {
-        "prompt": "Students email each other. How should a graph of “who emailed whom” be set up?",
+        "prompt": "During a test, a teacher notes who lent a pencil to whom. How should a graph of these loans be set up?",
         "options": [
           {
-            "id": "b",
-            "label": "Vertices: emails. Edges: students. Directed."
+            "id": "d",
+            "label": "Vertices: pencils. Edges: the learners who lent them. Directed, because a pencil is lent once."
           },
           {
-            "id": "c",
-            "label": "Vertices: students. Edges: emails. Undirected."
+            "id": "f",
+            "label": "Vertices: learners. Edges: loans. Directed, because a loan can go one way without one back."
           },
           {
-            "id": "a",
-            "label": "Vertices: students. Edges: emails. Directed."
+            "id": "e",
+            "label": "Vertices: learners. Edges: loans. Undirected, because a loan always involves two learners."
           }
         ]
       },
       "solution": {
-        "explanation": "The students are the things, and an email joins two of them. An email goes from one student to another, so the edges have a direction.",
-        "correct": "a",
+        "explanation": "Correct. The learners are the things, and each loan joins the lender to the borrower. One learner can lend to another without a loan coming back, so each edge has a direction.",
+        "correct": "f",
         "feedback": {
-          "b": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
-          "c": "Not quite. Sending an email doesn't mean you got one back, so each edge has a direction. Check the direction."
+          "d": "Not quite. A pencil isn't joined to another pencil: each loan joins two learners. The learners are the things in this graph. Ask: what does each loan connect?",
+          "e": "Not quite. Two learners are involved, but that doesn't make a loan two-way: one learner can lend to another without being lent to in return. Ask: if this edge exists, must the reverse one exist too?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "What are the things? What connects them?"
+          "body": "Ask: what are the things, and what joins two of them?"
         },
         {
           "level": 2,
-          "body": "Students are the things; emails connect them."
+          "body": "The vertices are the things being connected, and each edge joins exactly two of them."
         },
         {
           "level": 3,
-          "body": "Does an email go both ways?"
+          "body": "Learners are the vertices and loans are the edges. If one learner lends to another, must the other lend back?"
         },
         {
           "level": 4,
-          "body": "Answer: students as vertices, emails as directed edges."
+          "body": "Answer: Vertices: learners. Edges: loans. Directed, because a loan can go one way without one back."
         }
       ]
     },
@@ -1017,50 +1126,50 @@
       "purpose": "mastery",
       "objective_id": 3,
       "config": {
-        "prompt": "Streets in a neighbourhood where some streets are one-way. Which graph models it?",
+        "prompt": "A school pairs Grade 12 mentors with Grade 9 learners, and some Grade 12s mentor two. Thabo, in Grade 12, mentors Sam, in Grade 9. Which graph models who mentors whom?",
         "options": [
           {
-            "id": "d",
-            "label": "Vertices: one-way streets. Edges: intersections. Undirected."
+            "id": "e",
+            "label": "Vertices: learners. Edges: mentoring links. Undirected, since Sam and Thabo meet up each week."
           },
           {
-            "id": "a",
-            "label": "Vertices: intersections. Edges: one-way streets. Undirected."
+            "id": "g",
+            "label": "Vertices: mentoring sessions. Edges: the learners at each. Directed, as a session is given by one."
           },
           {
-            "id": "c",
-            "label": "Vertices: one-way streets. Edges: intersections. Directed."
+            "id": "f",
+            "label": "Vertices: learners. Edges: mentoring links. Directed, as Sam doesn't mentor Thabo back."
           },
           {
-            "id": "b",
-            "label": "Vertices: intersections. Edges: one-way streets. Directed."
+            "id": "h",
+            "label": "Vertices: grades. Edges: the learners in each grade. Directed, from the older grade to the younger."
           }
         ]
       },
       "solution": {
-        "correct": "b",
+        "correct": "f",
         "feedback": {
-          "a": "Not quite. These connections only go one way. One-way connections need arrows, so the graph is directed. Check the direction.",
-          "c": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
-          "d": "Not quite. Vertices and edges are swapped, and the direction is wrong too. The things are the vertices; the connections between them are the edges. Then check whether each connection works both ways."
+          "e": "Not quite. Sam and Thabo both go to the meetings, but meeting up doesn't make mentoring two-way: Thabo mentors Sam, and Sam doesn't mentor Thabo. Ask: if this edge exists, must the reverse one exist too?",
+          "g": "Not quite. A session isn't joined to another session: each mentoring link joins two learners. The learners are the things in this graph. Ask: what does each mentoring link connect?",
+          "h": "Not quite. A grade is a group of learners, and a learner doesn't join two grades. The question is about which learner mentors which. Ask: what are the things each mentoring link joins?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Ask: what are the things, and what connects them?"
+          "body": "Ask: what are the things, and what joins two of them?"
         },
         {
           "level": 2,
-          "body": "The things are vertices; the connections are edges."
+          "body": "The vertices are the things being connected, and each edge joins exactly two of them."
         },
         {
           "level": 3,
-          "body": "Then ask whether each connection works both ways. Here: one way only, so directed."
+          "body": "Learners are the vertices and mentoring links are the edges. Does Sam mentor Thabo?"
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: intersections. Edges: one-way streets. Directed."
+          "body": "Answer: Vertices: learners. Edges: mentoring links. Directed, as Sam doesn't mentor Thabo back."
         }
       ]
     },
@@ -1072,50 +1181,50 @@
       "purpose": "mastery",
       "objective_id": 3,
       "config": {
-        "prompt": "Cities joined by highways that can be driven both ways. Which graph models it?",
+        "prompt": "In a home network, the laptop, the printer and the TV each have a Wi-Fi link to the router. The laptop sends a page to the printer through the router, and the printer tells the laptop when it's done. Which graph models the network?",
         "options": [
           {
-            "id": "a",
-            "label": "Vertices: cities. Edges: highways. Directed."
+            "id": "f",
+            "label": "Vertices: devices. Edges: Wi-Fi links. Undirected, because data travels along a link in both directions."
           },
           {
-            "id": "c",
-            "label": "Vertices: cities. Edges: highways. Undirected."
+            "id": "e",
+            "label": "Vertices: devices. Edges: Wi-Fi links. Directed, because the laptop sends the page to the printer."
           },
           {
-            "id": "b",
-            "label": "Vertices: highways. Edges: cities. Undirected."
+            "id": "g",
+            "label": "Vertices: pages sent. Edges: the devices that sent them. Directed, as a page goes from a device."
           },
           {
-            "id": "d",
-            "label": "Vertices: highways. Edges: cities. Directed."
+            "id": "h",
+            "label": "Vertices: the people at home. Edges: the devices they use. Undirected, as people share the devices."
           }
         ]
       },
       "solution": {
-        "correct": "c",
+        "correct": "f",
         "feedback": {
-          "a": "Not quite. These connections work both ways, so the edges have no arrows and the graph is undirected. Check the direction.",
-          "b": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
-          "d": "Not quite. Vertices and edges are swapped, and the direction is wrong too. The things are the vertices; the connections between them are the edges. Then check whether each connection works both ways."
+          "e": "Not quite. The page goes from the laptop to the printer, but the printer also answers the laptop along the same links. Something moving along an edge doesn't give it an arrow. Ask: can data travel along this link one way only?",
+          "g": "Not quite. A page isn't joined to another page: the Wi-Fi links join devices. The devices are the things in this graph. Ask: what does each link connect?",
+          "h": "Not quite. The people use the devices, but the question is about how the devices are joined. Ask: what are the things the Wi-Fi links join?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Ask: what are the things, and what connects them?"
+          "body": "Ask: what are the things, and what joins two of them?"
         },
         {
           "level": 2,
-          "body": "The things are vertices; the connections are edges."
+          "body": "The vertices are the things being connected, and each edge joins exactly two of them."
         },
         {
           "level": 3,
-          "body": "Then ask whether each connection works both ways. Here: both ways, so undirected."
+          "body": "Devices are the vertices and the links are the edges. The page went to the printer: did anything come back along the same links?"
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: cities. Edges: highways. Undirected."
+          "body": "Answer: Vertices: devices. Edges: Wi-Fi links. Undirected, because data travels along a link in both directions."
         }
       ]
     },
@@ -1127,50 +1236,50 @@
       "purpose": "mastery",
       "objective_id": 3,
       "config": {
-        "prompt": "Recipe steps, where some steps must happen before others. Which graph models it?",
+        "prompt": "A family tree records who is whose parent. Nomsa is Thabo's mother, and Thabo is Lindiwe's father. Which graph models who is whose parent?",
         "options": [
           {
-            "id": "d",
-            "label": "Vertices: “comes before” links. Edges: steps. Undirected."
+            "id": "e",
+            "label": "Vertices: family members. Edges: parent links. Undirected, as a parent and child are related."
           },
           {
-            "id": "c",
-            "label": "Vertices: “comes before” links. Edges: steps. Directed."
+            "id": "g",
+            "label": "Vertices: generations. Edges: the people born in them. Directed, from older to younger ones."
           },
           {
-            "id": "a",
-            "label": "Vertices: steps. Edges: “comes before” links. Directed."
+            "id": "h",
+            "label": "Vertices: parent links. Edges: family members. Directed, because each link goes to a child."
           },
           {
-            "id": "b",
-            "label": "Vertices: steps. Edges: “comes before” links. Undirected."
+            "id": "f",
+            "label": "Vertices: family members. Edges: parent links. Directed, because a child isn't its parent's parent."
           }
         ]
       },
       "solution": {
-        "correct": "a",
+        "correct": "f",
         "feedback": {
-          "b": "Not quite. These connections only go one way. One-way connections need arrows, so the graph is directed. Check the direction.",
-          "c": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
-          "d": "Not quite. Vertices and edges are swapped, and the direction is wrong too. The things are the vertices; the connections between them are the edges. Then check whether each connection works both ways."
+          "e": "Not quite. A parent and a child are related both ways, but “is the parent of” only goes one way: Nomsa is Thabo's parent, and Thabo isn't Nomsa's. Ask: if this edge exists, must the reverse one exist too?",
+          "g": "Not quite. A generation is a group of people, and a person doesn't join two generations. The tree is about which person is whose parent. Ask: what are the things each parent link joins?",
+          "h": "Not quite. That swaps them. A parent link joins two people, so the link is the edge and the people are the vertices. Ask: which one joins the other two?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Ask: what are the things, and what connects them?"
+          "body": "Ask: what are the things, and what joins two of them?"
         },
         {
           "level": 2,
-          "body": "The things are vertices; the connections are edges."
+          "body": "The vertices are the things being connected, and each edge joins exactly two of them."
         },
         {
           "level": 3,
-          "body": "Then ask whether each connection works both ways. Here: one way only, so directed."
+          "body": "Family members are the vertices and parent links are the edges. Is Thabo Nomsa's parent?"
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: steps. Edges: “comes before” links. Directed."
+          "body": "Answer: Vertices: family members. Edges: parent links. Directed, because a child isn't its parent's parent."
         }
       ]
     },
@@ -1182,50 +1291,50 @@
       "purpose": "mastery",
       "objective_id": 3,
       "config": {
-        "prompt": "Players and which pairs of them have played a match together. Which graph models it?",
+        "prompt": "A science teacher records which learners have done a practical together as lab partners. Ayo did the titration with Busi, and Busi did the next practical with Chloé. Which graph models the lab partnerships?",
         "options": [
           {
-            "id": "c",
-            "label": "Vertices: matches. Edges: players. Undirected."
+            "id": "g",
+            "label": "Vertices: practicals. Edges: the learners who did them. Undirected, as each one needs two learners."
           },
           {
-            "id": "a",
-            "label": "Vertices: players. Edges: matches. Directed."
+            "id": "f",
+            "label": "Vertices: learners. Edges: lab partnerships. Undirected, because working together is shared."
           },
           {
-            "id": "b",
-            "label": "Vertices: players. Edges: matches. Undirected."
+            "id": "h",
+            "label": "Vertices: learners. Edges: the marks each learner got. Undirected, because both partners get a mark."
           },
           {
-            "id": "d",
-            "label": "Vertices: matches. Edges: players. Directed."
+            "id": "e",
+            "label": "Vertices: learners. Edges: lab partnerships. Directed, as Ayo and Busi worked together first."
           }
         ]
       },
       "solution": {
-        "correct": "b",
+        "correct": "f",
         "feedback": {
-          "a": "Not quite. These connections work both ways, so the edges have no arrows and the graph is undirected. Check the direction.",
-          "c": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
-          "d": "Not quite. Vertices and edges are swapped, and the direction is wrong too. The things are the vertices; the connections between them are the edges. Then check whether each connection works both ways."
+          "g": "Not quite. That swaps them. A partnership joins two learners, so the partnership is the edge and the learners are the vertices. Ask: which one joins the other two?",
+          "h": "Not quite. A mark belongs to one learner: it doesn't join two learners, so it can't be an edge. An edge always has two ends. Ask: what joins two learners?",
+          "e": "Not quite. Ayo and Busi did their practical first, but being lab partners is shared: if Ayo worked with Busi, Busi worked with Ayo. When it happened doesn't give an edge an arrow. Ask: could this connection exist one way only?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Ask: what are the things, and what connects them?"
+          "body": "Ask: what are the things, and what joins two of them?"
         },
         {
           "level": 2,
-          "body": "The things are vertices; the connections are edges."
+          "body": "The vertices are the things being connected, and each edge joins exactly two of them."
         },
         {
           "level": 3,
-          "body": "Then ask whether each connection works both ways. Here: both ways, so undirected."
+          "body": "Learners are the vertices and partnerships are the edges. If Ayo worked with Busi, did Busi work with Ayo?"
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: players. Edges: matches. Undirected."
+          "body": "Answer: Vertices: learners. Edges: lab partnerships. Undirected, because working together is shared."
         }
       ]
     },
@@ -1245,16 +1354,16 @@
           },
           {
             "id": "b",
-            "label": "Adding up the prices on a till slip at the shop"
+            "label": "Adding up all the prices on a till slip at the shop"
           },
           {
             "id": "c",
-            "label": "Finding the fewest bus changes between two stops"
+            "label": "Finding the fewest stop-to-stop rides between two stops"
           }
         ]
       },
       "solution": {
-        "explanation": "BFS finds the route with the fewest edges, so with stops as vertices and bus rides as edges it finds the fewest changes. It doesn't count road distance.",
+        "explanation": "BFS finds the route with the fewest edges, so with stops as vertices and each ride from one stop to the next as an edge, it finds the fewest rides. It doesn't count road distance.",
         "correct": "c",
         "feedback": {
           "a": "Not quite. BFS counts edges, not kilometres. Look for a problem about the fewest edges.",
@@ -1272,11 +1381,11 @@
         },
         {
           "level": 3,
-          "body": "Bus changes are edges between stops."
+          "body": "Each ride from one stop to the next is an edge."
         },
         {
           "level": 4,
-          "body": "Answer: the fewest bus changes."
+          "body": "Answer: the fewest stop-to-stop rides between two stops."
         }
       ]
     },
@@ -1296,7 +1405,7 @@
           },
           {
             "id": "a",
-            "label": "Yes. BFS explores the positions in rings, so it finds the fewest moves."
+            "label": "Yes. BFS takes one-move positions before two-move ones, so finds the fewest."
           },
           {
             "id": "e",
@@ -1318,15 +1427,15 @@
         },
         {
           "level": 2,
-          "body": "BFS is good at two jobs: the fewest edges, and reaching everything from a start."
+          "body": "There is a graph: positions joined by moves. What does the problem want as small as possible?"
         },
         {
           "level": 3,
-          "body": "Does this problem ask for one of those two jobs?"
+          "body": "It wants the fewest moves, and each move is one edge. BFS explores in rings, one edge further out each time. Does that give the fewest edges?"
         },
         {
           "level": 4,
-          "body": "Answer: Yes. BFS explores the positions in rings, so it finds the fewest moves."
+          "body": "Answer: Yes. BFS takes one-move positions before two-move ones, so finds the fewest."
         }
       ]
     },
@@ -1368,11 +1477,11 @@
         },
         {
           "level": 2,
-          "body": "BFS is good at two jobs: the fewest edges, and reaching everything from a start."
+          "body": "There is a graph: towns joined by roads. Does the problem want the fewest edges, or something else?"
         },
         {
           "level": 3,
-          "body": "Does this problem ask for one of those two jobs?"
+          "body": "It wants the longest trip. BFS finds the shortest route to each town first. Does a tool for the shortest route give the longest one?"
         },
         {
           "level": 4,
@@ -1418,11 +1527,11 @@
         },
         {
           "level": 2,
-          "body": "BFS is good at two jobs: the fewest edges, and reaching everything from a start."
+          "body": "There is a graph: people joined by contacts. Which people does the clinic want: everyone, or those within a few edges of the patient?"
         },
         {
           "level": 3,
-          "body": "Does this problem ask for one of those two jobs?"
+          "body": "It wants the patient's contacts, then their contacts: the first ring, then the second. In what order does BFS reach vertices?"
         },
         {
           "level": 4,
@@ -1468,11 +1577,11 @@
         },
         {
           "level": 2,
-          "body": "BFS is good at two jobs: the fewest edges, and reaching everything from a start."
+          "body": "Is there a graph here? What would join one student number to another?"
         },
         {
           "level": 3,
-          "body": "Does this problem ask for one of those two jobs?"
+          "body": "Nothing joins one number to another: it's a list to be put in order. Is that a job for following edges?"
         },
         {
           "level": 4,
@@ -1603,7 +1712,7 @@
     {
       "id": 1601,
       "kind": "multiple_choice",
-      "title": "Review practice: writing BFS in python",
+      "title": "Review practice: writing BFS in Python",
       "module_id": null,
       "purpose": "review",
       "objective_id": 6,
@@ -1654,12 +1763,12 @@
     {
       "id": 1602,
       "kind": "fill_in",
-      "title": "Objective 6 · fresh item: fill in the missing parts of BFS",
+      "title": "Objective 6 · fresh item 2 of 2: fill in the missing parts of BFS",
       "module_id": null,
       "purpose": "mastery",
       "objective_id": 6,
       "config": {
-        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    # Return the vertices in the order BFS visits them from start,\n    # taking neighbours in alphabetical order.\n    visited = {start}\n    queue = deque([__1__])\n    order = []\n    while queue:\n        v = queue.popleft()\n        __2__.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n __3__ visited:\n                visited.add(n)\n                queue.__4__(n)\n    return order",
+        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    # Return the vertices in the order BFS visits them from start,\n    # taking neighbours in alphabetical order.\n    discovered = {start}\n    lineup = __1__\n    order = []\n    while lineup:\n        here = lineup.popleft()\n        order.append(here)\n        for nbr in sorted(graph.adjacency[__2__]):\n            if nbr not in discovered:\n                discovered.add(__3__)\n                lineup.__4__\n    return order",
         "blanks": [
           1,
           2,
@@ -1667,54 +1776,65 @@
           4
         ],
         "options": [
+          "deque([start])",
+          "deque()",
+          "[start]",
+          "{start}",
+          "here",
           "start",
-          "[]",
-          "order",
-          "visited",
-          "not in",
-          "in",
-          "append",
-          "appendleft"
+          "lineup[0]",
+          "nbr",
+          "lineup",
+          "append(nbr)",
+          "appendleft(nbr)",
+          "append(here)",
+          "add(nbr)"
         ]
       },
       "solution": {
         "answers": {
-          "1": "start",
-          "2": "order",
-          "3": "not in",
-          "4": "append"
+          "1": "deque([start])",
+          "2": "here",
+          "3": "nbr",
+          "4": "append(nbr)"
         },
         "feedback": {
           "1": {
-            "[]": "Not quite. deque([[]]) puts an empty list in the queue, not the start vertex, so BFS never starts from start. The queue starts with the start vertex."
+            "deque()": "Not quite. The queue starts empty, so the while loop never runs and bfs returns an empty list. The start vertex must be waiting in the queue before the loop: deque([start]).",
+            "[start]": "Not quite. A list has no popleft, so the first time round the loop stops with an error. Build a deque that holds the start vertex: deque([start]).",
+            "{start}": "Not quite. That is a set, like discovered, and a set has no popleft and no order. The queue is a deque that holds the start vertex: deque([start])."
           },
           "2": {
-            "visited": "Not quite. visited already holds every vertex found, and a set has no append. Each vertex that leaves the queue joins the order list."
+            "start": "Not quite. That loops over the start's neighbours every time, not the neighbours of the vertex that just left the queue, so BFS never gets past the first ring. Use here.",
+            "lineup[0]": "Not quite. lineup[0] is the vertex waiting at the front now, not the one that just left, and on the last vertex lineup is empty, so it stops with an error. Use here, the vertex just taken out."
           },
           "3": {
-            "in": "Not quite. With in, only vertices already found would be queued, so BFS never finds anything new. Queue a neighbour only if it is not in visited."
+            "start": "Not quite. start has been in discovered from the beginning. The new neighbour isn't marked, so a second vertex can add it again and it is visited twice. Mark nbr.",
+            "lineup": "Not quite. lineup is the queue itself, and a deque can't go in a set, so this stops with an error. The new neighbour isn't marked either. Mark nbr, the vertex that is joining the queue."
           },
           "4": {
-            "appendleft": "Not quite. appendleft puts a new vertex at the front, so it is taken next and BFS goes deep instead of wide. BFS takes vertices from the front of the queue and adds new ones to the back. Check you use popleft() and append()."
+            "appendleft(nbr)": "Not quite. appendleft puts nbr at the front, so it leaves before vertices that have waited longer, and BFS goes deep instead of wide. New vertices join at the back: append(nbr).",
+            "append(here)": "Not quite. That puts here back in the queue instead of its new neighbour, so the neighbour is marked but never visited, and here comes round again. Add nbr to the back: append(nbr).",
+            "add(nbr)": "Not quite. A deque has no add, so this stops with an error. A deque takes a new vertex at the back with append(nbr)."
           }
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "The queue starts with the start vertex, and each vertex that leaves it joins the order."
+          "body": "You need a queue holding the start before the loop, and, inside it, the neighbours of the vertex that has just left the queue."
         },
         {
           "level": 2,
-          "body": "A neighbour joins the queue only if it hasn't been found yet."
+          "body": "A deque is built from a list of what it starts with. New vertices join it at the back, and the one that has waited longest leaves from the front."
         },
         {
           "level": 3,
-          "body": "New vertices wait their turn at the back of the queue."
+          "body": "Loop over the neighbours of the vertex just taken out, and mark the new neighbour, not that vertex, as found before it joins the back."
         },
         {
           "level": 4,
-          "body": "Answer: blank 1 is start, blank 2 is order, blank 3 is not in, and blank 4 is append."
+          "body": "Answer: blank 1 is deque([start]), blank 2 is here, blank 3 is nbr, and blank 4 is append(nbr)."
         }
       ]
     },
@@ -1757,7 +1877,7 @@
         },
         {
           "level": 2,
-          "body": "That needs a cycle."
+          "body": "That needs two routes to the same vertex. In an undirected graph, that means a cycle."
         },
         {
           "level": 3,
@@ -2512,6 +2632,1120 @@
         {
           "level": 4,
           "body": "Answer: Tests 1, 2 and 3. The faulty version passes the other three."
+        }
+      ]
+    },
+    {
+      "id": 1550,
+      "kind": "trace",
+      "title": "Review practice: trace BFS from T, one row each time a vertex leaves the queue",
+      "module_id": null,
+      "purpose": "review",
+      "objective_id": 5,
+      "config": {
+        "directed": false,
+        "vertices": [
+          "R",
+          "S",
+          "T",
+          "V",
+          "W",
+          "Y"
+        ],
+        "edges": [
+          {
+            "source": "T",
+            "target": "W"
+          },
+          {
+            "source": "T",
+            "target": "R"
+          },
+          {
+            "source": "R",
+            "target": "S"
+          },
+          {
+            "source": "W",
+            "target": "S"
+          },
+          {
+            "source": "W",
+            "target": "Y"
+          },
+          {
+            "source": "S",
+            "target": "V"
+          }
+        ],
+        "start_vertex": "T"
+      },
+      "solution": {},
+      "hints": [
+        {
+          "level": 1,
+          "body": "Each row starts by taking the vertex at the front of the previous queue."
+        },
+        {
+          "level": 2,
+          "body": "Add the current vertex's neighbours that haven't been found yet to the back of the queue, in alphabetical order. A vertex is found when it joins the queue and visited when it leaves."
+        },
+        {
+          "level": 3,
+          "body": "The first row: T leaves; the queue becomes R, W."
+        },
+        {
+          "level": 4,
+          "body": "Answer: order T, R, W, S, Y, V. Queues after each row: [R, W]; [W, S]; [S, Y]; [Y, V]; [V]; []."
+        }
+      ]
+    },
+    {
+      "id": 1650,
+      "kind": "parsons",
+      "title": "Review practice: put BFS in order",
+      "module_id": null,
+      "purpose": "review",
+      "objective_id": 6,
+      "config": {
+        "lines": [
+          {
+            "id": 9,
+            "text": "        for nb in sorted(graph.adjacency[cur]):"
+          },
+          {
+            "id": 21,
+            "text": "    reached = set()"
+          },
+          {
+            "id": 4,
+            "text": "    todo = deque([start])"
+          },
+          {
+            "id": 13,
+            "text": "    return order"
+          },
+          {
+            "id": 1,
+            "text": "from collections import deque"
+          },
+          {
+            "id": 22,
+            "text": "                order.append(nb)"
+          },
+          {
+            "id": 7,
+            "text": "        cur = todo.popleft()"
+          },
+          {
+            "id": 11,
+            "text": "                reached.add(nb)"
+          },
+          {
+            "id": 5,
+            "text": "    order = []"
+          },
+          {
+            "id": 20,
+            "text": "        cur = todo.pop()"
+          },
+          {
+            "id": 2,
+            "text": "def bfs(graph, start):"
+          },
+          {
+            "id": 10,
+            "text": "            if nb not in reached:"
+          },
+          {
+            "id": 6,
+            "text": "    while len(todo) > 0:"
+          },
+          {
+            "id": 23,
+            "text": "    return reached"
+          },
+          {
+            "id": 12,
+            "text": "                todo.append(nb)"
+          },
+          {
+            "id": 3,
+            "text": "    reached = {start}"
+          },
+          {
+            "id": 8,
+            "text": "        order.append(cur)"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "The start is found and waiting before the loop. While the queue isn't empty, the vertex at the front leaves and joins the order, and each neighbour not reached yet is added to reached, then to the back of the queue.",
+        "order": [
+          1,
+          2,
+          [
+            3,
+            4,
+            5
+          ],
+          6,
+          7,
+          8,
+          9,
+          10,
+          [
+            11,
+            12
+          ],
+          13
+        ]
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Before the loop you need three things: the set of vertices reached (found) so far, the queue of vertices to do, and the order list."
+        },
+        {
+          "level": 2,
+          "body": "While the queue isn't empty, take the vertex at the front and add it to the order."
+        },
+        {
+          "level": 3,
+          "body": "For each neighbour nb of cur, in sorted order, that isn't in reached yet: add it to reached, then to the back of todo. Four lines don't belong: pop(), set(), order.append(nb) and return reached."
+        },
+        {
+          "level": 4,
+          "body": "Answer: from collections import deque; def bfs(graph, start):; reached = {start}; todo = deque([start]); order = []; while len(todo) > 0:; cur = todo.popleft(); order.append(cur); for nb in sorted(graph.adjacency[cur]):; if nb not in reached:; reached.add(nb); todo.append(nb); return order."
+        }
+      ]
+    },
+    {
+      "id": 1651,
+      "kind": "parsons",
+      "title": "Objective 6 · fresh item 1 of 2: put BFS in order",
+      "module_id": null,
+      "purpose": "mastery",
+      "objective_id": 6,
+      "config": {
+        "lines": [
+          {
+            "id": 4,
+            "text": "    pending = deque([start])"
+          },
+          {
+            "id": 12,
+            "text": "                pending.append(other)"
+          },
+          {
+            "id": 22,
+            "text": "        for other in sorted(graph.adjacency[start]):"
+          },
+          {
+            "id": 1,
+            "text": "from collections import deque"
+          },
+          {
+            "id": 8,
+            "text": "        order.append(node)"
+          },
+          {
+            "id": 3,
+            "text": "    known = {start}"
+          },
+          {
+            "id": 20,
+            "text": "            if other in known:"
+          },
+          {
+            "id": 13,
+            "text": "    return order"
+          },
+          {
+            "id": 6,
+            "text": "    while pending:"
+          },
+          {
+            "id": 10,
+            "text": "            if other not in known:"
+          },
+          {
+            "id": 23,
+            "text": "    pending = deque()"
+          },
+          {
+            "id": 2,
+            "text": "def bfs(graph, start):"
+          },
+          {
+            "id": 11,
+            "text": "                known.add(other)"
+          },
+          {
+            "id": 9,
+            "text": "        for other in sorted(graph.adjacency[node]):"
+          },
+          {
+            "id": 21,
+            "text": "                pending.appendleft(other)"
+          },
+          {
+            "id": 5,
+            "text": "    order = []"
+          },
+          {
+            "id": 7,
+            "text": "        node = pending.popleft()"
+          }
+        ]
+      },
+      "solution": {
+        "order": [
+          1,
+          2,
+          [
+            3,
+            4,
+            5
+          ],
+          6,
+          7,
+          8,
+          9,
+          10,
+          [
+            11,
+            12
+          ],
+          13
+        ]
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Before the loop you need three things: the set of vertices known (found) so far, the queue of vertices pending, and the order list."
+        },
+        {
+          "level": 2,
+          "body": "While a vertex is pending, take the one at the front of the queue and add it to the order."
+        },
+        {
+          "level": 3,
+          "body": "Loop over the sorted neighbours of node, the vertex that just left, not of start. A neighbour that isn't in known yet joins known, then the back of pending. Four lines don't belong: deque(), appendleft, the loop over start's neighbours and if other in known."
+        },
+        {
+          "level": 4,
+          "body": "Answer: from collections import deque; def bfs(graph, start):; known = {start}; pending = deque([start]); order = []; while pending:; node = pending.popleft(); order.append(node); for other in sorted(graph.adjacency[node]):; if other not in known:; known.add(other); pending.append(other); return order."
+        }
+      ]
+    },
+    {
+      "id": 1750,
+      "kind": "fix_the_bug",
+      "title": "Review practice: fix the faulty BFS",
+      "module_id": null,
+      "purpose": "review",
+      "objective_id": 7,
+      "config": {
+        "prompt": "This BFS gives the wrong order whenever a vertex finds two or more new neighbours at once. Replace the faulty line with a correction.",
+        "lines": [
+          {
+            "id": 1,
+            "text": "from collections import deque"
+          },
+          {
+            "id": 2,
+            "text": "def bfs(graph, start):"
+          },
+          {
+            "id": 3,
+            "text": "    visited = {start}"
+          },
+          {
+            "id": 4,
+            "text": "    queue = deque([start])"
+          },
+          {
+            "id": 5,
+            "text": "    order = []"
+          },
+          {
+            "id": 6,
+            "text": "    while queue:"
+          },
+          {
+            "id": 7,
+            "text": "        v = queue.popleft()"
+          },
+          {
+            "id": 8,
+            "text": "        order.append(v)"
+          },
+          {
+            "id": 9,
+            "text": "        for n in sorted(graph.adjacency[v]):"
+          },
+          {
+            "id": 10,
+            "text": "            if n not in visited:"
+          },
+          {
+            "id": 11,
+            "text": "                visited.add(n)"
+          },
+          {
+            "id": 12,
+            "text": "                queue.appendleft(n)"
+          },
+          {
+            "id": 13,
+            "text": "    return order"
+          }
+        ],
+        "corrections": [
+          {
+            "id": 21,
+            "text": "                queue.append(v)"
+          },
+          {
+            "id": 22,
+            "text": "                queue.insert(0, n)"
+          },
+          {
+            "id": 20,
+            "text": "                queue.append(n)"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "popleft() takes a vertex from the front of the queue, so new vertices must join at the back with append(n). Then the vertex that has waited longest always leaves next.",
+        "order": [
+          1,
+          2,
+          [
+            3,
+            4,
+            5
+          ],
+          6,
+          7,
+          8,
+          9,
+          10,
+          [
+            11,
+            20
+          ],
+          13
+        ],
+        "feedback": {
+          "12": "Not quite. appendleft puts a new vertex at the front of the queue, where popleft takes it straight back out, so the newest vertex leaves next and BFS goes deep instead of wide. New vertices wait their turn at the back."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Run it on a star: A joined to B, C and D, starting at A. Which vertex leaves the queue after A?"
+        },
+        {
+          "level": 2,
+          "body": "Look at the line that adds a new vertex to the queue."
+        },
+        {
+          "level": 3,
+          "body": "The vertex leaves from the front with popleft, and appendleft also puts the new vertex at the front."
+        },
+        {
+          "level": 4,
+          "body": "Answer: change queue.appendleft(n) to queue.append(n)."
+        }
+      ]
+    },
+    {
+      "id": 1751,
+      "kind": "choose_tests",
+      "title": "Review practice: choose the tests that catch the bug",
+      "module_id": null,
+      "purpose": "review",
+      "objective_id": 7,
+      "config": {
+        "prompt": "This BFS has a bug: it puts each new vertex at the front of the queue. Choose every test case it fails: each one is a graph, a start vertex and the order a correct BFS visits it in.",
+        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                visited.add(n)\n                queue.appendleft(n)\n    return order",
+        "tests": [
+          {
+            "id": "chain",
+            "directed": false,
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "B",
+                "target": "C"
+              },
+              {
+                "source": "C",
+                "target": "D"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          {
+            "id": "star",
+            "directed": false,
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "A",
+                "target": "C"
+              },
+              {
+                "source": "A",
+                "target": "D"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          {
+            "id": "split",
+            "directed": false,
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "C",
+                "target": "D"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B"
+            ]
+          },
+          {
+            "id": "ring",
+            "directed": true,
+            "vertices": [
+              "A",
+              "B",
+              "C"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "B",
+                "target": "C"
+              },
+              {
+                "source": "C",
+                "target": "A"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "id": "square",
+            "directed": false,
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "B",
+                "target": "C"
+              },
+              {
+                "source": "C",
+                "target": "D"
+              },
+              {
+                "source": "D",
+                "target": "A"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B",
+              "D",
+              "C"
+            ]
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "The bug only shows when one vertex finds two or more new neighbours at once: the last one found then leaves first. That happens at A in Tests 2 and 5, and nowhere in the others.",
+        "exposing": [
+          "star",
+          "square"
+        ],
+        "feedback": {
+          "chain": "Each vertex in a chain finds at most one new neighbour, so front and back are the same place: the faulty version passes it.",
+          "star": "A finds B, C and D at once. The faulty version puts each at the front, so D leaves first and the order is A, D, C, B: it fails this test.",
+          "split": "A finds only B, and C and D are never reached, so the faulty version passes it.",
+          "ring": "Each vertex finds at most one new vertex, so the faulty version passes it.",
+          "square": "A finds B and D at once. The faulty version puts D in front of B, so D leaves first: it fails this test."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "The faulty version takes vertices from the front of the queue, and puts new ones at the front too."
+        },
+        {
+          "level": 2,
+          "body": "That only changes anything when two or more vertices are waiting at the same time."
+        },
+        {
+          "level": 3,
+          "body": "Look for a test where one vertex finds two or more new neighbours when it leaves the queue."
+        },
+        {
+          "level": 4,
+          "body": "Answer: Tests 2 and 5. The faulty version passes the other three."
+        }
+      ]
+    },
+    {
+      "id": 1652,
+      "kind": "fill_in",
+      "title": "Review practice: fill in the missing parts of BFS",
+      "module_id": null,
+      "purpose": "review",
+      "objective_id": 6,
+      "config": {
+        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    # Return the vertices in the order BFS visits them from start,\n    # taking neighbours in alphabetical order.\n    reached = __1__\n    todo = deque([start])\n    order = []\n    while len(todo) > 0:\n        cur = __2__\n        order.append(__3__)\n        for nb in sorted(graph.adjacency[cur]):\n            if nb not in __4__:\n                reached.add(nb)\n                todo.append(nb)\n    return order",
+        "blanks": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "options": [
+          "{start}",
+          "set()",
+          "[start]",
+          "todo.popleft()",
+          "todo.pop()",
+          "cur",
+          "nb",
+          "reached",
+          "todo"
+        ]
+      },
+      "solution": {
+        "explanation": "The start is reached before the loop. The vertex that has waited longest leaves from the front and joins the order, and a neighbour joins the queue only if it hasn't been reached yet.",
+        "answers": {
+          "1": "{start}",
+          "2": "todo.popleft()",
+          "3": "cur",
+          "4": "reached"
+        },
+        "feedback": {
+          "1": {
+            "set()": "Not quite. The start vertex is in the queue but not in reached, so a neighbour can add it to the queue again and it is visited twice. Start with the start vertex already in reached.",
+            "[start]": "Not quite. [start] is a list, and a list has no add, so reached.add(nb) stops with an error. A set holding the start vertex is written {start}."
+          },
+          "2": {
+            "todo.pop()": "Not quite. pop() takes the newest vertex, from the back of the queue, so BFS goes deep instead of wide. Take the vertex that has waited longest, from the front, with popleft()."
+          },
+          "3": {
+            "nb": "Not quite. No neighbour has been looked at yet on this line, so nb doesn't exist and the line stops with an error. The vertex that just left the queue joins the order."
+          },
+          "4": {
+            "todo": "Not quite. todo holds only the vertices still waiting. A vertex that has already left would join the queue again, so BFS never stops. Check against every vertex reached so far."
+          }
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Before the loop, the start vertex is already reached, and it waits in the queue."
+        },
+        {
+          "level": 2,
+          "body": "BFS takes the vertex that has waited longest, from the front of the queue, and that vertex joins the order."
+        },
+        {
+          "level": 3,
+          "body": "A neighbour joins the queue only if it isn't among the vertices reached so far, including the ones still waiting."
+        },
+        {
+          "level": 4,
+          "body": "Answer: blank 1 is {start}, blank 2 is todo.popleft(), blank 3 is cur, and blank 4 is reached."
+        }
+      ]
+    },
+    {
+      "id": 1150,
+      "kind": "matching",
+      "title": "Review practice: match each term to part of a library",
+      "module_id": null,
+      "purpose": "review",
+      "objective_id": 1,
+      "config": {
+        "prompt": "A school library has shelves, corridors between them, a desk and a returns trolley. Match each term to the part of the library that is an example of it. One example matches no term.",
+        "left": [
+          {
+            "id": "t1",
+            "label": "Data structure"
+          },
+          {
+            "id": "t2",
+            "label": "Algorithm"
+          },
+          {
+            "id": "t3",
+            "label": "Graph"
+          },
+          {
+            "id": "t4",
+            "label": "Graph traversal"
+          }
+        ],
+        "right": [
+          {
+            "id": "x3",
+            "label": "Walking from the desk along the corridors until every shelf you can reach has been checked"
+          },
+          {
+            "id": "x1",
+            "label": "The shelves as dots, with a line for each corridor that joins two of them"
+          },
+          {
+            "id": "x5",
+            "label": "The colour of the paint on the front door of the library"
+          },
+          {
+            "id": "x2",
+            "label": "The trolley of returned books, where the oldest book goes back first"
+          },
+          {
+            "id": "x4",
+            "label": "The steps for lending a book: scan the card, scan the book, stamp the date"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "The trolley stores books, so it is a data structure. The lending steps are an algorithm. Shelves joined by corridors are a graph, and walking the corridors to reach every shelf is a graph traversal.",
+        "pairs": {
+          "t1": "x2",
+          "t2": "x4",
+          "t3": "x1",
+          "t4": "x3"
+        },
+        "feedback": {
+          "t1": "Check “data structure”. A data structure stores things in an organised way, like a queue. Find the example that holds things and decides which comes out first.",
+          "t2": "Check “algorithm”. An algorithm is a list of steps. A traversal is one too, but it belongs with graph traversal here. Find the steps that use no corridors at all.",
+          "t3": "Check “graph”. A graph is things joined by connections, drawn as dots and lines. Find the example made of dots and lines.",
+          "t4": "Check “graph traversal”. A traversal moves through a graph along its edges. Find the example that follows the corridors."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Ask of each example: does it store things, list steps, show things and connections, or move along connections?"
+        },
+        {
+          "level": 2,
+          "body": "The paint colour is none of the four. Each other example matches one term."
+        },
+        {
+          "level": 3,
+          "body": "The trolley stores books, so it is the data structure. Walking along the corridors is the traversal."
+        },
+        {
+          "level": 4,
+          "body": "Answer: data structure → the trolley of returned books; algorithm → the steps for lending a book; graph → the shelves as dots and lines; graph traversal → walking the corridors to every shelf."
+        }
+      ]
+    },
+    {
+      "id": 1250,
+      "kind": "matching",
+      "title": "Review practice: label the train graph",
+      "module_id": null,
+      "purpose": "review",
+      "objective_id": 2,
+      "config": {
+        "prompt": "Train stations, joined by tracks. The stations are the airport (P), the city (Q), the harbour (R) and the stadium (S). Tracks join P–Q, Q–R and Q–S, and trains run both ways. Each marker below describes one part of this graph. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
+        "left": [
+          {
+            "id": "1",
+            "label": "Marker 1: the track between the harbour and the city"
+          },
+          {
+            "id": "2",
+            "label": "Marker 2: the stadium"
+          },
+          {
+            "id": "3",
+            "label": "Marker 3: what joins the airport and the city"
+          }
+        ],
+        "right": [
+          {
+            "id": "vP",
+            "label": "Vertex P"
+          },
+          {
+            "id": "vQ",
+            "label": "Vertex Q"
+          },
+          {
+            "id": "vR",
+            "label": "Vertex R"
+          },
+          {
+            "id": "vS",
+            "label": "Vertex S"
+          },
+          {
+            "id": "ePQ",
+            "label": "Edge P–Q"
+          },
+          {
+            "id": "eQR",
+            "label": "Edge Q–R"
+          },
+          {
+            "id": "eQS",
+            "label": "Edge Q–S"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "Stations are vertices and tracks are edges, each named by the stations at its two ends. The harbour is R and the city is Q, so their track is Q–R; the stadium is S; the airport is P, so its track to the city is P–Q.",
+        "pairs": {
+          "1": "eQR",
+          "2": "vS",
+          "3": "ePQ"
+        },
+        "feedback": {
+          "1": "Check marker 1. It describes a track between two stations, so it is an edge, named by the letters of its two ends. Look up both names in the prompt.",
+          "2": "Check marker 2. It describes one station, so it is a vertex. Look up its letter in the prompt.",
+          "3": "Check marker 3. Something that joins two stations is a track, so it is an edge, named by the letters of its two ends. Look up both names in the prompt."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Stations are vertices. Tracks are edges."
+        },
+        {
+          "level": 2,
+          "body": "Name an edge by the two vertices at its ends."
+        },
+        {
+          "level": 3,
+          "body": "Look up each name's letter in the prompt: the harbour is R and the city is Q. Then use the track list."
+        },
+        {
+          "level": 4,
+          "body": "Answer: 1 = Edge Q–R, 2 = Vertex S, 3 = Edge P–Q."
+        }
+      ]
+    },
+    {
+      "id": 1801,
+      "kind": "multiple_choice",
+      "title": "Review practice: the fewest edges",
+      "module_id": null,
+      "purpose": "review",
+      "objective_id": 8,
+      "config": {
+        "prompt": "An undirected graph has the edges A–B, B–C, C–D, A–E and D–E. What is the fewest number of edges from A to D?",
+        "options": [
+          {
+            "id": "b",
+            "label": "3"
+          },
+          {
+            "id": "a",
+            "label": "2"
+          },
+          {
+            "id": "c",
+            "label": "4"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "BFS from A finds B and E (1 edge), then C and D (2 edges): E found D. The route A, E, D has 2 edges.",
+        "correct": "a",
+        "feedback": {
+          "b": "Not quite. A, B, C, D has 3 edges, but there is a shorter way round. Ask: which vertex is 1 edge from A and joined to D?",
+          "c": "Not quite. 4 is the number of vertices on the long way round. BFS from A finds D sooner: see which ring D is in."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Run BFS from A: which vertices are 1 edge away?"
+        },
+        {
+          "level": 2,
+          "body": "B and E are 1 edge away. Is either joined to D?"
+        },
+        {
+          "level": 3,
+          "body": "E is joined to D, so D is in the 2-edge ring."
+        },
+        {
+          "level": 4,
+          "body": "Answer: 2 edges, A, E, D."
+        }
+      ]
+    },
+    {
+      "id": 1802,
+      "kind": "multiple_choice",
+      "title": "Objective 8 · fresh item 1 of 4: the route BFS records",
+      "module_id": null,
+      "purpose": "mastery",
+      "objective_id": 8,
+      "config": {
+        "prompt": "An undirected graph has the edges W–X, W–Y, X–Z, Y–Z, Y–V, Z–U and V–U. BFS runs from W in alphabetical order and records who found each vertex. Following those records back from U, which route does it give?",
+        "options": [
+          {
+            "id": "a",
+            "label": "W, Y, V, U"
+          },
+          {
+            "id": "b",
+            "label": "W, X, Z, U"
+          },
+          {
+            "id": "c",
+            "label": "W, Y, Z, U"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "b",
+        "feedback": {
+          "a": "Not quite. W, Y, V, U also has 3 edges, but Z leaves the queue before V and finds U first. Ask: who took U into the queue?",
+          "c": "Not quite. Y doesn't find Z: X leaves the queue first and finds Z. Ask: who found Z?"
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Write the order BFS visits the vertices, and who found each one."
+        },
+        {
+          "level": 2,
+          "body": "X found Z. Which leaves the queue first, Z or V?"
+        },
+        {
+          "level": 3,
+          "body": "Z finds U first. Walk back from U through who found each vertex."
+        },
+        {
+          "level": 4,
+          "body": "Answer: W, X, Z, U."
+        }
+      ]
+    },
+    {
+      "id": 1803,
+      "kind": "multiple_choice",
+      "title": "Objective 8 · fresh item 2 of 4: why it is the shortest",
+      "module_id": null,
+      "purpose": "mastery",
+      "objective_id": 8,
+      "config": {
+        "prompt": "BFS from M first reaches N while taking a vertex 3 edges from M out of the queue. Why can't any route from M to N use only 2 edges?",
+        "options": [
+          {
+            "id": "a",
+            "label": "Because BFS lists every route of 2 edges from M before it moves on, and none of those routes ended at N."
+          },
+          {
+            "id": "b",
+            "label": "Because N comes after all of the vertices 2 edges from M in alphabetical order, so BFS reaches it later."
+          },
+          {
+            "id": "c",
+            "label": "A vertex 1 edge from M would then have found N earlier."
+          }
+        ]
+      },
+      "solution": {
+        "correct": "c",
+        "feedback": {
+          "a": "Not quite. BFS never lists routes. The guarantee comes from the order vertices leave the queue. Ask: which vertices does BFS finish before going further out?",
+          "b": "Not quite. Alphabetical order only breaks ties between neighbours of one vertex. Ask: which vertices does BFS finish before going further out?"
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "If N were 2 edges from M, which kind of vertex would be joined to N?"
+        },
+        {
+          "level": 2,
+          "body": "When does BFS take those vertices out of the queue?"
+        },
+        {
+          "level": 3,
+          "body": "Each of them would have put N in the queue during the 1-edge ring."
+        },
+        {
+          "level": 4,
+          "body": "Answer: a vertex 1 edge from M would then have found N earlier."
+        }
+      ]
+    },
+    {
+      "id": 1804,
+      "kind": "multiple_choice",
+      "title": "Objective 8 · fresh item 3 of 4: the fewest edges",
+      "module_id": null,
+      "purpose": "mastery",
+      "objective_id": 8,
+      "config": {
+        "prompt": "An undirected graph has the edges F–G, F–H, G–I, H–I, I–J, H–K and K–J. How many edges are on the shortest route from F to J?",
+        "options": [
+          {
+            "id": "a",
+            "label": "2 edges"
+          },
+          {
+            "id": "b",
+            "label": "3 edges"
+          },
+          {
+            "id": "c",
+            "label": "4 edges"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "b",
+        "feedback": {
+          "a": "Not quite. J isn't joined to G or H, so it can't be 2 edges from F. Ask: which ring of BFS is J in?",
+          "c": "Not quite. 4 is the number of vertices on a route such as F, G, I, J. Count the edges between them."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Run BFS from F: which vertices are 1 edge away, and which 2?"
+        },
+        {
+          "level": 2,
+          "body": "G and H are 1 edge away; I and K are 2. Which ring is J in?"
+        },
+        {
+          "level": 3,
+          "body": "I found J. Walk back: J, I, G, F."
+        },
+        {
+          "level": 4,
+          "body": "Answer: 3 edges."
+        }
+      ]
+    },
+    {
+      "id": 1805,
+      "kind": "multiple_choice",
+      "title": "Objective 8 · fresh item 4 of 4: when the guarantee holds",
+      "module_id": null,
+      "purpose": "mastery",
+      "objective_id": 8,
+      "config": {
+        "prompt": "A map app stores each road's length in kilometres. Does the route BFS records always have the fewest kilometres?",
+        "options": [
+          {
+            "id": "a",
+            "label": "Yes, because BFS always finds the shortest route in any graph it runs on."
+          },
+          {
+            "id": "b",
+            "label": "Yes, as long as every road is stored as an undirected edge."
+          },
+          {
+            "id": "c",
+            "label": "No. BFS counts edges, not kilometres."
+          }
+        ]
+      },
+      "solution": {
+        "correct": "c",
+        "feedback": {
+          "a": "Not quite. BFS's guarantee is about the number of edges. One long road can be more kilometres than three short ones. Ask: what does BFS count?",
+          "b": "Not quite. Direction isn't the issue: BFS still counts edges, whatever their length. Ask: what does BFS count?"
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "What does BFS count as it moves out ring by ring?"
+        },
+        {
+          "level": 2,
+          "body": "Could one long road be more kilometres than three short roads?"
+        },
+        {
+          "level": 3,
+          "body": "BFS's guarantee is about edges, so lengths break it."
+        },
+        {
+          "level": 4,
+          "body": "Answer: No. BFS counts edges, not kilometres."
         }
       ]
     }

@@ -4,7 +4,7 @@
       "id": 1,
       "slug": "what-is-a-graph",
       "title": "What is a graph?",
-      "estimated_minutes": 12,
+      "estimated_minutes": 25,
       "goals": [
         "Say what a data structure, an algorithm, a graph and a graph traversal are, with an example of each.",
         "Point out the vertices and edges in a graph, and tell a directed graph from an undirected one.",
@@ -15,7 +15,7 @@
           "id": 101,
           "kind": "text",
           "title": "The campus map",
-          "body": "This is the campus you'll use in this module, and again in module 3.\n\n```\n   A ─── C ─── B ─── G\n   │     │\n   E ─── F\n   │\n   D\n```\n\nA Admin block · B Bookshop · C Computer Science building · D Dining hall · E Engineering building · F Fountain · G Green (sports field)\n\nEach line is a walkway, and you can walk every walkway both ways. The walkways join A–C, A–E, B–C, B–G, C–F, D–E and E–F."
+          "body": "This is the campus you'll use in this module, and again in module 3.\n\nA Admin block · B Bookshop · C Computer Science building · D Dining hall · E Engineering building · F Fountain · G Green (sports field)\n\nEach line is a walkway, and you can walk every walkway both ways. The walkways join A–C, A–E, B–C, B–G, C–F, D–E and E–F."
         },
         {
           "id": 102,
@@ -27,7 +27,7 @@
           "id": 103,
           "kind": "video",
           "title": "From a map to a graph",
-          "body": "Staff attach the narrated video to this segment in the video editor, with its checkpoint questions: see `docs/id/module-1/narration-script.md`."
+          "body": "You just found that the Green (G) is three walkways from the Admin block (A). To work that out, you ignored almost everything about the campus: the trees, the parking, how big each building is. You only looked at two things: the buildings, and which ones are joined by a walkway.\n\nThat simpler picture has a name: a **graph**. Each building is a **vertex**. Each walkway is an **edge**. An edge joins two vertices.\n\nTwo vertices joined by an edge are **neighbours**. The Engineering building, E, has three neighbours: A, D and F. The Dining hall, D, has just one: E.\n\nLet's count. Seven buildings, so seven vertices. Seven walkways, so seven edges. Each walkway counts once, even though it touches two buildings.\n\nA graph is a **data structure**. That means it's a way of organising data so a program can use it, just like the queue you met in COS110.\n\nAn **algorithm** is a list of steps that solves a problem. A data structure holds the information; an algorithm works with it.\n\nOne common job is to visit every vertex by following edges, like a tour guide walking to every building on campus. This is called a **graph traversal**. In module 3 you'll learn BFS, an algorithm for doing it.\n\nSo: a graph is a data structure made of vertices and edges. A traversal is an algorithm that visits them. Next, you'll practise reading graphs and build the campus graph yourself."
         },
         {
           "id": 104,
@@ -36,11 +36,30 @@
           "activity_id": 102
         },
         {
+          "id": 190,
+          "kind": "text",
+          "title": "Worked example: telling the four terms apart",
+          "body": "Let's sort four examples. Ask two questions about each one.\n\n**Question 1. Does it store something, or does it do something?** Something that stores and organises data is a **data structure**. A list of steps that does something is an **algorithm**.\n\n**Question 2. Is it about vertices joined by edges?** A data structure made of vertices and edges is a **graph**. An algorithm that visits the vertices by following the edges is a **graph traversal**. When the special name fits, use it.\n\n| Example | Stores or does? | Vertices and edges? | Term |\n|---|---|---|---|\n| A shopping list on your phone | Stores | No | Data structure |\n| The steps for making a cup of tea | Does | No | Algorithm |\n| Islands joined by ferry routes | Stores | Yes: the islands and the ferry routes | Graph |\n| An inspector visiting every island by taking the ferries | Does | Yes: it follows the ferry routes | Graph traversal |\n\n**Explain it to yourself before you go on:** the ferry map and the inspector's trip use the same islands and ferry routes. Why is one a graph and the other a graph traversal?",
+          "support_for": 1
+        },
+        {
+          "id": 191,
+          "kind": "activity",
+          "title": "Try another: name the term",
+          "activity_id": 190,
+          "support_for": 1
+        },
+        {
           "id": 105,
           "kind": "worked_example",
           "title": "Worked example: reading a graph",
-          "body": "Here is how to read any graph. We'll use the campus graph.\n\n**Step 1. List the vertices.** Every circle is a vertex. The campus has 7: A, B, C, D, E, F, G.\n\n**Step 2. List the edges.** Every line is one edge, named by the letters of the two vertices it joins. Count each line once, even though it touches two vertices. For example, the walkway between the Admin block (A) and Computer Science (C) is the edge A–C. The campus has 7 edges.\n\n**Step 3. Find neighbours.** Two vertices are neighbours if an edge joins them. E's neighbours are A, D and F. D has only one neighbour: E.\n\n**Step 4. Check the direction.** These edges are plain lines, so you can walk them both ways. The graph is **undirected**. If the edges had arrows, it would be **directed**.\n\n**Result:** 7 vertices, 7 edges, undirected. Next, you name every walkway's edge yourself.",
-          "skip_check_activity_id": 103
+          "body": "Here is how to read any graph. We'll use the campus graph.\n\n**Step 1. List the vertices.** Every circle is a vertex. The campus has 7: A, B, C, D, E, F, G.\n\n**Step 2. List the edges.** Every line is one edge, named by the letters of the two vertices it joins. Count each line once, even though it touches two vertices. For example, the walkway between the Admin block (A) and Computer Science (C) is the edge A–C. The campus has 7 edges.\n\n**Step 3. Find neighbours.** Two vertices are neighbours if an edge joins them. E's neighbours are A, D and F. D has only one neighbour: E.\n\n**Step 4. Check the direction.** These edges are plain lines, so you can walk them both ways. The graph is **undirected**. If the edges had arrows, it would be **directed**.\n\n**Result:** 7 vertices, 7 edges, undirected. Next, you name every walkway's edge yourself."
+        },
+        {
+          "id": 170,
+          "kind": "activity",
+          "title": "Why is A–C one edge?",
+          "activity_id": 160
         },
         {
           "id": 106,
@@ -58,7 +77,7 @@
           "id": 108,
           "kind": "video",
           "title": "One-way or two-way?",
-          "body": "Staff attach the narrated video to this segment in the video editor, with its checkpoint questions: see `docs/id/module-1/narration-script.md`."
+          "body": "Every walkway on campus can be walked both ways. When the edges of a graph work in both directions, we draw them as plain lines and call the graph **undirected**.\n\nThe campus shuttle is different. It drives one loop, in one direction only: from the Admin block (A) to the Dining hall (D), then to the Green (G), then back to the Admin block.\n\n```\nA → D → G → A\n```\n\nTo show that, each edge gets an arrow. An edge with an arrow can only be followed the way it points. A graph with arrows is called **directed**. The shuttle graph has 3 vertices, A, D and G, and 3 edges: A → D, D → G and G → A.\n\nSo from the Dining hall, the shuttle can only take you to the Green.\n\nCan you ride the shuttle directly from the Dining hall to the Admin block? No. The edge between them points from A to D. To get back to the Admin block, you ride D → G → A.\n\nOne last trap. If two people follow each other online, there are two arrows: one each way. The graph is still directed, because each follow is its own one-way edge.\n\nPlain lines: undirected. Arrows: directed. Next, you'll classify some graphs yourself."
         },
         {
           "id": 109,
@@ -67,10 +86,63 @@
           "activity_id": 106
         },
         {
-          "id": 110,
+          "id": 192,
+          "kind": "text",
+          "title": "Worked example: vertices, edges and arrows",
+          "body": "Here is the same reading on a new graph. Sports day uses four places: the field (F), the hall (H), the pool (P) and the tuck shop (T). Paths join F–H, F–P, H–T and P–T, and you can walk every path both ways.\n\n**Step 1. The places are the vertices.** Name each one by its letter: F, H, P and T.\n\n**Step 2. The paths are the edges.** Name each one by the letters at its two ends. The path between the field and the pool is the edge F–P. There are 4 edges: F–H, F–P, H–T and P–T.\n\n**Step 3. Check the direction.** Every path can be walked both ways, so the edges are plain lines and the graph is **undirected**. If the path from the tuck shop to the pool were one-way, that edge would be an arrow, T → P, and the graph would be **directed**. One arrow is enough.\n\n**Explain it to yourself before you go on:** is the pool a vertex or an edge, and why? What about the path between the hall and the tuck shop?",
+          "support_for": 2
+        },
+        {
+          "id": 193,
           "kind": "activity",
-          "title": "Closing task: graphs in real life",
-          "activity_id": 107
+          "title": "Try another: label the farm graph",
+          "activity_id": 191,
+          "support_for": 2
+        },
+        {
+          "id": 194,
+          "kind": "activity",
+          "title": "Try another: arrows or plain lines?",
+          "activity_id": 192,
+          "support_for": 2
+        },
+        {
+          "id": 195,
+          "kind": "text",
+          "title": "Worked example: from a situation to a graph",
+          "body": "Turning a situation into a graph takes three questions. Here they are on two situations.\n\n| Question | Libraries, and the bus routes between them, which run both ways | Learners, and who has saved whose phone number |\n|---|---|---|\n| 1. What are the things? They are the vertices. | Libraries | Learners |\n| 2. What connects them? Those are the edges. | Bus routes | Saved numbers |\n| 3. Does each connection work both ways? | Yes: a bus runs both ways | No: Ayanda can save Bongani's number without Bongani saving hers |\n| The graph | Undirected | Directed |\n\nWatch out for two traps. The things are the vertices, not the connections, so don't swap them. And decide the direction from the situation: ask whether the connection really works both ways.\n\n**Explain it to yourself before you go on:** why does saving a phone number give an arrow, when a bus route gives a plain line?",
+          "support_for": 3
+        },
+        {
+          "id": 196,
+          "kind": "activity",
+          "title": "Try another: which graph models it?",
+          "activity_id": 193,
+          "support_for": 3
+        },
+        {
+          "id": 114,
+          "kind": "activity",
+          "title": "Closing task 1 of 4: the Gautrain",
+          "activity_id": 108
+        },
+        {
+          "id": 115,
+          "kind": "activity",
+          "title": "Closing task 2 of 4: Instagram",
+          "activity_id": 109
+        },
+        {
+          "id": 116,
+          "kind": "activity",
+          "title": "Closing task 3 of 4: the web",
+          "activity_id": 110
+        },
+        {
+          "id": 117,
+          "kind": "activity",
+          "title": "Closing task 4 of 4: handshakes",
+          "activity_id": 111
         }
       ]
     }
@@ -140,7 +212,7 @@
       "purpose": "practice",
       "objective_id": 1,
       "config": {
-        "prompt": "Match each term to what it means and an example.",
+        "prompt": "Match each term to what it means and an example. Two of the descriptions match no term.",
         "left": [
           {
             "id": "t1",
@@ -162,24 +234,32 @@
         "right": [
           {
             "id": "d3",
-            "label": "A set of vertices joined by edges. Example: buildings joined by walkways."
+            "label": "Things joined by connections. Example: buildings joined by walkways."
+          },
+          {
+            "id": "x1",
+            "label": "A picture that plots values against an x-axis and a y-axis. Example: a bar chart of marks."
           },
           {
             "id": "d1",
-            "label": "A way to organise and store data so it can be used. Example: a queue."
+            "label": "A way to keep information organised so a program can use it. Example: a spreadsheet of each learner's marks."
           },
           {
             "id": "d4",
-            "label": "Visiting the vertices of a graph by following its edges. Example: walking to every building along walkways."
+            "label": "Going to every one of a set of connected things by moving along the connections. Example: a tour guide walking to every building."
+          },
+          {
+            "id": "x2",
+            "label": "The answer a program works out. Example: 97, the largest number in a list."
           },
           {
             "id": "d2",
-            "label": "A finite list of steps that solves a problem. Example: the steps for finding the largest number in a list."
+            "label": "A finite list of instructions that solves a problem. Example: finding the largest number in a list."
           }
         ]
       },
       "solution": {
-        "explanation": "A data structure stores data, an algorithm is a list of steps, a graph is vertices joined by edges, and a traversal visits the vertices by following the edges.",
+        "explanation": "Correct. A data structure keeps information organised, an algorithm is a list of instructions, a graph is things joined by connections, and a traversal goes to every connected thing by moving along the connections.",
         "pairs": {
           "t1": "d1",
           "t2": "d2",
@@ -187,40 +267,40 @@
           "t4": "d4"
         },
         "feedback": {
-          "t1": "Check \"data structure\". A data structure stores and organises data. The queue from COS110 is one. Find the description that talks about storing data.",
-          "t2": "Check \"algorithm\". An algorithm is a list of steps. It does something; it doesn't store anything. Find the description that talks about steps.",
-          "t3": "Check \"graph\". A graph is made of vertices and edges. Find the description that mentions vertices and edges.",
-          "t4": "Check \"graph traversal\". A traversal visits vertices by following edges. Find the description about visiting every vertex."
+          "t1": "Not quite. A data structure keeps information organised so a program can use it, like a spreadsheet of marks. Find the description about keeping information.",
+          "t2": "Not quite. An algorithm is a finite list of instructions that solves a problem. It does something: it is neither what is kept nor the answer it gives. Find the description about instructions.",
+          "t3": "Not quite. In maths a graph can be a chart, but in computer science a graph is things joined by connections, such as buildings joined by walkways. Find the description about connections.",
+          "t4": "Not quite. A traversal goes to every one of a set of connected things by moving along the connections. Find the description about going to every one."
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Two of these store or organise things; two of them do something."
+          "body": "Two of the terms hold or organise things; two of them do something. Two descriptions match no term."
         },
         {
           "level": 2,
-          "body": "A queue stores data. Finding the largest number is a set of steps."
+          "body": "A spreadsheet of marks keeps information. Finding the largest number is a list of instructions, and 97 is only the answer it gives."
         },
         {
           "level": 3,
-          "body": "A graph is a kind of data structure. A traversal is a kind of algorithm."
+          "body": "A graph is a kind of data structure, and a traversal is a kind of algorithm. A bar chart is not a graph in computer science, and an answer is not the instructions that found it."
         },
         {
           "level": 4,
-          "body": "Answer: data structure → organise and store (queue); algorithm → list of steps (largest number); graph → vertices and edges (buildings and walkways); graph traversal → visiting every vertex (walking to every building)."
+          "body": "Answer: data structure → keep information organised (the spreadsheet of marks); algorithm → list of instructions (largest number); graph → things joined by connections (buildings and walkways); graph traversal → going to every connected thing (the tour guide)."
         }
       ]
     },
     {
       "id": 103,
       "kind": "multiple_choice",
-      "title": "Check: reading a graph",
+      "title": "Counting edges and neighbours",
       "module_id": 1,
-      "purpose": "practice",
+      "purpose": "test_out",
       "objective_id": 2,
       "config": {
-        "prompt": "Already confident? This graph has vertices P, Q, R, S and edges P–Q, Q–R and Q–S. How many edges does it have, and which vertex has the most neighbours?",
+        "prompt": "This graph has vertices P, Q, R, S and edges P–Q, Q–R and Q–S. How many edges does it have, and which vertex has the most neighbours?",
         "options": [
           {
             "id": "b",
@@ -233,6 +313,10 @@
           {
             "id": "a",
             "label": "3 edges; Q has the most neighbours"
+          },
+          {
+            "id": "d",
+            "label": "4 edges; S has the most neighbours"
           }
         ]
       },
@@ -240,26 +324,174 @@
         "explanation": "There are three edges, and Q is in all of them, so Q has three neighbours: P, R and S. Every other vertex has only one.",
         "correct": "a",
         "feedback": {
-          "b": "Not quite. Each edge counts once. P–Q is one edge, not two, even though it touches P and Q. Read the worked example. It shows how to count edges.",
-          "c": "Not quite. P is joined only to Q. Q is joined to P, R and S. Read the worked example. It shows how to find neighbours."
+          "b": "Not quite. Each edge counts once. P–Q is one edge, not two, even though it touches P and Q.",
+          "c": "Not quite. P is joined only to Q. Q is joined to P, R and S.",
+          "d": "Not quite. There are three edges in the list, and S is joined only to Q."
+        }
+      }
+    },
+    {
+      "id": 150,
+      "kind": "multiple_choice",
+      "title": "The four key terms",
+      "module_id": 1,
+      "purpose": "test_out",
+      "objective_id": 1,
+      "config": {
+        "prompt": "Which of these is an example of a graph traversal?",
+        "options": [
+          {
+            "id": "e",
+            "label": "A recipe book's index: every dish, with its page number."
+          },
+          {
+            "id": "f",
+            "label": "Adding up every number in a list, one after another."
+          },
+          {
+            "id": "h",
+            "label": "Every town in a province, and the roads that join them."
+          },
+          {
+            "id": "g",
+            "label": "Opening a web page, then every page it links to, and so on."
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "Pages joined by links are a graph, and opening a page, then the pages it links to, then theirs, goes to every connected page by moving along the connections. That is a graph traversal.",
+        "correct": "g",
+        "feedback": {
+          "e": "Not quite. An index keeps information organised so you can look it up, so it is a data structure. Nothing moves along connections. Ask: does it keep something, or do something?",
+          "f": "Not quite. Adding up a list is an algorithm, but a list has no connections to follow: it goes through the numbers in order. Ask: does it move along connections between things?",
+          "h": "Not quite. Towns joined by roads are the graph itself. A traversal is something done to it: going to every town along the roads. Ask: does it keep something, or do something?"
+        }
+      }
+    },
+    {
+      "id": 151,
+      "kind": "multiple_choice",
+      "title": "Directed or undirected",
+      "module_id": 1,
+      "purpose": "test_out",
+      "objective_id": 2,
+      "config": {
+        "prompt": "A graph shows who follows whom on a social app. Lindi and Musa follow each other. Lindi also follows Nandi, who doesn't follow her back. Is the graph directed or undirected, and how many edges does it have?",
+        "options": [
+          {
+            "id": "g",
+            "label": "Directed, with 3 edges"
+          },
+          {
+            "id": "e",
+            "label": "Undirected, with 2 edges"
+          },
+          {
+            "id": "f",
+            "label": "Directed, with 2 edges"
+          },
+          {
+            "id": "h",
+            "label": "Undirected, with 3 edges"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "Following goes one way: Lindi follows Nandi without Nandi following her. So each follow is an arrow, and the graph is directed. Lindi and Musa follow each other, which is two arrows, one each way, plus Lindi's arrow to Nandi: 3 edges.",
+        "correct": "g",
+        "feedback": {
+          "e": "Not quite. Lindi follows Nandi, but Nandi doesn't follow Lindi, so a follow goes one way: the graph is directed. Ask: if this edge exists, must the reverse one exist too?",
+          "f": "Not quite. Directed is right, but Lindi and Musa following each other is two follows, so two arrows, one each way. Count every follow.",
+          "h": "Not quite. Lindi follows Nandi without Nandi following back, so a follow is one-way and the graph is directed, even where two people follow each other. Ask: can a follow go one way only?"
+        }
+      }
+    },
+    {
+      "id": 152,
+      "kind": "multiple_choice",
+      "title": "From a situation to a graph",
+      "module_id": 1,
+      "purpose": "test_out",
+      "objective_id": 3,
+      "config": {
+        "prompt": "Four learners sit in a row on a bench: Mpho (M), Pule (P), Sipho (S) and Zola (Z), in that order. So M and P sit side by side, as do P and S, and S and Z. Drawn as a graph of who sits next to whom, which is right?",
+        "options": [
+          {
+            "id": "e",
+            "label": "3 vertices, the pairs who sit together, and 4 edges, the learners"
+          },
+          {
+            "id": "g",
+            "label": "4 vertices, the learners, and 3 undirected edges: M–P, P–S and S–Z"
+          },
+          {
+            "id": "f",
+            "label": "4 vertices, the learners, and 3 directed edges: M → P, P → S and S → Z"
+          },
+          {
+            "id": "h",
+            "label": "4 vertices, the learners, and 4 undirected edges: M–P, P–S, S–Z and Z–M"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "The learners are the things, so they are the vertices, and each pair who sit side by side is an edge. If M sits next to P, P sits next to M, so the edges are undirected: M–P, P–S and S–Z.",
+        "correct": "g",
+        "feedback": {
+          "e": "Not quite. That swaps them. The learners are the things being joined, so they are the vertices, and each pair who sit side by side is an edge. Ask: what does each connection join?",
+          "f": "Not quite. Sitting next to someone works both ways: if M sits next to P, P sits next to M. Ask: could this connection exist one way only?",
+          "h": "Not quite. Z sits at the end of the row, not next to M, so there is no Z–M edge. Count only the pairs who sit side by side."
+        }
+      }
+    },
+    {
+      "id": 160,
+      "kind": "multiple_choice",
+      "title": "Why is A–C one edge?",
+      "module_id": 1,
+      "purpose": "practice",
+      "objective_id": 2,
+      "config": {
+        "prompt": "In the worked example, the walkway between A and C touches two vertices, yet it is one edge. Why is it counted only once?",
+        "options": [
+          {
+            "id": "a",
+            "label": "A owns the edge, because A comes first in the alphabet."
+          },
+          {
+            "id": "c",
+            "label": "An edge is one line, named by the two vertices it joins."
+          },
+          {
+            "id": "b",
+            "label": "C–A is a second edge, but the map draws only one of them."
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "One line is one edge. It touches two vertices because it has two ends, and it is named by both of them, in either order.",
+        "correct": "c",
+        "feedback": {
+          "a": "Not quite. No vertex owns an edge: A–C and C–A name the same line. Name an edge by both its ends, in either order.",
+          "b": "Not quite. On an undirected graph one line works both ways, so C–A is the same edge as A–C. Count each line once."
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Count the edges in the list."
+          "body": "Look at the campus map. How many lines join A and C?"
         },
         {
           "level": 2,
-          "body": "Neighbours of a vertex are the vertices joined to it by an edge."
+          "body": "An edge is a line between two vertices, and a line has two ends."
         },
         {
           "level": 3,
-          "body": "Q appears in all three edges."
+          "body": "A–C and C–A are two names for the same line."
         },
         {
           "level": 4,
-          "body": "Answer: 3 edges, and Q has the most neighbours (P, R and S)."
+          "body": "Answer: an edge is one line, named by the two vertices it joins, so A–C counts once."
         }
       ]
     },
@@ -373,7 +605,7 @@
       "purpose": "practice",
       "objective_id": 3,
       "config": {
-        "prompt": "Now build the campus graph from the campus guide. Each building is a vertex: A Admin block, B Bookshop, C Computer Science, D Dining hall, E Engineering, F Fountain, G Green. Turn each walkway on the guide's list into its edge.",
+        "prompt": "Now build the campus graph from the campus guide. Each place is a vertex: A Admin block, B Bookshop, C Computer Science, D Dining hall, E Engineering, F Fountain, G Green. Turn each walkway on the guide's list into its edge.",
         "left": [
           {
             "id": "DE",
@@ -406,10 +638,6 @@
         ],
         "right": [
           {
-            "id": "AB",
-            "label": "Edge A–B"
-          },
-          {
             "id": "AC",
             "label": "Edge A–C"
           },
@@ -420,6 +648,10 @@
           {
             "id": "BC",
             "label": "Edge B–C"
+          },
+          {
+            "id": "BF",
+            "label": "Edge B–F"
           },
           {
             "id": "BG",
@@ -434,20 +666,16 @@
             "label": "Edge C–F"
           },
           {
+            "id": "CG",
+            "label": "Edge C–G"
+          },
+          {
             "id": "DE",
             "label": "Edge D–E"
           },
           {
-            "id": "DF",
-            "label": "Edge D–F"
-          },
-          {
             "id": "EF",
             "label": "Edge E–F"
-          },
-          {
-            "id": "FG",
-            "label": "Edge F–G"
           }
         ]
       },
@@ -499,7 +727,7 @@
       "purpose": "practice",
       "objective_id": 2,
       "config": {
-        "prompt": "Classify each graph as directed or undirected. An edge written A → B is an arrow that only goes from A to B. An edge written A–B is a plain line that goes both ways.",
+        "prompt": "Classify each graph as directed or undirected. An edge written A → B is an arrow that only goes from A to B. An edge written A–B is a plain line that goes both ways. The last graph has no edge list: decide from what its connection means.",
         "left": [
           {
             "id": "friends",
@@ -516,6 +744,10 @@
           {
             "id": "roads",
             "label": "Roads between towns. Vertices: Johannesburg (J), Pretoria (P), Soweto (S). Edges: J–P, J–S."
+          },
+          {
+            "id": "older",
+            "label": "Who is older than whom among three children: Lebo, Mandla and Nandi."
           }
         ],
         "right": [
@@ -530,24 +762,26 @@
         ]
       },
       "solution": {
-        "explanation": "A graph is directed when its edges are one-way arrows, like following someone or a delivery route. Friendships, and roads you can drive both ways, are undirected.",
+        "explanation": "A graph is directed when its edges are one-way arrows, like following someone, a delivery route or being older than someone. Friendships, and roads you can drive both ways, are undirected.",
         "pairs": {
           "friends": "undirected",
           "follows": "directed",
           "route": "directed",
-          "roads": "undirected"
+          "roads": "undirected",
+          "older": "directed"
         },
         "feedback": {
           "friends": "Check the friendships graph. Friendship goes both ways: if Thandi is Sipho's friend, Sipho is Thandi's friend. The edges have no arrows. Look at how the edges are written. No arrows means undirected.",
           "follows": "Check the follows graph. Ana and Ben follow each other, but that's two separate arrows. Ben follows Cara without Cara following back. Any arrow makes a graph directed. Look closely: the edges are arrows (→).",
           "route": "Check the delivery route. The van drives Warehouse → Shop X → Shop Y → Warehouse, one way only. The edges are arrows. Ask: can you travel each edge in both directions?",
-          "roads": "Check the roads graph. Roads between towns can be driven both ways, so the edges are plain lines. No arrows means undirected."
+          "roads": "Check the roads graph. Roads between towns can be driven both ways, so the edges are plain lines. No arrows means undirected.",
+          "older": "Not quite. Being older goes one way: if Lebo is older than Mandla, Mandla isn't older than Lebo. With no edge list, decide from the meaning. Ask: if this connection exists, must the reverse one exist too?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Look at the edges: are they arrows (→) or plain lines (–)?"
+          "body": "Look at the edges: are they arrows (→) or plain lines (–)? Where there is no edge list, ask what the connection means."
         },
         {
           "level": 2,
@@ -559,73 +793,337 @@
         },
         {
           "level": 4,
-          "body": "Answer: friendships = undirected, follows = directed, delivery route = directed, roads = undirected."
+          "body": "Answer: friendships = undirected, follows = directed, delivery route = directed, roads = undirected, older than = directed."
         }
       ]
     },
     {
-      "id": 107,
+      "id": 190,
       "kind": "matching",
-      "title": "Closing task: graphs in real life",
+      "title": "Try another: name the term",
       "module_id": 1,
       "purpose": "practice",
-      "objective_id": 3,
+      "objective_id": 1,
       "config": {
-        "prompt": "Match each real situation to the graph that models it: what the vertices are, what the edges are, and whether it's directed.",
+        "prompt": "Match each example to the term that describes it best. A term can be used more than once. A graph is a special kind of data structure, and a graph traversal is a special kind of algorithm, so use the special name when it fits.",
         "left": [
           {
-            "id": "s1",
-            "label": "Gautrain stations and the tracks between them. Trains run both ways."
+            "id": "e1",
+            "label": "The steps for working out how much change to give someone"
           },
           {
-            "id": "s2",
-            "label": "Instagram accounts and who follows whom."
+            "id": "e2",
+            "label": "Hiking huts joined by the trails between them"
           },
           {
-            "id": "s3",
-            "label": "Web pages and the links from one page to another."
+            "id": "e3",
+            "label": "A contact list that stores each friend's name with their phone number"
           },
           {
-            "id": "s4",
-            "label": "Classmates and who has shaken hands with whom."
+            "id": "e4",
+            "label": "A ranger checking every hiking hut by walking the trails from hut to hut"
+          },
+          {
+            "id": "e5",
+            "label": "The steps for turning a temperature in degrees Celsius into degrees Fahrenheit"
           }
         ],
         "right": [
           {
-            "id": "r3",
-            "label": "Vertices: pages. Edges: links. Directed."
+            "id": "graph",
+            "label": "Graph"
           },
           {
-            "id": "r5",
-            "label": "Vertices: tracks. Edges: stations. Undirected."
+            "id": "alg",
+            "label": "Algorithm"
           },
           {
-            "id": "r1",
-            "label": "Vertices: stations. Edges: tracks. Undirected."
+            "id": "trav",
+            "label": "Graph traversal"
           },
           {
-            "id": "r4",
-            "label": "Vertices: classmates. Edges: handshakes. Undirected."
-          },
-          {
-            "id": "r2",
-            "label": "Vertices: accounts. Edges: follows. Directed."
+            "id": "ds",
+            "label": "Data structure"
           }
         ]
       },
       "solution": {
-        "explanation": "The things are the vertices and the connections between them are the edges. A connection that works both ways, like a track or a handshake, makes the graph undirected. A one-way one, like a follow or a link, makes it directed.",
         "pairs": {
-          "s1": "r1",
-          "s2": "r2",
-          "s3": "r3",
-          "s4": "r4"
+          "e1": "alg",
+          "e2": "graph",
+          "e3": "ds",
+          "e4": "trav",
+          "e5": "alg"
         },
+        "explanation": "An algorithm is a list of steps that does something, and a data structure stores information. Huts joined by trails are vertices joined by edges, so they are a graph, and the ranger following the trails to every hut is a graph traversal.",
         "feedback": {
-          "s1": "Check the Gautrain. The stations are the things (vertices) and the tracks connect them (edges). Trains run both ways, so it's undirected. Watch out for the option that swaps tracks and stations.",
-          "s2": "Check Instagram. Following someone doesn't mean they follow you back, so the edges are one-way. Look for the option with accounts and directed edges.",
-          "s3": "Check the web pages. A link from page X to page Y doesn't create a link back, so it's directed. Look for the option with pages and links.",
-          "s4": "Check the handshakes. A handshake involves both people equally, so it's undirected. Look for the option with classmates and handshakes."
+          "e1": "Not quite. Working out change is a list of steps that does something, and it has no vertices or edges. Ask the worked example's first question again: does it store data, or does it do something?",
+          "e2": "Not quite. The huts and trails are stored as things joined by connections: the huts are vertices and the trails are edges. Ask the second question: is it about vertices joined by edges? Then use the special name for that kind of data structure.",
+          "e3": "Not quite. A contact list stores names and numbers. It doesn't do anything, and nothing in it is joined by edges. Ask the first question: does it store data, or does it do something?",
+          "e4": "Not quite. The ranger does something: they visit every hut by following the trails, so this is an algorithm that follows edges. Use the special name for an algorithm that visits vertices along edges.",
+          "e5": "Not quite. Turning Celsius into Fahrenheit is a list of steps that does something, with no vertices or edges. Ask the first question: does it store data, or does it do something?"
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "For each example, ask: does it store something, or does it do something?"
+        },
+        {
+          "level": 2,
+          "body": "Then ask: is it about vertices joined by edges? If it is, use the special name: graph or graph traversal."
+        },
+        {
+          "level": 3,
+          "body": "The huts and trails are a graph, and the ranger's walk along the trails is a graph traversal. Now sort the other three by storing or doing."
+        },
+        {
+          "level": 4,
+          "body": "Answer: working out change → algorithm; huts and trails → graph; contact list → data structure; the ranger's walk → graph traversal; Celsius to Fahrenheit → algorithm."
+        }
+      ]
+    },
+    {
+      "id": 191,
+      "kind": "matching",
+      "title": "Try another: label the farm graph",
+      "module_id": 1,
+      "purpose": "practice",
+      "objective_id": 2,
+      "config": {
+        "prompt": "A farm has four places: the barn (B), the dam (D), the gate (G) and the windmill (W). There are four farm roads, B–D, B–G, D–W and G–W, and a tractor can use each road in either direction. Which vertex or edge is each part of the farm below?",
+        "left": [
+          {
+            "id": "1",
+            "label": "The dam"
+          },
+          {
+            "id": "2",
+            "label": "The farm road that links the barn with the gate"
+          },
+          {
+            "id": "3",
+            "label": "The windmill"
+          },
+          {
+            "id": "4",
+            "label": "The farm road that links the dam with the windmill"
+          },
+          {
+            "id": "5",
+            "label": "The road the tractor takes from the gate straight to the windmill"
+          }
+        ],
+        "right": [
+          {
+            "id": "vB",
+            "label": "Vertex B"
+          },
+          {
+            "id": "vD",
+            "label": "Vertex D"
+          },
+          {
+            "id": "vG",
+            "label": "Vertex G"
+          },
+          {
+            "id": "vW",
+            "label": "Vertex W"
+          },
+          {
+            "id": "eBD",
+            "label": "Edge B–D"
+          },
+          {
+            "id": "eBG",
+            "label": "Edge B–G"
+          },
+          {
+            "id": "eDW",
+            "label": "Edge D–W"
+          },
+          {
+            "id": "eGW",
+            "label": "Edge G–W"
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "1": "vD",
+          "2": "eBG",
+          "3": "vW",
+          "4": "eDW",
+          "5": "eGW"
+        },
+        "explanation": "A place is a vertex, named by its letter, and a road is an edge, named by the letters of the two places it joins. The tractor can use each road either way, so the road from the gate to the windmill is edge G–W.",
+        "feedback": {
+          "1": "Not quite. The dam is a place, so it is a vertex, named by its letter. Ask: is this a place, or a road between two places? Then use the dam's letter.",
+          "2": "Not quite. A road is an edge, named by the letters of the two places at its ends. Find the letters of the barn and the gate, then find that edge.",
+          "3": "Not quite. The windmill is a place, so it is a vertex, named by its letter. Ask: is this a place, or a road between two places? Then use the windmill's letter.",
+          "4": "Not quite. A road is an edge, named by the letters of the two places at its ends. Find the letters of the dam and the windmill, then find that edge.",
+          "5": "Not quite. A road is an edge, named by the letters of the two places at its ends. Find the letters of the gate and the windmill, then find that edge."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Places are vertices. Roads are edges."
+        },
+        {
+          "level": 2,
+          "body": "Name a vertex by its letter. Name an edge by the letters at its two ends."
+        },
+        {
+          "level": 3,
+          "body": "Parts 1 and 3 are places, and parts 2, 4 and 5 are roads. The barn is B, the dam D, the gate G and the windmill W."
+        },
+        {
+          "level": 4,
+          "body": "Answer: 1 = Vertex D, 2 = Edge B–G, 3 = Vertex W, 4 = Edge D–W, 5 = Edge G–W."
+        }
+      ]
+    },
+    {
+      "id": 192,
+      "kind": "matching",
+      "title": "Try another: arrows or plain lines?",
+      "module_id": 1,
+      "purpose": "practice",
+      "objective_id": 2,
+      "config": {
+        "prompt": "Sort the four graphs into directed and undirected. Two have their edges written out: an arrow, like K → M, goes one way only, and a plain line, like K–M, goes both ways. The other two have no edge list, so decide from what each connection means.",
+        "left": [
+          {
+            "id": "cousins",
+            "label": "Cousins in a family. Vertices: Sizwe (S), Tumi (T), Vuyo (V). Edges: S–T, T–V."
+          },
+          {
+            "id": "lend",
+            "label": "Who has lent a book to whom. Kabelo lent one to Mpho, and Naledi lent one to Mpho."
+          },
+          {
+            "id": "borders",
+            "label": "Countries that share a border. Botswana, Namibia and Zambia each share a border with the other two."
+          },
+          {
+            "id": "dams",
+            "label": "Water flowing down a river from dam to dam. Vertices: the upper dam (U), the middle dam (M), the lower dam (L). Edges: U → M, M → L."
+          }
+        ],
+        "right": [
+          {
+            "id": "directed",
+            "label": "Directed"
+          },
+          {
+            "id": "undirected",
+            "label": "Undirected"
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "cousins": "undirected",
+          "lend": "directed",
+          "borders": "undirected",
+          "dams": "directed"
+        },
+        "explanation": "A connection that must also hold the other way round is undirected: cousins and shared borders work both ways. Lending a book and water flowing downhill go one way only, so those graphs are directed.",
+        "feedback": {
+          "cousins": "Not quite. Being cousins goes both ways: if Sizwe is Tumi's cousin, Tumi is Sizwe's cousin, so the edges are plain lines with no arrows. Check how each edge is written before you choose.",
+          "lend": "Not quite. Lending goes one way: Kabelo lent a book to Mpho, but Mpho didn't lend one back. Ask: if this connection exists, must the reverse one exist too?",
+          "borders": "Not quite. A shared border belongs to both countries: if Botswana shares a border with Namibia, Namibia shares it with Botswana. Ask: could this connection exist one way only?",
+          "dams": "Not quite. Water only flows downhill, from the upper dam to the middle dam and on to the lower dam, so the edges are arrows. Ask: can you travel each edge both ways?"
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Where the edges are written out, look for arrows (→) or plain lines (–). Where they aren't, ask what each connection means."
+        },
+        {
+          "level": 2,
+          "body": "An arrow means the connection only goes one way, and one arrow is enough to make a graph directed. With no edge list, ask: if X is joined to Y, must Y be joined to X?"
+        },
+        {
+          "level": 3,
+          "body": "Lending a book and water flowing downhill each go one way. Being cousins and sharing a border go both ways."
+        },
+        {
+          "level": 4,
+          "body": "Answer: cousins = undirected, lending = directed, borders = undirected, dams = directed."
+        }
+      ]
+    },
+    {
+      "id": 193,
+      "kind": "matching",
+      "title": "Try another: which graph models it?",
+      "module_id": 1,
+      "purpose": "practice",
+      "objective_id": 3,
+      "config": {
+        "prompt": "Match each situation to the graph that models it: what the vertices are, what the edges are, and whether it is directed. Two descriptions fit none of the situations.",
+        "left": [
+          {
+            "id": "s1",
+            "label": "Taxi ranks, and the roads taxis drive between them. Taxis use every road both ways."
+          },
+          {
+            "id": "s2",
+            "label": "Children in a class, and who has invited whom to a birthday party."
+          },
+          {
+            "id": "s3",
+            "label": "Songs in a playlist, and which song plays straight after which."
+          },
+          {
+            "id": "s4",
+            "label": "The pieces of a jigsaw puzzle, and which ones slot into each other."
+          }
+        ],
+        "right": [
+          {
+            "id": "m4",
+            "label": "The people are vertices, and it is undirected, because two people are involved in each act."
+          },
+          {
+            "id": "m5",
+            "label": "The items are vertices, an edge leads from each item to the next, and it is directed."
+          },
+          {
+            "id": "m1",
+            "label": "The places are vertices, the connections between them are edges, and it is undirected."
+          },
+          {
+            "id": "m2",
+            "label": "The connections are vertices, the places they join are edges, and it is undirected."
+          },
+          {
+            "id": "m3",
+            "label": "The people are vertices, the one-way acts between them are edges, and it is directed."
+          },
+          {
+            "id": "m6",
+            "label": "The objects are vertices, each pair that fits together is an edge, and it is undirected."
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "s1": "m1",
+          "s2": "m3",
+          "s3": "m5",
+          "s4": "m6"
+        },
+        "explanation": "The things are the vertices and the links between them are the edges, so the taxi ranks, children, songs and puzzle pieces are the vertices. Roads that taxis use both ways and pieces that fit work both ways, so those graphs are undirected. An invitation and “plays straight after” work one way only, so those graphs are directed.",
+        "feedback": {
+          "s1": "Not quite. The taxi ranks are the places, so they are the vertices, and the roads joining them are the edges. Taxis use each road both ways, so it is undirected. Watch out for the description that swaps the places and the connections.",
+          "s2": "Not quite. The children are the people, so they are the vertices, and each invitation is an edge. One child can invite another without being invited back, so it is directed, even though two children are involved. Ask: if this edge exists, must the reverse one exist too?",
+          "s3": "Not quite. The songs are the items, and each link from a song to the one after it is an edge. One song playing after another doesn't mean the other plays after it, so it is directed. Look for the description of items each leading to the next.",
+          "s4": "Not quite. The pieces are the objects, and each pair that fits is an edge. If one piece fits another, the other fits it too, so it is undirected. Look for the description of objects that fit together."
         }
       },
       "hints": [
@@ -635,15 +1133,259 @@
         },
         {
           "level": 2,
-          "body": "The things are vertices. The connections are edges."
+          "body": "The things are the vertices. The connections are the edges."
         },
         {
           "level": 3,
-          "body": "Then ask: does the connection work both ways? If not, the graph is directed. Following and linking are one-way."
+          "body": "Then ask whether each connection works both ways. An invitation and a song playing next each go one way only, even though two children, or two songs, are involved."
         },
         {
           "level": 4,
-          "body": "Answer: Gautrain → stations/tracks/undirected; Instagram → accounts/follows/directed; web → pages/links/directed; handshakes → classmates/handshakes/undirected."
+          "body": "Answer: taxis → places and connections, undirected; birthday party → people and one-way acts, directed; playlist → items each leading to the next, directed; puzzle → objects and pairs that fit, undirected."
+        }
+      ]
+    },
+    {
+      "id": 108,
+      "kind": "multiple_choice",
+      "title": "Closing task 1 of 4: the Gautrain",
+      "module_id": 1,
+      "purpose": "practice",
+      "objective_id": 3,
+      "config": {
+        "prompt": "On the Gautrain, one stretch of line runs from Rosebank to Sandton, another from Sandton to Marlboro, and so on along the route. Trains run in both directions between neighbouring stations. Which graph models it?",
+        "options": [
+          {
+            "id": "a",
+            "label": "Vertices: stretches of line. Edges: stations. Undirected, because trains run both ways along each one."
+          },
+          {
+            "id": "b",
+            "label": "Vertices: stations. Edges: trains. Directed, because each train travels from one station to the next."
+          },
+          {
+            "id": "c",
+            "label": "Vertices: stations. Edges: stretches of line. Undirected, because trains run both ways along each one."
+          },
+          {
+            "id": "d",
+            "label": "Vertices: stations. Edges: stretches of line. Directed, because each train travels from one station to the next."
+          },
+          {
+            "id": "e",
+            "label": "Vertices: stretches of line. Edges: stations. Directed, because each train travels from one station to the next."
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "The stations are the vertices, and each stretch of line, which joins two neighbouring stations, is an edge. Trains run along it in both directions, so the connection works both ways: undirected. A train moving from one station to the next doesn't make the edge one-way.",
+        "correct": "c",
+        "feedback": {
+          "a": "Not quite. Trains do run both ways, but that swaps them. A stretch of line connects two stations, so the stretch of line is the edge and the stations are the vertices. Ask which of the two kinds of thing connects two of the other kind: that is the edge.",
+          "b": "Not quite. A train moves along the line, but it isn't what joins two stations, and a train moving one way doesn't make the connection one-way: trains run both ways. Look for what stays in place between two stations.",
+          "d": "Not quite. Each train does travel from one station to the next, but moving along an edge doesn't make the edge one-way. Trains run both ways between neighbouring stations, so each connection works in both directions. Ask whether you can travel the connection the other way, not whether something moves along it.",
+          "e": "Not quite. That swaps them, and a train moving one way doesn't make the line one-way: trains run along it both ways. A stretch of line connects two stations, so it is the edge. Ask which of the two kinds of thing connects two of the other kind, then check whether you can travel it the other way."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Which things in this network stay in one place, and what joins two of them?"
+        },
+        {
+          "level": 2,
+          "body": "The things are the vertices, and what joins two of them is an edge. Something moving along an edge doesn't make it one-way: an edge has a direction only if you can't travel it the other way."
+        },
+        {
+          "level": 3,
+          "body": "The stations are the vertices. Now decide what joins two neighbouring stations, and whether trains can travel it both ways."
+        },
+        {
+          "level": 4,
+          "body": "Answer: Vertices: stations. Edges: stretches of line. Undirected. A stretch of line joins two neighbouring stations, so it is the edge. Trains run along it in both directions, so it works both ways and is a plain line, even though each train moves one way at a time."
+        }
+      ]
+    },
+    {
+      "id": 109,
+      "kind": "multiple_choice",
+      "title": "Closing task 2 of 4: Instagram",
+      "module_id": 1,
+      "purpose": "practice",
+      "objective_id": 3,
+      "config": {
+        "prompt": "Instagram accounts can follow other accounts. Thandi follows Sipho, but Sipho hasn't followed Thandi. Which graph models it?",
+        "options": [
+          {
+            "id": "a",
+            "label": "Vertices: accounts. Edges: follows. Directed."
+          },
+          {
+            "id": "b",
+            "label": "Vertices: accounts. Edges: follows. Undirected."
+          },
+          {
+            "id": "c",
+            "label": "Vertices: follows. Edges: accounts. Undirected."
+          },
+          {
+            "id": "d",
+            "label": "Vertices: accounts. Edges: posts. Directed."
+          },
+          {
+            "id": "e",
+            "label": "Vertices: follows. Edges: accounts. Directed."
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "The accounts are the vertices and each follow is an edge joining two of them. A follow goes from the follower to the account followed, and the other account needn't follow back, so the edges are arrows: directed. Two accounts that follow each other are two arrows, one each way.",
+        "correct": "a",
+        "feedback": {
+          "b": "Not quite. The accounts and follows are right, but a follow can go one way: Thandi follows Sipho, and Sipho doesn't follow her. A connection that can go one way is an arrow. Check whether the connection always works both ways.",
+          "c": "Not quite. That swaps them, and a follow has a direction too. A follow connects two accounts, so it is the edge, and it can go one way only. Ask which of the two kinds of thing connects two of the other kind, then check whether it works both ways.",
+          "d": "Not quite. A post belongs to one account: it doesn't connect two accounts, so it can't be an edge. What connects Thandi's account to Sipho's is her follow. Look for what connects one account to another, then check whether it works both ways.",
+          "e": "Not quite. That swaps them. A follow connects two accounts, so the follow is the edge and the accounts are the vertices. Ask which of the two kinds of thing connects two of the other kind: that is the edge."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "What joins Thandi's account to Sipho's, and does it tell you whether Sipho follows Thandi?"
+        },
+        {
+          "level": 2,
+          "body": "What joins two things is an edge. If the connection can go one way without the other, it is an arrow, and one arrow makes the graph directed."
+        },
+        {
+          "level": 3,
+          "body": "The accounts are the vertices and each follow is an edge. Now decide: does Thandi following Sipho mean that Sipho follows Thandi?"
+        },
+        {
+          "level": 4,
+          "body": "Answer: Vertices: accounts. Edges: follows. Directed. A follow joins two accounts, so it is the edge. It goes from the follower to the account followed, and Sipho hasn't followed Thandi back, so each follow is an arrow."
+        }
+      ]
+    },
+    {
+      "id": 110,
+      "kind": "multiple_choice",
+      "title": "Closing task 3 of 4: the web",
+      "module_id": 1,
+      "purpose": "practice",
+      "objective_id": 3,
+      "config": {
+        "prompt": "Web pages have links on them: clicking a link on one page opens another page. Which graph models the web?",
+        "options": [
+          {
+            "id": "a",
+            "label": "Vertices: pages. Edges: links. Undirected."
+          },
+          {
+            "id": "b",
+            "label": "Vertices: links. Edges: pages. Undirected."
+          },
+          {
+            "id": "c",
+            "label": "Vertices: websites. Edges: links. Undirected."
+          },
+          {
+            "id": "d",
+            "label": "Vertices: links. Edges: pages. Directed."
+          },
+          {
+            "id": "e",
+            "label": "Vertices: pages. Edges: links. Directed."
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "The pages are the vertices, and each link is an edge from the page it sits on to the page it opens. The page it opens needn't link back, so each edge is an arrow: directed.",
+        "correct": "e",
+        "feedback": {
+          "a": "Not quite. The pages and links are right, but a link goes one way: from the page it sits on to the page it opens, and that page needn't link back. Check whether a link on one page gives you a way back from the other.",
+          "b": "Not quite. That swaps them, and a link has a direction too. A link connects two pages, so it is the edge, and it goes from the page it sits on to the page it opens. Ask which of the two kinds of thing connects two of the other kind, then check whether it works both ways.",
+          "c": "Not quite. A website is made of many pages, and a link often joins two pages on the same website, like a homepage and its contact page. With websites as vertices, that link would join a website to itself. A link opens a page, so take the pages as the vertices, then check whether a link works both ways.",
+          "d": "Not quite. That swaps them. A link connects two pages, so the link is the edge and the pages are the vertices. Ask which of the two kinds of thing connects two of the other kind: that is the edge."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "What sits on a page, and where does it take you when you click it?"
+        },
+        {
+          "level": 2,
+          "body": "The things being joined are the vertices, and what joins them is the edges. A connection that takes you from one thing to another, with no promise of a way back, is an arrow: directed."
+        },
+        {
+          "level": 3,
+          "body": "The pages are the vertices and the links are the edges. Now decide: if page X links to page Y, must page Y link to page X?"
+        },
+        {
+          "level": 4,
+          "body": "Answer: Vertices: pages. Edges: links. Directed. A link joins two pages, so it is the edge. It goes from the page it sits on to the page it opens, and that page needn't link back, so each link is an arrow."
+        }
+      ]
+    },
+    {
+      "id": 111,
+      "kind": "multiple_choice",
+      "title": "Closing task 4 of 4: handshakes",
+      "module_id": 1,
+      "purpose": "practice",
+      "objective_id": 3,
+      "config": {
+        "prompt": "Before the lecture, Lerato shook hands with Ayo. Think of every classmate and every handshake in the class. Which graph models it?",
+        "options": [
+          {
+            "id": "a",
+            "label": "Vertices: handshakes. Edges: classmates. Undirected."
+          },
+          {
+            "id": "b",
+            "label": "Vertices: classmates. Edges: handshakes. Undirected, because a handshake can't happen one way only."
+          },
+          {
+            "id": "c",
+            "label": "Vertices: classmates. Edges: handshakes. Directed, with an arrow each way, since each shook the other's hand."
+          },
+          {
+            "id": "d",
+            "label": "Vertices: classmates. Edges: handshakes. Directed, because one person reaches out first."
+          },
+          {
+            "id": "e",
+            "label": "Vertices: handshakes. Edges: classmates. Directed, because one person reaches out first."
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "The classmates are the vertices and each handshake is an edge joining two of them. Could a handshake happen one way only? No: if Lerato shook hands with Ayo, Ayo shook hands with Lerato. So each handshake is one plain line: undirected. A follow can go one way, so even a mutual follow is two arrows that both happen to exist.",
+        "correct": "b",
+        "feedback": {
+          "a": "Not quite. That swaps them. A handshake connects two classmates, so the handshake is the edge and the classmates are the vertices. Ask which of the two kinds of thing connects two of the other kind: that is the edge.",
+          "c": "Not quite. If Lerato shook hands with Ayo, Ayo shook hands with Lerato: the reverse always exists, so there is no direction for an arrow to show. That is one plain line. A follow can go one way, so even a mutual follow is two arrows that both happen to exist. Ask: if this edge exists, must the reverse one exist too?",
+          "d": "Not quite. Someone may reach out first, but who started doesn't give the connection a direction. If Lerato shook hands with Ayo, Ayo shook hands with Lerato, whoever reached out. Ask: if this edge exists, must the reverse one exist too?",
+          "e": "Not quite. That swaps them, and who reaches out first doesn't give a handshake a direction. A handshake connects two classmates, so it is the edge. Ask which of the two kinds of thing connects two of the other kind, then ask whether the reverse must exist too."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "If Lerato shook hands with Ayo, what do you know about Ayo and Lerato?"
+        },
+        {
+          "level": 2,
+          "body": "Ask one question of each connection: if it exists, must the reverse exist too? If it must, the edge is a plain line with no direction. If it can go one way only, it is an arrow."
+        },
+        {
+          "level": 3,
+          "body": "The classmates are the vertices and the handshakes are the edges. Now ask: could Lerato shake hands with Ayo without Ayo shaking hands with Lerato?"
+        },
+        {
+          "level": 4,
+          "body": "Answer: Vertices: classmates. Edges: handshakes. Undirected. A handshake connects two classmates, so it is the edge. It can't happen one way only: if Lerato shook hands with Ayo, Ayo shook hands with Lerato. So each handshake is one plain line, and who reached out first doesn't change that. A follow can go one way, so even a mutual follow is two arrows that both happen to exist."
         }
       ]
     }

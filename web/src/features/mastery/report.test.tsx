@@ -1,4 +1,5 @@
 import { screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { ada, fakeApi, renderApp } from '../../test/app.tsx'
 import type { MasteryReport, ObjectiveReport } from './mastery.api.ts'
@@ -169,10 +170,11 @@ describe('ReportPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong.')
   })
 
-  it('is linked from the header', async () => {
+  it('is linked from the account menu', async () => {
     withReport({ ready: false, objectives: [] })
     renderApp('/')
-    expect(await screen.findByRole('link', { name: 'Report' })).toHaveAttribute('href', '/report')
+    await userEvent.click(await screen.findByRole('button', { name: /your account/ }))
+    expect(screen.getByRole('link', { name: 'Mastery report' })).toHaveAttribute('href', '/report')
   })
 
   it('links each open review path, worded for how far the student is', async () => {
@@ -198,10 +200,102 @@ describe('ReportPage', () => {
     expect(row(7).getByText('You met this on your own after the review path.')).toBeVisible()
   })
 
+  it('sends a student whose review paths are done but still not yet to the lecture, not round in a circle', async () => {
+    withReport({
+      ready: false,
+      objectives: [
+        objective(1),
+        objective(5, { state: 'not_yet', review: { answered: 2, total: 2 } }),
+      ],
+    })
+    renderApp('/report')
+    expect(
+      await screen.findByText('Not ready yet: 1 objective to bring to the lecture'),
+    ).toBeVisible()
+    expect(screen.getByText(/bring to the lecture: it starts from here/)).toBeVisible()
+    expect(screen.queryByRole('link', { name: /Continue your modules/ })).toBeNull()
+  })
+
   it('has no review link for an objective whose path is not open', async () => {
     withReport({ ready: true, objectives: [objective(1)] })
     renderApp('/report')
     await screen.findByText('Ready for the lecture')
     expect(screen.queryByRole('link', { name: /review path/ })).toBeNull()
+  })
+
+  it('says an objective waits for the end of the check once its questions are answered (#144)', async () => {
+    withReport({
+      ready: false,
+      objectives: [
+        objective(1, { state: 'not_attempted', answered: 2, total: 2 }),
+        objective(2, { state: 'not_attempted', answered: 0, total: 1 }),
+      ],
+    })
+    renderApp('/report')
+    await screen.findByRole('heading', { name: 'Your mastery report' })
+    expect(row(1).getByText(/Its result shows when you finish the mastery check/)).toBeVisible()
+    expect(
+      row(1).getByRole('link', { name: 'Finish the mastery check in module 6: objective 1' }),
+    ).toHaveAttribute('href', '/modules/6')
+  })
+})
+
+describe('ReportPage: the summary and the one next step', () => {
+  it('counts the objectives in each state', async () => {
+    withReport({
+      ready: false,
+      objectives: [
+        objective(1),
+        objective(2, { state: 'met_with_support' }),
+        objective(3, { state: 'not_yet', review: { answered: 0, total: 3 } }),
+        objective(4, { state: 'not_attempted', answered: 0, total: 4 }),
+      ],
+    })
+    renderApp('/report')
+    await screen.findByRole('heading', { name: 'Your mastery report' })
+    const tile = (label: string) =>
+      screen
+        .getAllByText(label)
+        .find((e) => e.tagName === 'DT')!
+        .closest('div')!
+    expect(within(tile('Met on your own')).getByText('1')).toBeInTheDocument()
+    expect(within(tile('Met with support')).getByText('1')).toBeInTheDocument()
+    expect(within(tile('Not yet')).getByText('1')).toBeInTheDocument()
+    expect(within(tile('Still to answer')).getByText('1')).toBeInTheDocument()
+  })
+
+  it('points first to a review path that is still open', async () => {
+    withReport({
+      ready: false,
+      objectives: [
+        objective(1),
+        objective(5, { state: 'not_yet', review: { answered: 0, total: 3 } }),
+      ],
+    })
+    renderApp('/report')
+    expect(
+      await screen.findByRole('link', { name: "Start with objective 5's review path →" }),
+    ).toHaveAttribute('href', '/review/5')
+  })
+
+  it('points to the mastery check while its questions are unanswered', async () => {
+    withReport({
+      ready: false,
+      objectives: [objective(1, { state: 'not_attempted', answered: 0, total: 5 })],
+    })
+    renderApp('/report')
+    expect(await screen.findByRole('link', { name: 'Go to the mastery check →' })).toHaveAttribute(
+      'href',
+      '/modules/6',
+    )
+  })
+
+  it('sends a ready student back to the modules', async () => {
+    withReport({ ready: true, objectives: [objective(1)] })
+    renderApp('/report')
+    expect(await screen.findByRole('link', { name: 'Back to your modules →' })).toHaveAttribute(
+      'href',
+      '/',
+    )
   })
 })

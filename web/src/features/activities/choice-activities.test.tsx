@@ -94,6 +94,44 @@ describe('matching', () => {
     expect(onSubmit).toHaveBeenCalledWith({ roads: 'undirected' })
   })
 
+  it('writes out the whole chosen answer, which a closed select cuts off', async () => {
+    const user = userEvent.setup()
+    const long = {
+      ...matching,
+      config: {
+        ...matching.config,
+        right: [
+          {
+            id: 'undirected',
+            label: 'An undirected graph: each road is one edge, walked both ways. Example: a map.',
+          },
+          { id: 'directed', label: 'Directed graph' },
+        ],
+      },
+    }
+    render(
+      <Matching
+        activity={long}
+        result={undefined}
+        submitting={false}
+        onSubmit={vi.fn<(pairs: Record<string, string>) => Promise<void>>()}
+      />,
+    )
+    const roads = screen.getAllByRole('listitem')[0]
+    expect(within(roads).queryByText(/each road is one edge/, { selector: 'p' })).toBeNull()
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Two-way roads between towns' }),
+      'undirected',
+    )
+    expect(
+      within(roads).getByText(
+        'An undirected graph: each road is one edge, walked both ways. Example: a map.',
+        { selector: 'p' },
+      ),
+    ).toBeInTheDocument()
+  })
+
   it("marks each item, and drops an item's mark once the student changes it", async () => {
     const user = userEvent.setup()
     const onSubmit = vi
@@ -211,5 +249,24 @@ describe('the activity page', () => {
     const results = await screen.findByRole('region', { name: 'Submission results' })
     expect(within(results).getByText('A stack gives depth-first order.')).toBeInTheDocument()
     expect(within(results).queryByRole('list')).not.toBeInTheDocument()
+  })
+})
+
+describe('a select set back to its placeholder', () => {
+  it('is left out of a matching answer, as a pair not made', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi
+      .fn<(pairs: Record<string, string>) => Promise<void>>()
+      .mockResolvedValue(undefined)
+    render(
+      <Matching activity={matching} result={undefined} submitting={false} onSubmit={onSubmit} />,
+    )
+    const roads = screen.getByRole('combobox', { name: 'Two-way roads between towns' })
+    const follows = screen.getByRole('combobox', { name: 'Who follows whom online' })
+    await user.selectOptions(roads, 'Undirected graph')
+    await user.selectOptions(follows, 'Tree')
+    await user.selectOptions(follows, 'Choose a match') // reset
+    await user.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(onSubmit).toHaveBeenCalledWith({ roads: 'undirected' })
   })
 })

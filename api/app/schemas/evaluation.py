@@ -43,3 +43,37 @@ class Insights(ApiModel):
     hints_viewed: int
     activities: list[ActivityInsight]
     videos: list[VideoInsight]
+
+
+class ObjectiveReadiness(ApiModel):
+    """How the class stands on one objective, among students who have answered the mastery check."""
+
+    id: int
+    text: str
+    met_independently: int
+    met_with_support: int
+    not_yet: int
+
+
+class CommonWrongAnswer(ApiModel):
+    """The wrong option chosen most often, at first answer, on one multiple-choice assessed item:
+    the misconception to address in the lecture."""
+
+    activity_id: int
+    title: str
+    objective_id: int | None
+    answered: int  # students who answered it
+    wrong: int  # students whose first answer was wrong
+    option: str  # the wrong option chosen most
+    chosen_by: int
+    why_wrong: str | None  # the content's feedback for that option
+
+
+class Readiness(ApiModel):
+    """Before the lecture (Just-in-Time Teaching, Novak et al. 1999): who is ready, how the class
+    stands on each objective, and the wrong answers the lecture should address first."""
+
+    students: int  # real students who have answered at least one mastery item
+    ready: int  # of them, how many met every objective
+    objectives: list[ObjectiveReadiness]
+    common_wrong_answers: list[CommonWrongAnswer]

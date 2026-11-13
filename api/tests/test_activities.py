@@ -6,6 +6,7 @@ from typing import Any
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from support import open_module
 
 from app.models import Activity, Attempt, Hint, HintView
 
@@ -28,7 +29,7 @@ FILL_IN: dict[str, Any] = {
 
 
 def make_activity(db: Session, **data: Any) -> int:
-    activity = Activity(**data)
+    activity = Activity(**{"module_id": open_module(db), **data})
     db.add(activity)
     db.commit()
     return activity.id
@@ -223,6 +224,37 @@ def test_no_more_hints_once_the_answer_is_right(client: TestClient, db: Session)
     assert [h["level"] for h in client.get(f"{url}/hints").json()] == [1, 2]
 
 
+def test_coming_back_shows_the_latest_answer_and_its_result(
+    client: TestClient, db: Session
+) -> None:
+    """An activity remembers the student's latest answer and the result they were shown, so
+    coming back (Previous, a refresh, the module again) doesn't show a blank form (#171)."""
+    activity_id = make_activity(db, **CHOICE)
+    log_in(client)
+    url = f"/api/activities/{activity_id}"
+    assert client.get(url).json()["lastAttempt"] is None
+
+    wrong = client.post(f"{url}/attempts", json={"submitted": {"selected": "c"}}).json()
+    right = client.post(f"{url}/attempts", json={"submitted": {"selected": "a"}}).json()
+    last = client.get(url).json()["lastAttempt"]
+    assert last["submitted"] == {"selected": "a"}
+    # Exactly what the student was shown for it, but for the points it earned: those are said
+    # once, when it is answered, so coming back doesn't celebrate them again (#214).
+    assert right["points"] == 10
+    assert last["result"] == right | {"points": 0}
+    assert last["result"] != wrong
+
+
+def test_another_student_never_sees_my_last_answer(client: TestClient, db: Session) -> None:
+    activity_id = make_activity(db, **CHOICE)
+    log_in(client)
+    client.post(f"/api/activities/{activity_id}/attempts", json={"submitted": {"selected": "c"}})
+    client.post("/api/auth/logout")
+    other = {"email": "bob@example.com", "password": "Correct horse 2", "displayName": "Bob"}
+    assert client.post("/api/auth/register", json=other).status_code == 201
+    assert client.get(f"/api/activities/{activity_id}").json()["lastAttempt"] is None
+
+
 def test_hint_progress_is_per_student(client: TestClient, db: Session) -> None:
     activity_id = make_choice_with_hints(db)
     log_in(client)
@@ -346,11 +378,13 @@ def test_hostile_parsons_submissions_are_refused_or_graded_wrong(
         {"order": [0, None, 2, 3]},
         {"order": list(range(101))},
         {"order": [0, 1, 2, 3], "alternatives": [[3, 2, 1, 0]]},
+        {"order": [-5, 2**62, 1, 3]},  # an id no Postgres integer can hold (#139)
         {"order": []},  # answers nothing: refused, not recorded (#143)
+        {"order": [-5, 2**31 - 1, 1, 3]},  # names lines the problem doesn't have (#139)
     ]
     for bad in refused:
         assert client.post(url, json={"submitted": bad}).status_code == 422, bad
-    for wrong in ([0, 1, 2, 3, 9], [0, 0, 0, 0], [-5, 2**62, 1, 3], [3, 2, 1, 0]):
+    for wrong in ([0, 1, 2, 3, 9], [0, 0, 0, 0], [3, 2, 1, 0]):  # 9 is the distractor
         res = client.post(url, json={"submitted": {"order": wrong}})
         assert res.status_code == 201, wrong
         assert res.json()["correct"] is False, wrong

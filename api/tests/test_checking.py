@@ -398,6 +398,59 @@ def test_trace_order_still_counts_order() -> None:
     assert [p.correct for p in result.parts] == [True, False, True, True]
 
 
+def test_one_slip_carried_through_costs_one_step() -> None:
+    """Follow-through marking: a student who swaps the queue in step 1 and
+    then traces correctly from their own queue loses only step 1, so "at most one error"
+    (objective 5) still holds. Before, every step after the slip was wrong too."""
+    rows = [
+        {"visited_vertex": "A", "queue": ["C", "B"], "visited": ["A"], "order": ["A"]},
+        {"visited_vertex": "C", "queue": ["B"], "visited": ["A", "C"], "order": ["A", "C"]},
+        {
+            "visited_vertex": "B",
+            "queue": ["D"],
+            "visited": ["A", "B", "C"],
+            "order": ["A", "C", "B"],
+        },
+        {
+            "visited_vertex": "D",
+            "queue": [],
+            "visited": ["A", "B", "C", "D"],
+            "order": ["A", "C", "B", "D"],
+        },
+    ]
+    result = checking.check_trace(TRACE, TraceSubmission.model_validate({"rows": rows}))
+    assert [p.correct for p in result.parts] == [False, True, True, True]
+    assert result.score == pytest.approx(3 / 4)
+
+
+def test_a_slip_carried_through_wrongly_is_still_wrong() -> None:
+    """Following their own queue doesn't excuse a step that follows nothing: from queue C, B the
+    next vertex is C, so visiting B there is wrong on both readings."""
+    rows = [dict(r) for r in CORRECT_ROWS]
+    rows[0] = {**rows[0], "queue": ["C", "B"]}
+    rows[1] = {**rows[1], "queue": ["C"]}  # B taken, but D never found
+    result = checking.check_trace(TRACE, TraceSubmission.model_validate({"rows": rows}))
+    assert [p.correct for p in result.parts][:2] == [False, False]
+
+
+def test_emptying_the_queue_early_does_not_shorten_the_trace() -> None:
+    """A step that empties the queue ends the student's traversal, but the trace still has as
+    many parts as the engine's, so stopping early can't avoid the missing steps."""
+    rows = [{"visited_vertex": "A", "queue": [], "visited": ["A"], "order": ["A"]}]
+    result = checking.check_trace(TRACE, TraceSubmission.model_validate({"rows": rows}))
+    assert len(result.parts) == 4
+    assert not any(p.correct for p in result.parts)
+
+
+def test_a_step_after_both_traversals_end_is_extra() -> None:
+    rows = [
+        *CORRECT_ROWS,
+        {"visited_vertex": "D", "queue": [], "visited": ["A", "B", "C", "D"], "order": ["A"]},
+    ]
+    result = checking.check_trace(TRACE, TraceSubmission.model_validate({"rows": rows}))
+    assert result.parts[4].message == checking.EXTRA_TRACE_STEP
+
+
 def test_trace_refuses_an_overlong_vertex_label() -> None:
     row = {"visited_vertex": "A" * 33, "queue": [], "visited": [], "order": []}
     with pytest.raises(ValidationError):

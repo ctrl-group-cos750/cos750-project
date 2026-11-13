@@ -11,11 +11,16 @@ export type PartResult = {
 export type AttemptResult = {
   id: number
   activityId: number
-  correct: boolean
-  score: number
+  /** Null when the result is withheld (a mastery check item, #144). */
+  correct: boolean | null
+  score: number | null
   parts: readonly PartResult[]
   feedback: string
   hintLevel: number
+  /** A mastery check answer: recorded, but whether it was right is only in the report (#144). */
+  withheld?: boolean
+  /** The points this answer earned (10, 4 after hint 3 or 4, or 0); 0 when shown again (#214). */
+  points?: number
 }
 
 export type Hint = {
@@ -23,6 +28,8 @@ export type Hint = {
   body: string
   hasMore: boolean
   nextCountsAsSupport: boolean
+  /** The mastery check's hint limit is reached; the rest are on the review path (#144). */
+  limitReached?: boolean
 }
 
 export type ParsonsActivity = {
@@ -138,13 +145,32 @@ export type TraceRow = {
   order: string[]
 }
 
-export type Activity =
+/** A module 6 mastery item (#144): one answer only, its result shown only in the mastery report,
+ * and hints 1 and 2 only. `answered` says this student has given that answer. */
+export type MasteryCheckFlags = { masteryCheck?: boolean; answered?: boolean }
+
+/** The student's latest answer and the result for it, as marked now (#171): what each kind
+ * sends, as in `Submission`, and the check's result (withheld on a mastery check item). */
+export type LastAttempt = {
+  submitted: {
+    order?: number[]
+    answers?: Record<number, string>
+    selected?: string | string[]
+    pairs?: Record<string, string>
+    rows?: TraceRow[]
+  }
+  result: AttemptResult
+}
+
+export type Activity = (
   | CodeActivity
   | MultipleChoiceActivity
   | MatchingActivity
   | FixTheBugActivity
   | ChooseTestsActivity
   | TraceActivity
+) &
+  MasteryCheckFlags & { lastAttempt?: LastAttempt | null }
 
 /** What a student submits for each kind: their choices only, never code or the answer. */
 export type Submission =

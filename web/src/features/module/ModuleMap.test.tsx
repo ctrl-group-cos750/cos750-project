@@ -183,8 +183,31 @@ describe('ModuleMap — Continue button', () => {
     moduleListApi([openModule, lockedModule])
     renderApp('/')
 
-    const btn = await screen.findByRole('button', { name: /continue module 0/i })
+    const btn = await screen.findByRole('button', { name: /(start|continue) module 0/i })
     expect(btn).toBeInTheDocument()
+  })
+
+  it('never points Continue at a module with no content yet, which reads "coming soon"', async () => {
+    // Module 5 today: open (it doesn't lock the rest, #123) but nothing to work through (#146).
+    const empty: ModuleSummary = {
+      ...openModule,
+      id: 6,
+      number: 5,
+      title: 'Test and debug',
+      segmentCount: 0,
+    }
+    moduleListApi([
+      completeModule,
+      empty,
+      { ...openModule, id: 7, number: 6, title: 'Mastery check' },
+    ])
+    renderApp('/')
+
+    expect(
+      await screen.findByRole('button', { name: /(start|continue) module 6/i }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('coming soon')).toBeInTheDocument()
+    expect(screen.getByText('open')).toBeInTheDocument() // module 6
   })
 
   it('hides the Continue button when all modules are locked or complete', async () => {
@@ -210,7 +233,7 @@ describe('ModuleMap — Continue button', () => {
     })
     renderApp('/')
 
-    const btn = await screen.findByRole('button', { name: /continue module 0/i })
+    const btn = await screen.findByRole('button', { name: /(start|continue) module 0/i })
     await userEvent.click(btn)
 
     // ModulePage renders the module title (even empty-segments state)
@@ -309,21 +332,22 @@ describe('ModuleMap — minutes', () => {
     segmentCount: 0,
   }
 
-  it('shows the total, leaving out modules with no content yet, before anything is done', async () => {
+  it('shows the total of every module, as the rows add up, before anything is done', async () => {
     moduleListApi([openModule, lockedModule, emptyModule])
     renderApp('/')
 
-    expect(await screen.findByText('About 17 minutes in total')).toBeInTheDocument()
+    // 5 + 12 + 15: the same sum the register page shows (#146).
+    expect(await screen.findByText('About 32 minutes in total')).toBeInTheDocument()
     expect(screen.queryByRole('progressbar', { name: 'Course progress in minutes' })).toBeNull()
   })
 
   it('shows the minutes done and left', async () => {
-    // Module 3 complete (12) and module 2 halfway (2 of 4 segments of 10): 17 of 39.
+    // Module 3 complete (12) and module 2 halfway (2 of 4 segments of 10): 17 of 54.
     moduleListApi([openModule, lockedModule, inProgressModule, completeModule, emptyModule])
     renderApp('/')
 
     expect(
-      await screen.findByText('About 17 of 39 minutes done · about 22 left'),
+      await screen.findByText('About 17 of 54 minutes done · about 37 left'),
     ).toBeInTheDocument()
     expect(screen.getByRole('progressbar', { name: 'Course progress in minutes' })).toHaveAttribute(
       'value',
@@ -331,10 +355,128 @@ describe('ModuleMap — minutes', () => {
     )
   })
 
-  it('says when everything with content is done', async () => {
-    moduleListApi([completeModule, emptyModule])
+  it('says when everything is done', async () => {
+    moduleListApi([completeModule])
     renderApp('/')
 
     expect(await screen.findByText('All 12 minutes done')).toBeInTheDocument()
+  })
+
+  it('still counts a module with no content yet once the rest is done', async () => {
+    moduleListApi([completeModule, emptyModule])
+    renderApp('/')
+
+    expect(
+      await screen.findByText('About 12 of 27 minutes done · about 15 left'),
+    ).toBeInTheDocument()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Learner choice (#214): open modules, the recommended one, the quick check
+// ---------------------------------------------------------------------------
+
+describe('ModuleMap — learner choice (#214)', () => {
+  const later: ModuleSummary = {
+    ...openModule,
+    id: 5,
+    number: 3,
+    slug: 'meet-bfs',
+    title: 'Meet BFS',
+    quickCheck: 'available',
+  }
+
+  it('marks the recommended module and keeps every open module a link', async () => {
+    moduleListApi([{ ...openModule, recommended: true }, later, lockedModule])
+    renderApp('/')
+    expect(await screen.findByText('recommended next')).toBeInTheDocument()
+    const recommendedCard = screen
+      .getAllByRole('link')
+      .find((l) => l.textContent?.includes('Warm-up'))
+    expect(recommendedCard).toHaveTextContent('recommended next')
+    expect(screen.getByRole('link', { name: /Meet BFS/ })).toHaveAttribute('href', '/modules/5')
+    expect(screen.getAllByText('recommended next')).toHaveLength(1)
+  })
+
+  it('offers the quick check under a module the student can test out of', async () => {
+    moduleListApi([{ ...openModule, recommended: true }, later])
+    renderApp('/')
+    const link = await screen.findByRole('link', {
+      name: 'Already know module 3? Take the quick check',
+    })
+    expect(link).toHaveAttribute('href', '/modules/5/check')
+    // Not inside the module's own link.
+    expect(link.closest('a')).toBe(link)
+  })
+
+  it('shows a tested-out module as tested out, apart from complete, with no quick check', async () => {
+    moduleListApi([
+      { ...openModule, recommended: true },
+      { ...later, status: 'tested_out', quickCheck: 'passed' },
+      completeModule,
+    ])
+    renderApp('/')
+    expect(await screen.findByText('tested out')).toBeInTheDocument()
+    expect(screen.getByText('complete')).toBeInTheDocument()
+    expect(screen.queryByText(/Take the quick check/)).toBeNull()
+  })
+
+  it('offers the recommended module next when none is in progress', async () => {
+    moduleListApi([
+      { ...openModule, status: 'complete' },
+      { ...later, recommended: true },
+      { ...inProgressModule, status: 'open', id: 7, number: 4, title: 'Build BFS' },
+    ])
+    renderApp('/')
+    expect(await screen.findByRole('button', { name: /Start module 3/ })).toBeInTheDocument()
+  })
+
+  it('keeps a taken quick check findable, passed or not, with its score (#215)', async () => {
+    moduleListApi([
+      { ...openModule, quickCheck: 'not_passed', quickCheckScore: { correct: 2, total: 4 } },
+    ])
+    renderApp('/')
+    const link = await screen.findByRole('link', {
+      name: 'Quick check: 2 of 4, see the results for module 0',
+    })
+    expect(link).toHaveAttribute('href', '/modules/1/check')
+    expect(link.closest('a')).toBe(link) // its own link, not inside the module's
+    expect(screen.queryByText(/Take the quick check/)).toBeNull()
+  })
+
+  it('counts the activities marked to look at again (#215)', async () => {
+    moduleListApi([{ ...inProgressModule, lookAgainCount: 2 }, openModule])
+    renderApp('/')
+    expect(await screen.findByText('2 marked to look at again')).toBeInTheDocument()
+    expect(screen.getAllByText(/marked to look at again/)).toHaveLength(1)
+  })
+
+  it('puts the skill profile after the module list in one column (#215)', async () => {
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules': () => Response.json([openModule]),
+        'GET /api/me/skills': () =>
+          Response.json({
+            objectives: [
+              {
+                id: 1,
+                text: 'Objective 1.',
+                answered: 0,
+                correct: 0,
+                onYourOwn: 0,
+                total: 4,
+                level: 'not_started',
+                result: null,
+              },
+            ],
+            modules: [],
+          }),
+      },
+    })
+    renderApp('/')
+    const list = await screen.findByRole('heading', { name: 'All modules' })
+    const profile = await screen.findByRole('heading', { name: 'Skill profile' })
+    expect(list.compareDocumentPosition(profile) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 })

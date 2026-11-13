@@ -1,0 +1,419 @@
+.page {
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.skip {
+  position: absolute;
+  left: var(--space-4);
+  top: -3rem;
+  z-index: 40;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: var(--color-on-accent);
+}
+
+.skip:focus {
+  top: var(--space-2);
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  border-bottom: 1px solid var(--color-line);
+  /* Opaque, as in the app: a translucent header showed the page's text through it. */
+  background: var(--color-surface);
+}
+
+.bar,
+.inner {
+  width: 100%;
+  max-width: 76rem;
+  margin: 0 auto;
+  padding-inline: var(--space-5);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.logo {
+  height: 2rem;
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Hero: the promise and the way in, beside a graph coloured by BFS distance. */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-7);
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-5);
+}
+
+.heroText h1 {
+  margin: 0 0 var(--space-4);
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 1.4rem + 2.2vw, 3.25rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.lead {
+  max-width: 34rem;
+  margin: 0 0 var(--space-5);
+  color: var(--color-text-muted);
+  font-size: var(--text-lg);
+  line-height: 1.55;
+}
+
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.heroArt {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.graph {
+  width: 100%;
+  height: auto;
+}
+
+.graph line {
+  stroke: var(--color-control-border);
+  stroke-width: 2.5;
+}
+
+.graph circle {
+  stroke-width: 2.5;
+}
+
+.graph text {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+/* The four BFS levels: the start, then one, two and three steps away. */
+.graph [data-level='0'] circle,
+.legend [data-level='0']::before {
+  fill: var(--color-primary);
+  background: var(--color-primary);
+  stroke: var(--color-primary);
+}
+
+.graph [data-level='0'] text {
+  fill: var(--color-on-accent);
+}
+
+.graph [data-level='1'] circle,
+.legend [data-level='1']::before {
+  fill: var(--color-accent-soft);
+  background: var(--color-accent-soft);
+  stroke: var(--color-primary);
+}
+
+.graph [data-level='2'] circle,
+.legend [data-level='2']::before {
+  fill: var(--color-success-soft);
+  background: var(--color-success-soft);
+  stroke: var(--color-success);
+}
+
+.graph [data-level='3'] circle,
+.legend [data-level='3']::before {
+  fill: var(--color-warning-soft);
+  background: var(--color-warning-soft);
+  stroke: var(--color-warning);
+}
+
+.graph :is([data-level='1'], [data-level='2'], [data-level='3']) text {
+  fill: var(--color-text);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  padding: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  list-style: none;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.legend li::before {
+  content: '';
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 2px solid var(--color-control-border);
+  border-radius: 50%;
+}
+
+/* Sections */
+.section,
+.band {
+  padding-block: var(--space-8);
+}
+
+.band {
+  border-block: 1px solid var(--color-line);
+  background: var(--color-surface);
+}
+
+.section h2,
+.band h2,
+.final h2 {
+  margin: 0 0 var(--space-4);
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+}
+
+.sectionLead,
+.split p {
+  max-width: 40rem;
+  margin: 0 0 var(--space-5);
+  color: var(--color-text-muted);
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step h3,
+.module h3 {
+  margin: var(--space-2) 0 var(--space-1);
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.step p,
+.module p {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.stepNumber,
+.moduleNumber {
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: var(--color-accent-soft);
+  color: var(--color-accent-soft-text);
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+.modules {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4) var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.module {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.module h3 {
+  margin-top: 0.3rem;
+}
+
+.moduleNumber {
+  flex: none;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.ticks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ticks li {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.ticks li::before {
+  content: '✓';
+  color: var(--color-success);
+  font-weight: 700;
+}
+
+.research {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.research div {
+  padding: var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.research dt {
+  font-weight: 600;
+}
+
+.research dd {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.final {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  padding: var(--space-8) var(--space-5);
+  text-align: center;
+}
+
+.final h2,
+.final p {
+  margin: 0;
+}
+
+.final p {
+  color: var(--color-text-muted);
+}
+
+.footer {
+  padding: var(--space-5);
+  border-top: 1px solid var(--color-line);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+.footer p {
+  margin: var(--space-1) 0;
+}
+
+@media (max-width: 64rem) {
+  .hero,
+  .split {
+    grid-template-columns: 1fr;
+  }
+
+  .hero {
+    padding-block: var(--space-6);
+  }
+
+  .steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .research {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 40rem) {
+  .steps,
+  .modules,
+  .ticks,
+  .research {
+    grid-template-columns: 1fr;
+  }
+
+  .section,
+  .band {
+    padding-block: var(--space-6);
+  }
+
+  .headerActions {
+    gap: var(--space-1);
+  }
+}
+
+/* Phones: the brand and the header's buttons stay on one row. */
+@media (max-width: 26rem) {
+  .bar {
+    padding-inline: var(--space-4);
+    gap: var(--space-2);
+  }
+}
+
+/* A 320 px phone: "Log in" is left to the hero's "I have an account", just below. */
+@media (max-width: 24rem) {
+  .brand {
+    font-size: var(--text-md);
+  }
+
+  .logIn {
+    display: none;
+  }
+}

@@ -10,6 +10,7 @@ const grace: User = {
   displayName: 'Grace',
   isStaff: true,
   avatar: null,
+  pictureUrl: null,
 }
 
 const twoVideos = () =>
@@ -32,17 +33,13 @@ describe('staff portal', () => {
     expect(await screen.findByText('Only team members can open this page.')).toBeInTheDocument()
   })
 
-  it('opens from the navbar and lists every setup area', async () => {
+  it('opens from the account menu and lists every setup area', async () => {
     fakeApi({ user: grace, overrides: { 'GET /api/staff/videos': twoVideos } })
     renderApp('/')
-    const main = await screen.findByRole('navigation', { name: 'Main' })
-    await userEvent.click(within(main).getByRole('link', { name: 'Staff portal' }))
+    await userEvent.click(await screen.findByRole('button', { name: /your account/ }))
+    await userEvent.click(screen.getByRole('link', { name: 'Staff portal' }))
 
     expect(await screen.findByRole('heading', { name: 'Staff portal' })).toBeInTheDocument()
-    expect(within(main).getByRole('link', { name: 'Staff portal' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    )
     expect(await screen.findByText('2 videos')).toBeInTheDocument()
   })
 
@@ -56,12 +53,6 @@ describe('staff portal', () => {
 
     const menu = screen.getByRole('navigation', { name: 'Staff portal' })
     expect(within(menu).getByRole('link', { name: 'Videos' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    )
-    // The navbar link stays highlighted on every page in the portal.
-    const main = screen.getByRole('navigation', { name: 'Main' })
-    expect(within(main).getByRole('link', { name: 'Staff portal' })).toHaveAttribute(
       'aria-current',
       'page',
     )
@@ -156,6 +147,10 @@ describe('staff members page', () => {
     await userEvent.click(within(matches).getByRole('button', { name: 'Make Ada staff' }))
 
     expect(await screen.findByText('Ada is a team member')).toBeInTheDocument()
+    // The results went: focus is on the message, not the page (A9).
+    await waitFor(() =>
+      expect(screen.getByText('Ada is a team member').closest('[role="alert"]')).toHaveFocus(),
+    )
     expect(api.callsTo('POST /api/staff/members')[0]?.body).toEqual({ email: 'ada@example.com' })
     expect(await screen.findByText('ada@example.com')).toBeInTheDocument() // now in the team
     expect(search).toHaveValue('')
@@ -174,14 +169,21 @@ describe('staff members page', () => {
     const row = (await screen.findByText('ada@example.com')).closest('li')!
 
     await userEvent.click(within(row).getByRole('button', { name: 'Remove access' }))
+    // Focus moves into the question, and back to the row's button on Cancel (A9).
+    expect(within(row).getByRole('button', { name: 'Remove access' })).toHaveFocus()
     await userEvent.click(within(row).getByRole('button', { name: 'Cancel' }))
+    expect(within(row).getByRole('button', { name: 'Remove access' })).toHaveFocus()
     expect(api.callsTo('DELETE /api/staff/members/1')).toHaveLength(0)
 
     await userEvent.click(within(row).getByRole('button', { name: 'Remove access' }))
     expect(within(row).getByText("Remove Ada's staff access?")).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    expect(within(row).queryByText("Remove Ada's staff access?")).not.toBeInTheDocument()
+    await userEvent.click(within(row).getByRole('button', { name: 'Remove access' }))
     await userEvent.click(within(row).getByRole('button', { name: 'Remove access' }))
 
     await waitFor(() => expect(screen.queryByText('ada@example.com')).not.toBeInTheDocument())
+    expect(screen.getByRole('heading', { name: 'Current team members' })).toHaveFocus()
     expect(api.callsTo('DELETE /api/staff/members/1')).toHaveLength(1)
   })
 })
@@ -191,7 +193,7 @@ describe('accounts pages', () => {
     portalApi()
     renderApp('/staff/accounts')
     expect(await screen.findByText('3 accounts')).toBeInTheDocument()
-    await userEvent.type(screen.getByLabelText('Search by name or email'), 'ALAN@')
+    await userEvent.type(screen.getByLabelText('Search by name'), 'ALAN')
     expect(screen.getByText('1 of 3 accounts match')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Alan' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Ada' })).not.toBeInTheDocument()
@@ -205,6 +207,10 @@ describe('accounts pages', () => {
     expect(screen.getByText('75% of answers')).toBeInTheDocument()
     expect(screen.getByText('1 of 2 checkpoints passed')).toBeInTheDocument()
     expect(screen.getByText('Which leaves first?')).toBeInTheDocument()
+    // Not the pilot files' name for the student: beside the email it would put a name to every
+    // row of the CSV files (A13, #215 review).
+    expect(screen.queryByText(/CSV files/)).toBeNull()
+    expect(screen.queryByText(/^s-[0-9a-f]{12}$/)).toBeNull()
   })
 
   it('makes an account staff from its overview', async () => {
@@ -213,6 +219,22 @@ describe('accounts pages', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Make staff' }))
     expect(await screen.findByRole('button', { name: 'Remove staff access' })).toBeInTheDocument()
     expect(api.callsTo('POST /api/staff/members')).toHaveLength(1)
+  })
+
+  it('asks before removing staff access from the overview, as the members page does (A13)', async () => {
+    const api = portalApi([adaRow.id, grace.id])
+    renderApp('/staff/accounts/1')
+    await userEvent.click(await screen.findByRole('button', { name: 'Remove staff access' }))
+    expect(screen.getByText("Remove Ada's staff access?")).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Remove access' })).toHaveFocus()
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.getByRole('button', { name: 'Remove staff access' })).toHaveFocus()
+    expect(api.callsTo('DELETE /api/staff/members/1')).toHaveLength(0)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remove staff access' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Remove access' }))
+    expect(await screen.findByRole('button', { name: 'Make staff' })).toHaveFocus()
+    expect(api.callsTo('DELETE /api/staff/members/1')).toHaveLength(1)
   })
 
   it('deletes an account only once its email is typed, then goes back to the list', async () => {
@@ -228,6 +250,9 @@ describe('accounts pages', () => {
 
     expect(await screen.findByText('2 accounts')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Ada' })).not.toBeInTheDocument()
+    // It says so, and focus starts at the heading, not the page (A13).
+    expect(screen.getByText(/Ada's account was deleted/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Accounts' })).toHaveFocus()
     expect(api.callsTo('DELETE /api/staff/accounts/1')).toHaveLength(1)
   })
 
@@ -237,5 +262,15 @@ describe('accounts pages', () => {
     expect(await screen.findByRole('heading', { level: 1, name: /Grace/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Delete account' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /staff/i })).not.toBeInTheDocument()
+  })
+})
+
+describe('video editor', () => {
+  it('lists what a new video still needs without an empty item (#146)', async () => {
+    portalApi()
+    renderApp('/staff/videos/new')
+    expect(
+      await screen.findByText('Still needs the video, the captions, a title.'),
+    ).toBeInTheDocument()
   })
 })

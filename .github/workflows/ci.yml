@@ -31,6 +31,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
+          BASE: ${{ github.event.pull_request.base.ref }}
         run: |
           files=$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[].filename')
           echo "$files"
@@ -41,13 +42,22 @@ jobs:
             case $area in
               web) pattern='^web/' ;;
               api) pattern='^(api|scripts|web/src)/' ;;
-              compose) pattern='^(api|web)/|^docker-compose[^/]*\.yml$|^\.env\.example$' ;;
+              compose) pattern='^(api|web|e2e)/|^docker-compose[^/]*\.yml$|^\.env\.example$' ;;
             esac
             value=$(touched "$pattern")
             [ "$all" = true ] && value=true
             echo "$area=$value" >> "$GITHUB_OUTPUT"
             echo "$area: $value"
           done
+          # The end-to-end tests (about 36 minutes in three browsers) run only on the PR that takes
+          # staging to master, to save Actions minutes; PRs into staging run them locally first
+          # (e2e/README.md). The image build above still runs on every PR that touches the stack.
+          compose=$(touched '^(api|web|e2e)/|^docker-compose[^/]*\.yml$|^\.env\.example$')
+          [ "$all" = true ] && compose=true
+          e2e=false
+          [ "$compose" = true ] && [ "$BASE" = master ] && e2e=true
+          echo "e2e=$e2e" >> "$GITHUB_OUTPUT"
+          echo "e2e: $e2e (base $BASE)"
 
       # web
       - if: steps.paths.outputs.web == 'true'
@@ -106,15 +116,48 @@ jobs:
           TEST_DATABASE_URL: postgresql+psycopg://ctrl:ctrl@localhost:5432/ctrl
         run: .venv/bin/pytest
 
-      # The images Coolify will build, so a broken Dockerfile fails here, not on deploy.
-      - name: Build and start the whole stack
+      # The images Coolify will build, so a broken Dockerfile fails here, not on deploy. With
+      # docker-compose.e2e.yml the stack is also served over HTTPS for the end-to-end tests.
+      - name: Build the whole stack
         if: steps.paths.outputs.compose == 'true'
         run: |
           docker compose config --quiet
-          docker compose build
-          docker compose -p ctrlci up -d --wait
+          docker compose -f docker-compose.yml -f docker-compose.e2e.yml build
+      - name: Start the whole stack
+        if: steps.paths.outputs.e2e == 'true'
+        run: docker compose -f docker-compose.yml -f docker-compose.e2e.yml -p ctrlci up -d --wait
+
+      # End-to-end and accessibility tests in three browsers (e2e/, SE document §14.1). Only on the
+      # PR from staging to master (see "Which parts the PR touches").
+      - if: steps.paths.outputs.e2e == 'true'
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - name: End-to-end tests (Chromium, Firefox, WebKit)
+        if: steps.paths.outputs.e2e == 'true'
+        working-directory: e2e
+        timeout-minutes: 45
+        env:
+          # The setup project makes a staff account with `docker compose exec` (tests/env.ts).
+          COMPOSE_PROJECT_NAME: ctrlci
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium firefox webkit
+          npx playwright test
+      - name: Upload the Playwright report
+        if: failure() && steps.paths.outputs.e2e == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+          retention-days: 7
+
       - name: Logs
-        if: always() && steps.paths.outputs.compose == 'true'
-        run: docker compose -p ctrlci logs --tail 50
-      - if: always() && steps.paths.outputs.compose == 'true'
-        run: docker compose -p ctrlci down -v
+        if: always() && steps.paths.outputs.e2e == 'true'
+        run: docker compose -f docker-compose.yml -f docker-compose.e2e.yml -p ctrlci logs --tail 50
+      - if: always() && steps.paths.outputs.e2e == 'true'
+        run: docker compose -f docker-compose.yml -f docker-compose.e2e.yml -p ctrlci down -v

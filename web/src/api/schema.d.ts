@@ -90,7 +90,11 @@ export interface paths {
      * Get Activity
      * @description The activity to render. `ActivityOut` has no `solution`, so the answer never reaches the
      *     browser (FR-5.3, NFR-S2). `solved` says whether this student has already answered it
-     *     correctly, so the page stops offering hints after a refresh too (#158).
+     *     correctly, so the page stops offering hints after a refresh too (#158), and `lastAttempt`
+     *     holds this student's latest answer and the result for it, as marked now, so coming back to an
+     *     activity shows it (#171; withheld on a mastery check item, as when answered). 403 while the
+     *     activity's module is locked or its review path is closed, 404 if it doesn't exist or is no
+     *     longer part of the course.
      */
     get: operations['get_activity_api_activities__activity_id__get']
     put?: never
@@ -119,9 +123,21 @@ export interface paths {
      *     choice, `{"order": [...]}` for Parsons, `{"answers": {...}}` for fill-in, and
      *     `{"rows": [{"visitedVertex", "queue", "visited", "order"}, ...]}` for a trace table, one row
      *     per BFS step (graded against the engine, so a trace has no stored solution). A submission in the
-     *     wrong shape, or one that answers nothing (no option, line, token, pair, test or row), is 422
-     *     and isn't recorded. No student code is executed: `check_activity` compares the submission with
+     *     wrong shape is 422. No student code is executed: `check_activity` compares the submission with
      *     the solution, which stays in this process (NFR-S7).
+     *
+     *     Each kind's shape bounds its lengths, and the request body is at most `MAX_SUBMISSION_BYTES`
+     *     bytes (413 past it). A matching pair or fill-in blank sent as "" (a reset select) counts as
+     *     unanswered. A submission that answers nothing (no option, line, token, pair, test or row), or
+     *     one naming an option, line, blank, token, test case or vertex the activity doesn't have, is
+     *     422 and not recorded. 403 and 404 as for GET. 429 with `Retry-After` past 60 answers a minute
+     *     from one student. Two answers sent at once are recorded one after the other
+     *     (app/services/locks.py).
+     *
+     *     A module 6 mastery item takes one answer only (409 after it), and its response is `withheld`:
+     *     no `correct`, `score` or `parts`, so the network tab gives nothing away either (#144). The
+     *     mastery report shows the results once every item is answered. The 409 comes after every
+     *     other check, so a refused (413, 422, 429) submission never uses up that one answer.
      */
     post: operations['submit_attempt_api_activities__activity_id__attempts_post']
     delete?: never
@@ -141,7 +157,7 @@ export interface paths {
      * Get Revealed Hints
      * @description Every hint level this student has already unlocked on this activity (FR-4.4, FR-4.5).
      *
-     *     Returns an empty list if they have not asked for any hints yet.
+     *     Returns an empty list if they have not asked for any hints yet. 403 and 404 as for GET.
      */
     get: operations['get_revealed_hints_api_activities__activity_id__hints_get']
     put?: never
@@ -153,6 +169,13 @@ export interface paths {
      *     or once the student has answered correctly, it is 409. When `nextCountsAsSupport` is true,
      *     warn the student before calling again: a correct answer after hint 3 or 4 counts as "met
      *     with support" (ID document §7.4).
+     *
+     *     A module 6 mastery item gives hints 1 and 2 only (#144): asking for a third is 409, and the
+     *     second says `limitReached`. Once the item is answered it is 409 too, with a message that
+     *     doesn't say whether the answer was right.
+     *
+     *     403 and 404 as for GET. 429 with `Retry-After` past 30 reveals a minute from one student. Two
+     *     requests sent at once reveal two levels in turn, never the same level twice.
      */
     post: operations['reveal_hint_api_activities__activity_id__hints_post']
     delete?: never
@@ -173,7 +196,7 @@ export interface paths {
     /**
      * Report Event
      * @description Log something only the browser sees, for the pilot's evaluation (FR-10.1). The server adds
-     *     who and when. 404 if the video, checkpoint or segment doesn't exist; 429 past 120 a minute. A
+     *     who and when. 404 if the video, checkpoint, segment or graph doesn't exist; 429 past 120 a minute. A
      *     segment viewed in a module still locked for the student is accepted but not logged.
      */
     post: operations['report_event_api_events_post']
@@ -326,9 +349,35 @@ export interface paths {
      * Get Review Path
      * @description The objective's review path: its steps in order, and which the student has answered
      *     (FR-7.5). 404 if the objective has no path; 403 until module 6 marks it "not yet", so the
-     *     fresh items stay unseen until the student needs them.
+     *     fresh items stay unseen until the student needs them. Staff may always open it, to preview.
      */
     get: operations['get_review_path_api_me_review__objective_id__get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/me/skills': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get Skills
+     * @description The logged-in student's skill profile and module medals (FR-9.7, FR-9.8; #214).
+     *
+     *     For each learning objective: how many of its practice items they have answered correctly, of
+     *     how many, and its mastery result once the mastery check (or a review path) has decided it.
+     *     For each module with activities to mark: its medal once complete, and the medal the answers so
+     *     far are heading for. Worked out from attempts on each request (app/services/skills.py), so it
+     *     follows the current content and rules. Only ever the student's own.
+     */
+    get: operations['get_skills_api_me_skills_get']
     put?: never
     post?: never
     delete?: never
@@ -348,10 +397,44 @@ export interface paths {
     /**
      * Set Avatar
      * @description Choose a profile picture from the team's set, or none (FR-1.6). Only the student sees it.
+     *     An uploaded picture is deleted: the student has chosen something else.
      */
     put: operations['set_avatar_api_me_avatar_put']
     post?: never
     delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/me/picture': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get Picture
+     * @description The student's own uploaded picture. Its URL changes with each upload (`?v=`), so the browser
+     *     may keep it; never anyone else's, and never served as anything but an image.
+     */
+    get: operations['get_picture_api_me_picture_get']
+    /**
+     * Upload Picture
+     * @description Upload a profile picture of their own (FR-1.6), shown instead of the team's pictures.
+     *
+     *     The browser makes it a small square first (which also drops a photo's location and camera
+     *     details); the server keeps it only if its bytes really are a PNG, JPEG or WebP of at most
+     *     200 kB. It is personal information (POPIA), so only the student can fetch it.
+     */
+    put: operations['upload_picture_api_me_picture_put']
+    post?: never
+    /**
+     * Delete Picture
+     * @description Delete the uploaded picture; the student's initial shows until they choose another.
+     */
+    delete: operations['delete_picture_api_me_picture_delete']
     options?: never
     head?: never
     patch?: never
@@ -405,6 +488,27 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/modules/length': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Course Length
+     * @description The course's estimated length in minutes, the sum of every module's estimate. Public, so
+     *     the register page can say how long the course takes with the same number the map shows.
+     */
+    get: operations['course_length_api_modules_length_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/modules/{module_id}': {
     parameters: {
       query?: never
@@ -417,7 +521,7 @@ export interface paths {
      * @description One module with its full ordered segment list and the student's status.
      *
      *     Returns 404 if the module does not exist; 403 if it is locked for this
-     *     student (the previous module has not been completed yet).
+     *     student (only the mastery check is: until modules 1 to 5 are complete or tested out).
      */
     get: operations['get_module_api_modules__module_id__get']
     put?: never
@@ -462,6 +566,62 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/modules/{module_id}/quick-check': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get Quick Check
+     * @description The module's quick check, "Already know this?" (FR-8.2, #214): its questions while this
+     *     student may take it (no answers or hints are in them), or its result once taken. 404 for a
+     *     module with no quick check (modules 0 and 6).
+     */
+    get: operations['get_quick_check_api_modules__module_id__quick_check_get']
+    put?: never
+    /**
+     * Take Quick Check
+     * @description Mark the quick check: one answer for every question, sent together, marked at once
+     *     (FR-8.2, #214). At most one wrong passes, and marks the module tested out; the result says
+     *     what was missed and where to go next either way. One try per module: 409 once taken, or once
+     *     the module is complete. 422 unless there is exactly one answer per question, each one of its
+     *     options; nothing is recorded then. 404 for a module with no quick check.
+     */
+    post: operations['take_quick_check_api_modules__module_id__quick_check_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/modules/{module_id}/restart': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Restart
+     * @description Start the module again to redo its questions (app/services/restart.py): it opens at its
+     *     start, and every question, retrieval question and video checkpoint in it shows unanswered,
+     *     with hints from level 1 again. The module stays complete and earned points and badges stay;
+     *     earlier answers stay recorded for the evaluation but aren't shown. 404 if there is no such
+     *     module, 403 while it is locked, 409 for the mastery check or a module not finished. A module the
+     *     student only tested out of (FR-8.2) isn't finished: `can_restart` is true exactly when this
+     *     succeeds. A restart doesn't reopen the quick check: it is one try per module.
+     */
+    post: operations['restart_api_modules__module_id__restart_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/videos/{video_id}': {
     parameters: {
       query?: never
@@ -473,7 +633,11 @@ export interface paths {
      * Get Video
      * @description Everything the player needs in one call (FR-3): media and captions paths, the transcript,
      *     and each checkpoint with its activity (without the answer) and whether this student has
-     *     passed it. Answer a checkpoint with `POST /api/activities/{activityId}/attempts`.
+     *     passed it (since the module's restart, if they restarted it). Answer a checkpoint with
+     *     `POST /api/activities/{activityId}/attempts`.
+     *
+     *     403 while the segment that plays the video is in a locked module or a closed review path
+     *     (#137); a video on no segment yet is open. Its checkpoint questions follow the video.
      */
     get: operations['get_video_api_videos__video_id__get']
     put?: never
@@ -615,6 +779,11 @@ export interface paths {
     /**
      * List Accounts
      * @description Every account, newest first. The portal searches this list as you type.
+     *
+     *     Students' emails are masked here (NFR-S8, data minimisation, #146): a list of every student's
+     *     address is more than staff need to find an account, and it would all leak at once from one
+     *     staff session. Staff accounts keep their full email (the team's own). One account's page
+     *     (below) still shows the full email, which staff need to act on it.
      */
     get: operations['list_accounts_api_staff_accounts_get']
     put?: never
@@ -666,10 +835,15 @@ export interface paths {
      *
      *     - `attempts`: each answer; `submitted` and `detail` are what was answered and the per-part
      *       result, as JSON.
-     *     - `hints`: each hint shown.
+     *     - `hints`: each hint shown. `round` is which time through its module (0, then one more for
+     *       each restart, app/services/restart.py); `after_attempt` is the newest attempt id when it
+     *       was shown, so it came before exactly that student's attempts with a higher `attempt_id`.
      *     - `events`: the timeline (app/services/events.py): videos started and finished, checkpoints
-     *       reached, segments viewed, hints shown, results changing, modules completed; `payload` as JSON.
-     *       Segment views and module completions give time per segment and per module.
+     *       reached, segments viewed, hints shown, results changing, modules completed and restarted,
+     *       quick checks taken; `payload` as JSON. Segment views and module completions give time per segment and per
+     *       module. Each `module_restarted` carries its `round` and `after_attempt`: a student's
+     *       attempts at that module's activities with an id above one restart's `after_attempt`, and
+     *       not above the next one's, are that round's.
      *     - `objective_results`: each student's current result per objective, with the attempts it was
      *       decided from (`evidence`).
      */
@@ -697,6 +871,29 @@ export interface paths {
      *     or demo accounts); counts only.
      */
     get: operations['insights_api_staff_insights_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/staff/readiness': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Readiness
+     * @description For the lecturer, before the lecture (FR-10): how many students who took the mastery check
+     *     are ready, each objective's results across them, and the most common wrong first answers on
+     *     the assessed multiple-choice items (module 6 and the review paths' fresh items), each with the
+     *     content's explanation of why it is wrong. Real students only; counts only, no names.
+     */
+    get: operations['readiness_api_staff_readiness_get']
     put?: never
     post?: never
     delete?: never
@@ -1118,10 +1315,22 @@ export interface components {
        * @default false
        */
       solved: boolean
+      /**
+       * Masterycheck
+       * @default false
+       */
+      masteryCheck: boolean
+      /**
+       * Answered
+       * @default false
+       */
+      answered: boolean
+      lastAttempt?: components['schemas']['LastAttemptOut'] | null
     }
     /**
      * AttemptIn
      * @description A submission: only the student's choices (line ids, chosen tokens), never free-form code.
+     *     `submitted` is checked against the activity kind's shape above when it is graded.
      */
     AttemptIn: {
       /** Submitted */
@@ -1132,6 +1341,10 @@ export interface components {
     /**
      * AttemptOut
      * @description The graded result sent back. Carries per-part correctness and messages, never the solution.
+     *
+     *     On a mastery check item (#144) the result is `withheld`: `correct` and `score` are null,
+     *     `parts` is empty and `feedback` only says the answer was recorded. The mastery report shows
+     *     the results once every module 6 item is answered.
      */
     AttemptOut: {
       /** Id */
@@ -1139,15 +1352,25 @@ export interface components {
       /** Activityid */
       activityId: number
       /** Correct */
-      correct: boolean
+      correct: boolean | null
       /** Score */
-      score: number
+      score: number | null
       /** Parts */
       parts: components['schemas']['PartResult'][]
       /** Feedback */
       feedback: string
+      /**
+       * Withheld
+       * @default false
+       */
+      withheld: boolean
       /** Hintlevel */
       hintLevel: number
+      /**
+       * Points
+       * @default 0
+       */
+      points: number
     }
     /**
      * AvatarIn
@@ -1224,6 +1447,37 @@ export interface components {
       label: string
     }
     /**
+     * CommonWrongAnswer
+     * @description The wrong option chosen most often, at first answer, on one multiple-choice assessed item:
+     *     the misconception to address in the lecture.
+     */
+    CommonWrongAnswer: {
+      /** Activityid */
+      activityId: number
+      /** Title */
+      title: string
+      /** Objectiveid */
+      objectiveId: number | null
+      /** Answered */
+      answered: number
+      /** Wrong */
+      wrong: number
+      /** Option */
+      option: string
+      /** Chosenby */
+      chosenBy: number
+      /** Whywrong */
+      whyWrong: string | null
+    }
+    /**
+     * CourseLengthOut
+     * @description How long the whole course takes, in minutes: the sum of the modules' estimates.
+     */
+    CourseLengthOut: {
+      /** Minutes */
+      minutes: number
+    }
+    /**
      * EarnedBadgeOut
      * @description A badge the student holds. `badge` is a catalogue id (web/src/components/achievements.ts);
      *     `ref` tells repeatable badges apart (the bonus quest's id), "" otherwise. `seen` is false until
@@ -1245,6 +1499,8 @@ export interface components {
       upgradedAt: string | null
       /** Seen */
       seen: boolean
+      /** Questnumber */
+      questNumber?: number | null
     }
     /**
      * EditorActivityIn
@@ -1280,7 +1536,7 @@ export interface components {
        * @default practice
        * @enum {string}
        */
-      purpose: 'practice' | 'diagnostic' | 'retrieval' | 'mastery' | 'review' | 'bonus'
+      purpose: 'practice' | 'diagnostic' | 'retrieval' | 'mastery' | 'review' | 'bonus' | 'test_out'
       /** Config */
       config: {
         [key: string]: unknown
@@ -1326,7 +1582,7 @@ export interface components {
        * @default practice
        * @enum {string}
        */
-      purpose: 'practice' | 'diagnostic' | 'retrieval' | 'mastery' | 'review' | 'bonus'
+      purpose: 'practice' | 'diagnostic' | 'retrieval' | 'mastery' | 'review' | 'bonus' | 'test_out'
       /** Config */
       config: {
         [key: string]: unknown
@@ -1374,7 +1630,7 @@ export interface components {
        * Purpose
        * @enum {string}
        */
-      purpose: 'practice' | 'diagnostic' | 'retrieval' | 'mastery' | 'review' | 'bonus'
+      purpose: 'practice' | 'diagnostic' | 'retrieval' | 'mastery' | 'review' | 'bonus' | 'test_out'
     }
     /** EditorContentOverview */
     EditorContentOverview: {
@@ -1585,6 +1841,8 @@ export interface components {
       skipCheckActivityId?: number | null
       /** Refresherfor */
       refresherFor?: string | null
+      /** Supportfor */
+      supportFor?: number | null
       /** Videoid */
       videoId?: number | null
     }
@@ -1610,6 +1868,8 @@ export interface components {
       skipCheckActivityId?: number | null
       /** Refresherfor */
       refresherFor?: string | null
+      /** Supportfor */
+      supportFor?: number | null
       /** Videoid */
       videoId?: number | null
     }
@@ -1636,16 +1896,24 @@ export interface components {
     /**
      * EventIn
      * @description What the browser saw: `video_started` or `video_completed` (`targetId` is the video),
-     *     `checkpoint_reached` (the checkpoint) or `segment_viewed` (the segment).
+     *     `checkpoint_reached` (the checkpoint), `segment_viewed` (the segment) or `prediction_made`
+     *     (the graph, with `correct`: whether the predicted vertex was the one BFS takes next).
      */
     EventIn: {
       /**
        * Type
        * @enum {string}
        */
-      type: 'video_started' | 'video_completed' | 'checkpoint_reached' | 'segment_viewed'
+      type:
+        | 'video_started'
+        | 'video_completed'
+        | 'checkpoint_reached'
+        | 'segment_viewed'
+        | 'prediction_made'
       /** Targetid */
       targetId: number
+      /** Correct */
+      correct?: boolean | null
     }
     /**
      * GraphEdge
@@ -1696,6 +1964,11 @@ export interface components {
       hasMore: boolean
       /** Nextcountsassupport */
       nextCountsAsSupport: boolean
+      /**
+       * Limitreached
+       * @default false
+       */
+      limitReached: boolean
     }
     /** Insights */
     Insights: {
@@ -1709,6 +1982,18 @@ export interface components {
       activities: components['schemas']['ActivityInsight'][]
       /** Videos */
       videos: components['schemas']['VideoInsight'][]
+    }
+    /**
+     * LastAttemptOut
+     * @description A student's latest answer to an activity (#171): what they chose, in the kind's shape (as
+     *     sent in `AttemptIn.submitted`), and the result for it, as marked now.
+     */
+    LastAttemptOut: {
+      /** Submitted */
+      submitted: {
+        [key: string]: unknown
+      }
+      result: components['schemas']['AttemptOut']
     }
     /** LoginIn */
     LoginIn: {
@@ -1765,15 +2050,69 @@ export interface components {
        * Status
        * @enum {string}
        */
-      status: 'locked' | 'open' | 'in_progress' | 'complete'
+      status: 'locked' | 'open' | 'in_progress' | 'complete' | 'tested_out'
       /** Segmentcount */
       segmentCount: number
       /** Currentsegmentposition */
       currentSegmentPosition: number
+      /** Shownsegmentcount */
+      shownSegmentCount: number
+      /** Shownsegmentspassed */
+      shownSegmentsPassed: number
+      /**
+       * Recommended
+       * @default false
+       */
+      recommended: boolean
+      /** Quickcheck */
+      quickCheck?: ('available' | 'passed' | 'not_passed') | null
+      quickCheckScore?: components['schemas']['QuickCheckScoreOut'] | null
+      /**
+       * Lookagaincount
+       * @default 0
+       */
+      lookAgainCount: number
+      /**
+       * Restarted
+       * @default false
+       */
+      restarted: boolean
+      /**
+       * Canrestart
+       * @default false
+       */
+      canRestart: boolean
       /** Segments */
       segments: components['schemas']['SegmentOut'][]
       /** Retrieval */
       retrieval: components['schemas']['RetrievalActivityOut'][]
+    }
+    /**
+     * ModuleMedalOut
+     * @description A module's medal (FR-9.8): `medal` once the module is complete (gold, every activity right
+     *     first time without hint 3 or 4; silver, every activity right without them; bronze, finished),
+     *     and `headingFor`, what the answers so far are on course for. Never counts time or speed.
+     *     `objectives` are the learning objectives its activities practise.
+     */
+    ModuleMedalOut: {
+      /** Moduleid */
+      moduleId: number
+      /** Complete */
+      complete: boolean
+      /** Firsttime */
+      firstTime: number
+      /** Onyourown */
+      onYourOwn: number
+      /** Answered */
+      answered: number
+      /** Total */
+      total: number
+      /** Medal */
+      medal: ('gold' | 'silver' | 'bronze') | null
+      /** Headingfor */
+      headingFor: ('gold' | 'silver' | 'bronze') | null
+      /** Objectives */
+      objectives: number[]
     }
     /**
      * ModuleOut
@@ -1801,11 +2140,54 @@ export interface components {
        * Status
        * @enum {string}
        */
-      status: 'locked' | 'open' | 'in_progress' | 'complete'
+      status: 'locked' | 'open' | 'in_progress' | 'complete' | 'tested_out'
       /** Segmentcount */
       segmentCount: number
       /** Currentsegmentposition */
       currentSegmentPosition: number
+      /** Shownsegmentcount */
+      shownSegmentCount: number
+      /** Shownsegmentspassed */
+      shownSegmentsPassed: number
+      /**
+       * Recommended
+       * @default false
+       */
+      recommended: boolean
+      /** Quickcheck */
+      quickCheck?: ('available' | 'passed' | 'not_passed') | null
+      quickCheckScore?: components['schemas']['QuickCheckScoreOut'] | null
+      /**
+       * Lookagaincount
+       * @default 0
+       */
+      lookAgainCount: number
+      /**
+       * Restarted
+       * @default false
+       */
+      restarted: boolean
+      /**
+       * Canrestart
+       * @default false
+       */
+      canRestart: boolean
+    }
+    /**
+     * ObjectiveReadiness
+     * @description How the class stands on one objective, among students who have answered the mastery check.
+     */
+    ObjectiveReadiness: {
+      /** Id */
+      id: number
+      /** Text */
+      text: string
+      /** Metindependently */
+      metIndependently: number
+      /** Metwithsupport */
+      metWithSupport: number
+      /** Notyet */
+      notYet: number
     }
     /**
      * ObjectiveReportOut
@@ -1852,6 +2234,15 @@ export interface components {
       newPassword: string
     }
     /**
+     * PictureIn
+     * @description An uploaded profile picture as a data URL ("data:image/png;base64,…"): JSON like every other
+     *     request that changes something (NFR-S6), so a form on another site can't send one.
+     */
+    PictureIn: {
+      /** Image */
+      image: string
+    }
+    /**
      * PositionIn
      * @description Request body for ``POST /api/modules/{moduleId}/position`` (FR-2.5).
      *
@@ -1866,6 +2257,130 @@ export interface components {
     PositionIn: {
       /** Segmentposition */
       segmentPosition: number
+    }
+    /** QuickCheckAnswerIn */
+    QuickCheckAnswerIn: {
+      /** Activityid */
+      activityId: number
+      /** Selected */
+      selected: string
+    }
+    /**
+     * QuickCheckIn
+     * @description `POST /api/modules/{moduleId}/quick-check`: one answer for every question, sent together.
+     */
+    QuickCheckIn: {
+      /** Answers */
+      answers: components['schemas']['QuickCheckAnswerIn'][]
+    }
+    /**
+     * QuickCheckItemResultOut
+     * @description How one question went, shown once every question is answered.
+     */
+    QuickCheckItemResultOut: {
+      /** Activityid */
+      activityId: number
+      /** Title */
+      title: string
+      /** Prompt */
+      prompt: string
+      /** Correct */
+      correct: boolean
+      /** Chosen */
+      chosen: string
+      /** Answer */
+      answer: string
+      /** Explanation */
+      explanation: string
+    }
+    /** QuickCheckOptionOut */
+    QuickCheckOptionOut: {
+      /** Id */
+      id: string
+      /** Label */
+      label: string
+    }
+    /**
+     * QuickCheckOut
+     * @description `GET /api/modules/{moduleId}/quick-check`. `available` while the student may take it;
+     *     `questions` then holds its questions. Once taken, `result` holds how it went.
+     */
+    QuickCheckOut: {
+      /** Moduleid */
+      moduleId: number
+      /** Available */
+      available: boolean
+      /** Passmark */
+      passMark: number
+      /** Questions */
+      questions: components['schemas']['QuickCheckQuestionOut'][]
+      result?: components['schemas']['QuickCheckResultOut'] | null
+    }
+    /**
+     * QuickCheckQuestionOut
+     * @description One quick check question: multiple choice, no hints, no feedback until the end.
+     */
+    QuickCheckQuestionOut: {
+      /** Id */
+      id: number
+      /** Title */
+      title: string
+      /** Prompt */
+      prompt: string
+      /** Options */
+      options: components['schemas']['QuickCheckOptionOut'][]
+    }
+    /**
+     * QuickCheckResultOut
+     * @description The quick check's result (FR-8.2, #214). `passed` with at most one wrong. `suggestion`:
+     *     `move_on` after a pass, `start_with` an earlier module after a fail that points there (see
+     *     app/services/quick_check.py), else `work_through` this module. `suggested_module` is the
+     *     module named: the next one to do after a pass (None if there is none), the earlier one, or
+     *     this one. `look_at` names what was missed: the titles of the questions answered wrongly.
+     */
+    QuickCheckResultOut: {
+      /** Passed */
+      passed: boolean
+      /** Correct */
+      correct: number
+      /** Total */
+      total: number
+      /**
+       * Suggestion
+       * @enum {string}
+       */
+      suggestion: 'move_on' | 'start_with' | 'work_through'
+      /** Suggestedmodule */
+      suggestedModule: number | null
+      /** Lookat */
+      lookAt: string[]
+      /** Items */
+      items: components['schemas']['QuickCheckItemResultOut'][]
+    }
+    /**
+     * QuickCheckScoreOut
+     * @description How a quick check went, for the map and the module page to link back to its result.
+     */
+    QuickCheckScoreOut: {
+      /** Correct */
+      correct: number
+      /** Total */
+      total: number
+    }
+    /**
+     * Readiness
+     * @description Before the lecture (Just-in-Time Teaching, Novak et al. 1999): who is ready, how the class
+     *     stands on each objective, and the wrong answers the lecture should address first.
+     */
+    Readiness: {
+      /** Students */
+      students: number
+      /** Ready */
+      ready: number
+      /** Objectives */
+      objectives: components['schemas']['ObjectiveReadiness'][]
+      /** Commonwronganswers */
+      commonWrongAnswers: components['schemas']['CommonWrongAnswer'][]
     }
     /** RegisterIn */
     RegisterIn: {
@@ -1999,6 +2514,13 @@ export interface components {
       videoId?: number | null
       /** Activityid */
       activityId?: number | null
+      /** Supportfor */
+      supportFor?: number | null
+      /**
+       * Shown
+       * @default true
+       */
+      shown: boolean
       /**
        * Done
        * @default true
@@ -2009,6 +2531,54 @@ export interface components {
        * @default false
        */
       attempted: boolean
+      /**
+       * Lookagain
+       * @default false
+       */
+      lookAgain: boolean
+      /**
+       * Optional
+       * @default false
+       */
+      optional: boolean
+    }
+    /**
+     * SkillOut
+     * @description One objective on the skill profile (FR-9.7). `level` is practice progress in three coarse
+     *     steps (not started, practising, secure: every practice item answered and at least 80% right
+     *     without hint 3 or 4); the counts are the evidence behind it, of `total` practice items.
+     *     `result` is the mastery result once the mastery check (or a review path) has decided it.
+     */
+    SkillOut: {
+      /** Id */
+      id: number
+      /** Text */
+      text: string
+      /** Answered */
+      answered: number
+      /** Correct */
+      correct: number
+      /** Onyourown */
+      onYourOwn: number
+      /** Total */
+      total: number
+      /**
+       * Level
+       * @enum {string}
+       */
+      level: 'not_started' | 'practising' | 'secure'
+      /** Result */
+      result: ('not_attempted' | 'met_independently' | 'met_with_support' | 'not_yet') | null
+    }
+    /**
+     * SkillsOut
+     * @description The logged-in student's skill profile and module medals. Only ever their own.
+     */
+    SkillsOut: {
+      /** Objectives */
+      objectives: components['schemas']['SkillOut'][]
+      /** Modules */
+      modules: components['schemas']['ModuleMedalOut'][]
     }
     /**
      * StaffCheckpointIn
@@ -2144,6 +2714,8 @@ export interface components {
       isStaff: boolean
       /** Avatar */
       avatar?: string | null
+      /** Pictureurl */
+      pictureUrl?: string | null
     }
     /** ValidationError */
     ValidationError: {
@@ -2728,6 +3300,37 @@ export interface operations {
       }
     }
   }
+  get_skills_api_me_skills_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SkillsOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   set_avatar_api_me_avatar_put: {
     parameters: {
       query?: never
@@ -2742,6 +3345,132 @@ export interface operations {
         'application/json': components['schemas']['AvatarIn']
       }
     }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['UserOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  get_picture_api_me_picture_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'image/png': unknown
+          'image/jpeg': unknown
+          'image/webp': unknown
+        }
+      }
+      /** @description No picture uploaded. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  upload_picture_api_me_picture_put: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PictureIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['UserOut']
+        }
+      }
+      /** @description Not a PNG, JPEG or WebP, or over 200 kB. */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description More than 10 uploads in a minute. */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorOut']
+        }
+      }
+    }
+  }
+  delete_picture_api_me_picture_delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
     responses: {
       /** @description Successful Response */
       200: {
@@ -2845,6 +3574,26 @@ export interface operations {
       }
     }
   }
+  course_length_api_modules_length_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CourseLengthOut']
+        }
+      }
+    }
+  }
   get_module_api_modules__module_id__get: {
     parameters: {
       query?: never
@@ -2903,6 +3652,116 @@ export interface operations {
         content: {
           'application/json': components['schemas']['ModuleDetailOut']
         }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  get_quick_check_api_modules__module_id__quick_check_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        module_id: number
+      }
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['QuickCheckOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  take_quick_check_api_modules__module_id__quick_check_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        module_id: number
+      }
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['QuickCheckIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['QuickCheckResultOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  restart_api_modules__module_id__restart_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        module_id: number
+      }
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ModuleDetailOut']
+        }
+      }
+      /** @description The mastery check, or a module not worked through to the end yet (one only tested out of is not). */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
       /** @description Validation Error */
       422: {
@@ -3358,6 +4217,37 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['Insights']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  readiness_api_staff_readiness_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['Readiness']
         }
       }
       /** @description Validation Error */

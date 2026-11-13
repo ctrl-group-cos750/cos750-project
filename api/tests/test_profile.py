@@ -124,3 +124,104 @@ def test_the_password_change_documents_every_answer_it_gives(client: TestClient)
     # The published schema matches the real contract, so the generated types do too (NFR-M2).
     answers = client.get("/api/openapi.json").json()["paths"]["/api/me/password"]["post"]
     assert set(answers["responses"]) == {"204", "400", "422", "429"}
+
+
+# --- An uploaded picture (FR-1.6) ---------------------------------------------------------------
+
+PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
+JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 64
+WEBP = b"RIFF\x00\x00\x00\x00WEBPVP8 " + b"\x00" * 64
+
+
+def data_url(kind: str, raw: bytes) -> str:
+    import base64
+
+    return f"data:{kind};base64,{base64.b64encode(raw).decode()}"
+
+
+@pytest.mark.parametrize(
+    ("kind", "raw"), [("image/png", PNG), ("image/jpeg", JPEG), ("image/webp", WEBP)]
+)
+def test_a_student_can_upload_their_own_picture(
+    client: TestClient, db: Session, kind: str, raw: bytes
+) -> None:
+    log_in(client)
+    client.put("/api/me/avatar", json={"avatar": "tree"})
+    response = client.put("/api/me/picture", json={"image": data_url(kind, raw)})
+    assert response.status_code == 200
+    me = response.json()
+    assert me["avatar"] is None  # the upload replaces the chosen picture
+    assert me["pictureUrl"].startswith("/api/me/picture?v=")
+    image = client.get(me["pictureUrl"])
+    assert image.status_code == 200
+    assert image.content == raw
+    assert image.headers["content-type"] == kind
+    assert image.headers["x-content-type-options"] == "nosniff"
+    assert "sandbox" in image.headers["content-security-policy"]
+    assert image.headers["cache-control"].startswith("private")
+
+
+def test_choosing_one_of_the_teams_pictures_deletes_the_upload(
+    client: TestClient, db: Session
+) -> None:
+    log_in(client)
+    client.put("/api/me/picture", json={"image": data_url("image/png", PNG)})
+    assert client.put("/api/me/avatar", json={"avatar": "star"}).json()["pictureUrl"] is None
+    assert client.get("/api/me/picture").status_code == 404
+
+
+def test_removing_the_picture_deletes_it(client: TestClient, db: Session) -> None:
+    user_id = log_in(client)
+    client.put("/api/me/picture", json={"image": data_url("image/png", PNG)})
+    assert client.delete("/api/me/picture").json()["pictureUrl"] is None
+    assert client.get("/api/me/picture").status_code == 404
+    db.expire_all()
+    user = db.get(User, user_id)
+    assert user is not None
+    assert user.picture is None
+
+
+@pytest.mark.parametrize(
+    "image",
+    [
+        data_url("image/svg+xml", b"<svg onload='alert(1)'/>"),  # scripts: never kept
+        data_url("text/html", b"<script>alert(1)</script>"),
+        data_url("image/png", b"<script>alert(1)</script>"),  # claims PNG, isn't one
+        data_url("image/png", JPEG),  # claims PNG, is a JPEG
+        "data:image/png;base64,not base64!!",
+        "https://evil.example/me.png",
+        data_url("image/png", PNG + b"\x00" * 200_001),  # too big
+    ],
+)
+def test_only_small_real_pictures_are_kept(client: TestClient, db: Session, image: str) -> None:
+    log_in(client)
+    assert client.put("/api/me/picture", json={"image": image}).status_code in (400, 422)
+    assert client.get("/api/auth/me").json()["pictureUrl"] is None
+
+
+def test_pictures_need_a_login(client: TestClient, db: Session) -> None:
+    assert client.get("/api/me/picture").status_code == 401
+    assert (
+        client.put("/api/me/picture", json={"image": data_url("image/png", PNG)}).status_code == 401
+    )
+    assert client.delete("/api/me/picture").status_code == 401
+
+
+def test_a_picture_goes_with_the_account(client: TestClient, db: Session) -> None:
+    """Only the student's own session can fetch it: the URL has no user id to change."""
+    log_in(client)
+    url = client.put("/api/me/picture", json={"image": data_url("image/png", PNG)}).json()[
+        "pictureUrl"
+    ]
+    client.post("/api/auth/logout")
+    other = {"email": "grace@example.com", "password": PASSWORD, "displayName": "Grace"}
+    assert client.post("/api/auth/register", json=other).status_code == 201
+    assert client.get(url).status_code == 404
+
+
+def test_uploads_are_limited_to_ten_a_minute(client: TestClient, db: Session) -> None:
+    log_in(client)
+    image = data_url("image/png", PNG)
+    for _ in range(10):
+        assert client.put("/api/me/picture", json={"image": image}).status_code == 200
+    assert client.put("/api/me/picture", json={"image": image}).status_code == 429

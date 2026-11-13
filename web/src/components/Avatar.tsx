@@ -76,6 +76,8 @@ const DRAWINGS: Record<AvatarId, ReactNode> = {
 
 export type AvatarProps = {
   avatar: AvatarId | null | undefined
+  /** The student's own uploaded picture (FR-1.6); shown instead of `avatar` when there is one. */
+  picture?: string | null
   /** Shown as an initial when no picture is chosen. */
   name: string
   size?: number
@@ -83,9 +85,22 @@ export type AvatarProps = {
   label?: string
 }
 
-/** A student's profile picture, or their initial if they haven't chosen one. Only they see it. */
-export function Avatar({ avatar, name, size = 32, label }: AvatarProps) {
+/** A student's profile picture: one they uploaded, one of the team's (each in its own colour), or
+ * their initial if they haven't chosen one. Only they see it. */
+export function Avatar({ avatar, picture, name, size = 32, label }: AvatarProps) {
   const a11y = label ? { role: 'img', 'aria-label': label } : { 'aria-hidden': true }
+  if (picture) {
+    return (
+      <img
+        className={styles.photo}
+        src={picture}
+        width={size}
+        height={size}
+        alt={label ?? ''}
+        {...(label ? {} : { 'aria-hidden': true })}
+      />
+    )
+  }
   if (!avatar) {
     return (
       <span
@@ -98,7 +113,14 @@ export function Avatar({ avatar, name, size = 32, label }: AvatarProps) {
     )
   }
   return (
-    <svg className={styles.avatar} width={size} height={size} viewBox="0 0 40 40" {...a11y}>
+    <svg
+      className={styles.avatar}
+      data-avatar={avatar}
+      width={size}
+      height={size}
+      viewBox="0 0 40 40"
+      {...a11y}
+    >
       <circle className={styles.ground} cx={20} cy={20} r={20} />
       <g className={styles.drawing}>{DRAWINGS[avatar]}</g>
     </svg>

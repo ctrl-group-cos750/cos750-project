@@ -1,6 +1,94 @@
 .page {
   display: grid;
+  /* One column no wider than the screen: an auto track would widen to its widest line and run
+   * past the page's padding at 320 px (WCAG 1.4.10). */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-5);
+  max-width: 56rem;
+  margin-inline: auto;
+}
+
+.side {
+  display: grid;
+  gap: var(--space-5);
+  align-content: start;
+}
+
+.top {
+  display: grid;
+  gap: var(--space-4);
+}
+
+/* Wide screens: "next up" beside the list, so the page uses the width instead of a narrow
+ * column in the middle of the screen. */
+@media (min-width: 72rem) {
+  .page {
+    max-width: none;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    align-items: start;
+    column-gap: var(--space-6);
+  }
+
+  .top {
+    grid-column: 1 / -1;
+  }
+
+  .side {
+    position: sticky;
+    top: 6rem;
+  }
+}
+
+/* "Next up": the one thing to do, before the full list. */
+.next {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-6);
+  border-color: color-mix(in srgb, var(--color-accent-text) 35%, var(--color-line));
+}
+
+.nextTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 700;
+}
+
+.nextText {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.goals {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-inline-start: 1.25em;
+  list-style: disc;
+}
+
+.nextActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.all {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.allHeading {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
 }
 
 .header {
@@ -22,7 +110,8 @@
 .totalDuration {
   color: var(--color-text-muted);
   font-size: var(--text-sm);
-  white-space: nowrap;
+  /* Wraps rather than overflowing at 320 px or with larger text spacing (WCAG 1.4.12). */
+  overflow-wrap: anywhere;
 }
 
 /* Module list */
@@ -36,14 +125,17 @@
 /* Each module row inside a Card */
 .row {
   display: grid;
-  grid-template-columns: 2rem 1fr auto auto;
+  grid-template-columns: 2rem 1fr auto;
   align-items: center;
   gap: var(--space-4);
   padding: var(--space-4) var(--space-5);
 }
 
-.locked {
-  opacity: 0.6;
+/* A locked module reads as locked from its tag ("locked") and from not being a link, and its
+   title in the muted text colour; not from fading the whole row, which took its text below
+   WCAG 1.4.3 contrast (axe, end-to-end tests #35). */
+.locked .title {
+  color: var(--color-text-muted);
 }
 
 .number {
@@ -74,13 +166,6 @@
   white-space: nowrap;
 }
 
-/* Continue CTA */
-.continueBar {
-  display: flex;
-  justify-content: flex-start;
-  padding-top: var(--space-2);
-}
-
 /* Link wrapper for non-locked module cards — resets anchor decorations so the card
    appearance is unchanged; the Card's own interactive hover still applies. */
 .cardLink {
@@ -89,22 +174,62 @@
   color: inherit;
 }
 
-/* Responsive: stack number+title on small screens */
-@media (max-width: 480px) {
+/* "Already know this?" under a module's card: its quick check (#214). A link of its own, beside
+   the card's link, never inside it. */
+.quickCheck {
+  display: inline-block;
+  margin-block-start: var(--space-2);
+  margin-inline-start: calc(2rem + var(--space-4) + var(--space-5));
+  font-size: var(--text-sm);
+  color: var(--color-accent-text);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* "Quick check: 2 of 4, see results" once taken (#215 review), lined up with the title. */
+.quickCheckScore {
+  margin: var(--space-2) 0 0 calc(2rem + var(--space-4) + var(--space-5));
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.quickCheckScore a {
+  color: var(--color-accent-text);
+  font-weight: 600;
+}
+
+/* Links a full 44 px tall where the pointer is a finger (WCAG 2.5.5). */
+@media (pointer: coarse) {
+  .quickCheck,
+  .quickCheckScore a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}
+
+.lookAgain {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* Phones: the time and the state go on their own line under the title, never over it. */
+@media (max-width: 30rem) {
   .row {
     grid-template-columns: 2rem 1fr;
-    grid-template-rows: auto auto;
+    padding: var(--space-3) var(--space-4);
   }
 
-  .duration {
+  .meta {
     grid-column: 2;
-    grid-row: 2;
   }
 
-  /* Tag goes after duration on small screens */
-  .row > :last-child {
-    grid-column: 1;
-    grid-row: 2;
-    justify-self: start;
+  .next {
+    padding: var(--space-4);
+  }
+
+  .quickCheck,
+  .quickCheckScore {
+    margin-inline-start: calc(2rem + var(--space-4) + var(--space-4));
   }
 }

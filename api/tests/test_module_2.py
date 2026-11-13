@@ -235,3 +235,13 @@ def test_the_add_edge_feedback_only_names_the_items_own_vertices() -> None:
     for messages in activity(207).solution["feedback"].values():
         for text in messages.values():
             assert not EDGE.search(text), text  # its vertices are a and b, never capitals
+
+
+def test_hint_3_of_the_dictionaries_item_names_the_one_that_matches_nothing() -> None:
+    """Hint 3 said "the fourth dictionary" matches nothing, but the fourth one shown is graph 3's
+    answer (#214 C11). It now quotes the spare dictionary."""
+    a = next(x for x in CONTENT.activities if x.id == 204)
+    used = set(a.solution["pairs"].values())
+    (spare,) = [r["label"] for r in a.config["right"] if r["id"] not in used]
+    assert spare in a.hints[2].body
+    assert "fourth" not in a.hints[2].body

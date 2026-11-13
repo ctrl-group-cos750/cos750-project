@@ -199,42 +199,42 @@
         "prompt": "Which of these is a data structure?",
         "options": [
           {
-            "id": "a",
-            "label": "A Python dictionary that maps each vertex to its neighbours"
-          },
-          {
             "id": "c",
             "label": "Visiting every page of a website by following links"
           },
           {
-            "id": "b",
-            "label": "The steps BFS follows to visit every vertex of a graph, one by one"
+            "id": "d",
+            "label": "A bus timetable listing every stop and the time the bus gets there"
+          },
+          {
+            "id": "e",
+            "label": "How a sat-nav works out which turn you should take next"
           }
         ]
       },
       "solution": {
-        "correct": "a",
+        "correct": "d",
         "feedback": {
-          "b": "Not quite. That's an algorithm. A list of steps that does something is an algorithm. A data structure stores data. Find the option that stores information.",
-          "c": "Not quite. That's a traversal. Visiting vertices by following edges is a graph traversal, which is an algorithm. Find the option that stores information."
+          "c": "Not quite. That's a graph traversal: it visits pages by following links, so it is something done, not something kept. Ask: does it hold information, or is it a method for doing something?",
+          "e": "Not quite. That's an algorithm: a method the sat-nav follows to decide. It doesn't hold the information itself. Ask: does it hold information, or is it a method for doing something?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "A data structure organises and stores data."
+          "body": "Ask of each: does it hold information, or is it a way of doing something?"
         },
         {
           "level": 2,
-          "body": "An algorithm is a list of steps; it doesn't store anything."
+          "body": "Something that keeps information organised is a data structure. A method, or a way of moving through something, is not."
         },
         {
           "level": 3,
-          "body": "Which option holds data that a program can look up?"
+          "body": "Choosing a turn and visiting pages are both things done."
         },
         {
           "level": 4,
-          "body": "Answer: the dictionary of neighbour lists."
+          "body": "Answer: the bus timetable, which holds the stops and times."
         }
       ]
     },
@@ -253,38 +253,38 @@
             "label": "A map of the stations on a train line and the tracks between them"
           },
           {
-            "id": "a",
-            "label": "A queue of students waiting at the library desk to borrow books"
+            "id": "e",
+            "label": "A playlist, in the order the songs will play"
           },
           {
-            "id": "b",
-            "label": "Steps for finding the largest mark in a class list"
+            "id": "d",
+            "label": "The rules for deciding whether a year is a leap year"
           }
         ]
       },
       "solution": {
-        "correct": "b",
+        "correct": "d",
         "feedback": {
-          "a": "Not quite. That's a data structure. A queue stores items in order. It doesn't do anything by itself. Find the option that is a set of steps.",
-          "c": "Not quite. That's a graph. A map of stations and tracks is a graph, which is a data structure. Find the option that is a set of steps."
+          "c": "Not quite. That's a graph. A map of stations and tracks is a graph, which is a data structure. Find the option that is a method for working something out.",
+          "e": "Not quite. The songs are in an order, but the playlist only holds them, and something that holds information is a data structure. Ask: does it hold information, or is it a method for doing something?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "An algorithm is a finite list of steps that solves a problem."
+          "body": "An algorithm is a method that solves a problem."
         },
         {
           "level": 2,
-          "body": "Queues and graphs store data."
+          "body": "A map and a playlist hold information."
         },
         {
           "level": 3,
-          "body": "Which option describes doing something step by step?"
+          "body": "Which option tells you how to work something out?"
         },
         {
           "level": 4,
-          "body": "Answer: the steps for finding the largest mark."
+          "body": "Answer: the rules for deciding whether a year is a leap year."
         }
       ]
     },
@@ -296,11 +296,15 @@
       "purpose": "mastery",
       "objective_id": 1,
       "config": {
-        "prompt": "Match each term to its example.",
+        "prompt": "Match each term to its example. One example matches none of them.",
         "left": [
           {
-            "id": "t1",
-            "label": "Graph"
+            "id": "t3",
+            "label": "Data structure"
+          },
+          {
+            "id": "t4",
+            "label": "Algorithm"
           },
           {
             "id": "t2",
@@ -309,45 +313,51 @@
         ],
         "right": [
           {
-            "id": "e3",
-            "label": "A stack of plates"
-          },
-          {
-            "id": "e1",
-            "label": "A family tree showing who is a parent of whom"
+            "id": "e6",
+            "label": "A bar chart of the test marks in a class"
           },
           {
             "id": "e2",
             "label": "Checking every room in a building by walking through its doors"
+          },
+          {
+            "id": "e5",
+            "label": "The method for working out a 15% tip on a bill"
+          },
+          {
+            "id": "e4",
+            "label": "A phone's list of recent calls, newest first"
           }
         ]
       },
       "solution": {
         "pairs": {
-          "t1": "e1",
+          "t3": "e4",
+          "t4": "e5",
           "t2": "e2"
         },
         "feedback": {
-          "t1": "Check “graph”. A graph is things joined by connections, like people joined by parent links. Find the example with things and connections.",
-          "t2": "Check “graph traversal”. A traversal visits every vertex by following edges, like walking through every room via its doors. Find the example about visiting everything."
+          "t3": "Not quite. A data structure keeps information organised so a program can use it, like a phone's list of recent calls. Find the example that holds information for a program.",
+          "t4": "Not quite. An algorithm is a method that solves a problem, like working out a tip. Find the example that is a way of working something out.",
+          "t2": "Not quite. A traversal goes to every one of a set of connected things by moving along the connections, like walking through every room by its doors. Find the example about visiting everything."
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "One example stores connections; one visits things; one is neither."
+          "body": "One example holds information, one is a way of working something out, one visits connected things, and one is none of these."
         },
         {
           "level": 2,
-          "body": "A stack of plates is a stack, not a graph."
+          "body": "A bar chart is the everyday kind of graph, a picture of values: it is none of these terms."
         },
         {
           "level": 3,
-          "body": "Walking through every room is visiting every vertex."
+          "body": "Walking through every room by its doors is visiting connected things."
         },
         {
           "level": 4,
-          "body": "Answer: graph → family tree; graph traversal → checking every room."
+          "body": "Answer: data structure → the list of recent calls; algorithm → working out a tip; graph traversal → checking every room."
         }
       ]
     },
@@ -359,45 +369,50 @@
       "purpose": "mastery",
       "objective_id": 1,
       "config": {
-        "prompt": "What is a graph traversal?",
+        "prompt": "A municipal inspector starts at the waterworks and follows the pipes until every reservoir they can reach has been checked. Which term describes what the inspector does?",
         "options": [
           {
-            "id": "a",
-            "label": "Drawing a graph's vertices and edges on paper"
+            "id": "f",
+            "label": "A data structure"
           },
           {
-            "id": "b",
-            "label": "Adding vertices and edges to a graph until it matches a map"
+            "id": "e",
+            "label": "A graph"
           },
           {
-            "id": "c",
-            "label": "Visiting the vertices of a graph by following its edges"
+            "id": "g",
+            "label": "Building a graph"
+          },
+          {
+            "id": "d",
+            "label": "A graph traversal"
           }
         ]
       },
       "solution": {
-        "correct": "c",
+        "correct": "d",
         "feedback": {
-          "a": "Not quite. Drawing shows a graph; a traversal moves through it. Think about what BFS does to a graph.",
-          "b": "Not quite. That's building a graph. add_vertex and add_edge build a graph; a traversal visits what's already there. Think about what BFS does to a graph."
+          "e": "Not quite. The pipes and reservoirs are a graph, but the inspector isn't the pipes: they move along them. Ask: is this something that stores, or something that is done?",
+          "f": "Not quite. The pipes and reservoirs could be stored in a data structure, but the inspector isn't storing anything: they move along the pipes. Ask: is this something that stores, or something that is done?",
+          "g": "Not quite. Nothing new is added: the pipes and reservoirs are already there, and the inspector moves along them. Ask: is the inspector adding connections, or following them?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "BFS is one kind of graph traversal."
+          "body": "Ask: is the inspector something that stores, or something that is done?"
         },
         {
           "level": 2,
-          "body": "What does BFS do with the vertices?"
+          "body": "The pipes and reservoirs are the graph. What is the inspector doing to it?"
         },
         {
           "level": 3,
-          "body": "It visits them, moving along edges."
+          "body": "The inspector goes to every reservoir they can reach by moving along the pipes."
         },
         {
           "level": 4,
-          "body": "Answer: visiting the vertices of a graph by following its edges."
+          "body": "Answer: a graph traversal."
         }
       ]
     },
@@ -544,7 +559,7 @@
       "purpose": "mastery",
       "objective_id": 2,
       "config": {
-        "prompt": "Rooms on a floor, joined by doorways. The rooms are the kitchen (K), the lounge (L), the music room (M) and the nursery (N). Doorways join K–L, K–M, L–N and M–N, and you can walk through a doorway either way. Each marker below describes one part of this graph. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
+        "prompt": "Rooms on a floor, joined by doorways. The rooms are the kitchen (P), the lounge (Q), the music room (S) and the nursery (T). Doorways join P–Q, P–S, Q–T and S–T, and you can walk through a doorway either way. Each marker below describes one part of this graph. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
         "left": [
           {
             "id": "1",
@@ -561,44 +576,44 @@
         ],
         "right": [
           {
-            "id": "vK",
-            "label": "Vertex K"
+            "id": "vP",
+            "label": "Vertex P"
           },
           {
-            "id": "vL",
-            "label": "Vertex L"
+            "id": "vQ",
+            "label": "Vertex Q"
           },
           {
-            "id": "vM",
-            "label": "Vertex M"
+            "id": "vS",
+            "label": "Vertex S"
           },
           {
-            "id": "vN",
-            "label": "Vertex N"
+            "id": "vT",
+            "label": "Vertex T"
           },
           {
-            "id": "eKL",
-            "label": "Edge K–L"
+            "id": "ePQ",
+            "label": "Edge P–Q"
           },
           {
-            "id": "eKM",
-            "label": "Edge K–M"
+            "id": "ePS",
+            "label": "Edge P–S"
           },
           {
-            "id": "eLN",
-            "label": "Edge L–N"
+            "id": "eQT",
+            "label": "Edge Q–T"
           },
           {
-            "id": "eMN",
-            "label": "Edge M–N"
+            "id": "eST",
+            "label": "Edge S–T"
           }
         ]
       },
       "solution": {
         "pairs": {
-          "1": "eKM",
-          "2": "vN",
-          "3": "eLN"
+          "1": "ePS",
+          "2": "vT",
+          "3": "eQT"
         },
         "feedback": {
           "1": "Check marker 1. It describes a doorway between two things, so it is an edge, named by the letters of its two ends. Use the names and the list to find both ends.",
@@ -617,11 +632,11 @@
         },
         {
           "level": 3,
-          "body": "Look up each name's letter in the prompt: the kitchen is K and the music room is M."
+          "body": "Look up each name's letter in the prompt: the kitchen is P and the music room is S."
         },
         {
           "level": 4,
-          "body": "Answer: 1 = Edge K–M, 2 = Vertex N, 3 = Edge L–N."
+          "body": "Answer: 1 = Edge P–S, 2 = Vertex T, 3 = Edge Q–T."
         }
       ]
     },
@@ -718,23 +733,23 @@
       "purpose": "mastery",
       "objective_id": 2,
       "config": {
-        "prompt": "Classify each graph as directed or undirected. An edge written A → B is an arrow that only goes from A to B. An edge written A–B is a plain line that goes both ways.",
+        "prompt": "Is each graph directed or undirected? Decide from what each connection means.",
         "left": [
           {
-            "id": "phone-calls",
-            "label": "Phone calls (who called whom). Vertices: Amo (A), Bongi (B), Chris (C). Edges: A → B, C → B."
+            "id": "owes",
+            "label": "A flat's money: who owes money to whom. Amo owes Bongi, and Chris owes Bongi."
           },
           {
-            "id": "shared-walls-between-houses",
-            "label": "Shared walls between houses. Vertices: House 1 (H), House 2 (I), House 3 (J). Edges: H–I, I–J."
+            "id": "walls",
+            "label": "Houses on a street, and which houses share a wall. House 1 shares a wall with House 2, and House 2 with House 3."
           },
           {
-            "id": "module-prerequisites",
-            "label": "Module prerequisites. Vertices: COS132 (P), COS110 (Q), COS212 (R). Edges: P → Q, Q → R."
+            "id": "mutual",
+            "label": "TikTok follows between Dudu, Ewan and Fezi. Every one of them follows the other two, and each follow is its own link."
           },
           {
-            "id": "two-way-radio-links",
-            "label": "Two-way radio links. Vertices: Tower (T), Unit 1 (U), Unit 2 (V). Edges: T–U, T–V, U–V."
+            "id": "seats",
+            "label": "Learners in an exam, and who sat next to whom."
           }
         ],
         "right": [
@@ -750,34 +765,34 @@
       },
       "solution": {
         "pairs": {
-          "phone-calls": "directed",
-          "shared-walls-between-houses": "undirected",
-          "module-prerequisites": "directed",
-          "two-way-radio-links": "undirected"
+          "owes": "directed",
+          "walls": "undirected",
+          "mutual": "directed",
+          "seats": "undirected"
         },
         "feedback": {
-          "phone-calls": "Check “Phone calls (who called whom)”. Its edges are arrows (→): each connection goes one way, so it's directed. Look at how the edges are written.",
-          "shared-walls-between-houses": "Check “Shared walls between houses”. Its edges are plain lines (–): each connection works both ways, so it's undirected. Look at how the edges are written.",
-          "module-prerequisites": "Check “Module prerequisites”. Its edges are arrows (→): each connection goes one way, so it's directed. Look at how the edges are written.",
-          "two-way-radio-links": "Check “Two-way radio links”. Its edges are plain lines (–): each connection works both ways, so it's undirected. Look at how the edges are written."
+          "owes": "Not quite. Owing money goes one way: Amo owes Bongi, but Bongi doesn't owe Amo. Ask: if this connection exists, must the reverse one exist too?",
+          "walls": "Not quite. A shared wall belongs to both houses: if House 1 shares a wall with House 2, House 2 shares it with House 1. Ask: could this connection exist one way only?",
+          "mutual": "Not quite. Each follow is a one-way link, even when it's returned, so Dudu → Ewan and Ewan → Dudu are two separate arrows. A graph of one-way links is directed. Ask: is each single connection one-way?",
+          "seats": "Not quite. If Thabo sat next to Lindiwe, Lindiwe sat next to Thabo. Ask: could this connection exist one way only?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Look at how each graph's edges are written."
+          "body": "Ask of each connection: if it joins X to Y, must it also join Y to X?"
         },
         {
           "level": 2,
-          "body": "An edge written A → B is an arrow: it only goes one way. A–B is a plain line."
+          "body": "If the reverse must always exist, the graph is undirected. If one can exist without the other, it is directed."
         },
         {
           "level": 3,
-          "body": "Two arrows between the same pair still make a graph directed."
+          "body": "Watch the follows: every pair follows each other, but each follow is still one arrow."
         },
         {
           "level": 4,
-          "body": "Answer: Phone calls (who called whom) = directed; Shared walls between houses = undirected; Module prerequisites = directed; Two-way radio links = undirected."
+          "body": "Answer: owing money = directed; shared walls = undirected; TikTok follows = directed; sitting next to = undirected."
         }
       ]
     },
@@ -789,50 +804,50 @@
       "purpose": "mastery",
       "objective_id": 3,
       "config": {
-        "prompt": "Each flight route between airports only flies one way. Which graph models it?",
+        "prompt": "In a class WhatsApp group, the app keeps a record of who has replied to whose message. Ayanda replied to Bongani's message, but Bongani hasn't replied to any of Ayanda's. Which graph models who has replied to whom?",
         "options": [
           {
-            "id": "c",
-            "label": "Vertices: flight routes. Edges: airports. Directed."
+            "id": "f",
+            "label": "Vertices: learners. Edges: replies. Undirected, because a reply is part of a chat between two people."
           },
           {
-            "id": "a",
-            "label": "Vertices: airports. Edges: flight routes. Undirected."
+            "id": "e",
+            "label": "Vertices: learners. Edges: replies. Directed, because a reply can go one way without one coming back."
           },
           {
-            "id": "d",
-            "label": "Vertices: flight routes. Edges: airports. Undirected."
+            "id": "g",
+            "label": "Vertices: messages. Edges: the learners who wrote them. Directed, because a message has one writer."
           },
           {
-            "id": "b",
-            "label": "Vertices: airports. Edges: flight routes. Directed."
+            "id": "h",
+            "label": "Vertices: learners. Edges: the messages each learner sent to the group. Directed, as each is sent."
           }
         ]
       },
       "solution": {
-        "correct": "b",
+        "correct": "e",
         "feedback": {
-          "a": "Not quite. These connections only go one way. One-way connections need arrows, so the graph is directed. Check the direction.",
-          "c": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
-          "d": "Not quite. Vertices and edges are swapped, and the direction is wrong too. The things are the vertices; the connections between them are the edges. Then check whether each connection works both ways."
+          "f": "Not quite. Two people are involved, but that doesn't make a connection two-way. Ayanda replied to Bongani, and Bongani didn't reply to Ayanda. Ask: if this edge exists, must the reverse one exist too?",
+          "g": "Not quite. A message isn't joined to another message here: the replies join learners. The learners are the things in this graph. Ask: what does each reply connect?",
+          "h": "Not quite. A message sent to the whole group doesn't join two particular learners, so it can't be an edge. An edge always has two ends. Ask: which connection always joins exactly two learners?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Ask: what are the things, and what connects them?"
+          "body": "Ask: what are the things, and what joins two of them?"
         },
         {
           "level": 2,
-          "body": "The things are vertices; the connections are edges."
+          "body": "Each reply joins two learners: the one who replied and the one whose message it was."
         },
         {
           "level": 3,
-          "body": "Then ask whether each connection works both ways. Here: one way only, so directed."
+          "body": "The learners are the vertices and the replies are the edges. Now: does Ayanda's reply mean Bongani replied too?"
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: airports. Edges: flight routes. Directed."
+          "body": "Answer: Vertices: learners. Edges: replies. Directed, because a reply can go one way without one coming back."
         }
       ]
     },
@@ -844,50 +859,50 @@
       "purpose": "mastery",
       "objective_id": 3,
       "config": {
-        "prompt": "Substations are joined by power lines that carry power both ways. Which graph models it?",
+        "prompt": "In a molecule of water, the oxygen atom is bonded to each of the two hydrogen atoms. A chemist wants a graph of which atoms are bonded to which. Which graph models it?",
         "options": [
           {
-            "id": "c",
-            "label": "Vertices: substations. Edges: power lines. Undirected."
+            "id": "e",
+            "label": "Vertices: atoms. Edges: bonds. Directed, because each bond goes from one atom to the other atom."
           },
           {
-            "id": "b",
-            "label": "Vertices: power lines. Edges: substations. Undirected."
+            "id": "g",
+            "label": "Vertices: bonds. Edges: the atoms at their two ends. Undirected, because each bond has two atoms."
           },
           {
-            "id": "d",
-            "label": "Vertices: power lines. Edges: substations. Directed."
+            "id": "h",
+            "label": "Vertices: molecules. Edges: the atoms in them. Undirected, because each atom is in one molecule."
           },
           {
-            "id": "a",
-            "label": "Vertices: substations. Edges: power lines. Directed."
+            "id": "f",
+            "label": "Vertices: atoms. Edges: bonds. Undirected, since being bonded works the same from either side."
           }
         ]
       },
       "solution": {
-        "correct": "c",
+        "correct": "f",
         "feedback": {
-          "a": "Not quite. These connections work both ways, so the edges have no arrows and the graph is undirected. Check the direction.",
-          "b": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
-          "d": "Not quite. Vertices and edges are swapped, and the direction is wrong too. The things are the vertices; the connections between them are the edges. Then check whether each connection works both ways."
+          "e": "Not quite. A bond joins two atoms equally: if oxygen is bonded to hydrogen, hydrogen is bonded to oxygen. Something touching both ends doesn't give it an arrow. Ask: could this connection exist one way only?",
+          "g": "Not quite. That swaps them. A bond joins two atoms, so the bond is the edge and the atoms are the vertices. Ask: which one joins the other two?",
+          "h": "Not quite. There is only one molecule here, and the question is about which atoms are bonded. Ask: what are the things being joined?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Ask: what are the things, and what connects them?"
+          "body": "Ask: what are the things, and what joins two of them?"
         },
         {
           "level": 2,
-          "body": "The things are vertices; the connections are edges."
+          "body": "A bond joins two atoms."
         },
         {
           "level": 3,
-          "body": "Then ask whether each connection works both ways. Here: both ways, so undirected."
+          "body": "Atoms are the vertices and bonds are the edges. Is being bonded ever one-way?"
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: substations. Edges: power lines. Undirected."
+          "body": "Answer: Vertices: atoms. Edges: bonds. Undirected, since being bonded works the same from either side."
         }
       ]
     },
@@ -899,50 +914,50 @@
       "purpose": "mastery",
       "objective_id": 3,
       "config": {
-        "prompt": "A module must be passed before another one can be taken. Which graph models it?",
+        "prompt": "Building a house: the foundations must be finished before the walls go up, and the walls before the roof. A builder wants a graph showing which job must be finished before which. Which graph models it?",
         "options": [
           {
-            "id": "c",
-            "label": "Vertices: “must pass first” links. Edges: modules. Directed."
+            "id": "f",
+            "label": "Vertices: jobs. Edges: “must finish first” links. Directed, since the roof can't come before walls."
           },
           {
-            "id": "b",
-            "label": "Vertices: modules. Edges: “must pass first” links. Undirected."
+            "id": "e",
+            "label": "Vertices: jobs. Edges: “must finish first” links. Undirected, because each link joins two jobs."
           },
           {
-            "id": "a",
-            "label": "Vertices: modules. Edges: “must pass first” links. Directed."
+            "id": "g",
+            "label": "Vertices: builders. Edges: the jobs each builder does. Directed, because a builder does each job."
           },
           {
-            "id": "d",
-            "label": "Vertices: “must pass first” links. Edges: modules. Undirected."
+            "id": "h",
+            "label": "Vertices: “must finish first” links. Edges: jobs. Directed, because each job leads to the next job."
           }
         ]
       },
       "solution": {
-        "correct": "a",
+        "correct": "f",
         "feedback": {
-          "b": "Not quite. These connections only go one way. One-way connections need arrows, so the graph is directed. Check the direction.",
-          "c": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
-          "d": "Not quite. Vertices and edges are swapped, and the direction is wrong too. The things are the vertices; the connections between them are the edges. Then check whether each connection works both ways."
+          "e": "Not quite. The walls must come before the roof, but the roof doesn't come before the walls. The link only works one way. Ask: if A must finish before B, must B finish before A?",
+          "g": "Not quite. The builders do the jobs, but they aren't what the graph is about: the question asks which job must come before which. Ask: what are the things being ordered?",
+          "h": "Not quite. That swaps them. Each “must finish first” link joins two jobs, so the link is the edge. Ask: which one joins the other two?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Ask: what are the things, and what connects them?"
+          "body": "Ask: what are the things, and what joins two of them?"
         },
         {
           "level": 2,
-          "body": "The things are vertices; the connections are edges."
+          "body": "Each “must finish first” link joins two jobs: the earlier one and the later one."
         },
         {
           "level": 3,
-          "body": "Then ask whether each connection works both ways. Here: one way only, so directed."
+          "body": "Jobs are the vertices and the links are the edges. If the walls come before the roof, does the roof come before the walls?"
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: modules. Edges: “must pass first” links. Directed."
+          "body": "Answer: Vertices: jobs. Edges: “must finish first” links. Directed, since the roof can't come before walls."
         }
       ]
     },
@@ -954,50 +969,50 @@
       "purpose": "mastery",
       "objective_id": 3,
       "config": {
-        "prompt": "Students and which pairs of them share a desk. Which graph models it?",
+        "prompt": "The exams office says two subjects clash when at least one learner takes both, so they can't be written at the same time. It wants a graph of which subjects clash. Which graph models it?",
         "options": [
           {
-            "id": "c",
-            "label": "Vertices: shared desks. Edges: students. Undirected."
+            "id": "h",
+            "label": "Vertices: learners. Edges: the subjects they take. Undirected, as a learner takes many subjects."
           },
           {
-            "id": "b",
-            "label": "Vertices: students. Edges: shared desks. Undirected."
+            "id": "e",
+            "label": "Vertices: subjects. Edges: clashes. Directed, because one subject is written before the other."
           },
           {
-            "id": "d",
-            "label": "Vertices: shared desks. Edges: students. Directed."
+            "id": "f",
+            "label": "Vertices: subjects. Edges: clashes. Undirected, since a clash is shared by both of its subjects."
           },
           {
-            "id": "a",
-            "label": "Vertices: students. Edges: shared desks. Directed."
+            "id": "g",
+            "label": "Vertices: exam sessions. Edges: subjects. Undirected, because each session holds a few of the subjects."
           }
         ]
       },
       "solution": {
-        "correct": "b",
+        "correct": "f",
         "feedback": {
-          "a": "Not quite. These connections work both ways, so the edges have no arrows and the graph is undirected. Check the direction.",
-          "c": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
-          "d": "Not quite. Vertices and edges are swapped, and the direction is wrong too. The things are the vertices; the connections between them are the edges. Then check whether each connection works both ways."
+          "h": "Not quite. The learners cause the clashes, but the office wants to know which subjects clash. A clash joins two subjects. Ask: which things does each clash join?",
+          "e": "Not quite. If Maths clashes with Physics, Physics clashes with Maths: nothing has been written yet, so there is no first or later. Ask: can a clash go one way only?",
+          "g": "Not quite. The sessions are what the office will choose later; the graph shows which subjects clash. Ask: which things does each clash join?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Ask: what are the things, and what connects them?"
+          "body": "Ask: what are the things, and what joins two of them?"
         },
         {
           "level": 2,
-          "body": "The things are vertices; the connections are edges."
+          "body": "Each clash joins two subjects that one learner takes."
         },
         {
           "level": 3,
-          "body": "Then ask whether each connection works both ways. Here: both ways, so undirected."
+          "body": "Subjects are the vertices and clashes are the edges. If Maths clashes with Physics, does Physics clash with Maths?"
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: students. Edges: shared desks. Undirected."
+          "body": "Answer: Vertices: subjects. Edges: clashes. Undirected, since a clash is shared by both of its subjects."
         }
       ]
     },
@@ -1039,11 +1054,11 @@
         },
         {
           "level": 2,
-          "body": "BFS is good at two jobs: the fewest edges, and reaching everything from a start."
+          "body": "Think of a graph where one letter-change joins two words. What does the puzzle want as small as possible?"
         },
         {
           "level": 3,
-          "body": "Does this problem ask for one of those two jobs?"
+          "body": "It wants the fewest changes, and each change is one edge. BFS reaches vertices in rings, one edge further out each time. Does that give the fewest edges?"
         },
         {
           "level": 4,
@@ -1089,11 +1104,11 @@
         },
         {
           "level": 2,
-          "body": "BFS is good at two jobs: the fewest edges, and reaching everything from a start."
+          "body": "There is a graph: airports joined by flights. But what is the problem trying to make smallest: the number of flights, or something else?"
         },
         {
           "level": 3,
-          "body": "Does this problem ask for one of those two jobs?"
+          "body": "It wants the lowest total price, and each flight has its own price. BFS counts flights, not prices. Could two cheap flights cost less than one dear one?"
         },
         {
           "level": 4,
@@ -1139,11 +1154,11 @@
         },
         {
           "level": 2,
-          "body": "BFS is good at two jobs: the fewest edges, and reaching everything from a start."
+          "body": "Is this about the fewest edges, or about whether something can be reached at all?"
         },
         {
           "level": 3,
-          "body": "Does this problem ask for one of those two jobs?"
+          "body": "It asks which computers can be reached from the server. BFS from the server finds exactly those. What happens to a computer with no path from the server?"
         },
         {
           "level": 4,
@@ -1189,11 +1204,11 @@
         },
         {
           "level": 2,
-          "body": "BFS is good at two jobs: the fewest edges, and reaching everything from a start."
+          "body": "Is there a graph here? What would join one mark to another?"
         },
         {
           "level": 3,
-          "body": "Does this problem ask for one of those two jobs?"
+          "body": "The marks are just numbers in a list: nothing joins one mark to another. Does the problem need edges to follow?"
         },
         {
           "level": 4,
@@ -1441,7 +1456,7 @@
             "pop(0)": "Not quite. A deque's pop takes no position, so pop(0) stops with an error. A deque takes the vertex at the front with popleft()."
           },
           "3": {
-            "graph.adjacency[v]": "Neighbours aren't taken in alphabetical order. The edges were added out of order, but BFS takes neighbours alphabetically. Loop over sorted(graph.adjacency[v]).",
+            "graph.adjacency[v]": "Not quite. That takes v's neighbours in the order their edges were added, not alphabetically. Loop over sorted(graph.adjacency[v]).",
             "sorted(graph.adjacency[start])": "Not quite. That looks at the start's neighbours every time, not the neighbours of v, the vertex that just left the queue, so BFS never gets past the first ring. Loop over v's neighbours, sorted."
           },
           "4": {
@@ -1477,7 +1492,7 @@
       "purpose": "mastery",
       "objective_id": 7,
       "config": {
-        "prompt": "This BFS visits a vertex twice on a graph with a cycle. Replace the faulty lines with corrections, and leave out a line that doesn't belong.",
+        "prompt": "On a graph whose edges were added in the order A–D, A–C, A–B, a correct BFS from A gives A, B, C, D, but this one gives A, D, C, B. Replace the faulty line with a correction.",
         "lines": [
           {
             "id": 1,
@@ -1489,7 +1504,7 @@
           },
           {
             "id": 3,
-            "text": "    visited = set()"
+            "text": "    visited = {start}"
           },
           {
             "id": 4,
@@ -1509,19 +1524,19 @@
           },
           {
             "id": 8,
-            "text": "        visited.add(v)"
-          },
-          {
-            "id": 9,
             "text": "        order.append(v)"
           },
           {
+            "id": 9,
+            "text": "        for n in graph.adjacency[v]:"
+          },
+          {
             "id": 10,
-            "text": "        for n in sorted(graph.adjacency[v]):"
+            "text": "            if n not in visited:"
           },
           {
             "id": 11,
-            "text": "            if n not in visited:"
+            "text": "                visited.add(n)"
           },
           {
             "id": 12,
@@ -1534,20 +1549,16 @@
         ],
         "corrections": [
           {
-            "id": 22,
-            "text": "    visited = []"
+            "id": 25,
+            "text": "        for n in sorted(graph.adjacency):"
           },
           {
-            "id": 21,
-            "text": "                visited.add(n)"
+            "id": 24,
+            "text": "        for n in sorted(graph.adjacency[v]):"
           },
           {
-            "id": 23,
-            "text": "                order.append(n)"
-          },
-          {
-            "id": 20,
-            "text": "    visited = {start}"
+            "id": 26,
+            "text": "        for n in sorted(graph.adjacency[start]):"
           }
         ]
       },
@@ -1556,42 +1567,41 @@
           1,
           2,
           [
-            20,
+            3,
             4,
             5
           ],
           6,
           7,
-          9,
+          8,
+          24,
           10,
-          11,
           [
-            21,
+            11,
             12
           ],
           13
         ],
         "feedback": {
-          "3": "Not quite. The start vertex is in the queue but not in the visited set, which holds every vertex found so far, so a neighbour can add it again. Start with the start vertex already in visited.",
-          "8": "Not quite. Line 8 adds a vertex to visited only when it leaves the queue. Without visited.add(n) inside the if, a vertex still waiting can be found again and added twice; with it, line 8 does nothing. Either way, leave it out."
+          "9": "Not quite. This loop takes v's neighbours in the order their edges were added, so D, added first, joins the queue first. The traversal must take neighbours in alphabetical order. Sort v's own list of neighbours."
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Run it in your head on a graph with a cycle. What goes wrong?"
+          "body": "Compare the two orders. Which vertices come out in a different order?"
         },
         {
           "level": 2,
-          "body": "Look at where vertices are added to the visited set."
+          "body": "Look at the line that loops over v's neighbours. In what order does it take them?"
         },
         {
           "level": 3,
-          "body": "They're added to visited only when they leave the queue, so a vertex that is still waiting doesn't count as found and can be added again."
+          "body": "It takes them in the order their edges were added, so D comes first. BFS takes each vertex's neighbours in alphabetical order."
         },
         {
           "level": 4,
-          "body": "Answer: start with visited = {start}, leave out visited.add(v), and add visited.add(n) inside the if, next to queue.append(n). Either of those two lines can come first."
+          "body": "Answer: replace for n in graph.adjacency[v]: with for n in sorted(graph.adjacency[v]):, which sorts v's own neighbours."
         }
       ]
     },
@@ -1725,180 +1735,39 @@
       "objective_id": 7,
       "config": {
         "prompt": "This BFS has a bug. Choose every test case it fails: each one is a graph, a start vertex and the order a correct BFS visits it in.",
-        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    visited = set()\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        visited.add(v)\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                queue.append(n)\n    return order",
+        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        visited.add(v)\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                queue.append(n)\n    return order",
         "tests": [
           {
             "id": "cycle",
             "directed": false,
             "vertices": [
-              "A",
-              "B",
-              "C",
-              "D"
+              "P",
+              "Q",
+              "R"
             ],
             "edges": [
               {
-                "source": "A",
-                "target": "B"
+                "source": "P",
+                "target": "Q"
               },
               {
-                "source": "B",
-                "target": "C"
+                "source": "Q",
+                "target": "R"
               },
               {
-                "source": "C",
-                "target": "D"
-              },
-              {
-                "source": "D",
-                "target": "A"
-              },
-              {
-                "source": "A",
-                "target": "C"
+                "source": "P",
+                "target": "R"
               }
             ],
-            "start_vertex": "A",
+            "start_vertex": "P",
             "expected": [
-              "A",
-              "B",
-              "C",
-              "D"
+              "P",
+              "Q",
+              "R"
             ]
           },
           {
-            "id": "sports-centre",
-            "directed": false,
-            "vertices": [
-              "A",
-              "B",
-              "C",
-              "D",
-              "E",
-              "F",
-              "G"
-            ],
-            "edges": [
-              {
-                "source": "A",
-                "target": "B"
-              },
-              {
-                "source": "A",
-                "target": "D"
-              },
-              {
-                "source": "B",
-                "target": "C"
-              },
-              {
-                "source": "B",
-                "target": "E"
-              },
-              {
-                "source": "D",
-                "target": "E"
-              },
-              {
-                "source": "E",
-                "target": "F"
-              },
-              {
-                "source": "C",
-                "target": "G"
-              },
-              {
-                "source": "F",
-                "target": "G"
-              }
-            ],
-            "start_vertex": "A",
-            "expected": [
-              "A",
-              "B",
-              "D",
-              "C",
-              "E",
-              "G",
-              "F"
-            ]
-          },
-          {
-            "id": "line",
-            "directed": false,
-            "vertices": [
-              "V",
-              "W",
-              "X",
-              "Y",
-              "Z"
-            ],
-            "edges": [
-              {
-                "source": "Z",
-                "target": "Y"
-              },
-              {
-                "source": "Y",
-                "target": "X"
-              },
-              {
-                "source": "X",
-                "target": "W"
-              },
-              {
-                "source": "W",
-                "target": "V"
-              }
-            ],
-            "start_vertex": "X",
-            "expected": [
-              "X",
-              "W",
-              "Y",
-              "V",
-              "Z"
-            ]
-          },
-          {
-            "id": "out-of-order",
-            "directed": false,
-            "vertices": [
-              "A",
-              "B",
-              "C",
-              "D",
-              "E"
-            ],
-            "edges": [
-              {
-                "source": "A",
-                "target": "E"
-              },
-              {
-                "source": "A",
-                "target": "C"
-              },
-              {
-                "source": "A",
-                "target": "B"
-              },
-              {
-                "source": "B",
-                "target": "D"
-              }
-            ],
-            "start_vertex": "A",
-            "expected": [
-              "A",
-              "B",
-              "C",
-              "E",
-              "D"
-            ]
-          },
-          {
-            "id": "two-islands",
+            "id": "tree",
             "directed": false,
             "vertices": [
               "A",
@@ -1913,11 +1782,15 @@
                 "target": "B"
               },
               {
-                "source": "B",
+                "source": "A",
                 "target": "C"
               },
               {
-                "source": "D",
+                "source": "B",
+                "target": "D"
+              },
+              {
+                "source": "B",
                 "target": "E"
               }
             ],
@@ -1925,11 +1798,44 @@
             "expected": [
               "A",
               "B",
-              "C"
+              "C",
+              "D",
+              "E"
             ]
           },
           {
-            "id": "one-way",
+            "id": "added-backwards",
+            "directed": false,
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "D"
+              },
+              {
+                "source": "A",
+                "target": "C"
+              },
+              {
+                "source": "A",
+                "target": "B"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          {
+            "id": "fork-join",
             "directed": true,
             "vertices": [
               "A",
@@ -1943,15 +1849,45 @@
                 "target": "B"
               },
               {
+                "source": "A",
+                "target": "C"
+              },
+              {
+                "source": "B",
+                "target": "D"
+              },
+              {
+                "source": "C",
+                "target": "D"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          {
+            "id": "back-to-start",
+            "directed": true,
+            "vertices": [
+              "A",
+              "B",
+              "C"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
                 "source": "B",
                 "target": "C"
               },
               {
                 "source": "C",
-                "target": "A"
-              },
-              {
-                "source": "D",
                 "target": "A"
               }
             ],
@@ -1961,39 +1897,65 @@
               "B",
               "C"
             ]
+          },
+          {
+            "id": "two-islands",
+            "directed": false,
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "edges": [
+              {
+                "source": "B",
+                "target": "C"
+              },
+              {
+                "source": "C",
+                "target": "D"
+              }
+            ],
+            "start_vertex": "B",
+            "expected": [
+              "B",
+              "C",
+              "D"
+            ]
           }
         ]
       },
       "solution": {
         "exposing": [
           "cycle",
-          "sports-centre"
+          "fork-join"
         ],
         "feedback": {
-          "cycle": "This graph has cycles, so a vertex can be found again while it waits in the queue: the faulty version adds C twice and fails it.",
-          "sports-centre": "This graph has cycles, so a vertex can be found again while it waits in the queue: the faulty version adds E twice and fails it.",
-          "line": "A line has no cycle, so no vertex is found twice: the faulty version passes it.",
-          "out-of-order": "No vertex here can be found twice while it waits, so the faulty version passes it.",
-          "two-islands": "No vertex here can be found twice while it waits, so the faulty version passes it.",
-          "one-way": "The only cycle leads back to A, which is already visited by then, so the faulty version passes it."
+          "cycle": "R can be reached along two routes, from P and from Q. When Q looks at R, R is still waiting in the queue and isn't in visited yet, so it joins again: the faulty version gives P, Q, R, R and fails this test.",
+          "tree": "A tree has only one route to each vertex, so no vertex can be found a second time while it waits: the faulty version passes this test.",
+          "added-backwards": "The faulty version still sorts each vertex's neighbours, and A's neighbours each have only one route to them, so nothing is added twice: it passes this test.",
+          "fork-join": "There's no cycle here, but D can be reached along two routes, through B and through C. When C looks at D, D is still waiting and isn't in visited yet, so it joins the queue again. The faulty version fails this test.",
+          "back-to-start": "This graph has a cycle, but it only leads back to A, which has already left the queue and is in visited. No vertex is reached twice while it waits, so the faulty version passes this test.",
+          "two-islands": "BFS from B never reaches A, and B, C and D lie on a path with one route to each vertex. Nothing is found twice, so the faulty version passes this test."
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "This version adds a vertex to visited only when it leaves the queue, not when it is found."
+          "body": "This version adds a vertex to visited only when it leaves the queue, not when it joins."
         },
         {
           "level": 2,
-          "body": "A vertex still waiting in the queue can then be found again from another neighbour."
+          "body": "A vertex still waiting in the queue isn't in visited yet, so a second vertex can add it again."
         },
         {
           "level": 3,
-          "body": "That needs a second route to a vertex that is still waiting in the queue. A cycle that only leads back to the start doesn't do it: the start has already left the queue."
+          "body": "That needs two routes to the same vertex, with the second found while the vertex still waits. A cycle isn't needed, and a cycle that only leads back to the start isn't enough: the start has already left the queue."
         },
         {
           "level": 4,
-          "body": "Answer: Tests 1 and 2. The faulty version passes the other four."
+          "body": "Answer: Tests 1 and 4. The faulty version passes the other four."
         }
       ]
     },
@@ -2006,143 +1968,10 @@
       "objective_id": 7,
       "config": {
         "prompt": "This BFS has a bug. Choose every test case it fails: each one is a graph, a start vertex and the order a correct BFS visits it in.",
-        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                visited.add(n)\n                queue.append(n)\n    for v in graph.adjacency:\n        if v not in visited:\n            order.append(v)\n    return order",
+        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                visited.add(n)\n                queue.append(n)\n        if not queue:\n            for u in sorted(graph.adjacency):\n                if u not in visited:\n                    visited.add(u)\n                    queue.append(u)\n                    break\n    return order",
         "tests": [
           {
-            "id": "cycle",
-            "directed": false,
-            "vertices": [
-              "A",
-              "B",
-              "C",
-              "D"
-            ],
-            "edges": [
-              {
-                "source": "A",
-                "target": "B"
-              },
-              {
-                "source": "B",
-                "target": "C"
-              },
-              {
-                "source": "C",
-                "target": "D"
-              },
-              {
-                "source": "D",
-                "target": "A"
-              },
-              {
-                "source": "A",
-                "target": "C"
-              }
-            ],
-            "start_vertex": "A",
-            "expected": [
-              "A",
-              "B",
-              "C",
-              "D"
-            ]
-          },
-          {
-            "id": "sports-centre",
-            "directed": false,
-            "vertices": [
-              "A",
-              "B",
-              "C",
-              "D",
-              "E",
-              "F",
-              "G"
-            ],
-            "edges": [
-              {
-                "source": "A",
-                "target": "B"
-              },
-              {
-                "source": "A",
-                "target": "D"
-              },
-              {
-                "source": "B",
-                "target": "C"
-              },
-              {
-                "source": "B",
-                "target": "E"
-              },
-              {
-                "source": "D",
-                "target": "E"
-              },
-              {
-                "source": "E",
-                "target": "F"
-              },
-              {
-                "source": "C",
-                "target": "G"
-              },
-              {
-                "source": "F",
-                "target": "G"
-              }
-            ],
-            "start_vertex": "A",
-            "expected": [
-              "A",
-              "B",
-              "D",
-              "C",
-              "E",
-              "G",
-              "F"
-            ]
-          },
-          {
-            "id": "line",
-            "directed": false,
-            "vertices": [
-              "V",
-              "W",
-              "X",
-              "Y",
-              "Z"
-            ],
-            "edges": [
-              {
-                "source": "Z",
-                "target": "Y"
-              },
-              {
-                "source": "Y",
-                "target": "X"
-              },
-              {
-                "source": "X",
-                "target": "W"
-              },
-              {
-                "source": "W",
-                "target": "V"
-              }
-            ],
-            "start_vertex": "X",
-            "expected": [
-              "X",
-              "W",
-              "Y",
-              "V",
-              "Z"
-            ]
-          },
-          {
-            "id": "out-of-order",
+            "id": "tree",
             "directed": false,
             "vertices": [
               "A",
@@ -2154,19 +1983,19 @@
             "edges": [
               {
                 "source": "A",
-                "target": "E"
+                "target": "B"
               },
               {
                 "source": "A",
                 "target": "C"
               },
               {
-                "source": "A",
-                "target": "B"
+                "source": "B",
+                "target": "D"
               },
               {
                 "source": "B",
-                "target": "D"
+                "target": "E"
               }
             ],
             "start_vertex": "A",
@@ -2174,8 +2003,8 @@
               "A",
               "B",
               "C",
-              "E",
-              "D"
+              "D",
+              "E"
             ]
           },
           {
@@ -2185,32 +2014,87 @@
               "A",
               "B",
               "C",
-              "D",
-              "E"
+              "D"
             ],
             "edges": [
-              {
-                "source": "A",
-                "target": "B"
-              },
               {
                 "source": "B",
                 "target": "C"
               },
               {
-                "source": "D",
-                "target": "E"
+                "source": "C",
+                "target": "D"
+              }
+            ],
+            "start_vertex": "B",
+            "expected": [
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          {
+            "id": "cycle",
+            "directed": false,
+            "vertices": [
+              "P",
+              "Q",
+              "R"
+            ],
+            "edges": [
+              {
+                "source": "P",
+                "target": "Q"
+              },
+              {
+                "source": "Q",
+                "target": "R"
+              },
+              {
+                "source": "P",
+                "target": "R"
+              }
+            ],
+            "start_vertex": "P",
+            "expected": [
+              "P",
+              "Q",
+              "R"
+            ]
+          },
+          {
+            "id": "added-backwards",
+            "directed": false,
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "D"
+              },
+              {
+                "source": "A",
+                "target": "C"
+              },
+              {
+                "source": "A",
+                "target": "B"
               }
             ],
             "start_vertex": "A",
             "expected": [
               "A",
               "B",
-              "C"
+              "C",
+              "D"
             ]
           },
           {
-            "id": "one-way",
+            "id": "points-in",
             "directed": true,
             "vertices": [
               "A",
@@ -2228,10 +2112,6 @@
                 "target": "C"
               },
               {
-                "source": "C",
-                "target": "A"
-              },
-              {
                 "source": "D",
                 "target": "A"
               }
@@ -2242,39 +2122,74 @@
               "B",
               "C"
             ]
+          },
+          {
+            "id": "fork-join",
+            "directed": true,
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "edges": [
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "A",
+                "target": "C"
+              },
+              {
+                "source": "B",
+                "target": "D"
+              },
+              {
+                "source": "C",
+                "target": "D"
+              }
+            ],
+            "start_vertex": "A",
+            "expected": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
           }
         ]
       },
       "solution": {
         "exposing": [
           "two-islands",
-          "one-way"
+          "points-in"
         ],
         "feedback": {
-          "cycle": "Every vertex here can be reached from A, so nothing is added at the end: the faulty version passes it.",
-          "sports-centre": "Every vertex here can be reached from A, so nothing is added at the end: the faulty version passes it.",
-          "line": "Every vertex here can be reached from X, so nothing is added at the end: the faulty version passes it.",
-          "out-of-order": "Every vertex here can be reached from A, so nothing is added at the end: the faulty version passes it.",
-          "two-islands": "D and E can't be reached from A, but the faulty version adds them at the end, so it fails this test.",
-          "one-way": "D only has an arrow into A, so it can't be reached from A, but the faulty version adds it at the end, so it fails this test."
+          "tree": "Every vertex here can be reached from A, so when the queue empties there is nothing left to restart from: the faulty version passes this test.",
+          "two-islands": "A can't be reached from B. When the queue empties after D, the faulty version restarts from A and adds it, giving B, C, D, A, so it fails this test.",
+          "cycle": "Every vertex here can be reached from P, so when the queue empties there is nothing left to restart from: the faulty version passes this test.",
+          "added-backwards": "Every vertex here can be reached from A, and this version sorts each vertex's neighbours, so nothing changes: the faulty version passes this test.",
+          "points-in": "D only has an arrow into A, so it can't be reached from A. When the queue empties, the faulty version restarts from D and adds it, giving A, B, C, D, so it fails this test.",
+          "fork-join": "Every vertex here can be reached from A by following the arrows, so when the queue empties there is nothing left to restart from: the faulty version passes this test."
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Read the last loop: what does it add to the order?"
+          "body": "Read what happens when the queue becomes empty."
         },
         {
           "level": 2,
-          "body": "It adds every vertex BFS didn't reach."
+          "body": "It takes the first vertex, in alphabetical order, that hasn't been found, and carries on from there."
         },
         {
           "level": 3,
-          "body": "That only changes the answer when some vertex can't be reached from the start."
+          "body": "That only changes the answer when some vertex can't be reached from the start. In a directed graph, an arrow into the start doesn't let BFS reach the vertex it comes from."
         },
         {
           "level": 4,
-          "body": "Answer: Tests 5 and 6. The faulty version passes the other four."
+          "body": "Answer: Tests 2 and 5. The faulty version passes the other four."
         }
       ]
     },
@@ -2285,7 +2200,7 @@
       "module_id": 6,
       "purpose": "retrieval",
       "config": {
-        "prompt": "Which graph is useful for checking that BFS does not visit a vertex repeatedly?",
+        "prompt": "A BFS marks a vertex as found only when it leaves the queue. Which test graph would show that it can visit a vertex twice?",
         "options": [
           {
             "id": "single",
@@ -2302,11 +2217,11 @@
         ]
       },
       "solution": {
-        "explanation": "In a graph with a cycle, BFS can meet a vertex again along a second path, so it shows whether BFS adds it twice.",
+        "explanation": "Correct. In a graph with a cycle, some vertex can be reached along two routes, so a second vertex can find it while it still waits in the queue, and this BFS adds it twice.",
         "correct": "cycle",
         "feedback": {
-          "single": "A single vertex cannot reveal repeated visits through a cycle.",
-          "line": "A path is useful for order, but a cycle is needed to expose missing visited checks."
+          "single": "Not quite. With one vertex there is nothing to find twice. Look for a graph where two vertices can both find the same vertex.",
+          "line": "Not quite. On a path there is only one route to each vertex, so this bug can't add one twice. Look for a graph where two vertices can both find the same vertex."
         }
       },
       "hints": [
@@ -2316,11 +2231,11 @@
         },
         {
           "level": 2,
-          "body": "It needs a way back to a vertex BFS has already found."
+          "body": "This BFS only counts a vertex as found once it leaves the queue, so a vertex still waiting can be found again."
         },
         {
           "level": 3,
-          "body": "Only a loop of edges, a cycle, leads back to a vertex BFS has found."
+          "body": "That needs two routes to the same vertex. In an undirected graph, two routes to a vertex mean a cycle."
         },
         {
           "level": 4,
@@ -2336,12 +2251,8 @@
       "purpose": "mastery",
       "objective_id": 8,
       "config": {
-        "prompt": "A bus network joins stops with these routes, each one bus ride: P–Q, P–R, Q–S, R–S, R–T, S–U, T–U and U–V. How many rides does the quickest trip from P to V take?",
+        "prompt": "A bus network joins stops with these routes, each one bus ride: P–Q, P–R, Q–S, R–S, R–T, S–U, T–U and U–V. How many rides does the trip from P to V take, at the fewest?",
         "options": [
-          {
-            "id": "a",
-            "label": "5 rides, one for each stop on the trip"
-          },
           {
             "id": "b",
             "label": "3 rides"
@@ -2349,6 +2260,14 @@
           {
             "id": "c",
             "label": "4 rides"
+          },
+          {
+            "id": "a",
+            "label": "5 rides"
+          },
+          {
+            "id": "d",
+            "label": "6 rides"
           }
         ]
       },
@@ -2356,7 +2275,8 @@
         "correct": "c",
         "feedback": {
           "b": "Not quite. V is joined only to U, and U is 3 rides from P, so V is one more. Ask: in which ring of BFS does V appear?",
-          "a": "Not quite. A trip such as P, Q, S, U, V has 5 stops but 4 rides between them. Count the edges, not the vertices."
+          "a": "Not quite. 5 counts the stops on a trip such as P, Q, S, U, V, not the rides between them. Each ride is one edge. Count the edges.",
+          "d": "Not quite. 6 is how many stops BFS visits before V (P, Q, R, S, T, U), not how far V is. Ask: in which ring does V appear?"
         }
       },
       "hints": [

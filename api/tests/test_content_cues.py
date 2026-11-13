@@ -183,6 +183,34 @@ def test_a_mastery_fill_in_is_not_a_practice_one(a: ActivityFixture) -> None:
         assert filled(a) != filled(p), p.id  # 620 was 406 with fewer blanks (#147)
 
 
+@pytest.mark.parametrize(
+    "a", [a for a in MASTERY if a.kind == "fix_the_bug"], ids=lambda a: str(a.id)
+)
+def test_a_mastery_fix_the_bug_item_is_not_a_practice_one(a: ActivityFixture) -> None:
+    """621 was 504 line for line, after a worked example that prints the fix (#214 C2)."""
+    mine = [line["text"] for line in a.config["lines"]]
+    for p in (p for p in PRACTICE if p.kind == "fix_the_bug"):
+        assert mine != [line["text"] for line in p.config["lines"]], p.id
+
+
+@pytest.mark.parametrize(
+    "a", [a for a in MASTERY if a.kind == "choose_tests"], ids=lambda a: str(a.id)
+)
+def test_a_mastery_choose_tests_item_is_not_a_practice_one(a: ActivityFixture) -> None:
+    """623 and 624 were 506 and 507: the same faulty code and half the same test graphs, with the
+    verdicts module 5's feedback had already given (#214 C2)."""
+
+    def graphs(x: ActivityFixture) -> set[tuple[Any, ...]]:
+        return {
+            graph_key(t["directed"], t["vertices"], t["edges"], t["start_vertex"])
+            for t in x.config["tests"]
+        }
+
+    for p in (p for p in PRACTICE if p.kind == "choose_tests"):
+        assert a.config["code"] != p.config["code"], p.id
+        assert len(graphs(a) & graphs(p)) <= 1, p.id
+
+
 def test_a_mastery_question_does_not_restate_a_practice_situation() -> None:
     def sentences(a: ActivityFixture) -> list[str]:
         texts = [str(a.config.get("prompt", ""))] + [x["label"] for x in a.config.get("left", [])]
@@ -367,6 +395,25 @@ def test_no_simple_strategy_meets_any_objective(where: str, strategy: str) -> No
 # retired, never reused: an old attempt's `selected` must not be read as new text (the lesson of
 # #117 and #133). Ids made on this branch were never deployed, so they aren't listed.
 RETIRED = {
+    # Objective 3 (#214 C1): new situations whose direction must be worked out, so every option
+    # is new text under a new id.
+    610: {"a", "b", "c"},
+    611: {"a", "b", "c"},
+    612: {"a", "b", "c"},
+    613: {"a", "b", "c"},
+    1301: {"a", "b", "c"},
+    1302: {"a", "b", "c"},
+    1303: {"a", "b", "c"},
+    1304: {"a", "b", "c"},
+    1305: {"a", "b", "c"},
+    316: {"a", "b", "c"},
+    # Objective 1 (#214 C5): examples to classify instead of the definition's own words.
+    601: {"a", "b"},
+    602: {"a", "b"},
+    604: {"a", "b", "c"},
+    1102: {"a", "b"},
+    1103: {"a", "b", "c"},
+    1105: {"a", "b", "c"},  # a new closing task (#214 C3): routes from E, not a count from A
     614: {"a", "b", "c"},  # a new question: every staging id, the key's included
     615: {"c"},
     616: {"c"},
@@ -463,8 +510,11 @@ def test_right_corrections_are_not_in_one_place() -> None:
 
 def test_a_retired_correction_id_is_never_reused() -> None:
     """1703's correction 22 was a harmless extra condition; its replacement breaks BFS, a different
-    meaning, so it has a new id (23) and 22 is retired."""
-    assert 22 not in {c["id"] for c in ACTIVITIES[1703].config["corrections"]}
+    meaning, so it has a new id (23) and 22 is retired. 621's corrections went with its old bug."""
+    for activity_id, retired in RETIRED_CORRECTIONS.items():
+        a = ACTIVITIES[activity_id]
+        used = {c["id"] for c in a.config["corrections"]} | {x["id"] for x in a.config["lines"]}
+        assert not retired & used, activity_id
 
 
 # --- The round-2 review's strategy search (#147) --------------------------------------------------
@@ -711,12 +761,7 @@ WORDING_ONLY = {
         (312, "a"),
         (312, "b"),
         (312, "c"),
-        (601, "b"),
-        (602, "a"),
-        (602, "b"),
         (602, "c"),
-        (604, "a"),
-        (604, "b"),
         (605, "b"),
         (615, "a"),
         (615, "b"),
@@ -725,14 +770,10 @@ WORDING_ONLY = {
         (617, "a"),
         (617, "c"),
         (1101, "a"),
-        (1102, "a"),
-        (1103, "a"),
-        (1103, "b"),
-        (1105, "b"),
         (1106, "c"),
-        (1301, "a"),
         (1401, "a"),
         (1401, "b"),
+        (1401, "c"),  # the fewest bus rides, not changes: still the BFS problem (#214 C15)
         (1402, "a"),
         (1403, "a"),
         (1403, "b"),
@@ -744,10 +785,47 @@ WORDING_ONLY = {
     # An objective 2 marker now describes its part instead of naming it; it is the same part,
     # with the same answer, so an earlier pair means what it meant.
     "matching_left": {(a, m) for a in (606, 607, 608, 1202, 1203, 1204) for m in ("1", "2", "3")},
-    "matching_right": set(),
+    # 102's definitions keep their meaning in new words, without the term's own word (#214 C6).
+    "matching_right": {(102, d) for d in ("d1", "d2", "d3", "d4")} | {(313, "r1")},
 }
-# Ids that left an item; they must never come back (the same as RETIRED, plus 1703's correction).
-GONE = {(a, i) for a, ids in RETIRED.items() for i in ids} | {(1703, "22")}
+# Matching items that left an item: 609 and 1205 classify new situations by meaning (#214 C4), and
+# 603 matches three terms instead of "graph" (#214 C5).
+GONE_LEFT = (
+    {
+        (609, i)
+        for i in (
+            "phone-calls",
+            "shared-walls-between-houses",
+            "module-prerequisites",
+            "two-way-radio-links",
+        )
+    }
+    | {(603, "t1")}
+    | {
+        (1205, i)
+        for i in (
+            "emails",
+            "train-tracks-between-stations",
+            "teammates-in-a-project",
+            "a-tournament",
+        )
+    }
+)
+# Right entries that left an item (#214): 603's family tree and stack of plates (C5), 105's random
+# non-edges, now near misses, and 607's and 1204's vertices and edges, which named the places by
+# their initials (C15).
+GONE_RIGHT = (
+    {(603, "e1"), (603, "e3")}
+    | {(105, e) for e in ("AB", "DF", "FG")}
+    | {(607, e) for e in ("vK", "vL", "vM", "vN", "eKL", "eKM", "eLN", "eMN")}
+    | {(1204, e) for e in ("vR", "vS", "vT", "vU", "eRS", "eST", "eTU", "eSR", "eTS", "eUT")}
+)
+# Fix-the-bug corrections that left an item: 621 is a new bug (#214 C2), so all its corrections are.
+RETIRED_CORRECTIONS = {621: {20, 21, 22, 23}, 1703: {22}}
+# Ids that left an item; they must never come back (RETIRED, plus the retired corrections).
+GONE = {(a, i) for a, ids in RETIRED.items() for i in ids} | {
+    (a, str(i)) for a, ids in RETIRED_CORRECTIONS.items() for i in ids
+}
 
 
 def _now(a: ActivityFixture, kind: str) -> dict[str, str]:
@@ -771,7 +849,7 @@ def test_an_id_from_staging_keeps_its_text_unless_retired_or_listed(kind: str) -
                 changed.add((int(activity_id), item_id))
     assert sorted(changed - WORDING_ONLY[kind]) == []
     assert sorted(WORDING_ONLY[kind] - changed) == []  # the list says only what is true
-    assert gone == (GONE if kind == "options" else set())
+    assert gone == {"options": GONE, "matching_left": GONE_LEFT, "matching_right": GONE_RIGHT}[kind]
 
 
 def test_counting_the_places_a_marker_names_does_not_meet_objective_2() -> None:

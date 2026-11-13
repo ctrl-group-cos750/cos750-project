@@ -149,8 +149,37 @@ def test_the_built_graph_is_the_campus() -> None:
 
 def test_a_graph_is_directed_exactly_when_its_edges_are_arrows() -> None:
     a = activity(106)
+    # One graph has no edge list, so the step from the symbol to the meaning starts here (#214 C4).
+    unlisted = [item for item in a.config["left"] if not edges_in(item["label"])]
+    assert [item["id"] for item in unlisted] == ["older"]
+    assert right_label(a, "older") == "Directed"
     for item in a.config["left"]:
+        if item in unlisted:
+            continue
         edges = edges_in(item["label"])
         directed = all(isinstance(e, tuple) for e in edges)
         assert directed or all(isinstance(e, frozenset) for e in edges)
         assert right_label(a, item["id"]) == ("Directed" if directed else "Undirected")
+
+
+def test_the_key_terms_cannot_be_matched_by_their_own_words() -> None:
+    """102 paired "Data structure" with "… store data" and "Graph traversal" with "… of a graph",
+    with no spare description, so the last pair was forced (#214 C6)."""
+    a = activity(102)
+    terms = {item["id"]: item["label"].lower() for item in a.config["left"]}
+    for left in a.solution["pairs"]:
+        label = right_label(a, left).lower()
+        for word in re.findall(r"\w+", terms[left]):
+            assert not re.search(rf"\b{word}", label), (terms[left], label)
+    assert len(a.config["right"]) >= len(a.config["left"]) + 2
+    assert any("chart" in r["label"] for r in a.config["right"])  # a graph is not a chart
+
+
+def test_the_modelling_support_item_does_not_name_each_situations_nouns() -> None:
+    """193's right options named their situation's nouns (taxi ranks, children, songs, puzzle
+    pieces), so each could be matched by spotting a word (#214 C8)."""
+    a = activity(193)
+    nouns = ("taxi", "rank", "child", "invit", "song", "playlist", "jigsaw", "puzzle", "piece")
+    for r in a.config["right"]:
+        assert not any(n in r["label"].lower() for n in nouns), r["label"]
+    assert len(a.config["right"]) > len(a.config["left"])

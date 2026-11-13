@@ -604,13 +604,14 @@ def test_fix_the_bug_a_removed_line_is_named_in_the_summary() -> None:
 
 
 def test_the_reviewers_objective_7_case_is_correct() -> None:
-    # 621 with visited.add(n) and queue.append(n) swapped: was "11 of 13" (#145 review).
+    # 621 with visited.add(n) and queue.append(n) swapped: was "11 of 13" (#145 review). 621 is a
+    # new bug since #214 (C2), so the case is its fix with the same two lines swapped.
     item = next(a for a in read_fixtures().activities if a.id == 621)
     result = check_activity(
         "fix_the_bug",
         item.config,
         item.solution,
-        {"order": [1, 2, 20, 4, 5, 6, 7, 9, 10, 11, 12, 21, 13]},
+        {"order": [1, 2, 3, 4, 5, 6, 7, 8, 24, 10, 12, 11, 13]},
     )
     assert result.correct
 

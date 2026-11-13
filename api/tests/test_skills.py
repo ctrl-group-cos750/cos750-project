@@ -297,3 +297,24 @@ def test_a_module_tested_out_through_its_quick_check_has_silver(
     db.commit()
     medal = profile(client)["modules"][0]
     assert (medal["moduleId"], medal["complete"], medal["medal"]) == (1, True, "silver")
+
+
+def test_a_wrong_guess_at_an_opening_puzzle_costs_no_medal(
+    client: TestClient, db: Session, tmp_path: Path
+) -> None:
+    """Module 1 opens with a puzzle asked before any teaching, to show the student what they don't
+    know yet (Malone and Lepper's curiosity). It is a diagnostic item, so a wrong guess there
+    doesn't lose the module's gold for good, and the student can move on after one answer (review
+    13 Nov, High 12)."""
+    data = course()
+    data["modules"][0]["segments"].insert(0, segment(1000, 106))
+    data["activities"].append(mcq(106, None, 1, "diagnostic"))
+    (tmp_path / "course.json").write_text(json.dumps(data), encoding="utf-8")
+    load(db, tmp_path)
+    user = log_in(client)
+    answer(client, 106, WRONG)
+    assert profile(client)["modules"][0]["answered"] == 0  # the guess isn't counted
+    for activity in (101, 102, 103, 104):
+        answer(client, activity)
+    complete(db, user, 1)
+    assert profile(client)["modules"][0]["medal"] == "gold"

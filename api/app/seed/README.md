@@ -178,7 +178,7 @@ tagging that breaks these rules:
 | `purpose` | Use it for | Rules the check enforces |
 |---|---|---|
 | `practice` | Practice with feedback inside a module. Most activities. | none beyond the basics |
-| `diagnostic` | Module 0's quiz on prior knowledge (FR-8.1). | No `objective_id`. |
+| `diagnostic` | Module 0's quiz on prior knowledge (FR-8.1), and module 1's opening puzzle (101), asked before any teaching. Never counts towards a medal, and the student moves on after one answer, so a wrong guess costs nothing. | No `objective_id`. |
 | `retrieval` | One or two questions at the start of modules 2 to 6, on earlier modules (FR-2.4). | `multiple_choice` only; `module_id` 2 to 6; at most two per module; never placed in a segment. |
 | `mastery` | The mastery check (module 6) and the fresh items at the end of a review path. Counts towards the objective's result (FR-7). | Needs `objective_id`; in module 6 or on a review path only. Every objective needs at least one in module 6. |
 | `review` | Practice on a review path (ID document §7.6). | Needs `objective_id`; on a review path it needs all four hint levels. |

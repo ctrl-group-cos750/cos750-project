@@ -165,8 +165,7 @@
       "kind": "multiple_choice",
       "title": "Puzzle: the fewest walkways",
       "module_id": 1,
-      "purpose": "practice",
-      "objective_id": 3,
+      "purpose": "diagnostic",
       "config": {
         "prompt": "It's your first day on campus. You're at the Admin block (A) and your friends are waiting at the Green (G). The walkways on the map join A–C, A–E, B–C, B–G, C–F, D–E and E–F. What is the fewest number of walkways you need to walk along to reach them?",
         "options": [

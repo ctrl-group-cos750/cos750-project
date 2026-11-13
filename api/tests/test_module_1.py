@@ -54,13 +54,17 @@ def test_every_activity_is_shown_once_and_every_objective_has_one() -> None:
     shown = [s.activity_id for s in MODULE.segments if s.activity_id is not None]
     skip_checks = [a.id for a in QUICK_CHECK]  # asked in the quick check, in no segment
     assert sorted(shown + skip_checks) == sorted(a.id for a in ACTIVITIES + QUICK_CHECK)
-    assert {a.objective_id for a in ACTIVITIES} == {1, 2, 3}
+    assert {a.objective_id for a in ACTIVITIES} == {None, 1, 2, 3}  # None: the opening puzzle
 
 
 def test_the_module_opens_with_the_campus_and_its_puzzle() -> None:  # Gagné event 1
     first, second = MODULE.segments[:2]
     assert first.kind == "text"
     assert second.activity_id == 101
+    # Asked before any teaching, to show what the student doesn't know yet: a wrong guess must not
+    # cost the module's medal, so it is a diagnostic item, with no objective (review 13 Nov, 12).
+    assert activity(101).purpose == "diagnostic"
+    assert activity(101).objective_id is None
     assert edges_in(first.body) == campus_edges()
     assert all(vertex in first.body for vertex in CAMPUS.vertices)
 

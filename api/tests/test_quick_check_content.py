@@ -13,7 +13,7 @@ from collections import deque
 
 import pytest
 from test_module_2 import run as run_graph_class
-from test_module_4 import reference, setup_from
+from test_module_4 import reference, setup_from, step_budget
 from test_module_4 import run as run_module_bfs
 
 from app.schemas.graphs import GraphEdge, GraphScenarioOut
@@ -145,46 +145,67 @@ def test_103_counts_the_edges_and_finds_the_busiest_vertex() -> None:
     )
 
 
-def test_150_the_traversal_is_module_1s_example_of_one() -> None:
-    terms = next(a for a in CONTENT.activities if a.id == 102)
-    term_of_example = {}
-    for left in terms.config["left"]:
-        definition = next(
-            r["label"]
-            for r in terms.config["right"]
-            if r["id"] == terms.solution["pairs"][left["id"]]
-        )
-        example = definition.split("Example: ")[1]
-        term_of_example[example.lower()] = left["label"]
-    assert term_of_example[right(150).lower()] == "Graph traversal"
-    assert sorted(term_of_example[w.lower()] for w in wrong(150)) == [
+# What each option of 150 is, by the two questions module 1's worked example asks: does it keep
+# something or do something, and does it involve things joined by connections? Every option uses
+# "every", so the word that defines a traversal is no cue (round 2 review of #215, content 7).
+TERM_150 = {
+    "A recipe book's index: every dish, with its page number.": ("keeps", False),
+    "Adding up every number in a list, one after another.": ("does", False),
+    "Opening a web page, then every page it links to, and so on.": ("does", True),
+    "Every town in a province, and the roads that join them.": ("keeps", True),
+}
+TERMS = {
+    ("keeps", False): "Data structure",
+    ("does", False): "Algorithm",
+    ("keeps", True): "Graph",
+    ("does", True): "Graph traversal",
+}
+
+
+def test_150_the_traversal_is_new_and_no_keyword_finds_it() -> None:
+    assert set(labels(150).values()) == set(TERM_150)
+    assert TERMS[TERM_150[right(150)]] == "Graph traversal"
+    assert sorted(TERMS[TERM_150[w]] for w in wrong(150)) == [
         "Algorithm",
         "Data structure",
         "Graph",
     ]
+    assert all("every" in label.lower() for label in labels(150).values())
+    # None of module 1's key-term examples comes back, so recall of 102 is no answer either.
+    terms = next(a for a in CONTENT.activities if a.id == 102)
+    examples = " ".join(r["label"].split("Example: ")[-1].lower() for r in terms.config["right"])
+    assert not any(label.lower().rstrip(".") in examples for label in labels(150).values())
 
 
-def test_151_arrows_make_it_directed_and_each_is_one_edge() -> None:
-    found = edges(item(151).config["prompt"])
-    kind = "Directed" if all(d for _, _, d in found) else "Undirected"
-    assert right(151) == f"{kind}, with {len(found)} edges"
+def test_151_direction_comes_from_what_a_follow_means_not_an_arrow() -> None:
+    prompt = item(151).config["prompt"]
+    assert "→" not in prompt
+    assert "arrow" not in prompt.lower()
+    follows = {("Lindi", "Musa"), ("Musa", "Lindi"), ("Lindi", "Nandi")}
+    assert all(name in prompt for pair in follows for name in pair)
+    one_way = any((v, u) not in follows for u, v in follows)
+    assert one_way
+    assert right(151) == f"{'Directed' if one_way else 'Undirected'}, with {len(follows)} edges"
 
 
-def test_152_the_stops_are_vertices_and_the_two_way_buses_undirected_edges() -> None:
+def test_152_sitting_side_by_side_is_undirected_and_the_prompt_never_says_so() -> None:
     prompt = item(152).config["prompt"]
-    stops = re.findall(r"\(([A-Z])\)", prompt)
-    routes = {frozenset(p) for p in re.findall(r"\b([A-Z]) and ([A-Z])\b", prompt)}
-    assert len(stops) == 4
+    assert "both ways" not in prompt
+    assert "two-way" not in prompt
+    people = re.findall(r"\(([A-Z])\)", prompt)
+    pairs = {frozenset(p) for p in re.findall(r"\b([A-Z]) and ([A-Z])\b", prompt)}
+    assert len(people) == 4
+    assert pairs == {frozenset(people[i : i + 2]) for i in range(3)}  # neighbours in the row
     found = edges(right(152))
-    assert right(152).startswith(f"{len(stops)} vertices, the stops")
+    assert right(152).startswith(f"{len(people)} vertices, the learners")
     assert not any(d for _, _, d in found)
-    assert {frozenset((u, v)) for u, v, _ in found} == routes
+    assert {frozenset((u, v)) for u, v, _ in found} == pairs
     for label in wrong(152):
         other = edges(label)
         assert (
             not other
             or any(d for _, _, d in other)
-            or {frozenset((u, v)) for u, v, _ in other} != routes
+            or {frozenset((u, v)) for u, v, _ in other} != pairs
         )
 
 
@@ -227,8 +248,14 @@ def test_252_add_vertex_adds_an_empty_list() -> None:
 
 
 def test_314_the_queue_after_c_is_the_engines() -> None:
+    """314 named "the campus graph" with no walkways, so a student who skipped module 1 couldn't
+    answer it (round 2 review of #215, content 2). Its prompt lists them, and they are graph 4's."""
     campus = GraphScenarioOut(**next(g for g in CONTENT.graphs if g.id == 4).model_dump())
-    after_c = next(s for s in run_bfs(campus).steps if s.visited_vertex == "C")
+    listed = scenario(item(314).config["prompt"], "A")
+    assert {frozenset((e.source, e.target)) for e in listed.edges} == {
+        frozenset((e.source, e.target)) for e in campus.edges
+    }
+    after_c = next(s for s in run_bfs(listed).steps if s.visited_vertex == "C")
     assert right(314) == ", ".join(after_c.queue)
     assert all(label != right(314) for label in wrong(314))
 
@@ -254,18 +281,30 @@ def test_351_the_order_is_the_engines() -> None:
 
 
 def test_352_the_fewest_edges_is_the_engines() -> None:
-    result = run_bfs(scenario(item(352).config["prompt"], "P"))
+    prompt = item(352).config["prompt"]
+    start, goal = re.search(r"from ([A-Z]) to ([A-Z])\?", prompt).groups()  # type: ignore[union-attr]
+    result = run_bfs(scenario(prompt, start))
     found_by = {v: s.visited_vertex for s in result.steps for v in s.discovered}
-    path = ["U"]
-    while path[-1] != "P":
+    path = [goal]
+    while path[-1] != start:
         path.append(found_by[path[-1]])
     assert right(352) == str(len(path) - 1)
+    assert all(int(label) != len(path) - 1 for label in wrong(352))
+
+
+def test_352_is_not_mastery_626s_graph() -> None:
+    """352 was 626's bus network minus two edges, with the same letters, and its explanation gave
+    the distance 626 adds one to (round 2 review of #215, content 3)."""
+    mine = edges(item(352).config["prompt"])
+    theirs = edges(next(a for a in CONTENT.activities if a.id == 626).config["prompt"])
+    letters = {v for u, w, _ in mine for v in (u, w)}
+    assert not letters & {v for u, w, _ in theirs for v in (u, w)}
 
 
 # Module 4
 
 
-@pytest.mark.parametrize(("activity_id", "start"), [(403, "W"), (450, "A"), (451, "P")])
+@pytest.mark.parametrize(("activity_id", "start"), [(403, "W"), (450, "A")])
 def test_what_the_module_s_bfs_returns(activity_id: int, start: str) -> None:
     prompt = item(activity_id).config["prompt"]
     returned = run_module_bfs(reference(), setup_from(prompt), start)
@@ -287,14 +326,67 @@ def test_452_pop_takes_from_the_back() -> None:
     assert all(json.loads(label) != returned for label in wrong(452))
 
 
+# What each option of 451 does to the module's loop body, as code.
+BODIES_451 = {
+    "If n is not in visited: append n to the queue, and add it to visited when it leaves.": (
+        "            if n not in visited:\n                queue.append(n)",
+        "        visited.add(v)\n",
+    ),
+    "If n is not in visited: add n to visited, then append n to the queue.": (
+        "            if n not in visited:\n                visited.add(n)\n                queue.append(n)",
+        "",
+    ),
+    "Add n to visited, then append n to the queue, with no if.": (
+        "            visited.add(n)\n            queue.append(n)",
+        "",
+    ),
+    "If n is not in visited: add n to visited, then append n to order.": (
+        "            if n not in visited:\n                visited.add(n)\n                order.append(n)",
+        "",
+    ),
+}
+
+
+def test_451_builds_the_loop_and_only_the_right_body_makes_working_bfs() -> None:
+    """Module 4's quick check only asked what bfs returns, never how to build it (round 2 review
+    of #215, content 7). 451 asks for the neighbour loop's body; each option is run as code."""
+    code = reference()
+    body = "            if n not in visited:\n                visited.add(n)\n                queue.append(n)"
+    after_pop = "        v = queue.popleft()\n"
+    assert body in code
+    assert after_pop in code
+    assert set(labels(451).values()) == set(BODIES_451)
+    diamond = f"A{DASH}B, A{DASH}C, B{DASH}D, C{DASH}D"
+    expected = run_bfs(scenario(diamond, "A")).order
+
+    def returns(label: str) -> list[str] | None:
+        mine, on_pop = BODIES_451[label]
+        variant = code.replace(body, mine).replace(after_pop, after_pop + on_pop)
+        try:
+            with step_budget():
+                return run_module_bfs(variant, setup_from(diamond), "A")
+        except TimeoutError:
+            return None  # it never finishes
+
+    assert returns(right(451)) == expected
+    assert all(returns(label) != expected for label in wrong(451))
+
+
 # Module 5
 
 
-def test_503_the_late_visited_bug_visits_a_vertex_twice_on_a_cycle() -> None:
-    cycle = adjacency(f"A{DASH}B, A{DASH}C, B{DASH}D, C{DASH}D")
-    faulty = bfs(cycle, "A", late=True)
+def test_503_the_late_visited_bug_needs_two_routes_not_a_cycle() -> None:
+    """503 said the bug shows "on a graph with a cycle"; mastery 623 has a directed cycle the
+    faulty BFS passes and a fork-join with no cycle that it fails (round 2 review of #215)."""
+    prompt = item(503).config["prompt"]
+    assert "cycle" not in prompt
+    assert "two different routes" in prompt
+    fork_join = adjacency("A → B, A → C, B → D, C → D")  # two routes to D, no cycle
+    faulty = bfs(fork_join, "A", late=True)
     assert len(faulty) > len(set(faulty))
-    assert set(faulty) == set(cycle)
+    assert set(faulty) == set(fork_join)
+    back_to_start = adjacency("A → B, B → C, C → A")  # a cycle, one route to each vertex
+    assert bfs(back_to_start, "A", late=True) == bfs(back_to_start, "A")
     assert "visited twice" in right(503)
 
 

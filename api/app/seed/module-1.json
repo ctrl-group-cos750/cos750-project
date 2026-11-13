@@ -224,7 +224,7 @@
           },
           {
             "id": "d1",
-            "label": "A way to keep information organised so a program can use it. Example: the line of people at a till."
+            "label": "A way to keep information organised so a program can use it. Example: a spreadsheet of each learner's marks."
           },
           {
             "id": "d4",
@@ -232,7 +232,7 @@
           },
           {
             "id": "x2",
-            "label": "A drawing of a place, to scale. Example: a printed campus map."
+            "label": "The answer a program works out. Example: 97, the largest number in a list."
           },
           {
             "id": "d2",
@@ -249,8 +249,8 @@
           "t4": "d4"
         },
         "feedback": {
-          "t1": "Not quite. A data structure keeps information organised so a program can use it, like the line of people at a till, kept in the order they arrived. Find the description about keeping information.",
-          "t2": "Not quite. An algorithm is a finite list of instructions that solves a problem. It does something; it doesn't hold anything. Find the description about instructions.",
+          "t1": "Not quite. A data structure keeps information organised so a program can use it, like a spreadsheet of marks. Find the description about keeping information.",
+          "t2": "Not quite. An algorithm is a finite list of instructions that solves a problem. It does something: it is neither what is kept nor the answer it gives. Find the description about instructions.",
           "t3": "Not quite. In maths a graph can be a chart, but in computer science a graph is things joined by connections, such as buildings joined by walkways. Find the description about connections.",
           "t4": "Not quite. A traversal goes to every one of a set of connected things by moving along the connections. Find the description about going to every one."
         }
@@ -262,15 +262,15 @@
         },
         {
           "level": 2,
-          "body": "The line at a till is kept in order. Finding the largest number is a list of instructions."
+          "body": "A spreadsheet of marks keeps information. Finding the largest number is a list of instructions, and 97 is only the answer it gives."
         },
         {
           "level": 3,
-          "body": "A graph is a kind of data structure, and a traversal is a kind of algorithm. The chart and the scale drawing are not graphs in computer science."
+          "body": "A graph is a kind of data structure, and a traversal is a kind of algorithm. A bar chart is not a graph in computer science, and an answer is not the instructions that found it."
         },
         {
           "level": 4,
-          "body": "Answer: data structure → keep information organised (the line at a till); algorithm → list of instructions (largest number); graph → things joined by connections (buildings and walkways); graph traversal → going to every connected thing (the tour guide)."
+          "body": "Answer: data structure → keep information organised (the spreadsheet of marks); algorithm → list of instructions (largest number); graph → things joined by connections (buildings and walkways); graph traversal → going to every connected thing (the tour guide)."
         }
       ]
     },
@@ -323,30 +323,30 @@
         "prompt": "Which of these is an example of a graph traversal?",
         "options": [
           {
-            "id": "a",
-            "label": "The line of people at a till."
+            "id": "e",
+            "label": "A recipe book's index: every dish, with its page number."
           },
           {
-            "id": "b",
-            "label": "Finding the largest number in a list."
+            "id": "f",
+            "label": "Adding up every number in a list, one after another."
           },
           {
-            "id": "c",
-            "label": "Buildings joined by walkways."
+            "id": "h",
+            "label": "Every town in a province, and the roads that join them."
           },
           {
-            "id": "d",
-            "label": "A tour guide walking to every building."
+            "id": "g",
+            "label": "Opening a web page, then every page it links to, and so on."
           }
         ]
       },
       "solution": {
-        "explanation": "A traversal visits the vertices of a graph by following its edges, like a tour guide walking to every building. The line at a till is a data structure, finding the largest number is an algorithm, and the buildings joined by walkways are the graph itself.",
-        "correct": "d",
+        "explanation": "Pages joined by links are a graph, and opening a page, then the pages it links to, then theirs, goes to every connected page by moving along the connections. That is a graph traversal.",
+        "correct": "g",
         "feedback": {
-          "a": "Not quite. The line at a till is a data structure: it stores people in order. A traversal is something you do on a graph, moving along its edges.",
-          "b": "Not quite. Finding the largest number is an algorithm, but it doesn't follow the edges of a graph. Look for the one that moves along connections.",
-          "c": "Not quite. That is the graph itself. A traversal is the visiting of its vertices along its edges."
+          "e": "Not quite. An index keeps information organised so you can look it up, so it is a data structure. Nothing moves along connections. Ask: does it keep something, or do something?",
+          "f": "Not quite. Adding up a list is an algorithm, but a list has no connections to follow: it goes through the numbers in order. Ask: does it move along connections between things?",
+          "h": "Not quite. Towns joined by roads are the graph itself. A traversal is something done to it: going to every town along the roads. Ask: does it keep something, or do something?"
         }
       }
     },
@@ -358,33 +358,33 @@
       "purpose": "test_out",
       "objective_id": 2,
       "config": {
-        "prompt": "A graph has the edges J → K, K → L and L → J. Is it directed or undirected, and how many edges does it have?",
+        "prompt": "A graph shows who follows whom on a social app. Lindi and Musa follow each other. Lindi also follows Nandi, who doesn't follow her back. Is the graph directed or undirected, and how many edges does it have?",
         "options": [
           {
-            "id": "a",
+            "id": "g",
             "label": "Directed, with 3 edges"
           },
           {
-            "id": "b",
+            "id": "e",
+            "label": "Undirected, with 2 edges"
+          },
+          {
+            "id": "f",
+            "label": "Directed, with 2 edges"
+          },
+          {
+            "id": "h",
             "label": "Undirected, with 3 edges"
-          },
-          {
-            "id": "c",
-            "label": "Directed, with 6 edges"
-          },
-          {
-            "id": "d",
-            "label": "Undirected, with 6 edges"
           }
         ]
       },
       "solution": {
-        "explanation": "Each edge is an arrow, so the graph is directed, and there are three arrows, so three edges.",
-        "correct": "a",
+        "explanation": "Following goes one way: Lindi follows Nandi without Nandi following her. So each follow is an arrow, and the graph is directed. Lindi and Musa follow each other, which is two arrows, one each way, plus Lindi's arrow to Nandi: 3 edges.",
+        "correct": "g",
         "feedback": {
-          "b": "The edges are arrows, which go one way only. That makes the graph directed.",
-          "c": "Each arrow is one edge. There are three arrows.",
-          "d": "The edges are arrows, so the graph is directed, and each arrow is one edge."
+          "e": "Not quite. Lindi follows Nandi, but Nandi doesn't follow Lindi, so a follow goes one way: the graph is directed. Ask: if this edge exists, must the reverse one exist too?",
+          "f": "Not quite. Directed is right, but Lindi and Musa following each other is two follows, so two arrows, one each way. Count every follow.",
+          "h": "Not quite. Lindi follows Nandi without Nandi following back, so a follow is one-way and the graph is directed, even where two people follow each other. Ask: can a follow go one way only?"
         }
       }
     },
@@ -396,33 +396,33 @@
       "purpose": "test_out",
       "objective_id": 3,
       "config": {
-        "prompt": "A town has four bus stops: the Mall (M), the Park (P), the Station (S) and the Zoo (Z). Buses run both ways between M and P, P and S, and S and Z. Drawn as a graph, which is right?",
+        "prompt": "Four learners sit in a row on a bench: Mpho (M), Pule (P), Sipho (S) and Zola (Z), in that order. So M and P sit side by side, as do P and S, and S and Z. Drawn as a graph of who sits next to whom, which is right?",
         "options": [
           {
-            "id": "a",
-            "label": "4 vertices, the stops, and 3 undirected edges: M–P, P–S and S–Z"
+            "id": "e",
+            "label": "3 vertices, the pairs who sit together, and 4 edges, the learners"
           },
           {
-            "id": "b",
-            "label": "3 vertices, the bus routes, and 4 edges, the stops"
+            "id": "g",
+            "label": "4 vertices, the learners, and 3 undirected edges: M–P, P–S and S–Z"
           },
           {
-            "id": "c",
-            "label": "4 vertices, the stops, and 3 directed edges: M → P, P → S and S → Z"
+            "id": "f",
+            "label": "4 vertices, the learners, and 3 directed edges: M → P, P → S and S → Z"
           },
           {
-            "id": "d",
-            "label": "4 vertices, the stops, and 4 undirected edges: M–P, P–S, S–Z and Z–M"
+            "id": "h",
+            "label": "4 vertices, the learners, and 4 undirected edges: M–P, P–S, S–Z and Z–M"
           }
         ]
       },
       "solution": {
-        "explanation": "The places are the vertices and the connections between them are the edges. The buses run both ways, so the edges are undirected: M–P, P–S and S–Z.",
-        "correct": "a",
+        "explanation": "The learners are the things, so they are the vertices, and each pair who sit side by side is an edge. If M sits next to P, P sits next to M, so the edges are undirected: M–P, P–S and S–Z.",
+        "correct": "g",
         "feedback": {
-          "b": "The places you travel between are the vertices. The connections between them are the edges.",
-          "c": "The buses run both ways, so each edge works in both directions: it is undirected.",
-          "d": "There is no bus between the Zoo and the Mall, so there is no Z–M edge."
+          "e": "Not quite. That swaps them. The learners are the things being joined, so they are the vertices, and each pair who sit side by side is an edge. Ask: what does each connection join?",
+          "f": "Not quite. Sitting next to someone works both ways: if M sits next to P, P sits next to M. Ask: could this connection exist one way only?",
+          "h": "Not quite. Z sits at the end of the row, not next to M, so there is no Z–M edge. Count only the pairs who sit side by side."
         }
       }
     },
@@ -1135,7 +1135,7 @@
         "left": [
           {
             "id": "s1",
-            "label": "Taxi ranks and the taxi routes between them. Taxis drive every route both ways."
+            "label": "Taxi ranks, and the roads taxis drive between them. Taxis use every road both ways."
           },
           {
             "id": "s2",
@@ -1157,15 +1157,15 @@
           },
           {
             "id": "m5",
-            "label": "The items are vertices, each “comes straight after” link is an edge, and it is directed."
+            "label": "The items are vertices, an edge leads from each item to the next, and it is directed."
           },
           {
             "id": "m1",
-            "label": "The places are vertices, the routes between them are edges, and it is undirected."
+            "label": "The places are vertices, the connections between them are edges, and it is undirected."
           },
           {
             "id": "m2",
-            "label": "The routes are vertices, the places they join are edges, and it is undirected."
+            "label": "The connections are vertices, the places they join are edges, and it is undirected."
           },
           {
             "id": "m3",
@@ -1184,11 +1184,11 @@
           "s3": "m5",
           "s4": "m6"
         },
-        "explanation": "The things are the vertices and the links between them are the edges, so the taxi ranks, children, songs and puzzle pieces are the vertices. Taxi routes and pieces that fit work both ways, so those graphs are undirected. An invitation and “plays straight after” work one way only, so those graphs are directed.",
+        "explanation": "The things are the vertices and the links between them are the edges, so the taxi ranks, children, songs and puzzle pieces are the vertices. Roads that taxis use both ways and pieces that fit work both ways, so those graphs are undirected. An invitation and “plays straight after” work one way only, so those graphs are directed.",
         "feedback": {
-          "s1": "Not quite. The taxi ranks are the places, so they are the vertices, and the routes joining them are the edges. Taxis drive each route both ways, so it is undirected. Watch out for the description that swaps the places and the routes.",
+          "s1": "Not quite. The taxi ranks are the places, so they are the vertices, and the roads joining them are the edges. Taxis use each road both ways, so it is undirected. Watch out for the description that swaps the places and the connections.",
           "s2": "Not quite. The children are the people, so they are the vertices, and each invitation is an edge. One child can invite another without being invited back, so it is directed, even though two children are involved. Ask: if this edge exists, must the reverse one exist too?",
-          "s3": "Not quite. The songs are the items, and each link from a song to the one after it is an edge. One song playing after another doesn't mean the other plays after it, so it is directed. Look for the description of items in order, with arrows.",
+          "s3": "Not quite. The songs are the items, and each link from a song to the one after it is an edge. One song playing after another doesn't mean the other plays after it, so it is directed. Look for the description of items each leading to the next.",
           "s4": "Not quite. The pieces are the objects, and each pair that fits is an edge. If one piece fits another, the other fits it too, so it is undirected. Look for the description of objects that fit together."
         }
       },
@@ -1207,7 +1207,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: taxis → places and routes, undirected; birthday party → people and one-way acts, directed; playlist → items and “comes straight after” links, directed; puzzle → objects and pairs that fit, undirected."
+          "body": "Answer: taxis → places and connections, undirected; birthday party → people and one-way acts, directed; playlist → items each leading to the next, directed; puzzle → objects and pairs that fit, undirected."
         }
       ]
     }

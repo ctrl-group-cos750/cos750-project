@@ -657,6 +657,23 @@ def test_the_tests_include_a_disconnected_graph_and_a_graph_with_a_cycle() -> No
         assert "two-islands" in exposed
 
 
+def test_the_recall_item_names_two_routes_not_a_cycle() -> None:
+    """625 said "a graph containing a cycle" shows the visited-too-late bug, which set the student
+    up to get 623 wrong: there a directed cycle passes and a fork-join with no cycle fails (round 2
+    review of #215, content 1)."""
+    recall = ACTIVITIES[625]
+    key = next(
+        o["label"] for o in recall.config["options"] if o["id"] == recall.solution["correct"]
+    )
+    assert "two routes" in key
+    assert "cycle" not in key
+    verdicts = ACTIVITIES[623]
+    fails = set(verdicts.solution["exposing"])
+    cyclic = {t["id"] for t in verdicts.config["tests"] if t["id"] in ("cycle", "back-to-start")}
+    assert "fork-join" in fails  # no cycle, two routes to D
+    assert cyclic - fails == {"back-to-start"}  # a cycle, one route to each vertex
+
+
 def test_every_hidden_test_graph_runs_on_the_engine() -> None:
     for directed, vertices, edges, start in HIDDEN.values():
         assert run_bfs(scenario(directed, vertices, edges, start)).order
@@ -689,6 +706,28 @@ def test_a_review_fill_in_is_as_hard_as_the_module_6_one() -> None:
     for a in (a for a in FRESH[6] + CHECK if a.kind == "fill_in"):
         for blank in a.config["blanks"]:
             assert len(a.solution["feedback"][str(blank)]) >= 2, (a.id, blank)
+
+
+def test_the_review_fill_in_blanks_other_parts_than_620() -> None:
+    """1602 was 620 with renamed variables: the same four blanks, the same tokens (round 2 review
+    of #215). Now it blanks other parts of BFS: building the queue, whose neighbours, which vertex
+    is marked found, and where it joins."""
+    names = {"discovered": "visited", "lineup": "queue", "here": "v", "nbr": "n"}
+
+    def blanked(a: ActivityFixture) -> set[str]:
+        lines = {line.strip() for line in a.config["code"].splitlines() if BLANK.search(line)}
+        for old, new in names.items():
+            lines = {re.sub(rf"\b{old}\b", new, line) for line in lines}
+        return {BLANK.sub("__", line) for line in lines}
+
+    def answers(a: ActivityFixture) -> set[str]:
+        found = set(a.solution["answers"].values())
+        for old, new in names.items():
+            found = {re.sub(rf"\b{old}\b", new, x) for x in found}
+        return found
+
+    assert not blanked(ACTIVITIES[1602]) & blanked(ACTIVITIES[620])
+    assert not answers(ACTIVITIES[1602]) & answers(ACTIVITIES[620])
 
 
 @pytest.mark.parametrize("a", LABELLING, ids=lambda a: str(a.id))

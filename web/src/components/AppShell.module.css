@@ -1,5 +1,7 @@
 .skip {
-  position: absolute;
+  /* Fixed, so it shows wherever the page is scrolled to when it gets focus (Shift+Tab back to it
+   * from further down the page left it at the top of the document, out of view). */
+  position: fixed;
   left: var(--space-4);
   top: -3rem;
   padding: var(--space-2) var(--space-3);

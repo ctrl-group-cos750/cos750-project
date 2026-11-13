@@ -19,6 +19,8 @@ export type AppShellProps = {
  * Keeps `--header-h` on the root element equal to the sticky header's height, as it wraps or the
  * text grows. base.css pads the page's scrolling by it, so a control reached with Tab or Shift+Tab
  * is scrolled clear of the header instead of under it (WCAG 2.2 2.4.11 Focus Not Obscured).
+ * Firefox scrolls a focused control only when it is out of view, so one partly under the header
+ * stayed there: a control that gets focus under the header is scrolled clear of it here too.
  */
 function useHeaderHeight() {
   const header = useRef<HTMLElement>(null)
@@ -28,11 +30,19 @@ function useHeaderHeight() {
     if (!element) return
     const measure = () => root.style.setProperty('--header-h', `${element.offsetHeight}px`)
     measure()
-    if (typeof ResizeObserver === 'undefined') return () => root.style.removeProperty('--header-h')
-    const observer = new ResizeObserver(measure)
-    observer.observe(element)
+    const clear = (event: FocusEvent) => {
+      const target = event.target
+      if (!(target instanceof HTMLElement) || element.contains(target)) return
+      if (getComputedStyle(target).position === 'fixed') return // the skip link, drawn above it
+      const under = element.getBoundingClientRect().bottom - target.getBoundingClientRect().top
+      if (under > 0) window.scrollBy({ top: -(under + 8), behavior: 'instant' })
+    }
+    document.addEventListener('focusin', clear)
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure)
+    observer?.observe(element)
     return () => {
-      observer.disconnect()
+      observer?.disconnect()
+      document.removeEventListener('focusin', clear)
       root.style.removeProperty('--header-h')
     }
   }, [])

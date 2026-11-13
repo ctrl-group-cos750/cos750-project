@@ -88,6 +88,19 @@ describe('account menu', () => {
     expect(screen.queryByRole('link', { name: 'Profile and settings' })).toBeNull()
   })
 
+  it('closes when Tab leaves it (A12)', async () => {
+    setup()
+    renderApp('/')
+    await openMenu()
+    screen.getByRole('button', { name: 'Log out' }).focus()
+    await userEvent.tab()
+    expect(screen.queryByRole('link', { name: 'Profile and settings' })).toBeNull()
+    expect(screen.getByRole('button', { name: /your account/ })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
+  })
+
   it('closes on a click outside it, and after choosing a page', async () => {
     setup()
     renderApp('/')

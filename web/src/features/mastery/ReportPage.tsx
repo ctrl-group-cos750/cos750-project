@@ -224,7 +224,7 @@ export function ReportPage() {
       <NextAction objectives={objectives} ready={ready} checkId={checkId} />
 
       <Card>
-        <ol className={styles.objectives}>
+        <ol className={styles.objectives} aria-label="Your objectives">
           {objectives.map((o) => (
             <li key={o.id} className={styles.objective}>
               <span className={styles.number}>{o.id}</span>

@@ -52,7 +52,11 @@ function objectiveToMiss(): number {
 /** The report's row for an objective, found by the objective's text. */
 function row(page: Page, objective: number) {
   const text = objectives.find((o) => o.id === objective)?.text ?? ''
-  return page.getByRole('main').getByRole('listitem').filter({ hasText: text })
+  // The report's own list: the skill profile on the same page names the objectives too (#214).
+  return page
+    .getByRole('list', { name: 'Your objectives' })
+    .getByRole('listitem')
+    .filter({ hasText: text })
 }
 
 const ALL_KINDS = [

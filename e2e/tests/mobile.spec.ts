@@ -75,11 +75,13 @@ test.describe('badge notes', () => {
     page,
     course,
   }) => {
-    // Module 0 finished earns the First Module badge; its note shows on the next page, module 1
-    // (its recall questions answered, so the module itself is on screen, with Next).
+    // Module 1 finished earns the First Module badge (module 0, the warm-up, asks only diagnostic
+    // questions and earns none); its note shows on the next page, module 2 (its recall questions
+    // answered, so the module itself is on screen, with Next).
     await course.walk(0)
-    await course.walk(1, 0)
-    const module = await course.module(1)
+    await course.walk(1)
+    await course.walk(2, 0)
+    const module = await course.module(2)
     await page.goto(`/modules/${module.id}`)
     await expect(segmentRegion(page, module.segments[0].title)).toBeVisible()
     await expect(

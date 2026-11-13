@@ -25,6 +25,8 @@ type ActivityRendererProps = {
   heading?: 'h1' | 'h2' | 'h3'
   /** False inside a module segment, whose own heading already names the question. */
   showTitle?: boolean
+  /** An optional bonus quest (FR-8.3): the hint warning says it earns nothing after hint 3. */
+  bonus?: boolean
   /** The student's last answer, which each control starts from when they come back (#171). */
   previous?: LastAttempt['submitted']
 }
@@ -192,6 +194,7 @@ export function ActivityRenderer(props: ActivityRendererProps) {
       requestHint={props.requestHint}
       loadHints={props.loadHints}
       onLevel={onLevel}
+      bonus={props.bonus}
     />
   )
   const title = props.showTitle !== false && (

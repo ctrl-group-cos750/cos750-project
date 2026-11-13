@@ -4,6 +4,7 @@ import { Alert, Markdown } from '../../components'
 import { ActivityView } from '../activities/ActivityPage.tsx'
 import { PicturePanel } from '../activities/pictures/PicturePanel.tsx'
 import { pictureForSegment, pictureName } from '../activities/pictures/pictures.ts'
+import { useRewards } from '../rewards/hooks.ts'
 import { VideoView } from '../video/VideoPage.tsx'
 import type { Segment } from './module.types.ts'
 
@@ -36,6 +37,8 @@ function TextVersion({ body }: { body: string }) {
  * is focusable from script only (tabIndex -1, data-focus-heading): ModulePage moves focus to it
  * after Previous or Next. */
 export function SegmentView({ segment, onAnswered, intro }: SegmentViewProps) {
+  // A student who hid points and badges (FR-9.5) isn't told about them on a bonus quest either.
+  const hideRewards = useRewards().data?.hideRewards === true
   // The pilot's timeline of what each student saw (FR-10.1, #141): one event per segment shown.
   useEffect(() => reportEvent('segment_viewed', segment.id), [segment.id])
   const introLine = intro ? <p className="text-muted-foreground">{intro}</p> : null
@@ -96,13 +99,18 @@ export function SegmentView({ segment, onAnswered, intro }: SegmentViewProps) {
           {introLine}
           {segment.optional && (
             <p className="m-0 text-sm text-muted-foreground">
-              Optional bonus quest: try it for extra points and a badge, or carry on with Next. It
-              never affects your results. Hints 3 and 4 give the answer away, so after them it earns
-              no points or badge.
+              {hideRewards
+                ? 'Optional bonus quest: an extra challenge, or carry on with Next. It never affects your results.'
+                : 'Optional bonus quest: try it for extra points and a badge, or carry on with Next. It never affects your results. Hints 3 and 4 give the answer away, so after them it earns no points or badge.'}
             </p>
           )}
           {segment.activityId !== null ? (
-            <ActivityView activityId={segment.activityId} showTitle={false} onResult={onAnswered} />
+            <ActivityView
+              activityId={segment.activityId}
+              showTitle={false}
+              onResult={onAnswered}
+              bonus={segment.optional}
+            />
           ) : (
             <Alert tone="warning">Activity not available.</Alert>
           )}

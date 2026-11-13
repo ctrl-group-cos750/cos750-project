@@ -1406,6 +1406,8 @@ export interface components {
       upgradedAt: string | null
       /** Seen */
       seen: boolean
+      /** Questnumber */
+      questNumber?: number | null
     }
     /**
      * EditorActivityIn

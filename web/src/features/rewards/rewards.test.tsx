@@ -45,7 +45,7 @@ describe('buildShelf', () => {
       'Meet learning objective 1.',
     )
     expect(shelf.objective.find((i) => i.achievement.id === 'lo2')?.next).toBe(
-      'Meet it again on your own for gold.',
+      'Met with support. Gold is for meeting it without hint 3 or 4.',
     )
     expect(shelf.milestone.map((i) => i.state)).toEqual(['locked', 'locked', 'locked', 'locked'])
   })

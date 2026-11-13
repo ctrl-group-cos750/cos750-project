@@ -16,10 +16,10 @@ export type ShelfItem = {
 const howToEarn: Record<string, string> = {
   'ready-for-lecture': 'Meet every objective, with or without support.',
   'came-back-stronger': 'Meet an objective through its review path.',
-  'solo-run': 'Meet your bronze objectives again on your own.',
+  'solo-run': 'Meet every objective on your own, without hint 3 or 4.',
   quest: 'Finish a bonus quest.',
   'all-quests': 'Finish the bonus quests you have left.',
-  'first-module': 'Work through a whole module.',
+  'first-module': 'Finish a module with at least one answer right before hint 3.',
 }
 
 function stateOf(achievement: Achievement, earned?: EarnedBadge): AchievementState {
@@ -29,15 +29,15 @@ function stateOf(achievement: Achievement, earned?: EarnedBadge): AchievementSta
 }
 
 /**
- * A quest badge's ref is its activity id (stable if another quest is retired), so the shelf
- * numbers the student's quests for display: "Quest 1", "Quest 2", in course order (by id).
+ * A quest badge is numbered by the quest's place in the course ("Quest 1" is always the module 3
+ * quest), which the server sends, so a badge never changes name when another quest is finished
+ * first (13 Nov audit). A quest no longer in the course falls back to the order the student earned.
  */
 function questNumbers(earned: EarnedBadge[]): Map<string, number> {
-  const refs = earned
+  const quests = earned
     .filter((e) => e.badge === 'quest')
-    .map((e) => e.ref)
-    .sort((a, b) => Number(a) - Number(b) || a.localeCompare(b))
-  return new Map(refs.map((ref, index) => [ref, index + 1]))
+    .sort((a, b) => Number(a.ref) - Number(b.ref) || a.ref.localeCompare(b.ref))
+  return new Map(quests.map((e, index) => [e.ref, e.questNumber ?? index + 1]))
 }
 
 function item(achievement: Achievement, earned?: EarnedBadge, number?: number): ShelfItem {
@@ -53,7 +53,7 @@ function item(achievement: Achievement, earned?: EarnedBadge, number?: number): 
         ? `Meet learning objective ${achievement.objective}.`
         : howToEarn[achievement.id]
   } else if (state === 'bronze') {
-    next = 'Meet it again on your own for gold.'
+    next = 'Met with support. Gold is for meeting it without hint 3 or 4.'
   }
   return {
     key: earned ? `${achievement.id}:${earned.ref}` : achievement.id,

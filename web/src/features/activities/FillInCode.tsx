@@ -71,7 +71,7 @@ export function FillInCode({
           aria-label={`Blank ${blankId}`}
           value={answers[blankId] ?? ''}
           disabled={disabled}
-          className={`mx-1 rounded border bg-background px-1 py-0.5 font-mono text-sm ${part ? (part.correct ? 'border-success' : 'border-warning') : 'border-primary'}`}
+          className={`mx-1 rounded border bg-background px-1 py-0.5 font-mono text-base sm:pointer-fine:text-sm ${part ? (part.correct ? 'border-success' : 'border-warning') : 'border-primary'}`}
           onChange={(event) =>
             setAnswers((current) => ({ ...current, [blankId]: event.target.value }))
           }

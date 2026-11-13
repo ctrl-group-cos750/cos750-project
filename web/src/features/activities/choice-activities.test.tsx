@@ -94,6 +94,44 @@ describe('matching', () => {
     expect(onSubmit).toHaveBeenCalledWith({ roads: 'undirected' })
   })
 
+  it('writes out the whole chosen answer, which a closed select cuts off', async () => {
+    const user = userEvent.setup()
+    const long = {
+      ...matching,
+      config: {
+        ...matching.config,
+        right: [
+          {
+            id: 'undirected',
+            label: 'An undirected graph: each road is one edge, walked both ways. Example: a map.',
+          },
+          { id: 'directed', label: 'Directed graph' },
+        ],
+      },
+    }
+    render(
+      <Matching
+        activity={long}
+        result={undefined}
+        submitting={false}
+        onSubmit={vi.fn<(pairs: Record<string, string>) => Promise<void>>()}
+      />,
+    )
+    const roads = screen.getAllByRole('listitem')[0]
+    expect(within(roads).queryByText(/each road is one edge/, { selector: 'p' })).toBeNull()
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Two-way roads between towns' }),
+      'undirected',
+    )
+    expect(
+      within(roads).getByText(
+        'An undirected graph: each road is one edge, walked both ways. Example: a map.',
+        { selector: 'p' },
+      ),
+    ).toBeInTheDocument()
+  })
+
   it("marks each item, and drops an item's mark once the student changes it", async () => {
     const user = userEvent.setup()
     const onSubmit = vi

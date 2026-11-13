@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Link, MemoryRouter, Route, Routes } from 'react-router'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ada, fakeApi, renderApp } from '../../test/app.tsx'
 import { ModulePage } from './ModulePage.tsx'
 import type { ModuleDetail, ModuleSummary, Segment } from './module.types.ts'
@@ -126,6 +126,40 @@ describe('ModulePage — goals', () => {
     expect(await screen.findByText('By the end of this module you can:')).toBeInTheDocument()
     expect(screen.getByText('Recall how queues work.')).toBeInTheDocument()
     expect(screen.getByText('Use a queue in Python.')).toBeInTheDocument()
+  })
+
+  describe('on the first segment', () => {
+    afterEach(() => vi.unstubAllGlobals())
+
+    /** A screen as wide or as narrow as a phone, as matchMedia reports it. */
+    function screenIsPhone(phone: boolean) {
+      vi.stubGlobal(
+        'matchMedia',
+        vi.fn((query: string) => ({
+          matches: phone && query.includes('max-width'),
+          media: query,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+        })),
+      )
+    }
+
+    const goals = async () =>
+      (await screen.findByText('By the end of this module you can:')).closest('details')
+
+    it('opens the goals on a wider screen', async () => {
+      screenIsPhone(false)
+      setupModuleApi(twoSegmentDetail)
+      renderApp('/modules/1')
+      expect(await goals()).toHaveAttribute('open')
+    })
+
+    it('keeps the goals closed on a phone, so the lesson starts on the first screen', async () => {
+      screenIsPhone(true)
+      setupModuleApi(twoSegmentDetail)
+      renderApp('/modules/1')
+      expect(await goals()).not.toHaveAttribute('open')
+    })
   })
 })
 

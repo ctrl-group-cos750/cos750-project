@@ -23,8 +23,8 @@
   top: 0;
   z-index: 30;
   border-bottom: 1px solid var(--color-line);
-  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
-  backdrop-filter: blur(8px);
+  /* Opaque, as in the app: a translucent header showed the page's text through it. */
+  background: var(--color-surface);
 }
 
 .bar,
@@ -53,6 +53,8 @@
   font-weight: 700;
   letter-spacing: -0.02em;
   text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .logo {
@@ -61,6 +63,8 @@
 
 .headerActions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: center;
   gap: var(--space-2);
 }
@@ -392,5 +396,24 @@
 
   .headerActions {
     gap: var(--space-1);
+  }
+}
+
+/* Phones: the brand and the header's buttons stay on one row. */
+@media (max-width: 26rem) {
+  .bar {
+    padding-inline: var(--space-4);
+    gap: var(--space-2);
+  }
+}
+
+/* A 320 px phone: "Log in" is left to the hero's "I have an account", just below. */
+@media (max-width: 24rem) {
+  .brand {
+    font-size: var(--text-md);
+  }
+
+  .logIn {
+    display: none;
   }
 }

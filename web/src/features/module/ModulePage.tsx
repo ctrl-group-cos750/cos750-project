@@ -16,6 +16,10 @@ import {
 import { Link } from 'react-router'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { ApiError } from '../../api/client.ts'
+import { useMediaQuery } from '../activities/pictures/useMediaQuery.ts'
+
+/** Phones, where the module's goals start closed so the lesson starts on the first screen. */
+const PHONE_WIDTH = '(max-width: 40rem)'
 
 /** The API refused the request (any 4xx: 403 locked, 404 no such module, 429 too many): asking
  * again gets the same answer, so it isn't retried and the page says so at once instead of spinning
@@ -50,6 +54,7 @@ export function ModulePage() {
 
   // Drive current index from the fetched position; update locally on navigation.
   const [segmentIndex, setSegmentIndex] = useState<number | null>(null)
+  const phone = useMediaQuery(PHONE_WIDTH)
   // Which recall question is on screen; null until the student moves, so it starts at the first
   // one they haven't answered yet (FR-2.4).
   const [retrievalIndex, setRetrievalIndex] = useState<number | null>(null)
@@ -264,27 +269,28 @@ export function ModulePage() {
   return (
     <section
       ref={contentRef}
-      className="mx-auto grid w-full min-w-0 max-w-3xl gap-6 has-[[data-two-column]]:max-w-[70rem]"
+      className="mx-auto grid w-full min-w-0 max-w-3xl gap-4 sm:gap-6 has-[[data-two-column]]:max-w-[70rem]"
       aria-label={`Module ${module.number}: ${module.title}`}
     >
-      {/* Header */}
-      <div className="grid gap-3">
+      {/* Header. Compact on a phone, so the lesson starts on the first screen of a 320 × 568 one. */}
+      <div className="grid gap-2 sm:gap-3">
         <Link
           to="/"
-          className="justify-self-start text-sm text-muted-foreground hover:text-foreground"
+          className="inline-flex min-h-11 items-center justify-self-start text-sm text-muted-foreground hover:text-foreground sm:min-h-0"
         >
           ← All modules
         </Link>
-        <h1 className="text-2xl font-bold">
+        <h1 className="text-xl font-bold sm:text-2xl">
           Module {module.number} · {module.title}
         </h1>
 
         {/* Goals (FR-2.3): open on the first segment, where they set the scene (Gagné's event
-            2), then one click away, so the question isn't pushed down the screen every time. */}
+            2), then one click away, so the question isn't pushed down the screen every time. On
+            a phone they start closed: open, they fill the first screen. */}
         {module.goals.length > 0 && (
           <details
-            key={place.number === 1 ? 'first' : 'later'}
-            open={place.number === 1}
+            key={place.number === 1 && !phone ? 'first' : 'later'}
+            open={place.number === 1 && !phone}
             className="rounded-lg border border-border bg-card px-4 py-3"
           >
             <summary className="cursor-pointer font-semibold">
@@ -299,14 +305,17 @@ export function ModulePage() {
         )}
       </div>
 
-      {/* Progress indicator (FR-2.5, AC5) */}
-      <div className="grid gap-2">
-        <ProgressBar
-          label={`Module ${module.number} progress`}
-          value={place.number}
-          max={place.total}
-        />
-        <p className="text-sm text-muted-foreground" aria-live="polite">
+      {/* Progress indicator (FR-2.5, AC5): the count beside the bar on a phone, under it on a
+          wider screen. */}
+      <div className="flex items-center gap-3 sm:grid sm:gap-2">
+        <div className="min-w-0 flex-1">
+          <ProgressBar
+            label={`Module ${module.number} progress`}
+            value={place.number}
+            max={place.total}
+          />
+        </div>
+        <p className="m-0 shrink-0 text-sm text-muted-foreground" aria-live="polite">
           Segment {place.number} of {place.total}
         </p>
       </div>

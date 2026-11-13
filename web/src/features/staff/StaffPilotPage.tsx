@@ -3,7 +3,7 @@ import { Download } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Spinner } from '../../components'
+import { ScrollRegion, Spinner } from '../../components'
 import { formatTime } from './formatTime.ts'
 import { exportUrl, getInsights, type Insights } from './staff.api.ts'
 
@@ -30,7 +30,9 @@ function Totals({ data }: { data: Insights }) {
     ['Hints viewed', data.hintsViewed],
   ] as const
   return (
-    <div className="grid grid-cols-3 gap-3">
+    // Three across where they fit; at 320 px, or with larger text spacing, they wrap instead of
+    // clipping their numbers.
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(min(8rem,100%),1fr))] gap-3">
       {tiles.map(([label, value]) => (
         <Card key={label} size="sm">
           <CardContent className="grid gap-1">
@@ -59,42 +61,46 @@ function Activities({ data }: { data: Insights }) {
         <p className="text-muted-foreground">No student has answered anything yet.</p>
       ) : (
         <Card size="sm">
-          <CardContent className="overflow-x-auto">
-            <table className="w-full border-collapse text-left">
-              <thead className="text-muted-foreground">
-                <tr>
-                  <th className="py-2 pr-4 font-medium">Activity</th>
-                  <th className="py-2 pr-4 font-medium">Passed</th>
-                  <th className="py-2 pr-4 text-right font-medium">Wrong answers</th>
-                  <th className="py-2 font-medium">Needed hint 3 or 4</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.activities.map((a) => (
-                  <tr key={a.id} className="border-t border-foreground/10">
-                    <td className="py-2 pr-4">
-                      <span className="font-medium">{a.title}</span>
-                      <span className="block text-muted-foreground">
-                        {a.kind.replaceAll('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="py-2 pr-4">
-                      <Meter part={a.studentsPassed} whole={a.students} label="Students passed" />
-                    </td>
-                    <td className="py-2 pr-4 text-right tabular-nums">
-                      {a.wrongAttempts} of {a.attempts}
-                    </td>
-                    <td className="py-2">
-                      <Meter
-                        part={a.studentsWithSupport}
-                        whole={a.students}
-                        label="Students who needed hint 3 or 4"
-                      />
-                    </td>
+          <CardContent>
+            {/* Scrolls sideways on a narrow screen, and is then a named tab stop, so a keyboard
+                can scroll it (WCAG 2.1.1). */}
+            <ScrollRegion label="Table: activities">
+              <table className="w-full border-collapse text-left">
+                <thead className="text-muted-foreground">
+                  <tr>
+                    <th className="py-2 pr-4 font-medium">Activity</th>
+                    <th className="py-2 pr-4 font-medium">Passed</th>
+                    <th className="py-2 pr-4 text-right font-medium">Wrong answers</th>
+                    <th className="py-2 font-medium">Needed hint 3 or 4</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {data.activities.map((a) => (
+                    <tr key={a.id} className="border-t border-foreground/10">
+                      <td className="py-2 pr-4">
+                        <span className="font-medium">{a.title}</span>
+                        <span className="block text-muted-foreground">
+                          {a.kind.replaceAll('_', ' ')}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-4">
+                        <Meter part={a.studentsPassed} whole={a.students} label="Students passed" />
+                      </td>
+                      <td className="py-2 pr-4 text-right tabular-nums">
+                        {a.wrongAttempts} of {a.attempts}
+                      </td>
+                      <td className="py-2">
+                        <Meter
+                          part={a.studentsWithSupport}
+                          whole={a.students}
+                          label="Students who needed hint 3 or 4"
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </ScrollRegion>
           </CardContent>
         </Card>
       )}
@@ -196,7 +202,12 @@ function Downloads() {
               <CardDescription>{f.text}</CardDescription>
             </CardHeader>
             <CardContent>
-              <a href={exportUrl(f.table)} download className={buttonVariants({ size: 'lg' })}>
+              <a
+                href={exportUrl(f.table)}
+                download
+                // The file name wraps on a narrow screen rather than running out of the card.
+                className={`${buttonVariants({ size: 'lg' })} h-auto min-h-9 max-w-full py-2 whitespace-normal [overflow-wrap:anywhere]`}
+              >
                 <Download aria-hidden />
                 Download {f.file}.csv
               </a>

@@ -77,10 +77,7 @@ export function BfsVisualizer({ scenario }: BfsVisualizerProps) {
   }
 
   return (
-    <section
-      className="mx-auto w-full max-w-6xl space-y-5 px-4 py-6 sm:px-6"
-      aria-labelledby="bfs-title"
-    >
+    <section className="w-full min-w-0 space-y-5" aria-labelledby="bfs-title">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">

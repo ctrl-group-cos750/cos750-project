@@ -246,7 +246,8 @@ export function TraceTable({
       )}
 
       {/* A wide table scrolls here, not the page (WCAG 1.4.10). Its cells are inputs, so a
-          keyboard scrolls it by moving through them. */}
+          keyboard scrolls it by moving through them. Its controls are 16 px on a phone or a touch
+          screen: iOS zooms the page into any smaller one when it is focused. */}
       <section
         aria-labelledby={`${baseId}-caption`}
         className="min-w-0 overflow-x-auto rounded border border-border"
@@ -313,7 +314,7 @@ export function TraceTable({
                       aria-label={`Step ${index + 1}, current vertex`}
                       aria-invalid={visibleErrors.has(cellId(row.key, 'current')) || undefined}
                       aria-describedby={describedBy('current')}
-                      className="w-full rounded border border-primary bg-background px-2 py-1 font-mono aria-invalid:border-2 aria-invalid:border-warning aria-invalid:bg-warning/10"
+                      className="w-full rounded border border-primary bg-background px-2 py-1 font-mono text-base pointer-coarse:min-h-11 sm:pointer-fine:text-sm aria-invalid:border-2 aria-invalid:border-warning aria-invalid:bg-warning/10"
                       value={row.current}
                       disabled={disabled}
                       onChange={(event) => update(index, { current: event.target.value })}
@@ -334,12 +335,15 @@ export function TraceTable({
                         id={cellId(row.key, column)}
                         type="text"
                         autoComplete="off"
+                        // Vertex names are capitals; a phone's keyboard shouldn't correct "A, D".
+                        autoCapitalize="characters"
+                        autoCorrect="off"
                         spellCheck={false}
                         maxLength={MAX_INPUT}
                         aria-label={`Step ${index + 1}, ${heading.toLowerCase()}`}
                         aria-invalid={visibleErrors.has(cellId(row.key, column)) || undefined}
                         aria-describedby={describedBy(column)}
-                        className="w-full rounded border border-primary bg-background px-2 py-1 font-mono aria-invalid:border-2 aria-invalid:border-warning aria-invalid:bg-warning/10"
+                        className="w-full rounded border border-primary bg-background px-2 py-1 font-mono text-base pointer-coarse:min-h-11 sm:pointer-fine:text-sm aria-invalid:border-2 aria-invalid:border-warning aria-invalid:bg-warning/10"
                         value={row[column]}
                         disabled={disabled}
                         onChange={(event) => update(index, { [column]: event.target.value })}

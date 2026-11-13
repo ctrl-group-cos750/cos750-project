@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router'
 import { Alert, Button, ProgressBar, Spinner } from '../../components'
 import { ActivityView } from '../activities/ActivityPage.tsx'
 import { fetchModule, savePosition } from './module.api.ts'
+import type { ModuleDetail } from './module.types.ts'
 import { SegmentView } from './SegmentView.tsx'
 import {
   nearestShown,
@@ -137,6 +138,7 @@ export function ModulePage() {
           <h1 className="text-2xl font-bold">
             Module {module.number} · {module.title}
           </h1>
+          <ChoiceNote module={module} />
           <p className="text-sm text-muted-foreground" tabIndex={-1} data-focus-heading>
             Quick recall · Question {recallIndex + 1} of {retrieval.length}
           </p>
@@ -220,8 +222,13 @@ export function ModulePage() {
     : segment.kind === 'video'
       ? 'Answer each of the video’s checkpoint questions correctly to continue.'
       : segment.attempted
-        ? 'Get it right to continue. If you’re stuck, the hints can help.'
+        ? 'Not yet right. Try again: after one more answer you can move on, and the hints can help.'
         : 'Answer the activity to continue.'
+  // Two answers, or one after the last hint, and the student may move on without getting it right
+  // (FR-2.7, #214): say so, and that it is marked to look at again.
+  const statusLine =
+    blockedReason ||
+    (segment?.lookAgain ? 'You can move on: this one is marked to look at again.' : '')
   // The page opened here because the student moved past this activity before answering it: say
   // so, until it is done, so the jump back isn't a mystery.
   const showSkippedNote = skipped && currentIndex === firstSkipped && !segment?.done
@@ -278,6 +285,7 @@ export function ModulePage() {
         <h1 className="text-2xl font-bold">
           Module {module.number} · {module.title}
         </h1>
+        <ChoiceNote module={module} />
 
         {/* Goals (FR-2.3): open on the first segment, where they set the scene (Gagné's event
             2), then one click away, so the question isn't pushed down the screen every time. */}
@@ -341,7 +349,7 @@ export function ModulePage() {
           its text changes. It sits with the buttons so an empty one costs only a small gap. */}
       <div className="grid gap-2">
         <output id="segment-blocked" className="block text-sm text-muted-foreground">
-          {blockedReason}
+          {statusLine}
         </output>
         <nav className="flex justify-between" aria-label="Segment navigation">
           <Button
@@ -384,5 +392,26 @@ function ModuleRefused({ title, message }: { title: string; message: string }) {
         Back to your modules
       </Link>
     </section>
+  )
+}
+
+/** At the top of a module (#214): the quick check offer ("Already know this?", FR-8.2) while the
+ * student can take it, or a note that they tested out of the module. */
+function ChoiceNote({ module }: { module: ModuleDetail }) {
+  if (module.status === 'tested_out')
+    return (
+      <p className="m-0 text-sm text-muted-foreground">
+        You tested out of this module with its quick check. Working through it is up to you.
+      </p>
+    )
+  if (module.quickCheck !== 'available' || module.status === 'complete') return null
+  return (
+    <p className="m-0 text-sm text-muted-foreground">
+      Already know this?{' '}
+      <Link to={`/modules/${module.id}/check`} className="font-medium text-foreground underline">
+        Take the quick check
+      </Link>
+      : four questions, and if you know it you can move on.
+    </p>
   )
 }

@@ -164,6 +164,18 @@
   color: inherit;
 }
 
+/* "Already know this?" under a module's card: its quick check (#214). A link of its own, beside
+   the card's link, never inside it. */
+.quickCheck {
+  display: inline-block;
+  margin-block-start: var(--space-2);
+  margin-inline-start: calc(2rem + var(--space-4) + var(--space-5));
+  font-size: var(--text-sm);
+  color: var(--color-accent-text);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
 /* Phones: the time and the state go on their own line under the title, never over it. */
 @media (max-width: 30rem) {
   .row {
@@ -177,5 +189,9 @@
 
   .next {
     padding: var(--space-4);
+  }
+
+  .quickCheck {
+    margin-inline-start: calc(2rem + var(--space-4) + var(--space-4));
   }
 }

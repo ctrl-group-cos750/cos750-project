@@ -16,14 +16,18 @@ from app.services.events import log_event
 from app.services.locks import hold_activity, lock_student
 from app.services.mastery import counts, in_check, recompute
 from app.services.modules import reward_completed_modules
+from app.services.restart import activity_round
 from app.services.rewards import SUPPORT_LEVEL, on_attempt, on_bonus_quest
 
 
-def hint_level_seen(session: Session, user_id: int, activity_id: int) -> int:
-    """The highest hint level this student has been shown on this activity; 0 for none."""
+def hint_level_seen(session: Session, user_id: int, activity_id: int, round: int = 0) -> int:
+    """The highest hint level this student has been shown on this activity in this round of its
+    module (app/services/restart.py; 0 unless they restarted it); 0 for none."""
     seen = session.scalar(
         select(func.max(HintView.level)).where(
-            HintView.user_id == user_id, HintView.activity_id == activity_id
+            HintView.user_id == user_id,
+            HintView.activity_id == activity_id,
+            HintView.round == round,
         )
     )
     return seen or 0
@@ -120,7 +124,9 @@ def record_attempt(
         correct=result.correct,
         score=result.score,
         detail=result.model_dump(),
-        hint_level=hint_level_seen(session, user_id, activity.id),
+        hint_level=hint_level_seen(
+            session, user_id, activity.id, activity_round(session, user_id, activity).number
+        ),
     )
     session.add(attempt)
     session.flush()
@@ -153,20 +159,19 @@ def answered(session: Session, user_id: int, activity_id: int) -> bool:
     )
 
 
-def answered_correctly(session: Session, user_id: int, activity_id: int) -> bool:
-    """Whether this student has a correct attempt at the activity."""
-    return (
-        session.scalar(
-            select(Attempt.id)
-            .where(
-                Attempt.user_id == user_id,
-                Attempt.activity_id == activity_id,
-                Attempt.correct.is_(True),
-            )
-            .limit(1)
-        )
-        is not None
+def answered_correctly(
+    session: Session, user_id: int, activity_id: int, after: int | None = None
+) -> bool:
+    """Whether this student has a correct attempt at the activity: only attempts with an id above
+    `after` if given (since the module's restart, app/services/restart.py)."""
+    query = select(Attempt.id).where(
+        Attempt.user_id == user_id,
+        Attempt.activity_id == activity_id,
+        Attempt.correct.is_(True),
     )
+    if after is not None:
+        query = query.where(Attempt.id > after)
+    return session.scalar(query.limit(1)) is not None
 
 
 def reveal_next_hint(
@@ -184,11 +189,18 @@ def reveal_next_hint(
     hints = session.scalars(
         select(Hint).where(Hint.activity_id == activity.id).order_by(Hint.level)
     ).all()
-    seen = hint_level_seen(session, user_id, activity.id)
+    round = activity_round(session, user_id, activity).number  # a restarted module (restart.py)
+    seen = hint_level_seen(session, user_id, activity.id, round)
     hint = next((h for h in hints if h.level > seen), None)
     if hint is None or (limit is not None and hint.level > limit):
         return None
-    session.add(HintView(user_id=user_id, activity_id=activity.id, level=hint.level))
-    log_event(session, user_id, "hint_shown", f"activity:{activity.id}", {"level": hint.level})
+    session.add(HintView(user_id=user_id, activity_id=activity.id, level=hint.level, round=round))
+    log_event(
+        session,
+        user_id,
+        "hint_shown",
+        f"activity:{activity.id}",
+        {"level": hint.level, **({"round": round} if round else {})},
+    )
     session.flush()
     return hint, next((h for h in hints if h.level > hint.level), None)

@@ -1407,6 +1407,70 @@
         }
       }
     },
+    "/api/modules/{module_id}/restart": {
+      "post": {
+        "tags": [
+          "modules"
+        ],
+        "summary": "Restart",
+        "description": "Start the module again to redo its questions (app/services/restart.py): it opens at its\nstart, and every question, retrieval question and video checkpoint in it shows unanswered,\nwith hints from level 1 again. The module stays complete and earned points and badges stay;\nearlier answers stay recorded for the evaluation but aren't shown. 404 if there is no such\nmodule, 403 while it is locked, 409 for the mastery check or a module not started.",
+        "operationId": "restart_api_modules__module_id__restart_post",
+        "parameters": [
+          {
+            "name": "module_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 2147483647,
+              "minimum": 0,
+              "title": "Module Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleDetailOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The mastery check, or a module not started yet."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/videos/{video_id}": {
       "get": {
         "tags": [
@@ -5604,6 +5668,16 @@
             "type": "integer",
             "title": "Shownsegmentspassed"
           },
+          "restarted": {
+            "type": "boolean",
+            "title": "Restarted",
+            "default": false
+          },
+          "canRestart": {
+            "type": "boolean",
+            "title": "Canrestart",
+            "default": false
+          },
           "segments": {
             "items": {
               "$ref": "#/components/schemas/SegmentOut"
@@ -5693,6 +5767,16 @@
           "shownSegmentsPassed": {
             "type": "integer",
             "title": "Shownsegmentspassed"
+          },
+          "restarted": {
+            "type": "boolean",
+            "title": "Restarted",
+            "default": false
+          },
+          "canRestart": {
+            "type": "boolean",
+            "title": "Canrestart",
+            "default": false
           }
         },
         "additionalProperties": false,

@@ -1270,3 +1270,58 @@ describe('ModulePage — events', () => {
     )
   })
 })
+
+describe('ModulePage — restarting a module to redo its questions', () => {
+  const finished: ModuleDetail = {
+    ...twoSegmentDetail,
+    status: 'complete',
+    currentSegmentPosition: 1,
+    canRestart: true,
+  }
+
+  it('asks first, says what stays, then restarts at the start', async () => {
+    const api = fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules/1': () => Response.json(finished),
+        'POST /api/modules/1/restart': () =>
+          Response.json({ ...finished, currentSegmentPosition: 0, restarted: true }),
+      },
+    })
+    renderApp('/modules/1')
+    await screen.findByRole('heading', { name: 'Worked example: adjacency list' })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Restart module' }))
+    const ask = screen.getByRole('group', { name: 'Restart this module?' })
+    expect(ask).toHaveTextContent('You keep your points and badges, and the module stays complete.')
+    expect(api.callsTo('POST /api/modules/1/restart')).toHaveLength(0) // nothing yet
+
+    await userEvent.click(screen.getAllByRole('button', { name: 'Restart module' }).at(-1)!)
+    await waitFor(() => expect(api.callsTo('POST /api/modules/1/restart')).toHaveLength(1))
+    expect(await screen.findByRole('heading', { name: 'Introduction to graphs' })).toBeVisible()
+  })
+
+  it('can be cancelled', async () => {
+    const api = fakeApi({
+      user: ada,
+      overrides: { 'GET /api/modules/1': () => Response.json(finished) },
+    })
+    renderApp('/modules/1')
+    await userEvent.click(await screen.findByRole('button', { name: 'Restart module' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('group', { name: 'Restart this module?' })).toBeNull()
+    expect(api.callsTo('POST /api/modules/1/restart')).toHaveLength(0)
+  })
+
+  it('is not offered where the server says it can’t be (the mastery check, a new module)', async () => {
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules/1': () => Response.json({ ...finished, canRestart: false }),
+      },
+    })
+    renderApp('/modules/1')
+    await screen.findByRole('heading', { name: 'Worked example: adjacency list' })
+    expect(screen.queryByRole('button', { name: 'Restart module' })).toBeNull()
+  })
+})

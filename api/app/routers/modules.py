@@ -35,6 +35,7 @@ from app.services.modules import (
     get_modules_for_user,
     save_position,
 )
+from app.services.restart import CannotRestart, restart_module
 
 router = APIRouter(prefix="/api/modules", tags=["modules"])
 
@@ -44,6 +45,11 @@ _LOCKED = "This module is not available yet. Complete the previous module to unl
 _TOO_FAR = "Work through the module one segment at a time."
 _RETRIEVAL_INCOMPLETE = "Answer the retrieval questions before starting this module."
 _NOT_DONE = "Answer this segment's activity, or the video's checkpoints, before moving on."
+_CANNOT_RESTART = (
+    "This module can't be restarted: open it first. The mastery check can't be restarted either, "
+    "because only your first answer counts there; your report's review paths are the way to "
+    "practise again."
+)
 
 
 @router.get("")
@@ -112,3 +118,26 @@ def save_module_position(
         raise HTTPException(status.HTTP_409_CONFLICT, detail=_RETRIEVAL_INCOMPLETE) from None
     except SegmentNotDone:
         raise HTTPException(status.HTTP_409_CONFLICT, detail=_NOT_DONE) from None
+
+
+@router.post(
+    "/{module_id}/restart",
+    responses={409: {"description": "The mastery check, or a module not started yet."}},
+)
+def restart(module_id: RowId, user: CurrentUser, session: DbSession) -> ModuleDetailOut:
+    """Start the module again to redo its questions (app/services/restart.py): it opens at its
+    start, and every question, retrieval question and video checkpoint in it shows unanswered,
+    with hints from level 1 again. The module stays complete and earned points and badges stay;
+    earlier answers stay recorded for the evaluation but aren't shown. 404 if there is no such
+    module, 403 while it is locked, 409 for the mastery check or a module not started."""
+    try:
+        get_module_detail(session, user.id, module_id)  # 404 or 403 first
+        restart_module(session, user.id, module_id)
+        session.commit()
+        return get_module_detail(session, user.id, module_id)
+    except ModuleNotFound:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND) from None
+    except ModuleLocked:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=_LOCKED) from None
+    except CannotRestart:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=_CANNOT_RESTART) from None

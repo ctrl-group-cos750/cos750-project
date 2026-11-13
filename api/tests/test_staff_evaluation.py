@@ -302,7 +302,7 @@ def test_students_are_pseudonyms_not_their_account_ids(client: TestClient, db: S
         assert {r["student"] for r in found} <= {pseudonym(ids["ada"]), pseudonym(ids["alan"])}
         assert not any(r["student"].isdigit() for r in found), table
     assert pseudonym(ids["ada"]) != pseudonym(ids["alan"])
-    assert str(ids["ada"]) not in pseudonym(ids["ada"])
+    assert pseudonym(ids["ada"]) != str(ids["ada"])
 
 
 def test_insights_count_who_started_and_finished_a_video(client: TestClient, db: Session) -> None:

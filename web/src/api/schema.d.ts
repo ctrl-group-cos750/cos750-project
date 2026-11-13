@@ -1480,8 +1480,10 @@ export interface components {
     /**
      * EarnedBadgeOut
      * @description A badge the student holds. `badge` is a catalogue id (web/src/components/achievements.ts);
-     *     `ref` tells repeatable badges apart (the bonus quest's id), "" otherwise. `seen` is false until
-     *     the app has announced it; an upgrade from bronze to gold makes it unseen again.
+     *     `ref` tells repeatable badges apart (the bonus quest's id), "" otherwise. An objective badge's
+     *     `tier` is its level: practised (secure in the modules' practice), bronze (met with support in
+     *     the mastery check) or gold (met independently); it only ever goes up. `seen` is false until
+     *     the app has announced it; going up a level makes it unseen again.
      */
     EarnedBadgeOut: {
       /** Badge */
@@ -1489,7 +1491,7 @@ export interface components {
       /** Ref */
       ref: string
       /** Tier */
-      tier: ('bronze' | 'gold') | null
+      tier: ('practised' | 'bronze' | 'gold') | null
       /**
        * Awardedat
        * Format: date-time
@@ -2567,7 +2569,9 @@ export interface components {
      *     steps (not started, practising, secure: every practice item answered and at least 80% right
      *     without hint 3 or 4); the counts are the evidence behind it, of `total` practice items.
      *     `result` is the mastery result once the mastery check (or a review path) has decided it;
-     *     `improve`, where to work on it next (none once met on your own).
+     *     `improve`, where to work on it next (none once met on your own). `modules` are the modules, in
+     *     course order, whose segments hold its practice questions: where its badge's first level,
+     *     Practised, is earned.
      */
     SkillOut: {
       /** Id */
@@ -2590,6 +2594,8 @@ export interface components {
       /** Result */
       result: ('not_attempted' | 'met_independently' | 'met_with_support' | 'not_yet') | null
       improve: components['schemas']['ImproveOut'] | null
+      /** Modules */
+      modules: number[]
     }
     /**
      * SkillsOut

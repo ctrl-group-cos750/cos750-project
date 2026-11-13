@@ -36,6 +36,7 @@ def get_skills(user: CurrentUser, session: DbSession) -> SkillsOut:
                     segment=s.improve.segment,
                     objective_id=s.improve.objective_id,
                 ),
+                modules=list(s.modules),
             )
             for s in skills(session, user.id)
         ],

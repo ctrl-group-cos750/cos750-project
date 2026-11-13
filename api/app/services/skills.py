@@ -68,7 +68,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Activity, Attempt, Checkpoint, Module, ModuleProgress, Segment, Video
-from app.services import quick_check
+from app.services import quick_check, rewards
 from app.services.mastery import MASTERY_MODULE, State, evaluate
 from app.services.rewards import SUPPORT_LEVEL
 
@@ -108,6 +108,9 @@ class Skill:
     level: Level
     result: State | None  # None until the mastery check (or a review path) decides it
     improve: Improve | None = None
+    # The modules, in course order, whose segments hold its practice questions (not the spaced
+    # retrieval questions): where its badge's first level, Practised, is earned.
+    modules: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -297,6 +300,16 @@ def skills(session: Session, user_id: int) -> list[Skill]:
     out = []
     for outcome in evaluate(session, user_id):
         mine = [a.id for a in items if a.objective_id == outcome.objective.id]
+        practised_in = sorted(
+            {
+                (places[a.id][0], places[a.id][1])
+                for a in items
+                if a.objective_id == outcome.objective.id
+                and a.purpose == "practice"
+                and a.id in places
+                and places[a.id][1] != MASTERY_MODULE
+            }
+        )
         answered = sum(1 for a in mine if a in got.answered)
         own = sum(1 for a in mine if a in got.on_own)
         state = outcome.state
@@ -322,9 +335,53 @@ def skills(session: Session, user_id: int) -> list[Skill]:
                     got,
                     reached,
                 ),
+                modules=tuple(module_id for _, module_id in practised_in),
             )
         )
     return out
+
+
+def secure_objectives(
+    session: Session, user_id: int, only: Collection[int] | None = None
+) -> set[int]:
+    """The objectives this student is secure in, in practice (`level_for`), of `only` if given.
+    The same count as the skill profile's, without the rest of it."""
+    items = [a for a in _practice(session) if a.objective_id is not None]
+    if only is not None:
+        items = [a for a in items if a.objective_id in only]
+    got = _answers(session, user_id, [a.id for a in items])
+    secure = set()
+    for objective in {cast(int, a.objective_id) for a in items}:
+        mine = [a.id for a in items if a.objective_id == objective]
+        answered = sum(1 for a in mine if a in got.answered)
+        own = sum(1 for a in mine if a in got.on_own)
+        if level_for(answered, own, len(mine)) == "secure":
+            secure.add(objective)
+    return secure
+
+
+def award_practised(
+    session: Session, user_id: int, only: Collection[int] | None = None
+) -> rewards.Earned:
+    """Give the Practised badge for every objective this student is now secure in (of `only` if
+    given). A badge already held, at any level, stays as it is (rewards.on_practised). Called after
+    each practice answer (app/services/attempts.py) and by the seed for students who were secure
+    before badges had levels (`backfill_practised`). Not committed."""
+    earned = rewards.Earned()
+    for objective in sorted(secure_objectives(session, user_id, only)):
+        if objective in rewards.OBJECTIVES:
+            earned += rewards.on_practised(session, user_id, objective)
+    return earned
+
+
+def backfill_practised(session: Session) -> int:
+    """Practised badges for students already secure before badges had levels (#214). Safe to run
+    on every seed: a badge is given once and never lowered. Not committed. Returns how many
+    badges were given."""
+    given = 0
+    for user_id in sorted(set(session.scalars(select(Attempt.user_id).distinct()))):
+        given += len(award_practised(session, user_id).badges)
+    return given
 
 
 def module_medals(session: Session, user_id: int) -> list[ModuleMedal]:

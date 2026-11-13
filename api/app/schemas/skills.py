@@ -22,7 +22,9 @@ class SkillOut(ApiModel):
     steps (not started, practising, secure: every practice item answered and at least 80% right
     without hint 3 or 4); the counts are the evidence behind it, of `total` practice items.
     `result` is the mastery result once the mastery check (or a review path) has decided it;
-    `improve`, where to work on it next (none once met on your own)."""
+    `improve`, where to work on it next (none once met on your own). `modules` are the modules, in
+    course order, whose segments hold its practice questions: where its badge's first level,
+    Practised, is earned."""
 
     id: int
     text: str
@@ -33,6 +35,7 @@ class SkillOut(ApiModel):
     level: Literal["not_started", "practising", "secure"]
     result: ObjectiveState | None
     improve: ImproveOut | None
+    modules: list[int]
 
 
 class ModuleMedalOut(ApiModel):

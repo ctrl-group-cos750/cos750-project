@@ -133,6 +133,52 @@ def test_a_badge_never_goes_down_or_away(db: Session, user: User) -> None:
     assert rewards.total_points(db, user.id) == 30
 
 
+# --- Badge levels: practised, bronze, gold (#214) ----------------------------------------------
+
+
+def test_practised_is_the_first_level_and_earns_no_points(db: Session, user: User) -> None:
+    earned = rewards.on_practised(db, user.id, 5)
+    assert earned.points == 0
+    assert [(b.badge, b.tier) for b in earned.badges] == [("lo5", "practised")]
+    assert rewards.on_practised(db, user.id, 5) == rewards.Earned()  # once
+    assert rewards.total_points(db, user.id) == 0
+
+
+@pytest.mark.parametrize(
+    ("result", "tier", "points"), [("supported", "bronze", 15), ("independent", "gold", 30)]
+)
+def test_the_mastery_check_raises_practised(
+    db: Session, user: User, result: Mastery, tier: str, points: int
+) -> None:
+    rewards.on_practised(db, user.id, 5)
+    rewards.mark_seen(db, user.id)
+    earned = rewards.on_objective_result(db, user.id, 5, result, {})
+    assert earned.points == points  # the objective's points in full: nothing lost on the way up
+    (badge,) = earned.badges
+    assert (badge.tier, badge.seen_at) == (tier, None)  # announced again, at its new level
+    assert badge.upgraded_at is not None
+    assert badges(db, user.id) == {("lo5", ""): tier}
+
+
+@pytest.mark.parametrize("held", ["supported", "independent"])
+def test_practised_never_lowers_a_badge(db: Session, user: User, held: Mastery) -> None:
+    rewards.on_objective_result(db, user.id, 5, held, {})
+    before = badges(db, user.id)
+    assert rewards.on_practised(db, user.id, 5) == rewards.Earned()
+    assert badges(db, user.id) == before
+
+
+def test_not_yet_keeps_practised(db: Session, user: User) -> None:
+    rewards.on_practised(db, user.id, 5)
+    assert rewards.on_objective_result(db, user.id, 5, "not_yet", {}) == rewards.Earned()
+    assert badges(db, user.id) == {("lo5", ""): "practised"}
+
+
+def test_practised_needs_a_real_objective(db: Session, user: User) -> None:
+    with pytest.raises(ValueError, match="objective 9"):
+        rewards.on_practised(db, user.id, 9)
+
+
 def test_not_yet_earns_nothing(db: Session, user: User) -> None:
     assert rewards.on_objective_result(db, user.id, 5, "not_yet", {}) == rewards.Earned()
     assert badges(db, user.id) == {}

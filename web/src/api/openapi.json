@@ -4432,6 +4432,7 @@
               {
                 "type": "string",
                 "enum": [
+                  "practised",
                   "bronze",
                   "gold"
                 ]
@@ -4486,7 +4487,7 @@
           "seen"
         ],
         "title": "EarnedBadgeOut",
-        "description": "A badge the student holds. `badge` is a catalogue id (web/src/components/achievements.ts);\n`ref` tells repeatable badges apart (the bonus quest's id), \"\" otherwise. `seen` is false until\nthe app has announced it; an upgrade from bronze to gold makes it unseen again."
+        "description": "A badge the student holds. `badge` is a catalogue id (web/src/components/achievements.ts);\n`ref` tells repeatable badges apart (the bonus quest's id), \"\" otherwise. An objective badge's\n`tier` is its level: practised (secure in the modules' practice), bronze (met with support in\nthe mastery check) or gold (met independently); it only ever goes up. `seen` is false until\nthe app has announced it; going up a level makes it unseen again."
       },
       "EditorActivityIn": {
         "properties": {
@@ -7082,6 +7083,13 @@
                 "type": "null"
               }
             ]
+          },
+          "modules": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Modules"
           }
         },
         "additionalProperties": false,
@@ -7095,10 +7103,11 @@
           "total",
           "level",
           "result",
-          "improve"
+          "improve",
+          "modules"
         ],
         "title": "SkillOut",
-        "description": "One objective on the skill profile (FR-9.7). `level` is practice progress in three coarse\nsteps (not started, practising, secure: every practice item answered and at least 80% right\nwithout hint 3 or 4); the counts are the evidence behind it, of `total` practice items.\n`result` is the mastery result once the mastery check (or a review path) has decided it;\n`improve`, where to work on it next (none once met on your own)."
+        "description": "One objective on the skill profile (FR-9.7). `level` is practice progress in three coarse\nsteps (not started, practising, secure: every practice item answered and at least 80% right\nwithout hint 3 or 4); the counts are the evidence behind it, of `total` practice items.\n`result` is the mastery result once the mastery check (or a review path) has decided it;\n`improve`, where to work on it next (none once met on your own). `modules` are the modules, in\ncourse order, whose segments hold its practice questions: where its badge's first level,\nPractised, is earned."
       },
       "SkillsOut": {
         "properties": {

@@ -6,12 +6,14 @@ from app.schemas.base import ApiModel
 
 class EarnedBadgeOut(ApiModel):
     """A badge the student holds. `badge` is a catalogue id (web/src/components/achievements.ts);
-    `ref` tells repeatable badges apart (the bonus quest's id), "" otherwise. `seen` is false until
-    the app has announced it; an upgrade from bronze to gold makes it unseen again."""
+    `ref` tells repeatable badges apart (the bonus quest's id), "" otherwise. An objective badge's
+    `tier` is its level: practised (secure in the modules' practice), bronze (met with support in
+    the mastery check) or gold (met independently); it only ever goes up. `seen` is false until
+    the app has announced it; going up a level makes it unseen again."""
 
     badge: str
     ref: str
-    tier: Literal["bronze", "gold"] | None
+    tier: Literal["practised", "bronze", "gold"] | None
     awarded_at: datetime
     upgraded_at: datetime | None
     seen: bool

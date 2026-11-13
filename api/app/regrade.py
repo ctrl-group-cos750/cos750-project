@@ -46,7 +46,7 @@ from sqlalchemy import ColumnElement, or_, select
 from sqlalchemy.orm import Session
 
 from app.models import Activity, Attempt, ObjectiveResult
-from app.services import mastery, quick_check, rewards
+from app.services import mastery, quick_check, rewards, skills
 from app.services.checking import check_activity
 from app.services.locks import StudentGone, lock_student
 
@@ -164,6 +164,8 @@ def _regrade_student(session: Session, user_id: int, report: Report) -> None:
         ]
     if changed:
         mastery.recompute(session, user_id)
+        # An answer now right can make an objective secure in practice: its Practised badge (#214).
+        skills.award_practised(session, user_id)
         session.flush()
         after = _states(session, user_id)
         report.results += [

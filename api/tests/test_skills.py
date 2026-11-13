@@ -10,9 +10,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import HintView, ModuleProgress
+from app.models import Attempt, HintView, ModuleProgress, UserBadge
 from app.seed import load
-from app.services.skills import level_for, medal_for
+from app.services.skills import backfill_practised, level_for, medal_for
 
 STUDENT = {"email": "grace@example.com", "password": "Correct horse 1", "displayName": "Grace"}
 RIGHT = {"submitted": {"selected": "a"}}
@@ -193,6 +193,7 @@ def test_practice_progress_counts_right_answers_per_objective(
         "result": None,
         # Module 1 not started, so it opens where it resumes, not at 103's segment (#214).
         "improve": {"kind": "practise", "moduleId": 1, "segment": None, "objectiveId": None},
+        "modules": [1],
     }
     assert (skills[2]["level"], skills[2]["total"]) == ("not_started", 1)
     answer(client, 104)
@@ -373,3 +374,116 @@ def test_met_with_support_offers_a_revisit_not_a_review(
         "segment": None,
         "objectiveId": None,
     }
+
+
+# --- Badge levels: Practised when secure in practice (#214) -----------------------------------
+
+
+def objective_badges(client: TestClient) -> dict[str, str | None]:
+    return {
+        b["badge"]: b["tier"]
+        for b in client.get("/api/rewards").json()["badges"]
+        if b["badge"].startswith("lo")
+    }
+
+
+def test_practised_comes_when_the_objective_is_secure_and_not_before(
+    client: TestClient, loaded: None
+) -> None:
+    log_in(client)
+    answer(client, 101)
+    answer(client, 102)
+    assert objective_badges(client) == {}  # practising: 2 of 3 answered
+    points = client.get("/api/rewards").json()["points"]
+    answer(client, 103)
+    assert objective_badges(client) == {"lo1": "practised"}
+    # The answer's own points only: Practised earns none.
+    assert client.get("/api/rewards").json()["points"] == points + 10
+    new = [b for b in client.get("/api/rewards").json()["badges"] if not b["seen"]]
+    assert [(b["badge"], b["tier"]) for b in new] == [("lo1", "practised")]  # to announce
+
+
+def test_practised_needs_80_percent_on_your_own(
+    client: TestClient, db: Session, loaded: None
+) -> None:
+    """Every item answered is not enough: 80% of them right without hint 3 or 4 (`level_for`).
+    With three items, one answered after hint 3 keeps the objective practising."""
+    user = log_in(client)
+    answer(client, 101)
+    answer(client, 102)
+    see_hints(db, user, 103, 3)
+    answer(client, 103)
+    assert objective_badges(client) == {}  # 2 of 3 on your own: under 80%
+
+
+def test_practised_is_given_once(client: TestClient, db: Session, loaded: None) -> None:
+    user = log_in(client)
+    answer(client, 104)
+    answer(client, 104)
+    answer(client, 104, WRONG)
+    rows = db.scalars(select(UserBadge).where(UserBadge.user_id == user)).all()
+    assert [(b.badge, b.tier) for b in rows] == [("lo2", "practised")]
+
+
+def test_the_check_raises_practised_to_bronze_or_gold_and_not_yet_keeps_it(
+    client: TestClient, db: Session, loaded: None
+) -> None:
+    user = log_in(client)
+    for activity in (101, 102, 103, 104):
+        answer(client, activity)
+    assert objective_badges(client) == {"lo1": "practised", "lo2": "practised"}
+    client.post("/api/rewards/seen")
+    complete(db, user, 1)
+    see_hints(db, user, 601, 3)
+    answer(client, 601)
+    answer(client, 602, WRONG)
+    assert objective_badges(client) == {"lo1": "bronze", "lo2": "practised"}
+    upgraded = {b["badge"]: b for b in client.get("/api/rewards").json()["badges"]}["lo1"]
+    assert upgraded["upgradedAt"] is not None
+    assert not upgraded["seen"]  # announced: "now bronze"
+
+
+def test_a_badge_already_gold_stays_gold_when_practice_becomes_secure(
+    client: TestClient, db: Session, loaded: None
+) -> None:
+    user = log_in(client)
+    complete(db, user, 1)
+    answer(client, 601)
+    answer(client, 602)
+    assert objective_badges(client) == {"lo1": "gold", "lo2": "gold"}
+    for activity in (101, 102, 103, 104):
+        answer(client, activity)
+    assert objective_badges(client) == {"lo1": "gold", "lo2": "gold"}
+
+
+def test_the_seed_gives_practised_to_students_already_secure(
+    client: TestClient, db: Session, loaded: None
+) -> None:
+    """Students who were secure before badges had levels: their answers are in, the badge isn't."""
+    user = log_in(client)
+    for activity in (101, 102, 103):
+        db.add(
+            Attempt(
+                user_id=user,
+                activity_id=activity,
+                submitted={},
+                correct=True,
+                score=1.0,
+                detail={},
+                hint_level=0,
+            )
+        )
+    db.commit()
+    assert objective_badges(client) == {}
+    assert backfill_practised(db) == 1
+    db.commit()
+    assert objective_badges(client) == {"lo1": "practised"}
+    assert backfill_practised(db) == 0  # safe to run on every seed
+
+
+def test_each_objective_names_the_modules_that_practise_it(
+    client: TestClient, loaded: None
+) -> None:
+    log_in(client)
+    modules = {s["id"]: s["modules"] for s in profile(client)["objectives"]}
+    assert modules == {1: [1], 2: [1]}  # not module 6: its items aren't practice

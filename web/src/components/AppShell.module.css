@@ -17,8 +17,8 @@
   position: sticky;
   top: 0;
   z-index: 30;
-  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
-  backdrop-filter: blur(8px);
+  /* Opaque: a translucent header let the page's text show through it, over the brand. */
+  background: var(--color-surface);
   border-bottom: 1px solid var(--color-line);
 }
 
@@ -87,6 +87,30 @@
   .nav {
     order: 3;
     width: 100%;
+  }
+
+  /* Less space around the page on a phone, so code and tables get more of the width. */
+  .main {
+    padding: var(--space-5) var(--space-4) var(--space-7);
+  }
+}
+
+/* A 320 px phone: the brand and the actions stay on one row, so the sticky header doesn't take a
+ * fifth of the screen (WCAG 1.4.10). */
+@media (max-width: 24rem) {
+  .bar {
+    flex-wrap: nowrap;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+  }
+
+  .brand {
+    min-width: 0;
+    font-size: var(--text-md);
+  }
+
+  .actions {
+    gap: var(--space-1);
   }
 }
 

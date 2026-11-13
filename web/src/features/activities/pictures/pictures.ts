@@ -2,8 +2,8 @@
  * Which module 1 question or text segment shows which picture (#155). Keyed by the fixture ids
  * in api/app/seed/module-1.json, which never change. Only practice items are listed: a mastery
  * item never gets the correct graph (#144), and a test checks that every activity here is a
- * practice item. The closing task (activity 107) has no picture on purpose: one would hint that
- * stations are vertices.
+ * practice item. The closing task (activities 108 to 111, the segments titled "Closing task") has
+ * no picture on purpose: one would show which things are the vertices.
  */
 import { mapDrawing, type Drawing } from './drawing.ts'
 import {
@@ -12,7 +12,6 @@ import {
   CAMPUS,
   CAMPUS_MAP,
   CLASSIFY,
-  PQRS,
   type MapPicture,
   type Situation,
 } from './situations.ts'
@@ -37,15 +36,8 @@ const campusGraph = mapDrawing(
   'The campus as a graph. Vertices A to G, one for each place: A Admin block, B Bookshop, C Computer Science, D Dining hall, E Engineering, F Fountain, G Green. Edges A–C, A–E, B–C, B–G, C–F, D–E and E–F.',
 )
 
-const pqrs = mapDrawing(
-  PQRS,
-  'The graph in this question',
-  'A graph with vertices P, Q, R and S, and edges P–Q, Q–R and Q–S.',
-)
-
 const ACTIVITIES: Record<number, ActivityPictures> = {
   101: { picture: { kind: 'map', map: CAMPUS_MAP } },
-  103: { picture: { kind: 'drawing', drawing: pqrs, name: 'The graph' } },
   104: { picture: { kind: 'map', map: BUS_MAP }, situation: BUS },
   105: { picture: { kind: 'map', map: CAMPUS_MAP }, situation: CAMPUS },
   106: {

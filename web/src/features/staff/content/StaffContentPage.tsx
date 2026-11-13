@@ -21,7 +21,10 @@ export function StaffContentPage() {
   const overview = useQuery({ queryKey: OVERVIEW_KEY, queryFn: getOverview })
   const exporting = useMutation({ mutationFn: downloadFixtures })
   return (
-    <section className="grid gap-6" aria-labelledby="staff-content-heading">
+    <section
+      className="grid grid-cols-[minmax(0,1fr)] gap-6"
+      aria-labelledby="staff-content-heading"
+    >
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 id="staff-content-heading" className="text-3xl font-semibold">
           Content
@@ -120,14 +123,14 @@ function Lists({ data }: { data: ContentOverview }) {
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-xl font-semibold">Activities</h2>
-          <div className={styles.row}>
+          <div className={`${styles.row} min-w-0 max-w-full`}>
             <label className={styles.label} htmlFor="activity-filter">
               Show
             </label>
             <select
               id="activity-filter"
               className={styles.input}
-              style={{ width: 'auto' }}
+              style={{ width: 'auto', minWidth: 0, maxWidth: '100%' }}
               value={moduleFilter}
               onChange={(e) => setModuleFilter(e.target.value)}
             >

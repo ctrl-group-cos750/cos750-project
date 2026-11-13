@@ -33,10 +33,10 @@ echo "== api"
   # module's --cov target and its test file here in the PR that adds it.
   .venv/bin/pytest -o addopts="" \
     --cov=app.services.bfs --cov=app.services.checking --cov=app.services.rewards \
-    --cov=app.services.mastery \
+    --cov=app.services.mastery --cov=app.services.skills \
     --cov-branch --cov-fail-under=90 --cov-report=term-missing \
     tests/test_bfs.py tests/test_checking.py tests/test_rewards.py tests/test_activity_kinds.py \
-    tests/test_mastery.py
+    tests/test_mastery.py tests/test_skills.py
 )
 
 echo "== all checks passed"

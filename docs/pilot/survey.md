@@ -7,7 +7,7 @@ section into the form as written. Every rating question is required; the open qu
 
 > **Taking part is voluntary.** You can stop the session or the survey at any time, and skip any
 > open question. Your answers are identified only by your participant code (P1 to P7), never by
-> your name, and the app's data identifies you by an internal number only. Your answers are used
+> your name, and the app's data identifies you by a pseudonym only. Your answers are used
 > to improve the app and are reported, grouped, in the team's SE and ID documents.
 
 - Participant code: P1 / P2 / P3 / P4 / P5 / P6 / P7

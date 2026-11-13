@@ -1,8 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { Link } from 'react-router'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { Alert, Card, MasteryStatus, Spinner, Tag, type Mastery } from '../../components'
 import { fetchModules } from '../module/module.api.ts'
+import { celebrateOnce } from '../progress/confetti.ts'
+import { SkillProfileCard } from '../progress/SkillProfileCard.tsx'
 import { useReport } from './hooks.ts'
 import type { ObjectiveReport, ObjectiveState } from './mastery.api.ts'
 import styles from './ReportPage.module.css'
@@ -78,10 +81,14 @@ const countObjectives = (n: number) => `${n} objective${n === 1 ? '' : 's'}`
  * not attempted (still to answer in module 6), so neither hides the other (#136 review). */
 function summary(objectives: ObjectiveReport[], ready: boolean, checkOpen: boolean): string {
   if (ready) return 'Ready for the lecture'
-  const notYet = objectives.filter((o) => o.state === 'not_yet').length
+  // A "not yet" objective whose review path is finished has nothing left to do here: it goes to
+  // the lecture, not back to review (13 Nov audit).
+  const notYet = objectives.filter((o) => o.state === 'not_yet' && !reviewDone(o)).length
+  const forLecture = objectives.filter((o) => o.state === 'not_yet' && reviewDone(o)).length
   const toAnswer = objectives.filter((o) => o.state === 'not_attempted' && o.total > 0).length
   const left = [
     notYet > 0 ? `${countObjectives(notYet)} to review` : '',
+    forLecture > 0 ? `${countObjectives(forLecture)} to bring to the lecture` : '',
     toAnswer > 0
       ? `${countObjectives(toAnswer)} to answer in module 6${checkOpen ? '' : ', once you reach it'}`
       : '',
@@ -112,7 +119,8 @@ function MasteryCheckLink({ o, moduleId }: { o: ObjectiveReport; moduleId: numbe
 }
 
 /** The one thing to do next, as a button at the top of the report: the first review path still
- * to work through, else the mastery check if it is open and unfinished, else back to the modules.
+ * to work through, else the mastery check if it is open and unfinished, else (every review path
+ * done, something still not yet) the lecture, else back to the modules.
  * The list below still gives every objective's own next step. */
 function NextAction({
   objectives,
@@ -143,7 +151,13 @@ function NextAction({
             'Go to the mastery check',
             'Your results appear here once every question in it is answered.',
           ]
-        : ['/', 'Continue your modules', 'The mastery check in module 6 fills in this report.']
+        : objectives.some((o) => o.state === 'not_yet')
+          ? [
+              '/',
+              'Back to your modules',
+              'You have worked through every review path. What is still not yet, bring to the lecture: it starts from here, and you can ask about it there.',
+            ]
+          : ['/', 'Continue your modules', 'The mastery check in module 6 fills in this report.']
   return (
     <Card className={styles.next_action}>
       <p className={styles.nextText}>{text}</p>
@@ -186,11 +200,17 @@ export function ReportPage() {
   const modules = useQuery({ queryKey: ['modules'], queryFn: fetchModules })
   const check = modules.data?.find((m) => m.number === MASTERY_MODULE)
   const checkId = check && check.status !== 'locked' ? check.id : null
+  const ready = report.data?.ready === true
+  // Ready for the lecture is the course's big moment: a full burst, the first time it is seen on
+  // this device (#214).
+  useEffect(() => {
+    if (ready) celebrateOnce('ready-for-the-lecture')
+  }, [ready])
 
   if (report.isPending) return <Spinner label="Loading your report" />
   if (report.isError) return <Alert tone="danger">{report.error.message}</Alert>
 
-  const { ready, objectives } = report.data
+  const { objectives } = report.data
   return (
     <>
       <div className={styles.heading}>
@@ -204,7 +224,7 @@ export function ReportPage() {
       <NextAction objectives={objectives} ready={ready} checkId={checkId} />
 
       <Card>
-        <ol className={styles.objectives}>
+        <ol className={styles.objectives} aria-label="Your objectives">
           {objectives.map((o) => (
             <li key={o.id} className={styles.objective}>
               <span className={styles.number}>{o.id}</span>
@@ -220,6 +240,8 @@ export function ReportPage() {
           ))}
         </ol>
       </Card>
+
+      <SkillProfileCard className={styles.profile} />
 
       <p className={styles.note}>
         Each question in the mastery check counts once: your first answer is the one used here.

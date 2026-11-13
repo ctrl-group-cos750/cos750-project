@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useId, type ReactNode } from 'react'
+import { useId, type ReactNode, type Ref } from 'react'
 import { ApiError } from '../../../api/client.ts'
 import { Alert, Button, Tag } from '../../../components'
 import styles from '../staff.module.css'
@@ -7,29 +7,45 @@ import { restoreRepositoryVersion, type ItemKind } from './content.api.ts'
 
 /** The form pieces every content editor page shares. */
 
-export function TextArea(props: {
+export function TextArea({
+  inputRef,
+  ...props
+}: {
   label: string
   hint?: string
   value: string
   rows?: number
   monospace?: boolean
+  /** What is wrong with the value: shown under it, tied to it (aria-describedby), and the field
+   * marked aria-invalid. */
+  error?: string
+  inputRef?: Ref<HTMLTextAreaElement>
   onChange: (value: string) => void
 }) {
   const id = useId()
+  const errorId = `${id}-error`
   return (
     <div className={styles.field}>
       <label htmlFor={id} className={styles.label}>
         {props.label}
       </label>
       <textarea
+        ref={inputRef}
         id={id}
         className={styles.textarea}
         style={props.monospace ? { fontFamily: 'var(--font-mono)' } : undefined}
         rows={props.rows ?? 4}
         value={props.value}
         spellCheck={!props.monospace}
+        aria-invalid={props.error ? true : undefined}
+        aria-describedby={props.error ? errorId : undefined}
         onChange={(e) => props.onChange(e.target.value)}
       />
+      {props.error && (
+        <p id={errorId} className="text-sm text-destructive">
+          {props.error}
+        </p>
+      )}
       {props.hint && <p className={styles.muted}>{props.hint}</p>}
     </div>
   )
@@ -136,8 +152,14 @@ export function SaveBar(props: {
           {props.label}
         </Button>
         {props.children}
-        {props.dirty && !props.pending && <span className={styles.muted}>Unsaved changes</span>}
-        {props.saved && !props.dirty && <span className={styles.muted}>Saved.</span>}
+        {/* Always on the page, so a screen reader hears "Saved." when it appears (WCAG 4.1.3). */}
+        <output className={styles.muted}>
+          {props.dirty && !props.pending
+            ? 'Unsaved changes'
+            : props.saved && !props.dirty
+              ? 'Saved.'
+              : ''}
+        </output>
       </div>
       {props.error && (
         <Alert tone="danger" title="Not saved">

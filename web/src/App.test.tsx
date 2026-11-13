@@ -45,6 +45,7 @@ describe('routing', () => {
     fakeApi()
     renderApp('/no-such-page')
     expect(screen.getByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
+    expect(document.title).toBe('Page not found · Ctrl Academy') // A8
   })
 
   it('says when the API cannot be reached, and tries again on request', async () => {

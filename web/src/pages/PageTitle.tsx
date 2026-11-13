@@ -1,11 +1,13 @@
-import { useEffect } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import { useLocation } from 'react-router'
+import { pageTitleStore } from './usePageTitle.ts'
 
 /** Each route's name for the browser tab, most specific first. */
 const TITLES: [RegExp, string][] = [
   [/^\/$/, 'Your modules'],
   [/^\/login$/, 'Log in'],
   [/^\/register$/, 'Create an account'],
+  [/^\/modules\/\d+\/check$/, 'Quick check'],
   [/^\/modules\/\d+/, 'Module'],
   [/^\/activities\//, 'Activity'],
   [/^\/videos\//, 'Video'],
@@ -27,9 +29,18 @@ const TITLES: [RegExp, string][] = [
  * reader announcing the page, knows where they are. */
 export function PageTitle() {
   const { pathname } = useLocation()
+  const own = useSyncExternalStore(pageTitleStore.subscribe, pageTitleStore.get)
   useEffect(() => {
-    const name = TITLES.find(([pattern]) => pattern.test(pathname))?.[1]
+    const general = TITLES.find(([pattern]) => pattern.test(pathname))?.[1]
+    // A student page takes its own name ("Module 4: Build BFS"); a staff page keeps the section
+    // after it ("Module 4: Build BFS · Content · Staff portal").
+    const name =
+      own?.path !== pathname
+        ? general
+        : pathname.startsWith('/staff') && general
+          ? `${own.name} · ${general}`
+          : own.name
     document.title = name ? `${name} · Ctrl Academy` : 'Ctrl Academy'
-  }, [pathname])
+  }, [pathname, own])
   return null
 }

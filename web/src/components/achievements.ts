@@ -131,7 +131,7 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     name: 'First Module',
     kind: 'milestone',
     glyph: 'first-module',
-    description: 'You worked all the way through your first module.',
+    description: 'You worked all the way through a module and got answers right on your own.',
   },
   {
     id: 'solo-run',

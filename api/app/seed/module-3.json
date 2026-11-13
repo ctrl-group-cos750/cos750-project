@@ -53,8 +53,7 @@
           "id": 317,
           "kind": "worked_example",
           "title": "Worked example: filling in a trace table",
-          "body": "We trace BFS on the campus graph from **A**, one row for each vertex that leaves the queue. A vertex is **found** when it joins the queue, and BFS never adds a vertex it has already found. It is **visited** when it leaves the queue, which is when it joins the order.\n\nEvery row follows the same four subgoals. First, **initialise**: the start is found and waits in the queue (the start row). Then, for each row: **take the next vertex** from the front of the queue. Then, **for each neighbour** of that vertex, in alphabetical order, ask whether it has been found. If it hasn't, **mark and enqueue** it: it is found and joins the back.\n\n| Step | Current vertex | Queue after the step | Visited | Order so far |\n|---|---|---|---|---|\n| start | – | A | – | – |\n| 1 | A | C, E | A | A |\n| 2 | C | E, B, F | A, C | A, C |\n| 3 | E | B, F, D | A, C, E | A, C, E |\n\n**Step 1.** *Take the next vertex:* A leaves the queue, so it is visited and joins the order. *For each neighbour:* A's neighbours in alphabetical order are C and E. *Mark and enqueue:* neither has been found yet, so both join the back of the queue.\n\n**Step 2.** *Take the next vertex:* C is at the front, so C leaves. *For each neighbour:* its neighbours are A, B and F. *Mark and enqueue:* A has been found already, so only B and F join.\n\n**Step 3.** *Take the next vertex:* E leaves. *For each neighbour:* its neighbours are A, D and F. *Mark and enqueue:* A is visited, and F is already waiting in the queue, so only D joins.\n\nThe remaining steps work the same way. The full order is **A, C, E, B, F, D, G**.",
-          "skip_check_activity_id": 314
+          "body": "We trace BFS on the campus graph from **A**, one row for each vertex that leaves the queue. A vertex is **found** when it joins the queue, and BFS never adds a vertex it has already found. It is **visited** when it leaves the queue, which is when it joins the order.\n\nEvery row follows the same four subgoals. First, **initialise**: the start is found and waits in the queue (the start row). Then, for each row: **take the next vertex** from the front of the queue. Then, **for each neighbour** of that vertex, in alphabetical order, ask whether it has been found. If it hasn't, **mark and enqueue** it: it is found and joins the back.\n\n| Step | Current vertex | Queue after the step | Visited | Order so far |\n|---|---|---|---|---|\n| start | – | A | – | – |\n| 1 | A | C, E | A | A |\n| 2 | C | E, B, F | A, C | A, C |\n| 3 | E | B, F, D | A, C, E | A, C, E |\n\n**Step 1.** *Take the next vertex:* A leaves the queue, so it is visited and joins the order. *For each neighbour:* A's neighbours in alphabetical order are C and E. *Mark and enqueue:* neither has been found yet, so both join the back of the queue.\n\n**Step 2.** *Take the next vertex:* C is at the front, so C leaves. *For each neighbour:* its neighbours are A, B and F. *Mark and enqueue:* A has been found already, so only B and F join.\n\n**Step 3.** *Take the next vertex:* E leaves. *For each neighbour:* its neighbours are A, D and F. *Mark and enqueue:* A is visited, and F is already waiting in the queue, so only D joins.\n\nThe remaining steps work the same way. The full order is **A, C, E, B, F, D, G**."
         },
         {
           "id": 370,
@@ -152,8 +151,8 @@
         "explanation": "A walkway can be used both ways, so its edge has no direction: the graph is undirected. Lengths don't change whether it is a graph.",
         "correct": "a",
         "feedback": {
-          "b": "A directed edge only goes one way, like a one-way street. These walkways go both ways.",
-          "c": "Edges can have lengths (weights) and still be a graph. Here we only care whether two buildings are connected."
+          "b": "Not quite. A directed edge only goes one way, like a one-way street. These walkways go both ways. Ask: can every walkway be used in both directions?",
+          "c": "Not quite. Edges can have lengths (weights) and still be a graph. Here we only care whether two buildings are connected. Ask: are there things joined by connections?"
         }
       },
       "hints": [
@@ -203,8 +202,8 @@
         "explanation": "In an undirected graph add_edge connects both ways, so A gets C as a neighbour and C gets A.",
         "correct": "a",
         "feedback": {
-          "b": "That is a directed edge from A to C. In an undirected graph C must also list A.",
-          "c": "Each vertex maps to a list of neighbours, and both A and C are in the dictionary."
+          "b": "Not quite. That is a directed edge from A to C. In an undirected graph C must also list A. Check C's list.",
+          "c": "Not quite. Each vertex maps to a list of neighbours, and both A and C are in the dictionary. Look for a list on both sides."
         }
       },
       "hints": [
@@ -222,7 +221,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: {\"A\": [\"C\"], \"C\": [\"A\"]} — the edge is stored once in each vertex's list."
+          "body": "Answer: {\"A\": [\"C\"], \"C\": [\"A\"]}: the edge is stored once in each vertex's list."
         }
       ]
     },
@@ -251,16 +250,24 @@
           {
             "id": "s4",
             "label": "Find the fewest links you must click to get from one web page to another."
+          },
+          {
+            "id": "s5",
+            "label": "Find the route between two Gautrain stations with the shortest travel time."
           }
         ],
         "right": [
           {
             "id": "r2",
-            "label": "Good fit: BFS explores one ring of neighbours at a time, so it finds everyone within two steps first."
+            "label": "Good fit: BFS explores one ring of neighbours at a time, so it finds all the vertices close to the start first."
           },
           {
             "id": "r4",
             "label": "Good fit: BFS takes neighbours in alphabetical order, so it lists the items in order."
+          },
+          {
+            "id": "r6",
+            "label": "Not a fit: BFS counts edges, but here the edges aren't all worth the same."
           },
           {
             "id": "r3",
@@ -268,7 +275,7 @@
           },
           {
             "id": "r1",
-            "label": "Good fit: BFS reaches vertices in order of the fewest edges from the start."
+            "label": "Good fit: BFS works outwards one edge at a time, so it first reaches the goal by a shortest path."
           },
           {
             "id": "r5",
@@ -277,18 +284,20 @@
         ]
       },
       "solution": {
-        "explanation": "BFS fits when there are connections to follow and you want the fewest steps, or everyone within a few steps. Adding up prices has no connections, so it isn't a graph problem.",
+        "explanation": "BFS fits when there are connections to follow and you want the fewest edges, or everyone within a few edges. Adding up prices has no connections, and the quickest trip depends on each edge's time, not on how many edges there are.",
         "pairs": {
           "s1": "r1",
           "s2": "r2",
           "s3": "r3",
-          "s4": "r1"
+          "s4": "r1",
+          "s5": "r6"
         },
         "feedback": {
-          "s1": "Fewest stops means fewest edges. That is exactly the order in which BFS reaches vertices.",
-          "s2": "Friends are one edge away, friends of friends two edges. BFS finds them ring by ring, whatever the vertices stand for.",
-          "s3": "A list of prices has no vertices and edges to traverse. A simple loop is enough.",
-          "s4": "Pages are vertices and links are edges, so the fewest clicks is the fewest edges. Alphabetical order only decides which neighbour joins the queue first; it isn't why BFS finds the fewest."
+          "s1": "Not quite. Each stop-to-stop ride is an edge, so the fewest stops is the fewest edges. Look for the reason about how BFS reaches vertices ring by ring.",
+          "s2": "Not quite. Friends are one edge away and friends of friends two. BFS finds them ring by ring, whatever the vertices stand for. Look for the reason about rings of neighbours.",
+          "s3": "Not quite. A list of prices has no vertices and edges to traverse, so a simple loop is enough. Look for the reason that says there is nothing to follow.",
+          "s4": "Not quite. Pages are vertices and links are edges, so the fewest clicks is the fewest edges. Alphabetical order only decides which neighbour joins the queue first. Look for the reason about how BFS reaches vertices ring by ring.",
+          "s5": "Not quite. Each ride between stations takes its own time, so the route with the fewest stops isn't always the quickest. BFS counts edges, not minutes. Look for the reason about edges that aren't all worth the same."
         }
       },
       "hints": [
@@ -302,23 +311,23 @@
         },
         {
           "level": 3,
-          "body": "'Fewest stops', 'fewest clicks' and 'friend of a friend' are all about counting edges from a start. Any connections can be edges, not only paths on a map."
+          "body": "'Fewest stops', 'fewest clicks' and 'friend of a friend' are all about counting edges from a start. Any connections can be edges, not only paths on a map. Travel time is not a count of edges."
         },
         {
           "level": 4,
-          "body": "Answer: s1 → r1 (fewest stops), s2 → r2 (ring by ring), s3 → r3 (not a graph), s4 → r1 (fewest clicks)."
+          "body": "Answer: s1 → r1 (fewest stops), s2 → r2 (ring by ring), s3 → r3 (not a graph), s4 → r1 (fewest clicks), s5 → r6 (edges not all worth the same)."
         }
       ]
     },
     {
       "id": 314,
       "kind": "multiple_choice",
-      "title": "Already confident? The queue after C",
+      "title": "The queue after a step",
       "module_id": 3,
-      "purpose": "practice",
+      "purpose": "test_out",
       "objective_id": 5,
       "config": {
-        "prompt": "Already confident? On the campus graph from A, after C is processed, what is in the queue (front first)?",
+        "prompt": "The campus graph has the walkways A–C, A–E, B–C, B–G, C–F, D–E and E–F. BFS starts at A and takes neighbours in alphabetical order. After C is processed, what is in the queue (front first)?",
         "options": [
           {
             "id": "b",
@@ -331,6 +340,10 @@
           {
             "id": "a",
             "label": "E, B, F"
+          },
+          {
+            "id": "d",
+            "label": "C, E, B, F"
           }
         ]
       },
@@ -339,27 +352,124 @@
         "correct": "a",
         "feedback": {
           "b": "E was already waiting. New vertices join at the back, so E stays in front.",
-          "c": "B and F join together at the back, after E."
+          "c": "B and F join together at the back, after E.",
+          "d": "C left the front of the queue when it was processed, so it isn't in the queue any more."
         }
+      }
+    },
+    {
+      "id": 350,
+      "kind": "multiple_choice",
+      "title": "When BFS fits",
+      "module_id": 3,
+      "purpose": "test_out",
+      "objective_id": 4,
+      "config": {
+        "prompt": "Which of these is not a job for BFS?",
+        "options": [
+          {
+            "id": "a",
+            "label": "Find the route between two stations on the Gautrain map with the fewest stops."
+          },
+          {
+            "id": "b",
+            "label": "List everyone who is a friend, or a friend of a friend, of Thandi on a social network."
+          },
+          {
+            "id": "c",
+            "label": "Add up the prices of all items in a shopping list."
+          },
+          {
+            "id": "d",
+            "label": "Find the fewest links you must click to get from one web page to another."
+          }
+        ]
       },
-      "hints": [
-        {
-          "level": 1,
-          "body": "What was in the queue before C was processed?"
-        },
-        {
-          "level": 2,
-          "body": "C leaves from the front, and C's new neighbours join at the back."
-        },
-        {
-          "level": 3,
-          "body": "Before: C, E. C leaves. B and F join behind E."
-        },
-        {
-          "level": 4,
-          "body": "Answer: E, B, F."
+      "solution": {
+        "explanation": "BFS follows connections, ring by ring from the start. A list of prices has no connections to follow, so a simple loop adds them up. The other three are graphs where you want the fewest steps, or everyone within a few steps.",
+        "correct": "c",
+        "feedback": {
+          "a": "Fewest stops means fewest edges, the order in which BFS reaches vertices.",
+          "b": "Friends are one edge away and friends of friends two. BFS finds them ring by ring.",
+          "d": "Pages are vertices and links are edges, so the fewest clicks is the fewest edges."
         }
-      ]
+      }
+    },
+    {
+      "id": 351,
+      "kind": "multiple_choice",
+      "title": "The BFS order",
+      "module_id": 3,
+      "purpose": "test_out",
+      "objective_id": 5,
+      "config": {
+        "prompt": "BFS starts at A on the undirected graph with edges A–B, A–D, B–C, C–E and D–E, taking neighbours in alphabetical order. In what order does it visit the vertices?",
+        "options": [
+          {
+            "id": "a",
+            "label": "A, B, C, E, D"
+          },
+          {
+            "id": "b",
+            "label": "A, B, C, D, E"
+          },
+          {
+            "id": "c",
+            "label": "A, B, D, C, E"
+          },
+          {
+            "id": "d",
+            "label": "A, D, B, E, C"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "A's neighbours B and D join the queue first. Then B adds C, and D adds E. So the order is A, B, D, C, E: everything one edge from A before anything two edges away.",
+        "correct": "c",
+        "feedback": {
+          "a": "That goes deep first. BFS visits both of A's neighbours, B and D, before C.",
+          "b": "That is alphabetical order. BFS visits by distance from A: D is one edge away, C two.",
+          "d": "Neighbours are taken in alphabetical order, so B joins the queue before D."
+        }
+      }
+    },
+    {
+      "id": 352,
+      "kind": "multiple_choice",
+      "title": "The fewest edges",
+      "module_id": 3,
+      "purpose": "test_out",
+      "objective_id": 8,
+      "config": {
+        "prompt": "An undirected graph has the edges D–E, D–G, E–H, G–K, G–L, H–L and K–L. What is the fewest number of edges from D to L?",
+        "options": [
+          {
+            "id": "a",
+            "label": "1"
+          },
+          {
+            "id": "b",
+            "label": "2"
+          },
+          {
+            "id": "c",
+            "label": "3"
+          },
+          {
+            "id": "d",
+            "label": "7"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "BFS from D finds E and G at one edge, then H, K and L at two: G finds L. BFS reaches each vertex by a route with the fewest edges, so two is the fewest.",
+        "correct": "b",
+        "feedback": {
+          "a": "No edge joins D to L: D's only neighbours are E and G. Count the rings BFS finds from D.",
+          "c": "D–E–H–L is a route, but there is a shorter one: G is joined to L. Count the rings BFS finds from D.",
+          "d": "7 is the number of edges in the whole graph. Count only the edges on one route."
+        }
+      }
     },
     {
       "id": 360,
@@ -452,7 +562,9 @@
         ],
         "start_vertex": "B"
       },
-      "solution": {},
+      "solution": {
+        "explanation": "BFS takes the vertex at the front of the queue and adds its neighbours not found yet, in alphabetical order, at the back. B finds A and D, then A finds C. When D leaves, C is already waiting in the queue, so it isn't added again, and C then finds E."
+      },
       "hints": [
         {
           "level": 1,
@@ -480,46 +592,51 @@
       "purpose": "practice",
       "objective_id": 8,
       "config": {
-        "prompt": "On the campus graph, what is the fewest number of walkways from the Admin block (A) to the Green (G)? Use the BFS order you found: A, C, E, B, F, D, G.",
+        "prompt": "Closing task. BFS now starts at the Engineering building (E) on the campus graph (walkways A–C, A–E, B–C, B–G, C–F, D–E, E–F). It records who found each building. Walk back from the Bookshop (B) along those records: what route do you get, and how many walkways long is it?",
         "options": [
           {
-            "id": "c",
-            "label": "2"
+            "id": "f",
+            "label": "E → F → C → B: 3 walkways"
           },
           {
-            "id": "a",
-            "label": "3"
+            "id": "e",
+            "label": "E → A → C → B: 3 walkways"
           },
           {
-            "id": "b",
-            "label": "6"
+            "id": "g",
+            "label": "E → C → B: 2 walkways"
+          },
+          {
+            "id": "h",
+            "label": "E → A → C → B: 4 walkways"
           }
         ]
       },
       "solution": {
-        "explanation": "BFS reaches G through A, C, B, G: three walkways. BFS finds each vertex by the fewest edges from the start, so there is no shorter route.",
-        "correct": "a",
+        "explanation": "Correct. E finds A, D and F. A leaves the queue before F, so A finds C first, and C finds B. Walking back from B gives E → A → C → B: 3 walkways. BFS takes every building 2 walkways from E out of the queue before any 3 away, so no route is shorter.",
+        "correct": "e",
         "feedback": {
-          "b": "6 is how many vertices come before G in the order (G is 7th), not how many walkways separate it from A. Follow who found whom back to A.",
-          "c": "G is not joined to C or E. It needs one more walkway, from B."
+          "f": "Not quite. E → F → C → B is also 3 walkways, but it isn't the route BFS records. A and F both neighbour C, and A leaves the queue first, so A finds C. Ask: who took C into the queue?",
+          "g": "Not quite. There's no walkway between E and C: E's neighbours are A, D and F. Check E's walkways in the list, then walk back from B.",
+          "h": "Not quite. The route is right, but 4 counts the buildings E, A, C and B. Each walkway joins two of them, so there is one fewer walkway than buildings. Count the arrows."
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Ask: which vertex added G to the queue?"
+          "body": "Run BFS from E and write down who found each building."
         },
         {
           "level": 2,
-          "body": "B added G. Which vertex added B?"
+          "body": "E finds A, D and F, in that order. Which of A and F leaves the queue first?"
         },
         {
           "level": 3,
-          "body": "C added B, and A added C. Count those walkways."
+          "body": "A leaves first, so A finds C. Who finds B?"
         },
         {
           "level": 4,
-          "body": "Answer: 3 walkways, A → C → B → G."
+          "body": "Answer: E → A → C → B, 3 walkways."
         }
       ]
     },
@@ -563,7 +680,9 @@
         ],
         "start_vertex": "F"
       },
-      "solution": {},
+      "solution": {
+        "explanation": "BFS takes the vertex at the front of the queue and adds its neighbours not found yet, in alphabetical order, at the back. F finds D and H, then D finds E. When H leaves, E and F have both been found already, so nothing joins, and E then finds G."
+      },
       "hints": [
         {
           "level": 1,
@@ -640,6 +759,7 @@
           "s3": "r_len",
           "s4": "r_none"
         },
+        "explanation": "BFS reaches everything one edge away before anything two edges away, so the first route it finds uses the fewest edges: that fits the knight's moves and the rooms within two doors. It counts edges, not what each one costs, so it can't find the trip with the least petrol, and counting learners has no edges to follow at all.",
         "feedback": {
           "s1": "Not quite. The squares are vertices and each knight move is an edge, so the fewest moves is the fewest edges from the start. Look for the reason about the fewest edges.",
           "s2": "Not quite. The rooms are vertices and the doors are edges, and no more than two doors means everything within two edges. Look for the reason about finding everything one edge away first.",
@@ -674,46 +794,46 @@
       "purpose": "practice",
       "objective_id": 8,
       "config": {
-        "prompt": "BFS now starts at D on the campus graph (edges A–C, A–E, B–C, B–G, C–F, D–E, E–F) and visits D, E, A, F, C, B, G. What is the fewest number of walkways from D to the Green (G)?",
+        "prompt": "BFS now starts at the Fountain (F) on the campus graph (edges A–C, A–E, B–C, B–G, C–F, D–E, E–F) and visits F, C, E, A, B, D, G. What is the fewest number of walkways from F to the Green (G)?",
         "options": [
           {
             "id": "a",
-            "label": "4"
+            "label": "2"
           },
           {
             "id": "b",
-            "label": "5"
+            "label": "3"
           },
           {
             "id": "c",
-            "label": "6"
+            "label": "4"
           }
         ]
       },
       "solution": {
-        "explanation": "Walking back from G: B, C, A, E, D. The route D → E → A → C → B → G has 5 walkways, and BFS guarantees none is shorter.",
+        "explanation": "Walking back from G: B found G, C found B, and F found C. The route F → C → B → G has 3 walkways, and BFS guarantees none is shorter.",
         "correct": "b",
         "feedback": {
-          "a": "Not quite. Walk back from G: B found G, C found B, A found C, E found A, D found E. That is 5 walkways. Count each step back.",
-          "c": "Not quite. 6 is the number of places on the route D, E, A, C, B, G, not the walkways between them. Count the edges, not the vertices."
+          "a": "Not quite. No walkway joins C to G. Walk back from G: B found G, C found B, F found C. That is 3 walkways. Count each step back.",
+          "c": "Not quite. 4 is the number of places on the route F, C, B, G, not the walkways between them. Count the edges, not the vertices."
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Write down who found each vertex as BFS runs from D."
+          "body": "Write down who found each vertex as BFS runs from F."
         },
         {
           "level": 2,
-          "body": "E found A and F; A found C; C found B. Who found G?"
+          "body": "F found C and E; C found A and B. Who found G?"
         },
         {
           "level": 3,
-          "body": "B found G. Now walk back from G to D and count the steps."
+          "body": "B found G. Now walk back from G to F and count the steps."
         },
         {
           "level": 4,
-          "body": "Answer: 5 walkways, D → E → A → C → B → G."
+          "body": "Answer: 3 walkways, F → C → B → G."
         }
       ]
     },
@@ -725,33 +845,33 @@
       "purpose": "practice",
       "objective_id": 8,
       "config": {
-        "prompt": "In a small network, H links to J and K, both J and K link to L, and L links to M. Starting BFS at H, how many steps lie on the shortest route to M?",
+        "prompt": "In a small network, H links to J and K, both J and K link to L, and L links to M. Starting BFS at H, how many edges lie on the shortest route to M?",
         "options": [
           {
             "id": "a",
-            "label": "Two steps"
+            "label": "2 edges from H"
           },
           {
             "id": "b",
-            "label": "Five steps, one per vertex on the way"
+            "label": "5 edges from H"
           },
           {
             "id": "c",
-            "label": "Four steps"
+            "label": "4 edges from H"
           },
           {
             "id": "d",
-            "label": "Three steps"
+            "label": "3 edges from H"
           }
         ]
       },
       "solution": {
-        "explanation": "BFS from H finds J and K (1 step), then L (2), then M (3). The route H → J → L → M has 3 steps.",
+        "explanation": "BFS from H finds J and K (1 edge away), then L (2), then M (3). The route H → J → L → M has 3 edges.",
         "correct": "d",
         "feedback": {
-          "a": "Not quite. M links only to L, and L is 2 steps from H, so M is one more. Ask: who found M, and who found that vertex?",
-          "b": "Not quite. Count the steps between vertices, not the vertices: and the route H, J, L, M has only 4 vertices anyway. Walk back from M.",
-          "c": "Not quite. 4 is the number of vertices on the route H, J, L, M. The steps between them are one fewer."
+          "a": "Not quite. M links only to L, and L is 2 edges from H, so M is one more. Ask: who found M, and who found that vertex?",
+          "b": "Not quite. 5 is M's place in the visit order H, J, K, L, M, not how many edges away it is. Walk back from M and count the edges.",
+          "c": "Not quite. 4 is the number of vertices on the route H, J, L, M. The edges between them are one fewer, so count the edges."
         }
       },
       "hints": [
@@ -769,7 +889,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: 3 steps, H → J → L → M."
+          "body": "Answer: 3 edges, H → J → L → M."
         }
       ]
     },

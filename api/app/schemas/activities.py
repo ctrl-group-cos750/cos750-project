@@ -365,6 +365,11 @@ class TraceConfig(ApiModel):
     start_vertex: str
 
 
+class TraceSolution(Explained):
+    """Server-only: a trace keeps no answer, because the server derives it from the graph with
+    the BFS engine (FR-6.6). It may still carry the explanation shown when the trace is right."""
+
+
 # A vertex label as the student types it, at most TRACE_LABEL characters. The activity routes also
 # refuse a label that isn't in the graph (app/services/submissions.py).
 TracedVertex = Annotated[str, Field(max_length=TRACE_LABEL, pattern=NO_CONTROL)]
@@ -456,6 +461,10 @@ class AttemptOut(ApiModel):
     withheld: bool = False
     # The highest hint level seen before this attempt; 3 or 4 means "with support" (FR-4.5).
     hint_level: int
+    # The points this answer earned for the activity (FR-9.1, FR-9.2; #214): 10 for its first
+    # right answer, 4 if that came after hint 3 or 4, a bonus quest's own points, else 0. Always 0
+    # on a mastery check item, and 0 when the attempt is shown again later (#171).
+    points: int = 0
 
 
 class LastAttemptOut(ApiModel):

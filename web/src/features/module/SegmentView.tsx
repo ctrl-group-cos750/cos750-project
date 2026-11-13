@@ -4,6 +4,7 @@ import { Alert, Markdown } from '../../components'
 import { ActivityView } from '../activities/ActivityPage.tsx'
 import { PicturePanel } from '../activities/pictures/PicturePanel.tsx'
 import { pictureForSegment, pictureName } from '../activities/pictures/pictures.ts'
+import { useRewards } from '../rewards/hooks.ts'
 import { VideoView } from '../video/VideoPage.tsx'
 import type { Segment } from './module.types.ts'
 
@@ -36,6 +37,8 @@ function TextVersion({ body }: { body: string }) {
  * is focusable from script only (tabIndex -1, data-focus-heading): ModulePage moves focus to it
  * after Previous or Next. */
 export function SegmentView({ segment, onAnswered, intro }: SegmentViewProps) {
+  // A student who hid points and badges (FR-9.5) isn't told about them on a bonus quest either.
+  const hideRewards = useRewards().data?.hideRewards === true
   // The pilot's timeline of what each student saw (FR-10.1, #141): one event per segment shown.
   useEffect(() => reportEvent('segment_viewed', segment.id), [segment.id])
   const introLine = intro ? <p className="text-muted-foreground">{intro}</p> : null
@@ -52,12 +55,31 @@ export function SegmentView({ segment, onAnswered, intro }: SegmentViewProps) {
             {segment.title}
           </h2>
           {introLine}
-          {picture && (
-            <div className="max-w-[520px]">
-              <PicturePanel tabs={[{ name: pictureName(picture), picture }]} />
+          {picture ? (
+            // The picture beside the text it explains, so neither is scrolled away from the other
+            // (Mayer's spatial contiguity), the picture first and staying in view. Side by side
+            // only once the lesson column (the module page's container) is 72rem wide: after the
+            // text's 42rem and the gap, the picture still gets about 28rem (450 px), with the
+            // progress panel beside the lesson or not. Narrower, stacked, so the picture shows at
+            // the lesson's full width rather than squeezed (#211 review). data-picture-beside lets
+            // the module page widen then.
+            <div
+              data-picture-beside
+              className="grid items-start gap-6 @6xl:grid-cols-[minmax(0,1fr)_minmax(0,var(--reading-width))]"
+            >
+              <div className="@6xl:sticky @6xl:top-24">
+                <PicturePanel tabs={[{ name: pictureName(picture), picture }]} />
+              </div>
+              {/* The text keeps a readable line length (--reading-width); the picture takes the rest. */}
+              <div className="min-w-0 max-w-[var(--reading-width)]">
+                {segment.body ? (
+                  <Markdown>{segment.body}</Markdown>
+                ) : (
+                  <Alert tone="info">This segment has no content yet.</Alert>
+                )}
+              </div>
             </div>
-          )}
-          {segment.body ? (
+          ) : segment.body ? (
             <Markdown>{segment.body}</Markdown>
           ) : (
             <Alert tone="info">This segment has no content yet.</Alert>
@@ -74,6 +96,8 @@ export function SegmentView({ segment, onAnswered, intro }: SegmentViewProps) {
           </h2>
           {introLine}
           {segment.videoId !== null ? (
+            // The text version below the video at every width: closed, it is one line, so beside
+            // the video it would leave a mostly empty column (#211 review).
             <>
               <VideoView videoId={segment.videoId} heading="h3" onResult={onAnswered} />
               {segment.body && <TextVersion body={segment.body} />}
@@ -96,13 +120,18 @@ export function SegmentView({ segment, onAnswered, intro }: SegmentViewProps) {
           {introLine}
           {segment.optional && (
             <p className="m-0 text-sm text-muted-foreground">
-              Optional bonus quest: try it for extra points and a badge, or carry on with Next. It
-              never affects your results. Hints 3 and 4 give the answer away, so after them it earns
-              no points or badge.
+              {hideRewards
+                ? 'Optional bonus quest: an extra challenge, or carry on with Next. It never affects your results.'
+                : 'Optional bonus quest: try it for extra points and a badge, or carry on with Next. It never affects your results. Hints 3 and 4 give the answer away, so after them it earns no points or badge.'}
             </p>
           )}
           {segment.activityId !== null ? (
-            <ActivityView activityId={segment.activityId} showTitle={false} onResult={onAnswered} />
+            <ActivityView
+              activityId={segment.activityId}
+              showTitle={false}
+              onResult={onAnswered}
+              bonus={segment.optional}
+            />
           ) : (
             <Alert tone="warning">Activity not available.</Alert>
           )}

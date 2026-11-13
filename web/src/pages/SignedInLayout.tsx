@@ -1,6 +1,7 @@
 import { Outlet, useLocation, useNavigate } from 'react-router'
 import { useCurrentUser, useLogout } from '../auth/hooks.ts'
 import { Alert, AppShell } from '../components'
+import { setPreferenceOwner } from '../features/progress/preferences.ts'
 import { BadgeAnnouncer } from '../features/rewards/BadgeAnnouncer.tsx'
 import { ThemeToggle } from '../theme/ThemeToggle.tsx'
 import { AccountMenu } from './AccountMenu.tsx'
@@ -14,11 +15,11 @@ export function SignedInLayout() {
   const logout = useLogout()
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  // One-thing pages sit in a centred column; the map, the visualiser and the staff portal use
-  // the full width.
-  const width = /^\/(report|review|badges|profile|activities|videos)(\/|$)/.test(pathname)
-    ? 'page'
-    : 'wide'
+  // The feedback switches (confetti, comments) are this student's on this device (#215 review).
+  setPreferenceOwner(user?.id ?? null)
+  // One-thing pages sit in a centred column; the map, the visualiser, the staff portal and an
+  // activity (which has the progress panel beside it, #214) use the full width.
+  const width = /^\/(report|review|badges|profile|videos)(\/|$)/.test(pathname) ? 'page' : 'wide'
 
   return (
     <AppShell

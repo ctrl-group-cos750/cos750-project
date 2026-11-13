@@ -15,6 +15,9 @@ class EarnedBadgeOut(ApiModel):
     awarded_at: datetime
     upgraded_at: datetime | None
     seen: bool
+    # A quest badge's place among the course's bonus quests (1, 2, ...), so its name never changes
+    # when another quest is finished first; None for other badges or a quest no longer in use.
+    quest_number: int | None = None
 
 
 class RewardsOut(ApiModel):

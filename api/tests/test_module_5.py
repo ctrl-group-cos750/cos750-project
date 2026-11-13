@@ -6,7 +6,7 @@ them.  These tests check:
 - Content rules: every activity has four hint levels; level 4 starts with "Answer:"; every wrong
   answer / faulty line / test case has feedback.
 - Retrieval: exactly 2, none placed in segments.
-- Worked example: has skip_check_activity_id pointing at a valid practice activity (503).
+- Worked example: no skip check; 503 is in the module's quick check (#214).
 - Segment coverage: every activity appears in exactly one segment or is a retrieval item.
 - Objectives: the non-retrieval module-5 activities all cover objective 7.
 - fix_the_bug (504, 505): the faulty program fails the hidden tests; the fixed program passes;
@@ -33,7 +33,9 @@ from app.services.bfs import run_bfs
 
 CONTENT: FixtureFile = read_fixtures()
 MODULE = next(m for m in CONTENT.modules if m.id == 5)
-ACTIVITIES = [a for a in CONTENT.activities if a.module_id == 5]
+# The module's quick check (FR-8.2, #214) is checked in test_quick_check_content.py.
+QUICK_CHECK = [a for a in CONTENT.activities if a.module_id == 5 and a.purpose == "test_out"]
+ACTIVITIES = [a for a in CONTENT.activities if a.module_id == 5 and a.purpose != "test_out"]
 
 # ---------------------------------------------------------------------------
 # The Graph class the code items run on (same as in test_module_6.py).
@@ -87,7 +89,7 @@ HIDDEN: dict[str, tuple[bool, str, list[str], str]] = {
 
 
 def activity(activity_id: int) -> ActivityFixture:
-    return next(a for a in ACTIVITIES if a.id == activity_id)
+    return next(a for a in ACTIVITIES + QUICK_CHECK if a.id == activity_id)
 
 
 def scenario(directed: bool, vertices: Any, edges: Any, start: str) -> GraphScenarioOut:
@@ -226,11 +228,9 @@ def test_retrieval_ids_are_501_and_502() -> None:
 
 def test_every_activity_is_shown_by_exactly_one_segment_or_is_a_retrieval_item() -> None:
     shown = [s.activity_id for s in MODULE.segments if s.activity_id is not None]
-    skip_checks = [
-        s.skip_check_activity_id for s in MODULE.segments if s.skip_check_activity_id is not None
-    ]
+    skip_checks = [a.id for a in QUICK_CHECK]  # asked in the quick check, in no segment
     retrieval = [a.id for a in ACTIVITIES if a.purpose == "retrieval"]
-    assert sorted(shown + skip_checks + retrieval) == sorted(a.id for a in ACTIVITIES)
+    assert sorted(shown + skip_checks + retrieval) == sorted(a.id for a in ACTIVITIES + QUICK_CHECK)
 
 
 # ---------------------------------------------------------------------------
@@ -265,14 +265,11 @@ def test_module_5_ends_with_the_closing_transfer_task() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_worked_example_segment_has_skip_check_pointing_at_practice_503() -> None:
-    worked = next((s for s in MODULE.segments if s.kind == "worked_example"), None)
-    assert worked is not None, "module 5 has no worked_example segment"
-    assert worked.skip_check_activity_id == 503
-    # 503 must be a real practice activity in this module.
-    skip_check_activity = next((a for a in ACTIVITIES if a.id == 503), None)
-    assert skip_check_activity is not None
-    assert skip_check_activity.purpose == "practice"
+def test_the_worked_example_has_no_skip_check() -> None:
+    # 503 was its skip check; it is a question in the module's quick check now (FR-8.2, #214).
+    worked = next(s for s in MODULE.segments if s.kind == "worked_example")
+    assert worked.skip_check_activity_id is None
+    assert activity(503).purpose == "test_out"
 
 
 # ---------------------------------------------------------------------------

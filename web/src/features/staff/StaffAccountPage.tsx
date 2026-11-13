@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Check, ShieldCheck, Trash2, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -136,14 +136,29 @@ function RecentAnswers({ account }: { account: AccountDetail }) {
   )
 }
 
-/** Make staff, or remove staff access. Not shown on your own account. */
+/** Make staff, or remove staff access: removing asks first, as on the members page. Not shown
+ * on your own account. */
 function Access({ account }: { account: AccountDetail }) {
   const queryClient = useQueryClient()
+  const [confirming, setConfirming] = useState(false)
   const change = useMutation({
     mutationFn: () =>
       account.isStaff ? removeMember(account.id) : addMember(account.email).then(() => undefined),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['staff'] }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['staff'] })
+      setConfirming(false)
+    },
   })
+  // Focus follows the question: into it when it opens, back to the button when it closes.
+  const trigger = useRef<HTMLButtonElement>(null)
+  const confirm = useRef<HTMLButtonElement>(null)
+  const wasConfirming = useRef(false)
+  useEffect(() => {
+    if (confirming) confirm.current?.focus()
+    else if (wasConfirming.current) trigger.current?.focus()
+    wasConfirming.current = confirming
+  }, [confirming])
+
   return (
     <Card>
       <CardHeader>
@@ -155,17 +170,50 @@ function Access({ account }: { account: AccountDetail }) {
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-3">
-        <div>
-          <Button
-            variant={account.isStaff ? 'outline' : 'default'}
-            size="lg"
-            disabled={change.isPending}
-            onClick={() => change.mutate()}
+        {!confirming && (
+          <div>
+            <Button
+              ref={trigger}
+              variant={account.isStaff ? 'outline' : 'default'}
+              size="lg"
+              disabled={change.isPending}
+              focusableWhenDisabled
+              onClick={() => (account.isStaff ? setConfirming(true) : change.mutate())}
+            >
+              <ShieldCheck aria-hidden />
+              {account.isStaff ? 'Remove staff access' : 'Make staff'}
+            </Button>
+          </div>
+        )}
+        {confirming && (
+          <Alert
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') setConfirming(false)
+            }}
           >
-            <ShieldCheck aria-hidden />
-            {account.isStaff ? 'Remove staff access' : 'Make staff'}
-          </Button>
-        </div>
+            <AlertTitle>Remove {account.displayName}&apos;s staff access?</AlertTitle>
+            <AlertDescription className="grid gap-3 text-foreground">
+              <p>
+                They keep their account, but lose the staff portal straight away. You can add them
+                again later.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  ref={confirm}
+                  variant="destructive"
+                  disabled={change.isPending}
+                  focusableWhenDisabled
+                  onClick={() => change.mutate()}
+                >
+                  {change.isPending ? 'Removing...' : 'Remove access'}
+                </Button>
+                <Button variant="outline" onClick={() => setConfirming(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
         {change.isError && (
           <Alert variant="destructive">
             <AlertDescription>{change.error.message}</AlertDescription>
@@ -186,7 +234,11 @@ function DeleteAccount({ account }: { account: AccountDetail }) {
     onSuccess: () => {
       queryClient.removeQueries({ queryKey: ['staff', 'accounts', account.id] })
       void queryClient.invalidateQueries({ queryKey: ['staff'] })
-      void navigate('/staff/accounts', { replace: true })
+      // The list says it was deleted and takes focus (A13).
+      void navigate('/staff/accounts', {
+        replace: true,
+        state: { deleted: account.displayName },
+      })
     },
   })
   const confirmed = typed.trim().toLowerCase() === account.email

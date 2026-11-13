@@ -24,11 +24,15 @@ from typing import Any
 
 import pytest
 from parsons_orders import runnable_orders
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
+from app.models import ModuleProgress, User
 from app.schemas.graphs import GraphEdge, GraphScenarioOut
-from app.seed import ActivityFixture
+from app.seed import ActivityFixture, load
 from app.services.bfs import run_bfs
 from app.services.checking import check_activity
+from app.services.modules import keep_places, segment_order
 
 SEED = Path(__file__).parents[1] / "app" / "seed"
 DASH = "\N{EN DASH}"
@@ -159,7 +163,10 @@ ORDER = {
         109,
         [192, 193, 194],
         [195, 196],
-        110,
+        114,
+        115,
+        116,
+        117,
     ],
     2: [203, 204, 270, 205, [290, 291], 206, 207, 271, 208, [292, 293, 294], 209],
     3: [313, 314, [392, 393], 315, 316, 317, 370, 318, [390, 391], 320, 321, [397, 398], 319, 380],
@@ -217,13 +224,48 @@ def test_the_existing_segments_keep_their_order() -> None:
     #150's segments (170, 270, 271, 370, 470-473) and objective 8's worked example and practice
     (320, 321; #70) inserted among them."""
     base = {
-        1: [101, 102, 103, 104, 105, 170, 106, 107, 108, 109, 110],
+        # 114-117: the closing task as four questions, each with its own options (13 Nov). Fresh
+        # segment ids: 110 showed the retired activity 107, and a segment id is never reused.
+        1: [101, 102, 103, 104, 105, 170, 106, 107, 108, 109, 114, 115, 116, 117],
         2: [203, 204, 270, 205, 206, 207, 271, 208, 209],
         3: [313, 314, 315, 316, 317, 370, 318, 320, 321, 319, 380],
         4: [403, 404, 470, 405, 406, 471, 472, 473, 407, 408, 480],
     }
     for n, ids in base.items():
         assert [s["id"] for s in SEGMENTS[n] if s.get("support_for") is None] == ids
+
+
+# Module 1's segments on staging, before the closing task became four questions: 110 showed the
+# retired activity 107. Its replacements have fresh ids (114-117), because an id is never reused.
+STAGING_MODULE_1 = [101, 102, 103, 104, 190, 191, 105, 170, 106, 107, 108, 109]
+STAGING_MODULE_1 += [192, 193, 194, 195, 196, 110]
+
+
+def test_a_student_on_the_retired_closing_task_keeps_their_place(db: Session) -> None:
+    """The seed keeps each student on the segment they had reached (keep_places, SE document
+    ModuleProgress). A student on the retired segment 110 goes back to the segment before it, so
+    Next takes them to the first new closing question; nobody else moves."""
+    load(db)
+    places = {"on-110": STAGING_MODULE_1.index(110), "on-109": STAGING_MODULE_1.index(109)}
+    for name, place in places.items():
+        user = User(email=f"{name}@example.com", display_name=name, password_hash="x")  # noqa: S106
+        db.add(user)
+        db.flush()
+        db.add(
+            ModuleProgress(
+                user_id=user.id, module_id=1, status="in_progress", current_segment_position=place
+            )
+        )
+    db.flush()
+    assert keep_places(db, 1, STAGING_MODULE_1) == 1
+    now = segment_order(db, 1)
+    names = {u.id: u.display_name for u in db.scalars(select(User))}
+    moved = {
+        names[p.user_id]: now[p.current_segment_position]
+        for p in db.scalars(select(ModuleProgress).where(ModuleProgress.module_id == 1))
+    }
+    assert moved == {"on-110": 196, "on-109": 109}
+    assert now[now.index(196) + 1] == 114
 
 
 # --- Worked examples --------------------------------------------------------------------------
@@ -623,7 +665,7 @@ def plain_text(value: Any, key: str = "") -> Iterator[str]:
 def shown(a: dict[str, Any]) -> Iterator[str]:
     yield from plain_text(a["config"])
     yield from plain_text(a["solution"].get("feedback", {}))
-    yield from (h["body"] for h in a["hints"])
+    yield from (h["body"] for h in a.get("hints", []))
 
 
 @pytest.mark.parametrize("a", SUPPORT_ACTIVITIES, ids=lambda a: str(a["id"]))

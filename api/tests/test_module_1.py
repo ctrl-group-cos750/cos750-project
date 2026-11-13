@@ -18,13 +18,15 @@ from app.services.bfs import run_bfs
 CONTENT: FixtureFile = read_fixtures()
 CAMPUS = GraphScenarioOut(**next(g for g in CONTENT.graphs if g.id == 4).model_dump())
 MODULE = next(m for m in CONTENT.modules if m.id == 1)
-ACTIVITIES = [a for a in CONTENT.activities if a.module_id == 1]
+# The module's quick check (FR-8.2, #214) is checked in test_quick_check_content.py.
+QUICK_CHECK = [a for a in CONTENT.activities if a.module_id == 1 and a.purpose == "test_out"]
+ACTIVITIES = [a for a in CONTENT.activities if a.module_id == 1 and a.purpose != "test_out"]
 DASH = "\N{EN DASH}"  # the content joins an undirected edge's ends with it
 EDGE = re.compile(rf"\b([A-Z]) ?({DASH}|→) ?([A-Z])\b")
 
 
 def activity(activity_id: int) -> ActivityFixture:
-    return next(a for a in ACTIVITIES if a.id == activity_id)
+    return next(a for a in ACTIVITIES + QUICK_CHECK if a.id == activity_id)
 
 
 def chosen_label(activity_id: int) -> str:
@@ -49,8 +51,8 @@ def campus_edges() -> set[frozenset[str] | tuple[str, str]]:
 
 def test_every_activity_is_shown_once_and_every_objective_has_one() -> None:
     shown = [s.activity_id for s in MODULE.segments if s.activity_id is not None]
-    skip_checks = [s.skip_check_activity_id for s in MODULE.segments if s.skip_check_activity_id]
-    assert sorted(shown + skip_checks) == sorted(a.id for a in ACTIVITIES)
+    skip_checks = [a.id for a in QUICK_CHECK]  # asked in the quick check, in no segment
+    assert sorted(shown + skip_checks) == sorted(a.id for a in ACTIVITIES + QUICK_CHECK)
     assert {a.objective_id for a in ACTIVITIES} == {1, 2, 3}
 
 
@@ -92,7 +94,7 @@ def test_the_puzzle_answer_is_the_fewest_walkways_from_a_to_g() -> None:
 
 def test_the_worked_example_reads_the_campus() -> None:
     worked = next(s for s in MODULE.segments if s.kind == "worked_example")
-    assert worked.skip_check_activity_id == 103
+    assert worked.skip_check_activity_id is None  # its check is the quick check now (FR-8.2, #214)
     # It shows the method on one walkway, which is a campus edge, and leaves the rest to activity
     # 105: a list of every walkway beside its edge would make 105 a copying task (#147).
     shown = edges_in(worked.body)
@@ -147,8 +149,37 @@ def test_the_built_graph_is_the_campus() -> None:
 
 def test_a_graph_is_directed_exactly_when_its_edges_are_arrows() -> None:
     a = activity(106)
+    # One graph has no edge list, so the step from the symbol to the meaning starts here (#214 C4).
+    unlisted = [item for item in a.config["left"] if not edges_in(item["label"])]
+    assert [item["id"] for item in unlisted] == ["older"]
+    assert right_label(a, "older") == "Directed"
     for item in a.config["left"]:
+        if item in unlisted:
+            continue
         edges = edges_in(item["label"])
         directed = all(isinstance(e, tuple) for e in edges)
         assert directed or all(isinstance(e, frozenset) for e in edges)
         assert right_label(a, item["id"]) == ("Directed" if directed else "Undirected")
+
+
+def test_the_key_terms_cannot_be_matched_by_their_own_words() -> None:
+    """102 paired "Data structure" with "… store data" and "Graph traversal" with "… of a graph",
+    with no spare description, so the last pair was forced (#214 C6)."""
+    a = activity(102)
+    terms = {item["id"]: item["label"].lower() for item in a.config["left"]}
+    for left in a.solution["pairs"]:
+        label = right_label(a, left).lower()
+        for word in re.findall(r"\w+", terms[left]):
+            assert not re.search(rf"\b{word}", label), (terms[left], label)
+    assert len(a.config["right"]) >= len(a.config["left"]) + 2
+    assert any("chart" in r["label"] for r in a.config["right"])  # a graph is not a chart
+
+
+def test_the_modelling_support_item_does_not_name_each_situations_nouns() -> None:
+    """193's right options named their situation's nouns (taxi ranks, children, songs, puzzle
+    pieces), so each could be matched by spotting a word (#214 C8)."""
+    a = activity(193)
+    nouns = ("taxi", "rank", "child", "invit", "song", "playlist", "jigsaw", "puzzle", "piece")
+    for r in a.config["right"]:
+        assert not any(n in r["label"].lower() for n in nouns), r["label"]
+    assert len(a.config["right"]) > len(a.config["left"])

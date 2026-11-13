@@ -17,6 +17,8 @@ import {
   type AvatarId,
 } from '../../components'
 import { useReport } from '../mastery/hooks.ts'
+import { prefersReducedMotion, useConfettiSetting } from '../progress/confetti.ts'
+import { usePreference } from '../progress/preferences.ts'
 import { useRewards, useRewardsSettings } from '../rewards/hooks.ts'
 import { useChangePassword, useDeletePicture, useSetAvatar, useUploadPicture } from './hooks.ts'
 import { squarePicture } from './squarePicture.ts'
@@ -60,21 +62,54 @@ function Stats() {
   )
 }
 
-/** Upload a picture of their own, or choose one from the team's set (FR-1.6). Saved at once. */
+/** Upload a picture of their own, or choose one from the team's set (FR-1.6). Saved at once.
+ * Nothing here is disabled while it saves, so keyboard focus never drops to the page (WCAG
+ * 2.4.3): arrowing through the pictures saves the last one chosen, and a press that can't run yet
+ * is ignored (aria-disabled). */
 function Picture({ user }: { user: User }) {
   const setAvatar = useSetAvatar()
   const upload = useUploadPicture()
   const remove = useDeletePicture()
   const [problem, setProblem] = useState<string | null>(null)
   const [preparing, setPreparing] = useState(false)
+  // A picture chosen while another was saving: saved as soon as that one is done.
+  const [queued, setQueued] = useState<{ choice: AvatarId | null } | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
   const name = useId()
+  const uploadId = useId()
   const choices: (AvatarId | null)[] = [null, ...AVATARS]
-  const busy = setAvatar.isPending || upload.isPending || remove.isPending || preparing
+  const fileBusy = upload.isPending || remove.isPending || preparing
+  const busy = setAvatar.isPending || fileBusy
   // Show the picked picture straight away, while it saves; the saved one again if saving fails.
-  const shown = setAvatar.isPending ? setAvatar.variables : user.pictureUrl ? 'own' : user.avatar
+  const shown = queued
+    ? queued.choice
+    : setAvatar.isPending
+      ? setAvatar.variables
+      : user.pictureUrl
+        ? 'own'
+        : user.avatar
   const error = problem ?? (setAvatar.error ?? upload.error ?? remove.error)?.message
   const saved = setAvatar.isSuccess || upload.isSuccess || remove.isSuccess
+
+  const queue = useRef<{ choice: AvatarId | null } | null>(null)
+
+  function save(choice: AvatarId | null) {
+    setAvatar.mutate(choice, {
+      onSettled: () => {
+        const next = queue.current
+        queue.current = null
+        setQueued(null)
+        if (next) save(next.choice)
+      },
+    })
+  }
+  function pick(choice: AvatarId | null) {
+    if (fileBusy) return
+    if (setAvatar.isPending) {
+      queue.current = { choice }
+      setQueued({ choice })
+    } else save(choice)
+  }
 
   async function choose(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -113,10 +148,12 @@ function Picture({ user }: { user: User }) {
             onChange={(e) => void choose(e)}
           />
           <Button
+            id={uploadId}
             variant="secondary"
             loading={preparing || upload.isPending}
-            disabled={busy}
-            onClick={() => fileInput.current?.click()}
+            keepFocusWhileLoading
+            aria-disabled={busy || undefined}
+            onClick={() => !busy && fileInput.current?.click()}
           >
             Upload a picture
           </Button>
@@ -124,8 +161,15 @@ function Picture({ user }: { user: User }) {
             <Button
               variant="ghost"
               loading={remove.isPending}
-              disabled={busy}
-              onClick={() => remove.mutate()}
+              keepFocusWhileLoading
+              aria-disabled={busy || undefined}
+              onClick={() =>
+                !busy &&
+                remove.mutate(undefined, {
+                  // The button goes with the picture: focus the upload button, not the page.
+                  onSuccess: () => document.getElementById(uploadId)?.focus(),
+                })
+              }
             >
               Remove it
             </Button>
@@ -143,8 +187,8 @@ function Picture({ user }: { user: User }) {
                 type="radio"
                 name={name}
                 checked={shown === choice}
-                disabled={busy}
-                onChange={() => setAvatar.mutate(choice)}
+                aria-disabled={fileBusy || undefined}
+                onChange={() => pick(choice)}
               />
               <Avatar avatar={choice} name={user.displayName} size={48} />
               <span className="visually-hidden">{label}</span>
@@ -183,6 +227,54 @@ function RewardsSetting() {
         objective are always shown.
       </p>
       {settings.isError && <Alert tone="danger">{settings.error.message}</Alert>}
+    </section>
+  )
+}
+
+/** The feedback switches (#214), together under "Feedback": confetti and encouraging comments.
+ * Both on by default and kept on this device, per student (features/progress/preferences.ts). */
+function FeedbackSettings() {
+  const [confettiOn, setConfetti] = useConfettiSetting()
+  const [comments, setComments] = usePreference('comments')
+  const confettiId = useId()
+  const commentsId = useId()
+  const feedbackNote = useId()
+  return (
+    <section aria-labelledby="feedback-heading" className={styles.section}>
+      <h2 id="feedback-heading">Feedback</h2>
+      <div className={styles.toggle}>
+        <input
+          id={confettiId}
+          type="checkbox"
+          checked={confettiOn}
+          aria-describedby={`${confettiId}-about ${feedbackNote}`}
+          onChange={(e) => setConfetti(e.target.checked)}
+        />
+        <label htmlFor={confettiId}>Confetti when you get something right</label>
+      </div>
+      <p id={`${confettiId}-about`} className={styles.muted}>
+        A short burst for a right answer, and a bigger one when you finish a module or are ready for
+        the lecture. Never during the mastery check.
+        {prefersReducedMotion() && ' Your device asks for reduced motion, so it stays off anyway.'}
+      </p>
+      <div className={`${styles.toggle} ${styles.nextToggle}`}>
+        <input
+          id={commentsId}
+          type="checkbox"
+          checked={comments}
+          aria-describedby={`${commentsId}-about ${feedbackNote}`}
+          onChange={(e) => setComments(e.target.checked)}
+        />
+        <label htmlFor={commentsId}>Encouraging comments</label>
+      </div>
+      <p id={`${commentsId}-about`} className={styles.muted}>
+        A short line under a right answer, and a word on how far you have come. Off, you see only
+        the explanation of why the answer is right.
+      </p>
+      <p id={feedbackNote} className={styles.muted}>
+        Both are kept on this device, for you only: on a shared computer they don&apos;t change
+        anyone else&apos;s, and on another device they start on again.
+      </p>
     </section>
   )
 }
@@ -313,6 +405,7 @@ export function ProfilePage() {
       <Stats />
       <Picture user={user} />
       <RewardsSetting />
+      <FeedbackSettings />
       <Password user={user} />
     </>
   )

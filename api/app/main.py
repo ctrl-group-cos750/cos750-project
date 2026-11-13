@@ -21,6 +21,7 @@ from app.routers import (
     modules,
     profile,
     rewards,
+    skills,
     staff,
     staff_accounts,
     staff_content,
@@ -55,6 +56,7 @@ app.include_router(events.router)
 app.include_router(graphs.router)
 app.include_router(rewards.router)
 app.include_router(mastery.router)
+app.include_router(skills.router)
 app.include_router(profile.router)
 app.include_router(modules.router)
 app.include_router(videos.router)

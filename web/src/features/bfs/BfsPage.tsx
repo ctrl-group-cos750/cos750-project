@@ -50,10 +50,12 @@ export function BfsPage() {
     )
   }
 
+  // The back link sits in the visualiser's own column, so their left edges line up; the page's
+  // padding is main's, as on every other page.
   return (
-    <>
+    <div className="mx-auto grid w-full max-w-6xl justify-items-start gap-4">
       <BackLink fallback={TO_THE_MAP} />
       <BfsVisualizer key={query.data.id} scenario={query.data} />
-    </>
+    </div>
   )
 }

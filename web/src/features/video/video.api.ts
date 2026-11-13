@@ -27,6 +27,7 @@ export async function fetchVideo(id: number): Promise<LoadedVideo> {
   return {
     video: {
       id: v.id,
+      title: v.title,
       mediaPath: v.mediaPath,
       captionsPath: v.captionsPath,
       transcript: v.transcript,

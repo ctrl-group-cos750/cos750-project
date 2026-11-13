@@ -33,7 +33,9 @@
     ],
     "start_vertex": "A"
   },
-  "solution": {},
+  "solution": {
+    "explanation": "A finds B and C. When C leaves, D is already waiting, so it isn't added again."
+  },
   "hints": [
     {
       "level": 1,

@@ -6,8 +6,9 @@ POST /api/modules/{id}/position        → ModuleDetailOut  (commits progress)
 
 Seeding strategy: insert Module + Segment rows directly in the test db session — the
 same approach test_seed.py uses when it inserts Module/ModuleProgress/User rows directly.
-Using 3 modules (numbers 0, 1, 2) with 2 segments each is enough to exercise the full
-unlock chain and the completion logic while keeping the setup minimal.
+Using 3 modules (numbers 0, 1, 2) with 2 segments each is enough to exercise the opening rule
+(every module open but the last, which opens once the ones between the first and it are done,
+#214) and the completion logic while keeping the setup minimal.
 """
 
 from typing import Any
@@ -107,7 +108,8 @@ def _logout(client: TestClient) -> None:
 def test_list_modules_returns_all_modules_with_initial_states(
     client: TestClient, db: Session
 ) -> None:
-    """Module 0 is open; modules 1 and 2 are locked for a brand-new student."""
+    """Every module but the last is open for a brand-new student; the last (the mastery check)
+    is locked until the modules between the first and it are done (#214)."""
     _make_modules(db)
     _register_and_login(client, ALICE)
 
@@ -119,10 +121,12 @@ def test_list_modules_returns_all_modules_with_initial_states(
     # Returned in position order.
     assert [m["number"] for m in modules] == [0, 1, 2]
 
-    # Status — module 0 open, rest locked (no progress yet).
+    # Status — the student chooses where to start; only the last module is locked.
     assert modules[0]["status"] == "open"
-    assert modules[1]["status"] == "locked"
+    assert modules[1]["status"] == "open"
     assert modules[2]["status"] == "locked"
+    # The first module is the one recommended.
+    assert [m["recommended"] for m in modules] == [True, False, False]
 
 
 def test_list_modules_includes_estimated_minutes_and_segment_count(
@@ -262,12 +266,13 @@ def test_get_missing_module_is_404(client: TestClient, db: Session) -> None:
 
 
 def test_get_locked_module_is_403(client: TestClient, db: Session) -> None:
-    """Module 1 is locked until module 0 is complete — should return 403."""
-    _, m1_id, _ = _make_modules(db)
+    """The last module is locked until the ones between the first and it are done: 403."""
+    _, _, m2_id = _make_modules(db)
     _register_and_login(client, ALICE)
 
-    res = client.get(f"/api/modules/{m1_id}")
+    res = client.get(f"/api/modules/{m2_id}")
     assert res.status_code == 403
+    assert "mastery check" in res.json()["detail"]
 
 
 def test_get_module_2_locked_until_module_1_complete(client: TestClient, db: Session) -> None:
@@ -410,23 +415,25 @@ def test_completing_module_0_unlocks_module_1(client: TestClient, db: Session) -
     assert status_by_number[2] == "locked"
 
 
-def test_completing_module_0_lets_student_access_module_1_detail(
-    client: TestClient, db: Session
-) -> None:
-    """After module 0 is complete, GET /api/modules/{m1_id} returns 200 (no longer 403)."""
-    m0_id, m1_id, _ = _make_modules(db)
+def test_a_student_may_start_with_a_later_module(client: TestClient, db: Session) -> None:
+    """Module 1 opens without module 0 done (#214), and completing it, with module 0 never
+    started, opens the last module: the warm-up isn't required for it."""
+    _, m1_id, m2_id = _make_modules(db)
     _register_and_login(client, ALICE)
 
-    # Locked before.
-    assert client.get(f"/api/modules/{m1_id}").status_code == 403
-
-    # Complete module 0.
-    client.post(f"/api/modules/{m0_id}/position", json={"segmentPosition": 1})
-
-    # Unlocked now.
     res = client.get(f"/api/modules/{m1_id}")
     assert res.status_code == 200
     assert res.json()["status"] == "open"
+    assert (
+        client.post(f"/api/modules/{m1_id}/position", json={"segmentPosition": 1}).status_code
+        == 200
+    )
+
+    modules = client.get("/api/modules").json()
+    assert [m["status"] for m in modules] == ["open", "complete", "open"]
+    # The warm-up isn't recommended once a later module is done: the next one is.
+    assert [m["recommended"] for m in modules] == [False, False, True]
+    assert client.get(f"/api/modules/{m2_id}").status_code == 200
 
 
 def test_completing_module_1_unlocks_module_2(client: TestClient, db: Session) -> None:
@@ -464,8 +471,8 @@ def test_user_b_sees_initial_locked_states_regardless_of_user_a_progress(
     modules = client.get("/api/modules").json()
     status_by_number = {m["number"]: m["status"] for m in modules}
     assert status_by_number[0] == "open"
-    assert status_by_number[1] == "locked"  # Bob has NOT completed module 0
-    assert status_by_number[2] == "locked"
+    assert status_by_number[1] == "open"
+    assert status_by_number[2] == "locked"  # Bob has NOT completed module 1
 
 
 def test_user_a_position_does_not_bleed_into_user_b(client: TestClient, db: Session) -> None:
@@ -564,10 +571,10 @@ def test_post_position_requires_auth(client: TestClient, db: Session) -> None:
 
 def test_post_position_on_locked_module_is_403(client: TestClient, db: Session) -> None:
     """Cannot save progress on a locked module."""
-    _, m1_id, _ = _make_modules(db)
+    _, _, m2_id = _make_modules(db)
     _register_and_login(client, ALICE)
     assert (
-        client.post(f"/api/modules/{m1_id}/position", json={"segmentPosition": 0}).status_code
+        client.post(f"/api/modules/{m2_id}/position", json={"segmentPosition": 0}).status_code
         == 403
     )
 
@@ -1093,10 +1100,15 @@ def test_the_seed_backfills_modules_completed_before_module_points(db: Session) 
 def test_a_segment_in_a_locked_module_is_not_logged_as_viewed(
     client: TestClient, db: Session
 ) -> None:
-    _make_gated_module(db)  # module 1 stays locked until module 0 is complete
+    _make_gated_module(db)
+    # A last module, locked until module 1 is complete (#214).
+    db.add(Module(id=2, slug="m2", title="Two", goals=[], estimated_minutes=5, position=2))
+    db.flush()
+    db.add(Segment(id=6, module_id=2, position=0, kind="text", title="Last", body="Text."))
+    db.commit()
     _register_and_login(client, ALICE)
     assert (
-        client.post("/api/events", json={"type": "segment_viewed", "targetId": 5}).status_code
+        client.post("/api/events", json={"type": "segment_viewed", "targetId": 6}).status_code
         == 204
     )
     assert (
@@ -1139,3 +1151,67 @@ def test_the_course_length_is_public_and_sums_every_module(client: TestClient, d
     res = client.get("/api/modules/length")  # nobody logged in
     assert res.status_code == 200
     assert res.json() == {"minutes": 5 + 12 + 10}
+
+
+def test_a_module_of_diagnostic_questions_only_earns_no_module_reward(
+    client: TestClient, db: Session
+) -> None:
+    """Module 0, the warm-up, asks only diagnostic questions: they find gaps rather than teach, so
+    finishing it earns no module points and not the First Module badge, which comes with the first
+    module that teaches. The same right answers as practice do earn it."""
+    _make_gated_module(db)
+    _register_and_login(client, ALICE)
+    user = db.scalars(select(User).where(User.email == ALICE["email"])).one()
+    activities = [db.get_one(Activity, a) for a in (1, 3)]  # the two module 0 shows
+    for activity in activities:
+        activity.purpose = "diagnostic"
+        db.add(
+            Attempt(
+                user_id=user.id,
+                activity_id=activity.id,
+                submitted={},
+                correct=True,
+                score=1.0,
+                detail={},
+                hint_level=0,
+            )
+        )
+    db.commit()
+    assert modules_service.reward_module(db, user.id, 0) is False
+    for activity in activities:
+        activity.purpose = "practice"
+    db.commit()
+    assert modules_service.reward_module(db, user.id, 0) is True
+
+
+def test_module_0_diagnostic_earns_nothing_and_module_1_earns_first_module_and_its_points(
+    client: TestClient, db: Session
+) -> None:
+    """End to end, through the API: a student finishes module 0, whose questions are all
+    diagnostic, with every one right: no module points and no First Module badge. Then module 1
+    with a right answer: its 25 points and First Module, the badge's first and only award (#212)."""
+    _make_gated_module(db)
+    for activity_id in (1, 2, 3):
+        db.get_one(Activity, activity_id).purpose = "diagnostic"
+    _question(db, 5).purpose = "practice"
+    db.flush()
+    db.add(Segment(id=6, module_id=1, position=1, kind="activity", title="Try", activity_id=5))
+    db.commit()
+    _register_and_login(client, ALICE)
+
+    for activity_id in (1, 2, 3):
+        _answer(client, activity_id, "a")
+    for position in (1, 2, 3, 3):
+        assert _move(client, position) == 200
+    assert client.get("/api/modules/0").json()["status"] == "complete"
+    assert _module_points(db, 0) == []
+    assert _badges(client) == []
+
+    _answer(client, 5, "a")
+    for position in (1, 1):  # Next onto the activity, then "Finish module"
+        res = client.post("/api/modules/1/position", json={"segmentPosition": position})
+        assert res.status_code == 200, res.text
+    assert res.json()["status"] == "complete"
+    assert _module_points(db, 0) == []
+    assert _module_points(db, 1) == [25]
+    assert _badges(client) == ["first-module"]

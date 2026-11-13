@@ -5,6 +5,7 @@ import { Alert, Button, Spinner, TextField } from '../../../components'
 import styles from '../staff.module.css'
 import { deleteGraph, getGraph, saveGraph, type GraphIn, type GraphOut } from './content.api.ts'
 import { Provenance, SaveBar, SeedNote, TextArea } from './ContentFields.tsx'
+import { usePageTitle } from '../../../pages/usePageTitle.ts'
 import { useWarnBeforeLeaving } from './useWarnBeforeLeaving.ts'
 
 /** The graph as the form holds it: vertices comma-separated, one edge per line ("A B"). */
@@ -78,7 +79,8 @@ function GraphEditor(props: {
   const [dirty, setDirty] = useState(false)
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  useWarnBeforeLeaving(dirty)
+  const allowLeaving = useWarnBeforeLeaving(dirty)
+  usePageTitle(id === undefined ? 'New graph' : (saved?.name ?? `Graph ${id}`))
 
   function change(next: Partial<Draft>) {
     setDraft((d) => ({ ...d, ...next }))
@@ -90,6 +92,7 @@ function GraphEditor(props: {
       void queryClient.invalidateQueries({ queryKey: ['staff', 'content'] })
       setDraft(toDraft(result))
       setDirty(false)
+      allowLeaving()
       if (id === undefined) void navigate(`/staff/content/graphs/${result.id}`, { replace: true })
     },
   })
@@ -97,6 +100,7 @@ function GraphEditor(props: {
     mutationFn: () => deleteGraph(id!),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['staff', 'content'] })
+      allowLeaving() // deleted: nothing left to save
       void navigate('/staff/content')
     },
   })

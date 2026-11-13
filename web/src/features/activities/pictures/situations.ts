@@ -86,26 +86,6 @@ export const BUS: Situation = {
   ],
 }
 
-/** The graph in the check question (activity 103): vertices P, Q, R, S, no names. */
-export const PQRS: Situation = {
-  link: 'edge',
-  place: 'vertex',
-  width: 560,
-  height: 300,
-  directed: false,
-  places: [
-    { id: 'P', name: '', x: 120, y: 150 },
-    { id: 'Q', name: '', x: 300, y: 150 },
-    { id: 'R', name: '', x: 440, y: 70 },
-    { id: 'S', name: '', x: 440, y: 230 },
-  ],
-  links: [
-    ['P', 'Q'],
-    ['Q', 'R'],
-    ['Q', 'S'],
-  ],
-}
-
 const triangle = (ids: readonly [string, string, string], names: readonly string[]) =>
   [
     { id: ids[0], name: names[0], x: 220, y: 100 },

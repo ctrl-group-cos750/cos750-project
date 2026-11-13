@@ -69,6 +69,7 @@ from app.services.bfs import InvalidGraph, run_bfs
 from app.services.content import validate_activity
 from app.services.mastery import MASTERY_MODULE, recompute_all
 from app.services.modules import keep_places, segment_order
+from app.services.quick_check import QUICK_CHECK_SIZE
 
 FIXTURES = Path(__file__).parent
 # One example activity per kind, for authors to copy (README.md in this folder). The loader reads
@@ -124,6 +125,16 @@ class ActivityFixture(BaseModel, extra="forbid"):
                 raise ValueError(f"activity {self.id}: a retrieval item belongs in module 2 to 6")
             if self.kind != "multiple_choice":
                 raise ValueError(f"activity {self.id}: retrieval items must be multiple choice")
+        if self.purpose == "test_out":
+            # A module's quick check (FR-8.2, #214): one answer each, no hints, results at the end.
+            if self.module_id not in range(1, MASTERY_MODULE):
+                raise ValueError(f"activity {self.id}: a quick check item belongs in module 1 to 5")
+            if self.kind != "multiple_choice":
+                raise ValueError(f"activity {self.id}: quick check items must be multiple choice")
+            if self.objective_id is None:
+                raise ValueError(f"activity {self.id}: a quick check item needs an objective_id")
+            if self.hints:
+                raise ValueError(f"activity {self.id}: the quick check gives no hints")
         return self
 
 
@@ -272,6 +283,14 @@ def check_references(content: FixtureFile) -> None:
         module_id for module_id, count in retrieval_counts.items() if count > 2
     ):
         raise ValueError(f"modules may have at most two retrieval items: {modules_with_too_many}")
+    quick_checks: dict[int, int] = {}
+    for activity in content.activities:
+        if activity.purpose == "test_out" and activity.module_id is not None:
+            quick_checks[activity.module_id] = quick_checks.get(activity.module_id, 0) + 1
+    if wrong_size := sorted(m for m, count in quick_checks.items() if count != QUICK_CHECK_SIZE):
+        raise ValueError(
+            f"a module's quick check has exactly {QUICK_CHECK_SIZE} items: modules {wrong_size}"
+        )
     on_paths = _check_review_paths(content, objectives, activities)
     # Module 6 is the mastery check: every objective needs an item there, or its result could
     # never be met and no student could ever be ready for the lecture (FR-7.1, FR-7.4).
@@ -297,6 +316,12 @@ def check_references(content: FixtureFile) -> None:
                     raise ValueError(f"segment {seg.id}: no activity {ref}")
                 # The module page asks its retrieval questions before the segments (FR-2.4), so
                 # one placed in a segment as well would be asked twice.
+                # A quick check item is asked only in the quick check (FR-8.2, #214).
+                if ref is not None and activities[ref].purpose == "test_out":
+                    raise ValueError(
+                        f"segment {seg.id}: activity {ref} is a quick check item, which is only "
+                        "asked in the module's quick check"
+                    )
                 if ref is not None and activities[ref].purpose == "retrieval":
                     raise ValueError(
                         f"segment {seg.id}: activity {ref} is a retrieval question, which the "

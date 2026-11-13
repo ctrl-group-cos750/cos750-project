@@ -35,6 +35,13 @@ point at them.
 - Review paths use 1000 + 100 × the objective: objective 5 uses 1501, 1502, ….
 - The portal uses ids from 50 000 and the video editor from 100 000. Stay below 50 000.
 - Before you pick an id, search the folder for it (`grep -rn '"id": 305' api/app/seed/*.json`).
+- To replace a segment, give the new one a new id rather than reusing the old one's. A student's
+  saved place follows the segment, not its number: a student on a segment you take out goes back
+  to the nearest segment before it that is still there. Next brings them to the new segment only
+  if you put it where the old one was; anywhere else, Next takes them to whatever now follows that
+  segment. A module whose segments staff have edited in the portal keeps its list (the seed reports
+  it as held), so the replacement doesn't reach it: make the change in the portal, or export the
+  portal's content and commit it first.
 
 Text is plain, short sentences, in British/South African spelling. Segment bodies and activity
 prompts are Markdown, so you can use **bold**, lists and code blocks (` ```python `).
@@ -74,8 +81,8 @@ Every segment has an `id`, a `kind` and a `title` (up to 200 characters). The ki
 | `refresher` | A short refresher on prior knowledge, in module 0 only. | `body`, `refresher_for` |
 
 Any segment may also have `skip_check_activity_id`: if the student answers that activity
-correctly, they may skip the segment (a refresher after its diagnostic question, FR-8.1, or a
-worked example after a short check, FR-8.2).
+correctly, they may skip the segment (a refresher after its diagnostic question, FR-8.1). Skipping
+a whole module is the module's quick check instead (activities of purpose `test_out`, FR-8.2).
 
 ### Text
 
@@ -176,6 +183,7 @@ tagging that breaks these rules:
 | `mastery` | The mastery check (module 6) and the fresh items at the end of a review path. Counts towards the objective's result (FR-7). | Needs `objective_id`; in module 6 or on a review path only. Every objective needs at least one in module 6. |
 | `review` | Practice on a review path (ID document §7.6). | Needs `objective_id`; on a review path it needs all four hint levels. |
 | `bonus` | Optional bonus quests: points, never mastery (FR-8.3). | none beyond the basics |
+| `test_out` | A module's quick check, "Already know this?" (FR-8.2): a student who passes it tests out of the module. It counts for nothing else. | `multiple_choice` only; `module_id` 1 to 5; needs `objective_id`; no hints; never placed in a segment; exactly four per module that has any. |
 
 For example, a practice item for objective 5 in module 3:
 
@@ -202,8 +210,10 @@ Where you write it:
   token, faulty line or test case, depending on the kind). A wrong answer with no message gets a
   generic one, so write one for every wrong answer you can foresee, especially the ones built
   from a misconception (ID document §2.5).
-- `solution.explanation` (optional, every kind except trace): shown instead of the plain
-  "Correct." when the answer is right, saying why it is right (FR-4.2).
+- `solution.explanation`: shown instead of the plain "Correct." when the answer is right,
+  saying why it is right (FR-4.2). Every module practice item needs one (a test checks it); a
+  trace's solution holds only this, because the engine works out its answer. Mastery-check items
+  must not have one yet.
 - Parsons problems and trace tables have no `feedback` field: the checker marks each misplaced
   line or wrong row itself. Put the reasoning in the hints and the explanation.
 
@@ -366,11 +376,14 @@ the vertex, the queue after the step, the visited set and the order so far (FR-4
   ],
   "start_vertex": "A"
 },
-"solution": {}
+"solution": {
+  "explanation": "A finds B and C. When C leaves, D is already waiting, so it isn't added again."
+}
 ```
 
-- You give only the graph. The answer is worked out by the app's BFS engine, so `solution` is
-  always `{}` and you can't get it wrong. Neighbours are visited in alphabetical order.
+- You give only the graph. The answer is worked out by the app's BFS engine, so `solution`
+  holds no answer, only the `explanation` (or nothing: `{}`). Neighbours are visited in
+  alphabetical order.
 - Up to 50 vertices; the check refuses an edge to an unknown vertex or an unknown start.
 - Work the trace out yourself for hints 3 and 4.
 

@@ -7,6 +7,53 @@
   flex-direction: column;
   gap: var(--space-2);
   width: min(24rem, calc(100vw - 2 * var(--space-4)));
+  /* Never taller than most of the screen; it scrolls if a burst is long. The gaps between notes
+   * let clicks through to the page. */
+  max-height: 70vh;
+  overflow-y: auto;
+  pointer-events: none;
+}
+
+.region > * {
+  pointer-events: auto;
+}
+
+/* Phones: one card (BadgeAnnouncer shows at most one), a compact banner at the top of the
+ * screen, so it never covers a module's Previous and Next at the bottom (#215 review), and the
+ * dismiss button a full 44 px touch target. */
+@media (max-width: 480px) {
+  .region {
+    top: var(--space-2);
+    right: var(--space-2);
+    bottom: auto;
+    width: calc(100vw - 2 * var(--space-2));
+    max-height: 40vh;
+  }
+
+  .note {
+    align-items: center;
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .description {
+    display: none;
+  }
+
+  .dismiss {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* Links and buttons in a note a full 44 px tall on a phone or wherever the pointer is a finger
+ * (WCAG 2.5.5). */
+@media (max-width: 480px), (pointer: coarse) {
+  .link,
+  .off {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
 }
 
 .note {
@@ -57,31 +104,28 @@
   color: var(--color-text);
 }
 
-.backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  display: grid;
-  place-items: center;
-  padding: var(--space-4);
-  background: var(--overlay);
+/* A modal <dialog> (showModal), centred by the browser in the top layer; ::backdrop dims the page. */
+.dialog {
+  max-width: min(28rem, calc(100vw - 2 * var(--space-4)));
+  padding: var(--space-6) var(--space-5);
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  color: inherit;
+  text-align: center;
 }
 
-.dialog {
-  position: static;
-  margin: 0;
-  border: 0;
-  color: inherit;
+.dialog[open] {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-3);
-  max-width: 28rem;
-  padding: var(--space-6) var(--space-5);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-card);
-  text-align: center;
+}
+
+.dialog::backdrop {
+  /* The fallback is for browsers whose ::backdrop does not inherit custom properties. */
+  background: var(--overlay, rgb(15 23 42 / 55%));
 }
 
 .dialog h2 {

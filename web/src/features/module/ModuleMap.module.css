@@ -1,8 +1,17 @@
 .page {
   display: grid;
+  /* One column no wider than the screen: an auto track would widen to its widest line and run
+   * past the page's padding at 320 px (WCAG 1.4.10). */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-5);
   max-width: 56rem;
   margin-inline: auto;
+}
+
+.side {
+  display: grid;
+  gap: var(--space-5);
+  align-content: start;
 }
 
 .top {
@@ -101,7 +110,8 @@
 .totalDuration {
   color: var(--color-text-muted);
   font-size: var(--text-sm);
-  white-space: nowrap;
+  /* Wraps rather than overflowing at 320 px or with larger text spacing (WCAG 1.4.12). */
+  overflow-wrap: anywhere;
 }
 
 /* Module list */
@@ -164,6 +174,45 @@
   color: inherit;
 }
 
+/* "Already know this?" under a module's card: its quick check (#214). A link of its own, beside
+   the card's link, never inside it. */
+.quickCheck {
+  display: inline-block;
+  margin-block-start: var(--space-2);
+  margin-inline-start: calc(2rem + var(--space-4) + var(--space-5));
+  font-size: var(--text-sm);
+  color: var(--color-accent-text);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* "Quick check: 2 of 4, see results" once taken (#215 review), lined up with the title. */
+.quickCheckScore {
+  margin: var(--space-2) 0 0 calc(2rem + var(--space-4) + var(--space-5));
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.quickCheckScore a {
+  color: var(--color-accent-text);
+  font-weight: 600;
+}
+
+/* Links a full 44 px tall where the pointer is a finger (WCAG 2.5.5). */
+@media (pointer: coarse) {
+  .quickCheck,
+  .quickCheckScore a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}
+
+.lookAgain {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
 /* Phones: the time and the state go on their own line under the title, never over it. */
 @media (max-width: 30rem) {
   .row {
@@ -177,5 +226,10 @@
 
   .next {
     padding: var(--space-4);
+  }
+
+  .quickCheck,
+  .quickCheckScore {
+    margin-inline-start: calc(2rem + var(--space-4) + var(--space-4));
   }
 }

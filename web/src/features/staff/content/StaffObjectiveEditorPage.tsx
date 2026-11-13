@@ -11,6 +11,7 @@ import {
   type ObjectiveOut,
 } from './content.api.ts'
 import { Provenance, SaveBar, SeedNote, TextArea } from './ContentFields.tsx'
+import { usePageTitle } from '../../../pages/usePageTitle.ts'
 import { useWarnBeforeLeaving } from './useWarnBeforeLeaving.ts'
 
 const EMPTY: ObjectiveIn = {
@@ -62,7 +63,8 @@ function ObjectiveEditor(props: {
   const [dirty, setDirty] = useState(false)
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  useWarnBeforeLeaving(dirty)
+  const allowLeaving = useWarnBeforeLeaving(dirty)
+  usePageTitle(id === undefined ? 'New objective' : `Objective ${id}`)
   const byFraction = (draft.passFraction ?? null) !== null
 
   function change(next: Partial<ObjectiveIn>) {
@@ -75,6 +77,7 @@ function ObjectiveEditor(props: {
       void queryClient.invalidateQueries({ queryKey: ['staff', 'content'] })
       setDraft(toInput(result))
       setDirty(false)
+      allowLeaving()
       if (id === undefined)
         void navigate(`/staff/content/objectives/${result.id}`, { replace: true })
     },

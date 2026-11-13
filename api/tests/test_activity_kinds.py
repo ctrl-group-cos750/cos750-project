@@ -116,6 +116,12 @@ DIAMOND = {
     "start_vertex": "A",
     "expected": ["A", "B", "C", "D"],
 }
+TRACE_CONFIG: dict[str, Any] = {
+    "directed": False,
+    "vertices": ["A", "B", "D"],
+    "edges": [{"source": "A", "target": "B"}, {"source": "B", "target": "D"}],
+    "start_vertex": "B",
+}
 TESTS_CONFIG: dict[str, Any] = {
     "prompt": "Select every test case this BFS fails.",
     "code": "def bfs(graph, start): ...",
@@ -604,13 +610,14 @@ def test_fix_the_bug_a_removed_line_is_named_in_the_summary() -> None:
 
 
 def test_the_reviewers_objective_7_case_is_correct() -> None:
-    # 621 with visited.add(n) and queue.append(n) swapped: was "11 of 13" (#145 review).
+    # 621 with visited.add(n) and queue.append(n) swapped: was "11 of 13" (#145 review). 621 is a
+    # new bug since #214 (C2), so the case is its fix with the same two lines swapped.
     item = next(a for a in read_fixtures().activities if a.id == 621)
     result = check_activity(
         "fix_the_bug",
         item.config,
         item.solution,
-        {"order": [1, 2, 20, 4, 5, 6, 7, 9, 10, 11, 12, 21, 13]},
+        {"order": [1, 2, 3, 4, 5, 6, 7, 8, 24, 10, 12, 11, 13]},
     )
     assert result.correct
 
@@ -638,6 +645,32 @@ def test_no_mastery_item_explains_its_answer_yet() -> None:
         if a.purpose == "mastery" and (a.solution or {}).get("explanation")
     ]
     assert explained == []
+
+
+def test_every_module_practice_item_explains_its_answer() -> None:
+    """A right answer to a practice item leads with why it is right (FeedbackPanel, #214), so
+    every practice item a module shows, support items included, carries an explanation. Without
+    one, a right answer says only "Correct."."""
+    fixtures = read_fixtures()
+    shown = {
+        segment.activity_id
+        for module in fixtures.modules
+        for segment in module.segments
+        if segment.activity_id is not None
+    }
+    practice = [a for a in fixtures.activities if a.purpose == "practice"]
+    assert practice
+    assert {a.id for a in practice} <= shown
+    unexplained = [a.id for a in practice if not (a.solution or {}).get("explanation")]
+    assert unexplained == []
+
+
+def test_a_trace_may_carry_an_explanation_but_no_answer() -> None:
+    """A trace keeps no stored answer (the engine derives it, FR-6.6), but its explanation is
+    shown when the trace is right, like any other kind's."""
+    validate_activity("trace", TRACE_CONFIG, {"explanation": "B finds A and D first."})
+    with pytest.raises(ValueError, match="Extra inputs"):
+        validate_activity("trace", TRACE_CONFIG, {"order": ["B", "A"]})
 
 
 def test_choose_tests_text_never_names_a_test_by_its_stored_id() -> None:

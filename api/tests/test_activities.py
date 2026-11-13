@@ -238,7 +238,10 @@ def test_coming_back_shows_the_latest_answer_and_its_result(
     right = client.post(f"{url}/attempts", json={"submitted": {"selected": "a"}}).json()
     last = client.get(url).json()["lastAttempt"]
     assert last["submitted"] == {"selected": "a"}
-    assert last["result"] == right  # exactly what the student was shown for it
+    # Exactly what the student was shown for it, but for the points it earned: those are said
+    # once, when it is answered, so coming back doesn't celebrate them again (#214).
+    assert right["points"] == 10
+    assert last["result"] == right | {"points": 0}
     assert last["result"] != wrong
 
 

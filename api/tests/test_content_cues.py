@@ -21,7 +21,7 @@ import json
 import random
 import re
 from collections import Counter
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -181,6 +181,34 @@ def test_a_mastery_parsons_item_is_not_the_practice_one(a: ActivityFixture) -> N
 def test_a_mastery_fill_in_is_not_a_practice_one(a: ActivityFixture) -> None:
     for p in (p for p in PRACTICE if p.kind == "fill_in"):
         assert filled(a) != filled(p), p.id  # 620 was 406 with fewer blanks (#147)
+
+
+@pytest.mark.parametrize(
+    "a", [a for a in MASTERY if a.kind == "fix_the_bug"], ids=lambda a: str(a.id)
+)
+def test_a_mastery_fix_the_bug_item_is_not_a_practice_one(a: ActivityFixture) -> None:
+    """621 was 504 line for line, after a worked example that prints the fix (#214 C2)."""
+    mine = [line["text"] for line in a.config["lines"]]
+    for p in (p for p in PRACTICE if p.kind == "fix_the_bug"):
+        assert mine != [line["text"] for line in p.config["lines"]], p.id
+
+
+@pytest.mark.parametrize(
+    "a", [a for a in MASTERY if a.kind == "choose_tests"], ids=lambda a: str(a.id)
+)
+def test_a_mastery_choose_tests_item_is_not_a_practice_one(a: ActivityFixture) -> None:
+    """623 and 624 were 506 and 507: the same faulty code and half the same test graphs, with the
+    verdicts module 5's feedback had already given (#214 C2)."""
+
+    def graphs(x: ActivityFixture) -> set[tuple[Any, ...]]:
+        return {
+            graph_key(t["directed"], t["vertices"], t["edges"], t["start_vertex"])
+            for t in x.config["tests"]
+        }
+
+    for p in (p for p in PRACTICE if p.kind == "choose_tests"):
+        assert a.config["code"] != p.config["code"], p.id
+        assert len(graphs(a) & graphs(p)) <= 1, p.id
 
 
 def test_a_mastery_question_does_not_restate_a_practice_situation() -> None:
@@ -367,6 +395,25 @@ def test_no_simple_strategy_meets_any_objective(where: str, strategy: str) -> No
 # retired, never reused: an old attempt's `selected` must not be read as new text (the lesson of
 # #117 and #133). Ids made on this branch were never deployed, so they aren't listed.
 RETIRED = {
+    # Objective 3 (#214 C1): new situations whose direction must be worked out, so every option
+    # is new text under a new id.
+    610: {"a", "b", "c"},
+    611: {"a", "b", "c"},
+    612: {"a", "b", "c"},
+    613: {"a", "b", "c"},
+    1301: {"a", "b", "c"},
+    1302: {"a", "b", "c"},
+    1303: {"a", "b", "c"},
+    1304: {"a", "b", "c"},
+    1305: {"a", "b", "c"},
+    316: {"a", "b", "c"},  # a new closing task (#214 C3): routes from E, not a count from A
+    # Objective 1 (#214 C5): examples to classify instead of the definition's own words.
+    601: {"a", "b"},
+    602: {"a", "b"},
+    604: {"a", "b", "c"},
+    1102: {"a", "b"},
+    1103: {"a", "b", "c"},
+    1105: {"a", "b", "c"},
     614: {"a", "b", "c"},  # a new question: every staging id, the key's included
     615: {"c"},
     616: {"c"},
@@ -376,6 +423,9 @@ RETIRED = {
     1404: {"a", "b", "c"},  # a new question: every staging id, the key's included
     1405: {"c"},
     1601: {"a", "b"},
+    # 625 claimed a cycle shows the visited-too-late bug; 623's directed cycle doesn't (round 2
+    # review of #215, content 1). The key is now two routes to one vertex, under a new id.
+    625: {"cycle"},
 }
 
 
@@ -463,8 +513,11 @@ def test_right_corrections_are_not_in_one_place() -> None:
 
 def test_a_retired_correction_id_is_never_reused() -> None:
     """1703's correction 22 was a harmless extra condition; its replacement breaks BFS, a different
-    meaning, so it has a new id (23) and 22 is retired."""
-    assert 22 not in {c["id"] for c in ACTIVITIES[1703].config["corrections"]}
+    meaning, so it has a new id (23) and 22 is retired. 621's corrections went with its old bug."""
+    for activity_id, retired in RETIRED_CORRECTIONS.items():
+        a = ACTIVITIES[activity_id]
+        used = {c["id"] for c in a.config["corrections"]} | {x["id"] for x in a.config["lines"]}
+        assert not retired & used, activity_id
 
 
 # --- The round-2 review's strategy search (#147) --------------------------------------------------
@@ -700,6 +753,67 @@ def test_a_markers_first_word_does_not_predict_vertex_or_edge() -> None:
         assert best_rule <= always_commoner, (where, by_word)
 
 
+# --- Code comments don't fill the blanks (#214 C15, round 2 review of #215) -----------------------
+# What the comments in 205, 291 and 405 said: "an empty list" ([]), "unless v is already in" (not
+# in), "the edge goes from a to b" (a, b), "back from b to a" (not self.directed), "the front of
+# the queue" (popleft).
+STATED = ("empty list", "unless", "from a to b", "back from b", "front of the queue")
+
+
+@pytest.mark.parametrize(
+    "a", [a for a in CONTENT.activities if a.kind == "fill_in"], ids=lambda a: str(a.id)
+)
+def test_no_code_comment_states_a_blank(a: ActivityFixture) -> None:
+    for line in a.config["code"].splitlines():
+        code, _, comment = line.partition("#")
+        assert not (comment and "__" in code), line  # no comment beside a blank
+        assert not any(phrase in comment.lower() for phrase in STATED), line
+
+
+# --- No word or pattern only the keys share (round 2 review of #215, content 5) ----------------
+# Only the right option said "since" in 611-613, only the right one wrote "Directed:" or
+# "Undirected:" in 1302 and 1305, and only the right one said "ring" in 614, 628 and 1402. A
+# student who noticed would pick the key without knowing why. Function words are left out: they
+# carry no meaning a student could read as a cue.
+FUNCTION_WORDS = {"a", "an", "the", "and", "or", "but", "for", "of", "to", "in", "on", "at", "by"}
+FUNCTION_WORDS |= {
+    "it",
+    "its",
+    "is",
+    "are",
+    "be",
+    "so",
+    "as",
+    "if",
+    "not",
+    "no",
+    "yes",
+    "with",
+    "there",
+}
+QUICK_CHECKS = {"quick checks": [a for a in CONTENT.activities if a.purpose == "test_out"]}
+
+
+def cue_tokens(label: str) -> set[str]:
+    """A label's words, each without a plural s, and how many colons it has (a colon after the
+    verdict was 1302's and 1305's pattern)."""
+    words = {w.removesuffix("s") for w in _words(label) if w not in FUNCTION_WORDS}
+    return words | {f"{label.count(':')} colons"}
+
+
+@pytest.mark.parametrize("where", [*CHECK_SETS, *QUICK_CHECKS])
+def test_no_word_or_pattern_is_found_only_in_the_keys(where: str) -> None:
+    items = {**CHECK_SETS, **QUICK_CHECKS}[where]
+    in_keys: Counter[str] = Counter()
+    in_wrong: Counter[str] = Counter()
+    for a in (a for a in items if a.kind == "multiple_choice"):
+        for o in a.config["options"]:
+            right = o["id"] == a.solution["correct"]
+            (in_keys if right else in_wrong).update(cue_tokens(o["label"]))
+    tells = sorted(w for w, n in in_keys.items() if n >= 2 and not in_wrong[w])
+    assert tells == [], where
+
+
 # --- Same id, same meaning: staging's text, kept or listed -----------------------------------------
 
 SNAPSHOT = json.loads((Path(__file__).parent / "data" / "staging_options.json").read_text("utf-8"))
@@ -711,12 +825,7 @@ WORDING_ONLY = {
         (312, "a"),
         (312, "b"),
         (312, "c"),
-        (601, "b"),
-        (602, "a"),
-        (602, "b"),
         (602, "c"),
-        (604, "a"),
-        (604, "b"),
         (605, "b"),
         (615, "a"),
         (615, "b"),
@@ -725,14 +834,10 @@ WORDING_ONLY = {
         (617, "a"),
         (617, "c"),
         (1101, "a"),
-        (1102, "a"),
-        (1103, "a"),
-        (1103, "b"),
-        (1105, "b"),
         (1106, "c"),
-        (1301, "a"),
         (1401, "a"),
         (1401, "b"),
+        (1401, "c"),  # the fewest bus rides, not changes: still the BFS problem (#214 C15)
         (1402, "a"),
         (1403, "a"),
         (1403, "b"),
@@ -744,10 +849,54 @@ WORDING_ONLY = {
     # An objective 2 marker now describes its part instead of naming it; it is the same part,
     # with the same answer, so an earlier pair means what it meant.
     "matching_left": {(a, m) for a in (606, 607, 608, 1202, 1203, 1204) for m in ("1", "2", "3")},
-    "matching_right": set(),
+    # 102's definitions keep their meaning in new words, without the term's own word (#214 C6).
+    # 313's reasons no longer share a word with their situation (round 2 review of #215, content 10).
+    "matching_right": {(102, d) for d in ("d1", "d2", "d3", "d4")} | {(313, "r1"), (313, "r2")},
 }
-# Ids that left an item; they must never come back (the same as RETIRED, plus 1703's correction).
-GONE = {(a, i) for a, ids in RETIRED.items() for i in ids} | {(1703, "22")}
+# Matching items that left an item: 609 and 1205 classify new situations by meaning (#214 C4), and
+# 603 matches three terms instead of "graph" (#214 C5).
+GONE_LEFT = (
+    {
+        (609, i)
+        for i in (
+            "phone-calls",
+            "shared-walls-between-houses",
+            "module-prerequisites",
+            "two-way-radio-links",
+        )
+    }
+    | {(603, "t1")}
+    | {
+        (1205, i)
+        for i in (
+            "emails",
+            "train-tracks-between-stations",
+            "teammates-in-a-project",
+            "a-tournament",
+        )
+    }
+)
+# Right entries that left an item (#214): 603's family tree and stack of plates (C5), 105's random
+# non-edges, now near misses, and 607's and 1204's vertices and edges, which named the places by
+# their initials (C15).
+GONE_RIGHT = (
+    {(603, "e1"), (603, "e3")}
+    | {(105, e) for e in ("AB", "DF", "FG")}
+    | {(607, e) for e in ("vK", "vL", "vM", "vN", "eKL", "eKM", "eLN", "eMN")}
+    | {(1204, e) for e in ("vR", "vS", "vT", "vU", "eRS", "eST", "eTU", "eSR", "eTS", "eUT")}
+)
+# Fix-the-bug corrections that left an item: 621 is a new bug (#214 C2), so all its corrections are.
+RETIRED_CORRECTIONS = {621: {20, 21, 22, 23}, 1703: {22}}
+# Ids that left an item; they must never come back (RETIRED, plus the retired corrections).
+GONE = {(a, i) for a, ids in RETIRED.items() for i in ids} | {
+    (a, str(i)) for a, ids in RETIRED_CORRECTIONS.items() for i in ids
+}
+# Whole activities taken out of the course; their ids must never return with other content. 107,
+# module 1's closing task, matched four situations against one shared list, so each situation's
+# own nouns gave its answer away; it became four questions, 108-111, each with its own options,
+# shown by fresh segments 114-117. Segment 110, which showed 107, is retired with it.
+RETIRED_ACTIVITIES = {107}
+RETIRED_SEGMENTS = {110}
 
 
 def _now(a: ActivityFixture, kind: str) -> dict[str, str]:
@@ -763,6 +912,9 @@ def _now(a: ActivityFixture, kind: str) -> dict[str, str]:
 def test_an_id_from_staging_keeps_its_text_unless_retired_or_listed(kind: str) -> None:
     changed, gone = set(), set()
     for activity_id, staged in SNAPSHOT[kind].items():
+        if int(activity_id) in RETIRED_ACTIVITIES:
+            assert int(activity_id) not in ACTIVITIES
+            continue
         now = _now(ACTIVITIES[int(activity_id)], kind)
         for item_id, text in staged.items():
             if item_id not in now:
@@ -771,7 +923,11 @@ def test_an_id_from_staging_keeps_its_text_unless_retired_or_listed(kind: str) -
                 changed.add((int(activity_id), item_id))
     assert sorted(changed - WORDING_ONLY[kind]) == []
     assert sorted(WORDING_ONLY[kind] - changed) == []  # the list says only what is true
-    assert gone == (GONE if kind == "options" else set())
+    assert gone == {"options": GONE, "matching_left": GONE_LEFT, "matching_right": GONE_RIGHT}[kind]
+
+
+def test_a_retired_segment_id_is_never_reused() -> None:
+    assert not RETIRED_SEGMENTS & {s.id for s in SEGMENTS}
 
 
 def test_counting_the_places_a_marker_names_does_not_meet_objective_2() -> None:
@@ -806,3 +962,134 @@ def test_counting_the_places_a_marker_names_does_not_meet_objective_2() -> None:
         # The classifying item (609, 1205) is given to the strategy as all right.
         right += sum(len(a.config["left"]) for a in mine if "Marker" not in str(a.config["left"]))
         assert not rule.met(right, sum(parts(a) for a in mine)), (where, right)
+
+
+# --- Module 1's closing task (108-111): no surface rule answers it ----------------------------------
+
+CLOSING = [ACTIVITIES[i] for i in (108, 109, 110, 111)]
+MODEL = re.compile(r"Vertices: (?:the )?(.+?)\. Edges: (?:the )?(.+?)\. (Directed|Undirected)\b")
+DIRECTION_STATED = {
+    "Undirected": re.compile(r"both ways|both directions", re.I),
+    "Directed": re.compile(r"n't \w+ back|hasn't|doesn't|one way|no link", re.I),
+}
+
+
+def _model(label: str) -> tuple[str, str, str]:
+    found = MODEL.match(label)
+    assert found, label
+    return found.group(1), found.group(2), found.group(3)
+
+
+def _at(noun: str, prompt: str) -> int | None:
+    """Where the prompt first names this option noun (by its first word's stem), if it does."""
+    found = re.search(rf"\b{re.escape(noun.split()[0][:5])}", prompt, re.I)
+    return found.start() if found else None
+
+
+def _key(a: ActivityFixture) -> tuple[str, str, str]:
+    return _model(next(o["label"] for o in a.config["options"] if o["id"] == a.solution["correct"]))
+
+
+def _stated_direction(a: ActivityFixture) -> str | None:
+    said = [d for d, pattern in DIRECTION_STATED.items() if pattern.search(a.config["prompt"])]
+    return said[0] if len(said) == 1 else None
+
+
+def _by_noun_order(a: ActivityFixture, vertex_first: bool) -> str | None:
+    """A reader who takes the first (or second) noun the prompt names as the vertices, the other
+    as the edges, and copies the direction the prompt states. None when it can't decide."""
+    nouns = {n for o in a.config["options"] for n in _model(o["label"])[:2]}
+    placed = sorted((at, n) for n in nouns if (at := _at(n, a.config["prompt"])) is not None)
+    direction = _stated_direction(a)
+    if len(placed) < 2 or direction is None:
+        return None
+    first, second = placed[0][1], placed[1][1]
+    v, e = (first, second) if vertex_first else (second, first)
+    return next(
+        (o["id"] for o in a.config["options"] if _model(o["label"]) == (v, e, direction)), None
+    )
+
+
+def _shortest(a: ActivityFixture) -> str:
+    """The shortest option. A tie that includes the key counts as the key: a reader choosing among
+    the shortest options can land on it."""
+    least = min(len(o["label"]) for o in a.config["options"])
+    tied = [str(o["id"]) for o in a.config["options"] if len(o["label"]) == least]
+    return a.solution["correct"] if a.solution["correct"] in tied else tied[0]
+
+
+CLOSING_RULES: dict[str, Callable[[ActivityFixture], str | None]] = {
+    "first noun is the vertices, copy the stated direction": lambda a: _by_noun_order(a, True),
+    "second noun is the vertices, copy the stated direction": lambda a: _by_noun_order(a, False),
+    "most like the rest": most_like_the_rest,
+    "nearest to the other options": nearest_to_the_others,
+    "the longest option": longest,
+    "the shortest option": _shortest,
+}
+
+
+@pytest.mark.parametrize("rule", CLOSING_RULES)
+def test_no_surface_rule_answers_module_1s_closing_task(rule: str) -> None:
+    """The first version scored 4 of 4 by "first noun = vertices, second = edges, copy the stated
+    direction", and convergence picked the key in two items (content audit, 13 Nov, section 7)."""
+    pick = CLOSING_RULES[rule]
+    right = [a.id for a in CLOSING if pick(a) == a.solution["correct"]]
+    assert len(right) <= 1, (rule, right)
+
+
+def test_the_closing_task_varies_noun_order_direction_and_key_position() -> None:
+    vertex_first = []
+    for a in CLOSING:
+        v, e, _ = _key(a)
+        at_v, at_e = _at(v, a.config["prompt"]), _at(e, a.config["prompt"])
+        assert at_v is not None, a.id
+        assert at_e is not None, a.id
+        vertex_first.append(at_v < at_e)
+    assert any(vertex_first), vertex_first
+    assert not all(vertex_first), vertex_first
+    # The direction is worked out from what the connection means in at least two items.
+    assert sum(_stated_direction(a) is None for a in CLOSING) >= 2
+    assert len({right_index(a) for a in CLOSING}) >= 3
+    # Each model is offered once: exactly one option is right.
+    for a in CLOSING:
+        models = [_model(o["label"]) for o in a.config["options"]]
+        key = _model(
+            next(o["label"] for o in a.config["options"] if o["id"] == a.solution["correct"])
+        )
+        assert models.count(key) == 1, a.id
+
+
+def test_the_closing_hints_climb_from_a_question_to_the_explained_answer() -> None:
+    """Level 1 asks what to look for, level 2 is a general rule naming none of the item's nouns,
+    level 3 gives part of the answer but not the direction, and level 4 is the answer with why
+    (ID document §7.5). The first version named the vertices and edges at levels 1 and 2."""
+    for a in CLOSING:
+        hints = {h.level: h.body for h in a.hints}
+        v, e, direction = _key(a)
+        nouns = {n for o in a.config["options"] for n in _model(o["label"])[:2]}
+        assert hints[1].endswith("?"), a.id
+        assert not any(_at(n, hints[2]) is not None for n in nouns), (a.id, hints[2])
+        assert direction.lower() not in hints[3].lower(), a.id
+        assert hints[4].startswith(f"Answer: Vertices: {v}. Edges: {e}. {direction}."), a.id
+        assert len(re.findall(r"[.!?](?:\s|$)", hints[4])) >= 5, a.id  # the answer, then why
+
+
+def test_the_handshake_item_agrees_with_the_video_on_mutual_connections() -> None:
+    """Segment 108 teaches that a mutual follow is two arrows, so still directed. The handshake is
+    undirected because it can't happen one way only: the reverse always exists. That is the one
+    question module 1 teaches for direction ("must the reverse exist too?", 193). The second version
+    counted "acts", which taught nowhere else and sounded like 193's trap, "two people are involved
+    in each act" (round 2 review of #213)."""
+    video = next(s for s in SEGMENTS if s.id == 108)
+    assert "two arrows" in (video.body or "")
+    a = ACTIVITIES[111]
+    assert _key(a)[2] == "Undirected"
+    assert "each has shaken the other" not in a.config["prompt"]
+    two_arrows = next(o["id"] for o in a.config["options"] if "arrow each way" in o["label"])
+    for text in (a.solution["feedback"][two_arrows], a.solution["explanation"]):
+        assert "two arrows that both happen to exist" in text, text
+    assert "reverse" in a.solution["feedback"][two_arrows]
+    for where, text in shown_text(a):
+        assert not {"act", "acts", "shared", "together"} & set(_words(text)), (where, text)
+    # Not having shaken hands is not the same as not having met.
+    assert not any("met" in _words(t) for _, t in shown_text(a))

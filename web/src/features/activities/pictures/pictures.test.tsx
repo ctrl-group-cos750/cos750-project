@@ -22,7 +22,7 @@ type FixtureActivity = {
 const fixture = JSON.parse(
   readFileSync(`${process.cwd()}/../api/app/seed/module-1.json`, 'utf8'),
 ) as {
-  modules: { segments: { id: number; body?: string }[] }[]
+  modules: { segments: { id: number; title: string; body?: string; activity_id?: number }[] }[]
   activities: FixtureActivity[]
 }
 const activityById = (id: number) => fixture.activities.find((a) => a.id === id)!
@@ -79,8 +79,12 @@ describe('the situations match the module 1 fixture', () => {
     for (const id of PICTURED_ACTIVITY_IDS) expect(activityById(id).purpose).toBe('practice')
   })
 
-  it('has no picture for the closing task, which would hint that stations are vertices', () => {
-    expect(PICTURED_ACTIVITY_IDS).not.toContain(107)
+  it('has no picture for the closing task, which would show which things are the vertices', () => {
+    const closing = fixture.modules[0].segments
+      .filter((s) => s.title.startsWith('Closing task'))
+      .map((s) => s.activity_id!)
+    expect(closing).toHaveLength(4)
+    for (const id of closing) expect(PICTURED_ACTIVITY_IDS).not.toContain(id)
   })
 
   it('says each place is a vertex, since the Green and the Fountain are not buildings', () => {

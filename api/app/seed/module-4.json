@@ -924,7 +924,8 @@
             12
           ],
           13
-        ]
+        ],
+        "explanation": "seen and queue both start with the start vertex, before the loop. Each round takes the vertex at the front with popleft, adds it to order, and adds each neighbour not seen yet, marking it seen as it joins so it never joins twice. The new names don't change the algorithm: seen does the job of visited, and current the job of v."
       },
       "hints": [
         {
@@ -975,6 +976,7 @@
       },
       "solution": {
         "correct": "c",
+        "explanation": "bfs sorts each vertex's neighbours, so K adds L before N, even though the edge K–N was added first. L then finds M, so when N leaves, M has already been found and isn't added twice. M finds P last.",
         "feedback": {
           "a": "Not quite. That takes K's neighbours in the order their edges were added, N first. bfs loops over sorted(graph.adjacency[v]), so L joins the queue before N. Sort each vertex's neighbours, then follow the queue.",
           "b": "Not quite. That goes deep: after L it goes on to M, two edges from K, before N, which is only one edge away. BFS takes the vertex at the front of the queue, and N joined before M. Follow the queue one vertex at a time.",

@@ -921,6 +921,7 @@
           "e4": "trav",
           "e5": "alg"
         },
+        "explanation": "An algorithm is a list of steps that does something, and a data structure stores information. Huts joined by trails are vertices joined by edges, so they are a graph, and the ranger following the trails to every hut is a graph traversal.",
         "feedback": {
           "e1": "Not quite. Working out change is a list of steps that does something, and it has no vertices or edges. Ask the worked example's first question again: does it store data, or does it do something?",
           "e2": "Not quite. The huts and trails are stored as things joined by connections: the huts are vertices and the trails are edges. Ask the second question: is it about vertices joined by edges? Then use the special name for that kind of data structure.",
@@ -1022,6 +1023,7 @@
           "4": "eDW",
           "5": "eGW"
         },
+        "explanation": "A place is a vertex, named by its letter, and a road is an edge, named by the letters of the two places it joins. The tractor can use each road either way, so the road from the gate to the windmill is edge G–W.",
         "feedback": {
           "1": "Not quite. The dam is a place, so it is a vertex, named by its letter. Ask: is this a place, or a road between two places? Then use the dam's letter.",
           "2": "Not quite. A road is an edge, named by the letters of the two places at its ends. Find the letters of the barn and the gate, then find that edge.",
@@ -1094,6 +1096,7 @@
           "borders": "undirected",
           "dams": "directed"
         },
+        "explanation": "A connection that must also hold the other way round is undirected: cousins and shared borders work both ways. Lending a book and water flowing downhill go one way only, so those graphs are directed.",
         "feedback": {
           "cousins": "Not quite. Being cousins goes both ways: if Sizwe is Tumi's cousin, Tumi is Sizwe's cousin, so the edges are plain lines with no arrows. Check how each edge is written before you choose.",
           "lend": "Not quite. Lending goes one way: Kabelo lent a book to Mpho, but Mpho didn't lend one back. Ask: if this connection exists, must the reverse one exist too?",
@@ -1181,6 +1184,7 @@
           "s3": "m5",
           "s4": "m6"
         },
+        "explanation": "The things are the vertices and the links between them are the edges, so the taxi ranks, children, songs and puzzle pieces are the vertices. Taxi routes and pieces that fit work both ways, so those graphs are undirected. An invitation and “plays straight after” work one way only, so those graphs are directed.",
         "feedback": {
           "s1": "Not quite. The taxi ranks are the places, so they are the vertices, and the routes joining them are the edges. Taxis drive each route both ways, so it is undirected. Watch out for the description that swaps the places and the routes.",
           "s2": "Not quite. The children are the people, so they are the vertices, and each invitation is an edge. One child can invite another without being invited back, so it is directed, even though two children are involved. Ask: if this edge exists, must the reverse one exist too?",

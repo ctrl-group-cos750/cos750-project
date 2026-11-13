@@ -30,8 +30,7 @@ def test_each_template_shows_what_the_guide_asks_for(kind: str) -> None:
     assert activity.objective_id is not None
     # Feedback on a right answer, and a reason for wrong ones where the kind takes them
     # (Parsons and trace tables are explained line by line and row by row by the checker).
-    if kind != "trace":
-        assert activity.solution.get("explanation")
+    assert activity.solution.get("explanation")
     if kind not in ("trace", "parsons"):
         assert activity.solution.get("feedback")
 

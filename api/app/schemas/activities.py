@@ -365,6 +365,11 @@ class TraceConfig(ApiModel):
     start_vertex: str
 
 
+class TraceSolution(Explained):
+    """Server-only: a trace keeps no answer, because the server derives it from the graph with
+    the BFS engine (FR-6.6). It may still carry the explanation shown when the trace is right."""
+
+
 # A vertex label as the student types it, at most TRACE_LABEL characters. The activity routes also
 # refuse a label that isn't in the graph (app/services/submissions.py).
 TracedVertex = Annotated[str, Field(max_length=TRACE_LABEL, pattern=NO_CONTROL)]

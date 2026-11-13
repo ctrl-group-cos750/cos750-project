@@ -283,7 +283,7 @@ export function ModulePage() {
   return (
     <section
       ref={contentRef}
-      className="mx-auto grid w-full min-w-0 max-w-3xl gap-6 has-[[data-two-column]]:max-w-[84rem]"
+      className="mx-auto grid w-full min-w-0 max-w-3xl gap-6 has-[[data-two-column]]:max-w-[100rem]"
       aria-label={`Module ${module.number}: ${module.title}`}
     >
       {/* Header */}
@@ -294,6 +294,8 @@ export function ModulePage() {
           </Link>
           {module.canRestart && (
             <RestartModule
+              // Remounted after each restart, so its "Restart this module?" question closes.
+              key={restarts}
               pending={restart.isPending}
               error={restart.error?.message ?? null}
               onRestart={() => restart.mutate()}

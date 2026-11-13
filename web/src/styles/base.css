@@ -11,11 +11,12 @@
   box-sizing: border-box;
 }
 
-/* Everything is sized in rem, so the whole app grows with this: 16 px on a laptop, up to 20 px on
- * a large desktop screen, so a 4K monitor isn't a page of thumbnails with empty margins. */
+/* Everything is sized in rem, so the whole app grows with this: 16 px on a laptop, 17 px at
+ * 1920 px and about 23 px at 3840 px, so a 4K monitor isn't a page of thumbnails with empty
+ * margins. */
 html {
   -webkit-text-size-adjust: 100%;
-  font-size: clamp(100%, 80% + 0.25vw, 125%);
+  font-size: clamp(100%, 70% + 0.3vw, 150%);
 }
 
 /* Outside any layer so these document defaults apply to the legacy component CSS too. */

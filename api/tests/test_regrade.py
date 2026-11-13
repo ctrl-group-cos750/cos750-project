@@ -290,8 +290,8 @@ def test_a_student_answering_during_the_regrade_waits_and_both_succeed(
     db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The re-grade locks a student before it touches their rows. A student answering 619 at that
-    moment (their attempt references the locked user row) waits, then finds the points already
-    given: no deadlock, no duplicate points (review of #145, /tmp/a4r2/race.py)."""
+    moment (their attempt references the locked user row) waits, then both succeed: no deadlock,
+    and no points paid early or twice (review of #145, /tmp/a4r2/race.py)."""
     load(db)
     one = student(db, 1)
     stored_as_on_staging(db, one, db.get_one(Activity, 619), EQUIVALENT)
@@ -343,7 +343,9 @@ def test_a_student_answering_during_the_regrade_waits_and_both_succeed(
         rows = session.scalars(
             select(PointsEntry).where(PointsEntry.user_id == one, PointsEntry.ref == "activity:619")
         ).all()
-        assert len(rows) == 1
+        # None yet, and never two: a module 6 item's points wait for the end of the check, which
+        # this student hasn't finished (review of 13 Nov on #221).
+        assert rows == []
         assert state(session, one, 6) == "not_attempted"  # the other module 6 items: unanswered
 
 

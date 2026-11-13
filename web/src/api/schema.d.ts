@@ -555,7 +555,7 @@ export interface paths {
      *     start, and every question, retrieval question and video checkpoint in it shows unanswered,
      *     with hints from level 1 again. The module stays complete and earned points and badges stay;
      *     earlier answers stay recorded for the evaluation but aren't shown. 404 if there is no such
-     *     module, 403 while it is locked, 409 for the mastery check or a module not started.
+     *     module, 403 while it is locked, 409 for the mastery check or a module not finished.
      */
     post: operations['restart_api_modules__module_id__restart_post']
     delete?: never
@@ -575,7 +575,8 @@ export interface paths {
      * Get Video
      * @description Everything the player needs in one call (FR-3): media and captions paths, the transcript,
      *     and each checkpoint with its activity (without the answer) and whether this student has
-     *     passed it. Answer a checkpoint with `POST /api/activities/{activityId}/attempts`.
+     *     passed it (since the module's restart, if they restarted it). Answer a checkpoint with
+     *     `POST /api/activities/{activityId}/attempts`.
      *
      *     403 while the segment that plays the video is in a locked module or a closed review path
      *     (#137); a video on no segment yet is open. Its checkpoint questions follow the video.
@@ -776,10 +777,15 @@ export interface paths {
      *
      *     - `attempts`: each answer; `submitted` and `detail` are what was answered and the per-part
      *       result, as JSON.
-     *     - `hints`: each hint shown.
+     *     - `hints`: each hint shown. `round` is which time through its module (0, then one more for
+     *       each restart, app/services/restart.py); `after_attempt` is the newest attempt id when it
+     *       was shown, so it came before exactly that student's attempts with a higher `attempt_id`.
      *     - `events`: the timeline (app/services/events.py): videos started and finished, checkpoints
-     *       reached, segments viewed, hints shown, results changing, modules completed; `payload` as JSON.
-     *       Segment views and module completions give time per segment and per module.
+     *       reached, segments viewed, hints shown, results changing, modules completed and restarted;
+     *       `payload` as JSON. Segment views and module completions give time per segment and per
+     *       module. Each `module_restarted` carries its `round` and `after_attempt`: a student's
+     *       attempts at that module's activities with an id above one restart's `after_attempt`, and
+     *       not above the next one's, are that round's.
      *     - `objective_results`: each student's current result per objective, with the attempts it was
      *       decided from (`evidence`).
      */
@@ -3379,7 +3385,7 @@ export interface operations {
           'application/json': components['schemas']['ModuleDetailOut']
         }
       }
-      /** @description The mastery check, or a module not started yet. */
+      /** @description The mastery check, or a module not finished yet. */
       409: {
         headers: {
           [name: string]: unknown

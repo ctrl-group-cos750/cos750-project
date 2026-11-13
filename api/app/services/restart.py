@@ -8,8 +8,14 @@ open), and the points and badges already earned stay, because each is only ever 
 evaluation data (FR-10), and the restart itself is logged.
 
 How: `ModuleProgress.restarted_after_attempt` holds the newest attempt id at the restart, and the
-module page, its activities and their hints only count attempts after it (`after`). Hint views carry a `round`, one more each time
-the module is restarted, so each hint level is still shown once per round.
+module page, its activities, their hints and its videos' checkpoints only count attempts after it
+(`after`). Hint views carry a `round`, one more each time the module is restarted, so each hint
+level is still shown once per round, and the newest attempt id when shown (`after_attempt`), so
+hint 3 or 4 counts against a later answer (even one after a restart) but never an earlier one.
+
+For the evaluation, rounds are recovered from the data alone: the hints CSV has each view's
+`round`, and each `module_restarted` event carries its `round` and `after_attempt`, so a student's
+attempts at the module's activities between two restarts' `after_attempt` are that round's.
 
 The mastery check (module 6) can't be restarted: only a student's first answer counts there
 (FR-7.1), so redoing it would change nothing they could see, and the review paths are the way to
@@ -102,6 +108,15 @@ def restart_module(session: Session, user_id: int, module_id: int) -> ModuleProg
     row.restarted_after_attempt = session.scalar(select(func.max(Attempt.id))) or 0
     row.restarts += 1
     row.current_segment_position = 0
-    log_event(session, user_id, "module_restarted", f"module:{module_id}", {"round": row.restarts})
+    # Every restart's boundary stays in the event log (the row keeps only the latest): attempts at
+    # this module's activities with an id above one restart's `after_attempt`, and not above the
+    # next one's, are that round's (FR-10).
+    log_event(
+        session,
+        user_id,
+        "module_restarted",
+        f"module:{module_id}",
+        {"round": row.restarts, "after_attempt": row.restarted_after_attempt},
+    )
     session.flush()
     return row

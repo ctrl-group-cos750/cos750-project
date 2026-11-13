@@ -122,14 +122,14 @@ def save_module_position(
 
 @router.post(
     "/{module_id}/restart",
-    responses={409: {"description": "The mastery check, or a module not started yet."}},
+    responses={409: {"description": "The mastery check, or a module not finished yet."}},
 )
 def restart(module_id: RowId, user: CurrentUser, session: DbSession) -> ModuleDetailOut:
     """Start the module again to redo its questions (app/services/restart.py): it opens at its
     start, and every question, retrieval question and video checkpoint in it shows unanswered,
     with hints from level 1 again. The module stays complete and earned points and badges stay;
     earlier answers stay recorded for the evaluation but aren't shown. 404 if there is no such
-    module, 403 while it is locked, 409 for the mastery check or a module not started."""
+    module, 403 while it is locked, 409 for the mastery check or a module not finished."""
     try:
         get_module_detail(session, user.id, module_id)  # 404 or 403 first
         restart_module(session, user.id, module_id)

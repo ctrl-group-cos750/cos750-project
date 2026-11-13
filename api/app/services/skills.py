@@ -70,7 +70,6 @@ from sqlalchemy.orm import Session
 from app.models import Activity, Attempt, Checkpoint, Module, ModuleProgress, Segment, Video
 from app.services import quick_check, rewards
 from app.services.mastery import MASTERY_MODULE, State, evaluate
-from app.services.rewards import SUPPORT_LEVEL
 
 Medal = Literal["gold", "silver", "bronze"]
 
@@ -188,18 +187,21 @@ def _answers(session: Session, user_id: int, ids: Collection[int]) -> _Answers:
     4, and right without them at the first answer."""
     if not ids:
         return _Answers(set(), set(), set(), set())
+    # "Without hint 3 or 4" is the rewards' rule (rewards.real_work): a hint 3 or 4 seen before
+    # the answer in any round counts, so restarting a module after opening every hint doesn't
+    # turn the answers the hints gave into a silver or gold medal (13 Nov review).
     rows = session.execute(
-        select(Attempt.activity_id, Attempt.correct, Attempt.hint_level)
+        select(Attempt.activity_id, Attempt.correct, rewards.real_work().label("real"))
         .where(Attempt.user_id == user_id, Attempt.activity_id.in_(ids))
         .order_by(Attempt.id)
     ).all()
     first: dict[int, bool] = {}
-    for activity, correct, hint in rows:
-        first.setdefault(activity, bool(correct) and hint < SUPPORT_LEVEL)
+    for activity, correct, real in rows:
+        first.setdefault(activity, bool(correct) and bool(real))
     return _Answers(
         answered=set(first),
         right={a for a, correct, _ in rows if correct},
-        on_own={a for a, correct, hint in rows if correct and hint < SUPPORT_LEVEL},
+        on_own={a for a, correct, real in rows if correct and real},
         first_time={a for a, ok in first.items() if ok},
     )
 
@@ -345,32 +347,14 @@ def secure_objectives(
     session: Session, user_id: int, only: Collection[int] | None = None
 ) -> set[int]:
     """The objectives this student is secure in, in practice (`level_for`), of `only` if given,
-    for the Practised badge. Stricter than the profile's count in one way: "on your own" is real
-    work (rewards.real_work), so an answer given away by hint 3 or 4 before a module's restart
+    for the Practised badge: the skill profile's count, without the rest of it. "On your own" is
+    real work (`_answers`), so an answer given away by hint 3 or 4 before a module's restart
     doesn't count after it, as for every other reward (13 Nov audit)."""
     items = [a for a in _practice(session) if a.objective_id is not None]
     if only is not None:
         items = [a for a in items if a.objective_id in only]
-    ids = [a.id for a in items]
-    if not ids:
-        return set()
-    answered_ids = set(
-        session.scalars(
-            select(Attempt.activity_id).where(
-                Attempt.user_id == user_id, Attempt.activity_id.in_(ids)
-            )
-        )
-    )
-    own_ids = set(
-        session.scalars(
-            select(Attempt.activity_id).where(
-                Attempt.user_id == user_id,
-                Attempt.activity_id.in_(ids),
-                Attempt.correct.is_(True),
-                rewards.real_work(),
-            )
-        )
-    )
+    got = _answers(session, user_id, [a.id for a in items])
+    answered_ids, own_ids = got.answered, got.on_own
     secure = set()
     for objective in {cast(int, a.objective_id) for a in items}:
         mine = [a.id for a in items if a.objective_id == objective]

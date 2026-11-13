@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import Attempt, HintView, ModuleProgress, UserBadge
@@ -120,8 +120,17 @@ def answer(client: TestClient, activity: int, body: dict[str, Any] = RIGHT) -> d
 
 
 def see_hints(db: Session, user_id: int, activity: int, up_to: int) -> None:
+    """Hints opened now: after the student's answers so far, as the hints route records them
+    (`after_attempt`), so they count only against later answers (rewards.real_work)."""
+    after = db.scalar(
+        select(func.coalesce(func.max(Attempt.id), 0)).where(
+            Attempt.user_id == user_id, Attempt.activity_id == activity
+        )
+    )
     for level in range(1, up_to + 1):
-        db.add(HintView(user_id=user_id, activity_id=activity, level=level))
+        db.add(
+            HintView(user_id=user_id, activity_id=activity, level=level, after_attempt=after or 0)
+        )
     db.commit()
 
 
@@ -487,3 +496,21 @@ def test_each_objective_names_the_modules_that_practise_it(
     log_in(client)
     modules = {s["id"]: s["modules"] for s in profile(client)["objectives"]}
     assert modules == {1: [1], 2: [1]}  # not module 6: its items aren't practice
+
+
+def test_hints_before_a_restart_still_count_for_the_medal(
+    client: TestClient, db: Session, loaded: None
+) -> None:
+    """Every hint opened on every item, the module finished, restarted, then every answer right:
+    the hints gave those answers away, so no silver or gold (13 Nov review, as for points)."""
+    user = log_in(client)
+    for activity in (101, 102, 103, 104):
+        see_hints(db, user, activity, 4)
+        answer(client, activity, WRONG)
+    complete(db, user, 1)
+    assert client.post("/api/modules/1/restart").status_code == 200
+    for activity in (101, 102, 103, 104):
+        answer(client, activity)
+    medal = next(m for m in profile(client)["modules"] if m["moduleId"] == 1)
+    assert (medal["medal"], medal["onYourOwn"], medal["firstTime"]) == (None, 0, 0)
+    assert objective_badges(client) == {}  # not secure in practice either: no Practised

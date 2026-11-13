@@ -327,7 +327,7 @@
       "purpose": "test_out",
       "objective_id": 5,
       "config": {
-        "prompt": "On the campus graph from A, after C is processed, what is in the queue (front first)?",
+        "prompt": "The campus graph has the walkways A–C, A–E, B–C, B–G, C–F, D–E and E–F. BFS starts at A and takes neighbours in alphabetical order. After C is processed, what is in the queue (front first)?",
         "options": [
           {
             "id": "b",
@@ -441,33 +441,33 @@
       "purpose": "test_out",
       "objective_id": 8,
       "config": {
-        "prompt": "An undirected graph has the edges P–Q, P–R, Q–S, R–T, S–U and T–U. What is the fewest number of edges from P to U?",
+        "prompt": "An undirected graph has the edges D–E, D–G, E–H, G–K, G–L, H–L and K–L. What is the fewest number of edges from D to L?",
         "options": [
           {
             "id": "a",
-            "label": "2"
+            "label": "1"
           },
           {
             "id": "b",
-            "label": "3"
+            "label": "2"
           },
           {
             "id": "c",
-            "label": "4"
+            "label": "3"
           },
           {
             "id": "d",
-            "label": "6"
+            "label": "7"
           }
         ]
       },
       "solution": {
-        "explanation": "BFS from P finds Q and R at one edge, S and T at two, and U at three. BFS reaches each vertex by a route with the fewest edges, so three is the fewest.",
+        "explanation": "BFS from D finds E and G at one edge, then H, K and L at two: G finds L. BFS reaches each vertex by a route with the fewest edges, so two is the fewest.",
         "correct": "b",
         "feedback": {
-          "a": "No neighbour of P is joined to U. Count the rings BFS finds from P.",
-          "c": "There is a shorter route: P–Q–S–U takes three edges.",
-          "d": "6 is the number of edges in the whole graph. Count only the edges on one route."
+          "a": "No edge joins D to L: D's only neighbours are E and G. Count the rings BFS finds from D.",
+          "c": "D–E–H–L is a route, but there is a shorter one: G is joined to L. Count the rings BFS finds from D.",
+          "d": "7 is the number of edges in the whole graph. Count only the edges on one route."
         }
       }
     },

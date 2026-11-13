@@ -423,6 +423,9 @@ RETIRED = {
     1404: {"a", "b", "c"},  # a new question: every staging id, the key's included
     1405: {"c"},
     1601: {"a", "b"},
+    # 625 claimed a cycle shows the visited-too-late bug; 623's directed cycle doesn't (round 2
+    # review of #215, content 1). The key is now two routes to one vertex, under a new id.
+    625: {"cycle"},
 }
 
 

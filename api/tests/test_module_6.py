@@ -657,6 +657,23 @@ def test_the_tests_include_a_disconnected_graph_and_a_graph_with_a_cycle() -> No
         assert "two-islands" in exposed
 
 
+def test_the_recall_item_names_two_routes_not_a_cycle() -> None:
+    """625 said "a graph containing a cycle" shows the visited-too-late bug, which set the student
+    up to get 623 wrong: there a directed cycle passes and a fork-join with no cycle fails (round 2
+    review of #215, content 1)."""
+    recall = ACTIVITIES[625]
+    key = next(
+        o["label"] for o in recall.config["options"] if o["id"] == recall.solution["correct"]
+    )
+    assert "two routes" in key
+    assert "cycle" not in key
+    verdicts = ACTIVITIES[623]
+    fails = set(verdicts.solution["exposing"])
+    cyclic = {t["id"] for t in verdicts.config["tests"] if t["id"] in ("cycle", "back-to-start")}
+    assert "fork-join" in fails  # no cycle, two routes to D
+    assert cyclic - fails == {"back-to-start"}  # a cycle, one route to each vertex
+
+
 def test_every_hidden_test_graph_runs_on_the_engine() -> None:
     for directed, vertices, edges, start in HIDDEN.values():
         assert run_bfs(scenario(directed, vertices, edges, start)).order

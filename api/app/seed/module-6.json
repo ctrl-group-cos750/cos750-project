@@ -2200,28 +2200,33 @@
       "module_id": 6,
       "purpose": "retrieval",
       "config": {
-        "prompt": "A BFS marks a vertex as found only when it leaves the queue. Which test graph would show that it can visit a vertex twice?",
+        "prompt": "A BFS marks a vertex as found only when it leaves the queue. Which kind of test graph would show that it can visit a vertex twice?",
         "options": [
           {
             "id": "single",
             "label": "A graph with one vertex and no edges"
           },
           {
-            "id": "cycle",
-            "label": "A graph containing a cycle"
+            "id": "routes",
+            "label": "A graph where one vertex can be reached along two routes"
           },
           {
             "id": "line",
             "label": "A straight path with no branches"
+          },
+          {
+            "id": "islands",
+            "label": "A graph in two pieces, with no edge between them"
           }
         ]
       },
       "solution": {
-        "explanation": "Correct. In a graph with a cycle, some vertex can be reached along two routes, so a second vertex can find it while it still waits in the queue, and this BFS adds it twice.",
-        "correct": "cycle",
+        "explanation": "Correct. If a vertex can be reached along two routes, a second vertex can find it while it still waits in the queue, and this BFS adds it again. What matters is the two routes, not whether the graph has a cycle.",
+        "correct": "routes",
         "feedback": {
           "single": "Not quite. With one vertex there is nothing to find twice. Look for a graph where two vertices can both find the same vertex.",
-          "line": "Not quite. On a path there is only one route to each vertex, so this bug can't add one twice. Look for a graph where two vertices can both find the same vertex."
+          "line": "Not quite. On a path there is only one route to each vertex, so this bug can't add one twice. Look for a graph where two vertices can both find the same vertex.",
+          "islands": "Not quite. Two separate pieces expose a different bug, one that adds vertices BFS can't reach. Each piece here could still have one route to each vertex. Look for a graph where two vertices can both find the same vertex."
         }
       },
       "hints": [
@@ -2235,11 +2240,11 @@
         },
         {
           "level": 3,
-          "body": "That needs two routes to the same vertex. In an undirected graph, two routes to a vertex mean a cycle."
+          "body": "That needs two vertices that can both find the same vertex, while it still waits in the queue."
         },
         {
           "level": 4,
-          "body": "Answer: a graph containing a cycle."
+          "body": "Answer: a graph where one vertex can be reached along two routes."
         }
       ]
     },

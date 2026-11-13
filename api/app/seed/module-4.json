@@ -270,7 +270,7 @@
         ]
       },
       "solution": {
-        "explanation": "bfs takes each vertex's neighbours in sorted order, whatever order the edges were added in, so A adds B then C. D is found from B and is already visited when C looks at it.",
+        "explanation": "bfs takes each vertex's neighbours in sorted order, whatever order the edges were added in, so A adds B then C. D is found from B, so it is already in visited when C looks at it, and C doesn't add it again.",
         "correct": "b",
         "feedback": {
           "a": "bfs sorts each vertex's neighbours, so B comes before C whichever edge was added first.",
@@ -282,38 +282,38 @@
     {
       "id": 451,
       "kind": "multiple_choice",
-      "title": "BFS on a directed graph",
+      "title": "Building bfs: the neighbour loop",
       "module_id": 4,
       "purpose": "test_out",
       "objective_id": 6,
       "config": {
-        "prompt": "The directed graph has the edges P → Q, Q → R, R → P and S → P. What does bfs(g, \"P\") return?",
+        "prompt": "You are writing the module's bfs. Before the loop: visited = {start}, queue = deque([start]) and order = []. In the loop: v = queue.popleft(), then order.append(v). Then, for each n in sorted(graph.adjacency[v]), what should happen?",
         "options": [
           {
-            "id": "a",
-            "label": "[\"P\", \"Q\", \"R\", \"S\"]"
+            "id": "e",
+            "label": "If n is not in visited: append n to the queue, and add it to visited when it leaves."
           },
           {
-            "id": "b",
-            "label": "[\"P\", \"Q\", \"R\"]"
+            "id": "g",
+            "label": "Add n to visited, then append n to the queue, with no if."
           },
           {
-            "id": "c",
-            "label": "[\"P\", \"Q\", \"R\", \"P\"]"
+            "id": "h",
+            "label": "If n is not in visited: add n to visited, then append n to order."
           },
           {
-            "id": "d",
-            "label": "[\"P\", \"S\", \"Q\", \"R\"]"
+            "id": "f",
+            "label": "If n is not in visited: add n to visited, then append n to the queue."
           }
         ]
       },
       "solution": {
-        "explanation": "From P the arrows lead to Q, then to R. R's arrow leads back to P, which is already visited. No arrow leads to S, so BFS from P never reaches it.",
-        "correct": "b",
+        "explanation": "A neighbour BFS hasn't found yet is marked found and joins the back of the queue in the same step. So the if skips it from then on, even while it is still waiting, and no vertex joins the queue twice.",
+        "correct": "f",
         "feedback": {
-          "a": "S → P goes into P, not out of it. No arrow leads from P's side to S.",
-          "c": "P is already in visited, so R doesn't add it again.",
-          "d": "BFS can only follow arrows forwards. S → P can't be followed from P."
+          "e": "Not quite. A vertex waiting in the queue isn't in visited yet, so a second neighbour can add it again: on the graph A–B, A–C, B–D, C–D, D is visited twice. Mark n as found when it joins.",
+          "g": "Not quite. Without the if, every neighbour joins again, even A, which has already left: on A–B the queue never empties. Only a neighbour not yet found should join.",
+          "h": "Not quite. n is marked found but never joins the queue, so BFS never takes it out to look at its neighbours: it stops after the start's neighbours. n has to join the queue."
         }
       }
     },

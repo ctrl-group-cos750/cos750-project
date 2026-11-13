@@ -968,7 +968,7 @@ def test_counting_the_places_a_marker_names_does_not_meet_objective_2() -> None:
 
 CLOSING = [ACTIVITIES[i] for i in (108, 109, 110, 111)]
 MODEL = re.compile(r"Vertices: (?:the )?(.+?)\. Edges: (?:the )?(.+?)\. (Directed|Undirected)\b")
-STATED = {
+DIRECTION_STATED = {
     "Undirected": re.compile(r"both ways|both directions", re.I),
     "Directed": re.compile(r"n't \w+ back|hasn't|doesn't|one way|no link", re.I),
 }
@@ -991,7 +991,7 @@ def _key(a: ActivityFixture) -> tuple[str, str, str]:
 
 
 def _stated_direction(a: ActivityFixture) -> str | None:
-    said = [d for d, pattern in STATED.items() if pattern.search(a.config["prompt"])]
+    said = [d for d, pattern in DIRECTION_STATED.items() if pattern.search(a.config["prompt"])]
     return said[0] if len(said) == 1 else None
 
 

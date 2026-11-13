@@ -738,8 +738,39 @@ If the pilot shows that our choices do not work as intended, the first thing we 
 | 1 Nov 2026 | "okay, for the se doc, what is the next thing we need to add/ make desisions on or correct" | SE document: alignment with this document |
 | 1 Nov 2026 | "yes lets carry on with the nes things we need to do in the se doc. ask me questions if the asnswer requires inout" | SE document: testing strategy and diagrams |
 | 1 Nov 2026 | "okay lets continue building it. ask me questions you need imput on" | SE document: stakeholders, wireframes, references; the Sprint 0 record |
+| 2 Nov 2026 | "okay now lets start on the login logout work." | Registration, login and logout (FR-1) |
+| 2 Nov 2026 | "lets try see if we can break it. try any sort of attack to bypass the auth or steal someones auth / impernonate someone else." | Security testing of authentication, repeated after each fix (SE §14.6) |
+| 2 Nov 2026 | "don have a list of passwords to not accept rather just have password rules and ui for password rules." | Password rules and the checklist on the register page (NFR-S1) |
+| 3 Nov 2026 | "what if a student tries to kill the sever by running an infinate loop or loading pakages or things like this. how do we stop this." | The code sandbox's limits, later removed (SE §15.3) |
+| 3 Nov 2026 | "this is too formal i want something like, hi guys, i have been working on the code sandbox today and i think we should rather pivit from it because xyz and rtaher do abc" | Drafting the team message proposing to drop the sandbox; the team decided |
+| 3 Nov 2026 | "first remove all of the code from staging regard it, save in in a local stash incase i want to bring it back. then update the 2 docs to record the change." | Removing the code runner; recording the decision in both documents |
+| 3 Nov 2026 | "i think we should use some sort of inline documentation or something." | Docstrings and the OpenAPI schema as code documentation (NFR-M2) |
+| 5 Nov 2026 | "build the staff portal on the navbar, in here it will be where all the staff can setup everything, for example the videos configuration page." | The staff portal (FR-10, FR-11) |
+| 5 Nov 2026 | "begin research on how badges and achievements work in educational software development. based on the lecture slides additional papers research in the field, the bible app, duolingo, khan academy etc." | Research for the badge design (ID document, Motivation) |
+| 5 Nov 2026 | "lets build what is decided then. How are we going to get icons or images for the badges, lets geneare the images for the 12 badges" | The badge artwork and the rewards feature (FR-9) (GUI) |
+| 6 Nov 2026 | "can we not generate a better colour pallete based on the logo for readbility? in both darkmode and light mode." | Colour palette options for readability, given to the frontend developer (GUI) |
+| 7 Nov 2026 | "lets generate all of the screens based on his new ui chnages" | Screen mock-ups for the SE document's wireframes (GUI) |
+| 7 Nov 2026 | "do we have a ticket for the user profile/ dropdown. this is where the pagedges section will be wheere the user can set a profile picture chnage password see their stats etc" | The profile page and account menu (FR-1.5–FR-1.7) (GUI) |
+| 8–10 Nov 2026 | "review pr 105", "begin the review on #122" and similar, then "make the chnages and push to the branch" | Drafting reviews of team members' pull requests; the reviewer read, edited and posted them |
+| 11 Nov 2026 | "What is still assigned to me and not in staging yet? All of this needs to be resolved asap." | Navigation, mastery-check rules, review paths that teach again (#146, #144, #148); module 1's drawn graph answers (#155); evidence-based content edits and support items (#150, #173) |
+| 12 Nov 2026 | "look at savys branch and ours. compare them to ensure the final version is as rock solida as possible" | Combining the two end-to-end test branches (#35) |
+| 12 Nov 2026 | "before we waste money please try this properly locally so we know if it fails beforehand" and "the end to end test should only run on github for a pr to master from staging" | Running the end-to-end tests locally; the CI rule (#194) |
+| 12 Nov 2026 | "I will give you a few small examples, but your job will be to find everything else ... look at the research material on educational software devlopment ... read the spec of this exam again and ensure we have met all of the requirements." | A UI, research and specification audit; the landing page, header, layout and profile pictures (#198, #199) |
+| 12 Nov 2026 | "you job is to do all i have assigend you. keep checking discord and prs and make any contnent that is missing." | Objective 8's assessment (#70), honest module timings, the stand-up record (#79), this prompt record (#74) |
 
 Table: Generative AI prompts for the software engineering work.
+
+The prompts above are Matthew Els's, taken from his assistant's session logs (1 to 12 November). Prompts that only asked for a status, approved a step ("push it", "open a pr") or contained a teammate's message are left out.
+
+**Course content made with the assistant.** Some of what students see was drafted with the same tool from the prompts above, then checked by the automated content tests (`api/tests/`: every answer is run through the BFS engine or the checker, mastery items are checked for answer cues, support items for overlap with assessed items) and reviewed in pull requests: module 1's drawn graph answers and their images (#155), the evidence-based edits and support items (#150, #173), the review paths' worked examples and practice (#148), the narration as text (#149) and objective 8's items (#70). The narration scripts for modules 1 to 4 were generated by Matthew Els before this record starts; the prompt he used is to be added (#74).
+
+### Ayanda Juqu
+
+To be added by Ayanda Juqu (#74): the tool and the main prompts, or a statement that none was used.
+
+### Reece Schmidt
+
+To be added by Reece Schmidt (#74): the tool and the main prompts, or a statement that none was used.
 
 ## Instructional design
 

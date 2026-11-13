@@ -670,11 +670,11 @@
         },
         {
           "level": 2,
-          "body": "A queue stores items in order."
+          "body": "Ask of each one: could you put items into it and take them out?"
         },
         {
           "level": 3,
-          "body": "BFS uses a queue while it runs."
+          "body": "A data structure holds items; an algorithm is a list of steps, and it may use a data structure. Decide which word fits each."
         },
         {
           "level": 4,
@@ -3886,7 +3886,7 @@
         },
         {
           "level": 3,
-          "body": "Z finds U first. Walk back from U through who found each vertex."
+          "body": "Whichever of Z and V leaves the queue first is the one that finds U. Then walk back from U, one “found by” at a time, to W."
         },
         {
           "level": 4,
@@ -3986,7 +3986,7 @@
         },
         {
           "level": 3,
-          "body": "I found J. Walk back: J, I, G, F."
+          "body": "The fewest edges to J is the number of the ring J is in. Check whether either vertex 2 edges away is joined to J."
         },
         {
           "level": 4,

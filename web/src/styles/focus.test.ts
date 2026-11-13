@@ -7,6 +7,9 @@ import { describe, expect, it } from 'vitest'
  * - WCAG 2.4.7: the shared Button draws its own focus outline. Its box-shadow is unlayered CSS and
  *   beat the global :focus-visible ring (a box-shadow in @layer base), so focus was invisible.
  * - WCAG 1.4.1: a plain link in running text is underlined, not told apart by colour alone.
+ * - WCAG 2.4.11: the sticky header never covers the focused control. The page's scrolling is padded
+ *   by the header's height, and the skip link sits above the header. The browser check is
+ *   e2e/tests/keyboard.spec.ts.
  */
 const read = (path: string) => readFileSync(`${process.cwd()}/src/${path}`, 'utf8')
 
@@ -26,5 +29,15 @@ describe('focus and link styles', () => {
     expect(rule(read('styles/base.css'), 'a:not([class])')).toMatch(
       /text-decoration-line:\s*underline/,
     )
+  })
+
+  it('pads scrolling by the sticky header, so a focused control is not hidden under it', () => {
+    expect(rule(read('styles/base.css'), 'html')).toMatch(
+      /scroll-padding-top:\s*calc\(var\(--header-h,[^)]*\)/,
+    )
+    const shell = read('components/AppShell.module.css')
+    const zIndex = (selector: string) =>
+      Number(/z-index:\s*(\d+)/.exec(rule(shell, selector))?.[1] ?? Number.NaN)
+    expect(zIndex('.skip')).toBeGreaterThan(zIndex('.header'))
   })
 })

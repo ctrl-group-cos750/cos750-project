@@ -6,7 +6,8 @@
   background: var(--color-primary);
   color: var(--color-on-accent);
   border-radius: var(--radius-md);
-  z-index: 10;
+  /* Above the sticky header (30), which is opaque and painted over the link (WCAG 2.4.7, 2.4.11). */
+  z-index: 40;
 }
 
 .skip:focus {

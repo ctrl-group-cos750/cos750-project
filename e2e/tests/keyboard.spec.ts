@@ -86,3 +86,42 @@ test('every control in a module activity shows a visible focus indicator', async
     await expectVisibleFocus(control, (await control.textContent()) ?? '')
   }
 })
+
+// WCAG 2.2 2.4.11 Focus Not Obscured: the sticky header covered the skip link on every signed-in
+// page, and Shift+Tab from the bottom of a page left controls under the header (review of 13 Nov;
+// #223 review, Should fix 7). The page's scrolling is padded by the header's height (base.css).
+test('the sticky header never hides the focused control', async ({ page, course }) => {
+  void course // a signed-in student, on the module map
+  await page.setViewportSize({ width: 375, height: 667 })
+  await page.goto('/')
+  await expect(page.getByRole('button', { name: /^(Start|Continue) module 0/ })).toBeVisible()
+
+  await page.keyboard.press('Tab')
+  const skip = page.getByRole('link', { name: 'Skip to content' })
+  await expect(skip).toBeFocused()
+  const onTop = await skip.evaluate((el) => {
+    const r = el.getBoundingClientRect()
+    const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+    return !!hit && el.contains(hit)
+  })
+  expect(onTop, 'the skip link is drawn above the header').toBe(true)
+
+  // From the bottom of the page, back up through it with Shift+Tab.
+  await page.locator('body').evaluate((el) => (el as HTMLElement).focus())
+  await page.keyboard.press('End')
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
+  const hidden: string[] = []
+  for (let i = 0; i < 20; i++) {
+    await page.keyboard.press('Shift+Tab')
+    const covered = await page.evaluate(() => {
+      const el = document.activeElement
+      const header = document.querySelector('header')
+      if (!el || el === document.body || !header || header.contains(el)) return null
+      const r = el.getBoundingClientRect()
+      const h = header.getBoundingClientRect()
+      return r.top < h.bottom - 1 ? (el.textContent ?? el.tagName).trim().slice(0, 60) : null
+    })
+    if (covered !== null) hidden.push(covered)
+  }
+  expect(hidden, 'controls under the sticky header').toEqual([])
+})

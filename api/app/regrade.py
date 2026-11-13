@@ -32,7 +32,10 @@ updates `correct`, `score` and `detail`, then recomputes the results of each stu
   passes is marked tested out, as taking it would have done (`quick_check.refresh_tested_out`).
   They earn nothing, as when taken.
 
-No migration: it only updates rows that exist. It does not touch other kinds.
+No migration: it only updates rows that exist. It does not touch other kinds. Trace answers in
+particular are left as stored: the trace checker's impossible-queue rule (review of 13 Nov, item
+618) would only lower marks, and a re-grade never lowers, so results earned before it stand (SE
+document FR-6.6, FR-9.6).
 """
 
 import argparse

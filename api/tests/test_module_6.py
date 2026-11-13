@@ -742,3 +742,16 @@ def test_the_places_letters_are_not_their_initials(a: ActivityFixture) -> None:
         if letter in {w[0].upper() for w in name.removeprefix("the ").split()}
     ]
     assert len(initials) <= 1, initials  # one by chance (606's shed tap is S), not a pattern
+
+
+def test_the_introduction_says_what_the_check_is() -> None:
+    """Segment 601 didn't say how many questions there are, how long they take or that the student
+    can stop and resume, and it promised "met with support (if you used hint 3 or 4)", which the
+    check, whose hints stop at 2, can't give (review 13 Nov; ID document §7.5)."""
+    module = next(m for m in CONTENT.modules if m.id == 6)
+    intro = next(s for s in module.segments if s.id == 601).body
+    assert f"There are {len(CHECK)} questions" in intro
+    assert f"about {module.estimated_minutes} minutes" in intro
+    assert "carry on later" in intro
+    assert "Hints 1 and 2" in intro
+    assert "if you used hint 3 or 4" not in intro

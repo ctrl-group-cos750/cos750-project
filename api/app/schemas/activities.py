@@ -456,6 +456,10 @@ class AttemptOut(ApiModel):
     withheld: bool = False
     # The highest hint level seen before this attempt; 3 or 4 means "with support" (FR-4.5).
     hint_level: int
+    # The points this answer earned for the activity (FR-9.1, FR-9.2; #214): 10 for its first
+    # right answer, 4 if that came after hint 3 or 4, a bonus quest's own points, else 0. Always 0
+    # on a mastery check item, and 0 when the attempt is shown again later (#171).
+    points: int = 0
 
 
 class LastAttemptOut(ApiModel):

@@ -212,6 +212,21 @@ def total_points(session: Session, user_id: int) -> int:
     return int(total or 0)
 
 
+def activity_refs(activity_id: int) -> tuple[str, ...]:
+    """The points refs an answer to this activity can earn: its own, or a bonus quest's."""
+    return (f"activity:{activity_id}", f"quest:{activity_id}")
+
+
+def points_for_refs(session: Session, user_id: int, refs: Collection[str]) -> int:
+    """This student's points for these refs, so a route can tell what one answer earned."""
+    total = session.scalar(
+        select(func.coalesce(func.sum(PointsEntry.points), 0)).where(
+            PointsEntry.user_id == user_id, PointsEntry.ref.in_(refs)
+        )
+    )
+    return int(total or 0)
+
+
 def badges_of(session: Session, user_id: int) -> list[UserBadge]:
     return list(
         session.scalars(

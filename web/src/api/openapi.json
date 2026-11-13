@@ -882,6 +882,56 @@
         }
       }
     },
+    "/api/me/skills": {
+      "get": {
+        "tags": [
+          "skills"
+        ],
+        "summary": "Get Skills",
+        "description": "The logged-in student's skill profile and module medals (FR-9.7, FR-9.8; #214).\n\nFor each learning objective: how many of its practice items they have answered correctly, of\nhow many, and its mastery result once the mastery check (or a review path) has decided it.\nFor each module with activities to mark: its medal once complete, and the medal the answers so\nfar are heading for. Worked out from attempts on each request (app/services/skills.py), so it\nfollows the current content and rules. Only ever the student's own.",
+        "operationId": "get_skills_api_me_skills_get",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/me/avatar": {
       "put": {
         "tags": [
@@ -3874,6 +3924,11 @@
           "hintLevel": {
             "type": "integer",
             "title": "Hintlevel"
+          },
+          "points": {
+            "type": "integer",
+            "title": "Points",
+            "default": 0
           }
         },
         "additionalProperties": false,
@@ -5650,6 +5705,83 @@
         "title": "ModuleDetailOut",
         "description": "A module with its full ordered segment list.\n\nReturned by ``GET /api/modules/{moduleId}``.  Extends ``ModuleOut`` so the\nfrontend can use the same type for map cards and detail views."
       },
+      "ModuleMedalOut": {
+        "properties": {
+          "moduleId": {
+            "type": "integer",
+            "title": "Moduleid"
+          },
+          "complete": {
+            "type": "boolean",
+            "title": "Complete"
+          },
+          "onYourOwn": {
+            "type": "integer",
+            "title": "Onyourown"
+          },
+          "answered": {
+            "type": "integer",
+            "title": "Answered"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "medal": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "gold",
+                  "silver",
+                  "bronze"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Medal"
+          },
+          "headingFor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "gold",
+                  "silver",
+                  "bronze"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Headingfor"
+          },
+          "objectives": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Objectives"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "moduleId",
+          "complete",
+          "onYourOwn",
+          "answered",
+          "total",
+          "medal",
+          "headingFor",
+          "objectives"
+        ],
+        "title": "ModuleMedalOut",
+        "description": "A module's medal (FR-9.8): `medal` once the module is complete (gold, every activity\nanswered right without hint 3 or 4; silver, at least half; bronze, finished), and\n`headingFor`, what the answers so far are on course for. Never counts attempts or time.\n`objectives` are the learning objectives its activities practise."
+      },
       "ModuleOut": {
         "properties": {
           "id": {
@@ -6269,6 +6401,80 @@
         ],
         "title": "SegmentOut",
         "description": "One segment of a module, in display order.\n\nKind-specific nullable fields:\n- ``body``        — Markdown content, for ``text`` / ``worked_example`` / ``refresher``.\n- ``video_id``    — FK to the video, present only for ``video`` segments.\n- ``activity_id`` — FK to the activity, present only for ``activity`` segments.\n\n``body``, ``video_id``, and ``activity_id`` are mutually exclusive in practice;\nthe schema keeps them separate and nullable so the frontend can branch on ``kind``."
+      },
+      "SkillOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "correct": {
+            "type": "integer",
+            "title": "Correct"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "not_attempted",
+                  "met_independently",
+                  "met_with_support",
+                  "not_yet"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "correct",
+          "total",
+          "result"
+        ],
+        "title": "SkillOut",
+        "description": "One objective on the skill profile (FR-9.7). `correct` of `total` is practice progress:\nthe objective's practice items answered correctly. `result` is the mastery result once the\nmastery check (or a review path) has decided it, else null."
+      },
+      "SkillsOut": {
+        "properties": {
+          "objectives": {
+            "items": {
+              "$ref": "#/components/schemas/SkillOut"
+            },
+            "type": "array",
+            "title": "Objectives"
+          },
+          "modules": {
+            "items": {
+              "$ref": "#/components/schemas/ModuleMedalOut"
+            },
+            "type": "array",
+            "title": "Modules"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "objectives",
+          "modules"
+        ],
+        "title": "SkillsOut",
+        "description": "The logged-in student's skill profile and module medals. Only ever their own."
       },
       "StaffCheckpointIn": {
         "properties": {

@@ -38,6 +38,7 @@ from app.services.attempts import (
 )
 from app.services.locks import ActivityGone
 from app.services.mastery import in_check
+from app.services.rewards import activity_refs, points_for_refs
 from app.services.submissions import clean, submission_problem
 
 router = APIRouter(prefix="/api/activities", tags=["activities"])
@@ -238,7 +239,10 @@ def submit_attempt(
         submitted = clean(activity.kind, body.submitted)
         if submission_problem(activity.kind, activity.config, submitted) is not None:
             raise HTTPException(422, detail=FOREIGN)
+        refs = activity_refs(activity.id)
+        before = points_for_refs(session, user.id, refs)
         attempt, _ = record_attempt(session, user.id, activity, submitted, one_answer=checked)
+        points = points_for_refs(session, user.id, refs) - before
     except AlreadyAnswered:  # the mastery check takes one answer (#144)
         raise HTTPException(status.HTTP_409_CONFLICT, detail=ALREADY_ANSWERED) from None
     except ValidationError as exc:  # the submission didn't match the kind's shape
@@ -248,7 +252,10 @@ def submit_attempt(
     except ActivityGone:  # the seed deleted it while this answer waited
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NOT_FOUND) from None
     session.commit()
-    return _attempt_out(attempt, checked)
+    out = _attempt_out(attempt, checked)
+    if not checked:  # a mastery check item's points wait for the end of the check (#144)
+        out.points = points
+    return out
 
 
 @router.get("/{activity_id}/hints")

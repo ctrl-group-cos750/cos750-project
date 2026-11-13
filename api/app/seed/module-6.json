@@ -276,7 +276,7 @@
         },
         {
           "level": 2,
-          "body": "A map and a playlist hold information."
+          "body": "Something that only holds information is a data structure, however it is ordered. An algorithm is a method you can follow."
         },
         {
           "level": 3,
@@ -804,7 +804,7 @@
       "purpose": "mastery",
       "objective_id": 3,
       "config": {
-        "prompt": "In a class WhatsApp group, the app keeps a record of who has replied to whose message. Ayanda replied to Bongani's message, but Bongani hasn't replied to any of Ayanda's. Which graph models who has replied to whom?",
+        "prompt": "In a class WhatsApp group, the app keeps a record of who has replied to whose message. Which graph models who has replied to whom?",
         "options": [
           {
             "id": "f",
@@ -827,7 +827,7 @@
       "solution": {
         "correct": "e",
         "feedback": {
-          "f": "Not quite. Two people are involved, but that doesn't make a connection two-way. Ayanda replied to Bongani, and Bongani didn't reply to Ayanda. Ask: if this edge exists, must the reverse one exist too?",
+          "f": "Not quite. Two people are involved, but that doesn't make a connection two-way: a learner can reply to another's message without a reply coming back. Ask: if this edge exists, must the reverse one exist too?",
           "g": "Not quite. A message isn't joined to another message here: the replies join learners. The learners are the things in this graph. Ask: what does each reply connect?",
           "h": "Not quite. A message sent to the whole group doesn't join two particular learners, so it can't be an edge. An edge always has two ends. Ask: which connection always joins exactly two learners?"
         }
@@ -839,11 +839,11 @@
         },
         {
           "level": 2,
-          "body": "Each reply joins two learners: the one who replied and the one whose message it was."
+          "body": "The vertices are the things being connected, and each edge joins exactly two of them."
         },
         {
           "level": 3,
-          "body": "The learners are the vertices and the replies are the edges. Now: does Ayanda's reply mean Bongani replied too?"
+          "body": "The learners are the vertices and the replies are the edges. Now: if one learner replied to another, must the other have replied too?"
         },
         {
           "level": 4,
@@ -875,7 +875,7 @@
           },
           {
             "id": "f",
-            "label": "Vertices: atoms. Edges: bonds. Undirected, since being bonded works the same from either side."
+            "label": "Vertices: atoms. Edges: bonds. Undirected, because being bonded works the same from either side."
           }
         ]
       },
@@ -894,7 +894,7 @@
         },
         {
           "level": 2,
-          "body": "A bond joins two atoms."
+          "body": "The vertices are the things being connected, and each edge joins exactly two of them."
         },
         {
           "level": 3,
@@ -902,7 +902,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: atoms. Edges: bonds. Undirected, since being bonded works the same from either side."
+          "body": "Answer: Vertices: atoms. Edges: bonds. Undirected, because being bonded works the same from either side."
         }
       ]
     },
@@ -918,7 +918,7 @@
         "options": [
           {
             "id": "f",
-            "label": "Vertices: jobs. Edges: “must finish first” links. Directed, since the roof can't come before walls."
+            "label": "Vertices: jobs. Edges: “must finish first” links. Directed, because the roof can't come before walls."
           },
           {
             "id": "e",
@@ -949,7 +949,7 @@
         },
         {
           "level": 2,
-          "body": "Each “must finish first” link joins two jobs: the earlier one and the later one."
+          "body": "The vertices are the things being connected, and each edge joins exactly two of them."
         },
         {
           "level": 3,
@@ -957,7 +957,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: jobs. Edges: “must finish first” links. Directed, since the roof can't come before walls."
+          "body": "Answer: Vertices: jobs. Edges: “must finish first” links. Directed, because the roof can't come before walls."
         }
       ]
     },
@@ -981,7 +981,7 @@
           },
           {
             "id": "f",
-            "label": "Vertices: subjects. Edges: clashes. Undirected, since a clash is shared by both of its subjects."
+            "label": "Vertices: subjects. Edges: clashes. Undirected, because a clash is shared by both of its subjects."
           },
           {
             "id": "g",
@@ -1004,7 +1004,7 @@
         },
         {
           "level": 2,
-          "body": "Each clash joins two subjects that one learner takes."
+          "body": "The vertices are the things being connected, and each edge joins exactly two of them."
         },
         {
           "level": 3,
@@ -1012,7 +1012,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: subjects. Edges: clashes. Undirected, since a clash is shared by both of its subjects."
+          "body": "Answer: Vertices: subjects. Edges: clashes. Undirected, because a clash is shared by both of its subjects."
         }
       ]
     },
@@ -1036,7 +1036,7 @@
           },
           {
             "id": "f",
-            "label": "Yes. BFS treats each word as a vertex and searches in rings, which finds a shortest ladder."
+            "label": "Yes. Taking words as vertices, BFS finishes each distance before starting the next: shortest ladder."
           }
         ]
       },
@@ -1062,7 +1062,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: Yes. BFS treats each word as a vertex and searches in rings, which finds a shortest ladder."
+          "body": "Answer: Yes. Taking words as vertices, BFS finishes each distance before starting the next: shortest ladder."
         }
       ]
     },
@@ -1178,7 +1178,7 @@
         "options": [
           {
             "id": "c",
-            "label": "No. The marks aren't joined by edges, so a simple loop works out the average without BFS."
+            "label": "No. There are no edges between marks to follow: a plain loop gives the average."
           },
           {
             "id": "a",
@@ -1212,7 +1212,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: No. The marks aren't joined by edges, so a simple loop works out the average without BFS."
+          "body": "Answer: No. There are no edges between marks to follow: a plain loop gives the average."
         }
       ]
     },
@@ -2365,7 +2365,7 @@
         "options": [
           {
             "id": "d",
-            "label": "It empties the queue ring by ring, so each vertex is first reached along a fewest-edge route."
+            "label": "It takes every vertex one edge away out of the queue before any two away, so it first reaches each by fewest edges."
           },
           {
             "id": "a",
@@ -2404,7 +2404,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: it works ring by ring, so it first reaches each vertex along a fewest-edge route."
+          "body": "Answer: it takes every vertex one edge away out of the queue before any two away, so it first reaches each by fewest edges."
         }
       ]
     },

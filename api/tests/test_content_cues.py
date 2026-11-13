@@ -753,6 +753,50 @@ def test_a_markers_first_word_does_not_predict_vertex_or_edge() -> None:
         assert best_rule <= always_commoner, (where, by_word)
 
 
+# --- No word or pattern only the keys share (round 2 review of #215, content 5) ----------------
+# Only the right option said "since" in 611-613, only the right one wrote "Directed:" or
+# "Undirected:" in 1302 and 1305, and only the right one said "ring" in 614, 628 and 1402. A
+# student who noticed would pick the key without knowing why. Function words are left out: they
+# carry no meaning a student could read as a cue.
+FUNCTION_WORDS = {"a", "an", "the", "and", "or", "but", "for", "of", "to", "in", "on", "at", "by"}
+FUNCTION_WORDS |= {
+    "it",
+    "its",
+    "is",
+    "are",
+    "be",
+    "so",
+    "as",
+    "if",
+    "not",
+    "no",
+    "yes",
+    "with",
+    "there",
+}
+QUICK_CHECKS = {"quick checks": [a for a in CONTENT.activities if a.purpose == "test_out"]}
+
+
+def cue_tokens(label: str) -> set[str]:
+    """A label's words, each without a plural s, and how many colons it has (a colon after the
+    verdict was 1302's and 1305's pattern)."""
+    words = {w.removesuffix("s") for w in _words(label) if w not in FUNCTION_WORDS}
+    return words | {f"{label.count(':')} colons"}
+
+
+@pytest.mark.parametrize("where", [*CHECK_SETS, *QUICK_CHECKS])
+def test_no_word_or_pattern_is_found_only_in_the_keys(where: str) -> None:
+    items = {**CHECK_SETS, **QUICK_CHECKS}[where]
+    in_keys: Counter[str] = Counter()
+    in_wrong: Counter[str] = Counter()
+    for a in (a for a in items if a.kind == "multiple_choice"):
+        for o in a.config["options"]:
+            right = o["id"] == a.solution["correct"]
+            (in_keys if right else in_wrong).update(cue_tokens(o["label"]))
+    tells = sorted(w for w, n in in_keys.items() if n >= 2 and not in_wrong[w])
+    assert tells == [], where
+
+
 # --- Same id, same meaning: staging's text, kept or listed -----------------------------------------
 
 SNAPSHOT = json.loads((Path(__file__).parent / "data" / "staging_options.json").read_text("utf-8"))

@@ -411,7 +411,7 @@
         "options": [
           {
             "id": "d",
-            "label": "The seating plan for an exam venue: which learner sits in which seat"
+            "label": "The seating plan that shows which learner sits in which exam seat"
           },
           {
             "id": "e",
@@ -437,7 +437,7 @@
         },
         {
           "level": 2,
-          "body": "Working out change and walking a mall are both things done."
+          "body": "A data structure holds information that can be looked up later. Something you do, step by step, is not one."
         },
         {
           "level": 3,
@@ -492,7 +492,7 @@
         },
         {
           "level": 2,
-          "body": "A contact list, a map and a shopping list each hold information."
+          "body": "Being sorted, or in a useful order, doesn't make something an algorithm: an algorithm is the method itself."
         },
         {
           "level": 3,
@@ -620,7 +620,7 @@
         },
         {
           "level": 2,
-          "body": "Each circle is a member, and each line joins two members."
+          "body": "Ask whether it keeps something or does something, and whether it involves things joined by connections."
         },
         {
           "level": 3,
@@ -1075,7 +1075,7 @@
       "purpose": "review",
       "objective_id": 3,
       "config": {
-        "prompt": "During a test, a teacher notes who lent a pencil to whom. Sizwe lent one to Thandeka, and Thandeka didn't lend one to Sizwe. How should a graph of these loans be set up?",
+        "prompt": "During a test, a teacher notes who lent a pencil to whom. How should a graph of these loans be set up?",
         "options": [
           {
             "id": "d",
@@ -1092,11 +1092,11 @@
         ]
       },
       "solution": {
-        "explanation": "Correct. The learners are the things, and each loan joins the lender to the borrower. Sizwe lent to Thandeka without her lending back, so each edge has a direction.",
+        "explanation": "Correct. The learners are the things, and each loan joins the lender to the borrower. One learner can lend to another without a loan coming back, so each edge has a direction.",
         "correct": "f",
         "feedback": {
           "d": "Not quite. A pencil isn't joined to another pencil: each loan joins two learners. The learners are the things in this graph. Ask: what does each loan connect?",
-          "e": "Not quite. Two learners are involved, but that doesn't make a loan two-way. Sizwe lent to Thandeka, and she didn't lend to him. Ask: if this edge exists, must the reverse one exist too?"
+          "e": "Not quite. Two learners are involved, but that doesn't make a loan two-way: one learner can lend to another without being lent to in return. Ask: if this edge exists, must the reverse one exist too?"
         }
       },
       "hints": [
@@ -1106,11 +1106,11 @@
         },
         {
           "level": 2,
-          "body": "Each loan joins two learners: the one who lent and the one who borrowed."
+          "body": "The vertices are the things being connected, and each edge joins exactly two of them."
         },
         {
           "level": 3,
-          "body": "Learners are the vertices and loans are the edges. Does Sizwe's loan to Thandeka mean she lent him one?"
+          "body": "Learners are the vertices and loans are the edges. If one learner lends to another, must the other lend back?"
         },
         {
           "level": 4,
@@ -1138,7 +1138,7 @@
           },
           {
             "id": "f",
-            "label": "Vertices: learners. Edges: mentoring links. Directed: Thabo mentors Sam, but Sam doesn't mentor Thabo."
+            "label": "Vertices: learners. Edges: mentoring links. Directed, as Sam doesn't mentor Thabo back."
           },
           {
             "id": "h",
@@ -1161,7 +1161,7 @@
         },
         {
           "level": 2,
-          "body": "Each mentoring link joins two learners: the mentor and the learner they mentor."
+          "body": "The vertices are the things being connected, and each edge joins exactly two of them."
         },
         {
           "level": 3,
@@ -1169,7 +1169,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: learners. Edges: mentoring links. Directed: Thabo mentors Sam, but Sam doesn't mentor Thabo."
+          "body": "Answer: Vertices: learners. Edges: mentoring links. Directed, as Sam doesn't mentor Thabo back."
         }
       ]
     },
@@ -1185,7 +1185,7 @@
         "options": [
           {
             "id": "f",
-            "label": "Vertices: devices. Edges: Wi-Fi links. Undirected, because data travels along a link either way."
+            "label": "Vertices: devices. Edges: Wi-Fi links. Undirected, because data travels along a link in both directions."
           },
           {
             "id": "e",
@@ -1216,7 +1216,7 @@
         },
         {
           "level": 2,
-          "body": "Each Wi-Fi link joins two devices: the router and one other."
+          "body": "The vertices are the things being connected, and each edge joins exactly two of them."
         },
         {
           "level": 3,
@@ -1224,7 +1224,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: devices. Edges: Wi-Fi links. Undirected, because data travels along a link either way."
+          "body": "Answer: Vertices: devices. Edges: Wi-Fi links. Undirected, because data travels along a link in both directions."
         }
       ]
     },
@@ -1271,7 +1271,7 @@
         },
         {
           "level": 2,
-          "body": "Each parent link joins two people: a parent and their child."
+          "body": "The vertices are the things being connected, and each edge joins exactly two of them."
         },
         {
           "level": 3,
@@ -1299,7 +1299,7 @@
           },
           {
             "id": "f",
-            "label": "Vertices: learners. Edges: lab partnerships. Undirected: if Ayo worked with Busi, Busi worked with Ayo."
+            "label": "Vertices: learners. Edges: lab partnerships. Undirected, because working together is shared."
           },
           {
             "id": "h",
@@ -1307,7 +1307,7 @@
           },
           {
             "id": "e",
-            "label": "Vertices: learners. Edges: lab partnerships. Directed, as the results pass from one partner to the other."
+            "label": "Vertices: learners. Edges: lab partnerships. Directed, as Ayo and Busi worked together first."
           }
         ]
       },
@@ -1316,7 +1316,7 @@
         "feedback": {
           "g": "Not quite. That swaps them. A partnership joins two learners, so the partnership is the edge and the learners are the vertices. Ask: which one joins the other two?",
           "h": "Not quite. A mark belongs to one learner: it doesn't join two learners, so it can't be an edge. An edge always has two ends. Ask: what joins two learners?",
-          "e": "Not quite. Results may be passed on, but being lab partners is shared: if Ayo worked with Busi, Busi worked with Ayo. Something moving along an edge doesn't give it an arrow. Ask: could this connection exist one way only?"
+          "e": "Not quite. Ayo and Busi did their practical first, but being lab partners is shared: if Ayo worked with Busi, Busi worked with Ayo. When it happened doesn't give an edge an arrow. Ask: could this connection exist one way only?"
         }
       },
       "hints": [
@@ -1326,7 +1326,7 @@
         },
         {
           "level": 2,
-          "body": "Each lab partnership joins two learners."
+          "body": "The vertices are the things being connected, and each edge joins exactly two of them."
         },
         {
           "level": 3,
@@ -1334,7 +1334,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: learners. Edges: lab partnerships. Undirected: if Ayo worked with Busi, Busi worked with Ayo."
+          "body": "Answer: Vertices: learners. Edges: lab partnerships. Undirected, because working together is shared."
         }
       ]
     },
@@ -1405,7 +1405,7 @@
           },
           {
             "id": "a",
-            "label": "Yes. BFS explores the positions in rings, so it finds the fewest moves."
+            "label": "Yes. BFS takes one-move positions before two-move ones, so finds the fewest."
           },
           {
             "id": "e",
@@ -1435,7 +1435,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: Yes. BFS explores the positions in rings, so it finds the fewest moves."
+          "body": "Answer: Yes. BFS takes one-move positions before two-move ones, so finds the fewest."
         }
       ]
     },
@@ -3716,7 +3716,7 @@
           },
           {
             "id": "c",
-            "label": "No: BFS counts edges, not kilometres."
+            "label": "No. BFS counts edges, not kilometres."
           }
         ]
       },
@@ -3742,7 +3742,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: No: BFS counts edges, not kilometres."
+          "body": "Answer: No. BFS counts edges, not kilometres."
         }
       ]
     }

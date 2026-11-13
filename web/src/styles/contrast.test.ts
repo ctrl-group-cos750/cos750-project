@@ -253,3 +253,36 @@ describe('page backgrounds', () => {
     })
   })
 })
+
+/**
+ * The study companion's characters (#214, features/companion/characters/characters.css): the
+ * colours that draw each one's outline and shape keep 3:1 (WCAG 1.4.11) on the solid surface the
+ * companion sits on, in light and dark, whatever the page background (Companion.module.css).
+ */
+describe('study companion characters', () => {
+  const css = read('../features/companion/characters/characters.css')
+  const cases = [
+    { theme: 'light', selector: ':root', global: ':root' },
+    {
+      theme: 'dark',
+      selector: ".dark,\n:root[data-theme='dark']",
+      global: ".dark,\n:root[data-theme='dark']",
+    },
+  ] as const
+  it.each(cases)(
+    'outline and shape colours reach 3:1 on the $theme card',
+    ({ selector, global }) => {
+      const card = colour({ css: globalCss, selector: global, name: '--card' })
+      const own = (name: string) => {
+        try {
+          return colour({ css, selector, name })
+        } catch {
+          return colour({ css, selector: ':root', name })
+        }
+      }
+      for (const name of ['--cmp-blue', '--cmp-line', '--cmp-honey-edge']) {
+        expect(ratio(own(name), card), `${name}`).toBeGreaterThanOrEqual(3)
+      }
+    },
+  )
+})

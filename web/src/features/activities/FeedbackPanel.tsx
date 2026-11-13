@@ -1,9 +1,10 @@
 import { QueryClientContext } from '@tanstack/react-query'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { Alert } from '../../components'
+import { FeedbackCompanion } from '../companion/Companion.tsx'
 import { confetti, prefersReducedMotion, useConfettiSetting } from '../progress/confetti.ts'
 import { useSkills } from '../progress/hooks.ts'
-import { usePreference } from '../progress/preferences.ts'
+import { useCompanionChoice, usePreference } from '../progress/preferences.ts'
 import { praiseFor, progressRemark } from '../progress/praise.ts'
 import { HiddenNote } from '../progress/HiddenNote.tsx'
 import { HideMenu, type HideItem } from '../progress/HideMenu.tsx'
@@ -36,6 +37,10 @@ type FeedbackPanelProps = { result: AttemptResult | undefined; partName?: 'line'
  * as calm as before, and nothing in the mastery check (module 6: `CelebrationAllowed`) gets any of
  * it, withheld or not. Under
  * prefers-reduced-motion the check mark is drawn at once and there is no confetti.
+ *
+ * The study companion (#214, opt-in) speaks here too, beside the message, about an answer just
+ * checked: the first time, it asks whether the student wants one. Its line replaces the varied
+ * line under a right answer, so the feedback isn't said twice. Never in the mastery check.
  */
 export function FeedbackPanel({ result }: FeedbackPanelProps) {
   const alert = useRef<HTMLDivElement>(null)
@@ -45,6 +50,12 @@ export function FeedbackPanel({ result }: FeedbackPanelProps) {
   const [initial] = useState(result)
   const allowed = useContext(CelebrationAllowed)
   const celebrate = allowed && result !== initial && result?.correct === true && !result.withheld
+  const companion =
+    allowed &&
+    result !== initial &&
+    result !== undefined &&
+    !result.withheld &&
+    result.correct !== null
 
   useEffect(() => {
     if (result === shown.current) return
@@ -89,6 +100,7 @@ export function FeedbackPanel({ result }: FeedbackPanelProps) {
           result.feedback
         )}
       </Alert>
+      {companion && <FeedbackCompanion key={result.id} result={result} />}
       {celebrate && <SuccessMoment result={result} />}
     </section>
   )
@@ -116,6 +128,9 @@ function SuccessMoment({ result }: { result: AttemptResult }) {
       .catch(() => {})
   const [confettiOn, setConfetti] = useConfettiSetting()
   const [comments, setComments] = usePreference('comments')
+  // With the study companion on, its line is the one under the answer (#214).
+  const [companion] = useCompanionChoice()
+  const praise = comments && (companion === null || companion === 'off')
   // What was just turned off from here, for the note that takes its place (and focus, WCAG 2.4.3).
   const [turnedOff, setTurnedOff] = useState<{ text: string; undo: () => void } | null>(null)
   const points = result.points ?? 0
@@ -169,9 +184,9 @@ function SuccessMoment({ result }: { result: AttemptResult }) {
         <path d="M9.5 16.5l4.5 4.5 8.5-9" />
       </svg>
       <div className={styles.words}>
-        {(comments || showPoints) && (
+        {(praise || showPoints) && (
           <p className={styles.praise}>
-            {comments && praiseFor(result.id, result.hintLevel)}
+            {praise && praiseFor(result.id, result.hintLevel)}
             {showPoints && <span className={styles.points}>+{points} points</span>}
           </p>
         )}

@@ -7,6 +7,7 @@ import type { ModuleSummary } from './module.types.ts'
 import { fetchModules } from './module.api.ts'
 import { minutesProgress } from './minutes.ts'
 import { useSkills } from '../progress/hooks.ts'
+import { ModuleDoneCompanion } from '../companion/Companion.tsx'
 import { Medal } from '../progress/Medal.tsx'
 import { medalText } from '../progress/medals.ts'
 import type { Medal as MedalTier } from '../progress/skills.api.ts'
@@ -266,6 +267,8 @@ export function ModuleMap() {
             max={minutes.total}
           />
         )}
+        {/* A module just finished: the study companion's word on it, if it is on (#214). */}
+        <ModuleDoneCompanion modules={modules} />
       </div>
 
       <div className={styles.side}>

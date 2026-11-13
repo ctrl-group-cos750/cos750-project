@@ -2,6 +2,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router'
 import { useCurrentUser, useLogout } from '../auth/hooks.ts'
 import { Alert, AppShell } from '../components'
 import { setPreferenceOwner } from '../features/progress/preferences.ts'
+import { CompanionAnnouncer } from '../features/companion/Companion.tsx'
 import { BadgeAnnouncer } from '../features/rewards/BadgeAnnouncer.tsx'
 import { useAppliedBackground } from '../theme/background.ts'
 import { ThemeMenu } from '../theme/ThemeMenu.tsx'
@@ -55,6 +56,7 @@ export function SignedInLayout() {
       )}
       <Outlet />
       <BadgeAnnouncer />
+      <CompanionAnnouncer />
     </AppShell>
   )
 }

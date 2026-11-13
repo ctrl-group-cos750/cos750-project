@@ -188,3 +188,35 @@ export function setDeviceValue(name: string, value: string): void {
 export function preferenceOwner(): number | null {
   return owner
 }
+
+/**
+ * The study companion (#214): one of the five characters, or 'off'; null until the student has
+ * been asked (the first time they check an answer). Kept per student on this device like the
+ * switches above. Opt-in: nothing is shown until they say yes.
+ */
+export type CompanionChoice = 'inka' | 'rowan' | 'juno' | 'sol' | 'rook' | 'off'
+
+const COMPANION_CHOICES: readonly CompanionChoice[] = [
+  'inka',
+  'rowan',
+  'juno',
+  'sol',
+  'rook',
+  'off',
+]
+
+export function storedCompanion(): CompanionChoice | null {
+  const value = deviceValue('companion')
+  return COMPANION_CHOICES.includes(value as CompanionChoice) ? (value as CompanionChoice) : null
+}
+
+export function setStoredCompanion(choice: CompanionChoice): void {
+  setDeviceValue('companion', choice)
+  window.dispatchEvent(new Event(CHANGED))
+}
+
+/** The student's companion choice, kept in step across the page. */
+export function useCompanionChoice(): [CompanionChoice | null, (choice: CompanionChoice) => void] {
+  const choice = useSyncExternalStore(subscribe, storedCompanion, () => null)
+  return [choice, setStoredCompanion]
+}

@@ -9,7 +9,16 @@ export type HideItem = { label: string; onSelect: () => void }
  * of real buttons, not an ARIA menu: Tab reaches each, Escape or a press outside closes it and
  * focus goes back to the "⋯". 44 px on a touch screen.
  */
-export function HideMenu({ title, items }: { title: string; items: HideItem[] }) {
+export function HideMenu({
+  title,
+  items,
+  label,
+}: {
+  title: string
+  items: HideItem[]
+  /** The button's name, if not "Hide options for {title}". */
+  label?: string
+}) {
   const [open, setOpen] = useState(false)
   const id = useId()
   const button = useRef<HTMLButtonElement>(null)
@@ -42,7 +51,7 @@ export function HideMenu({ title, items }: { title: string; items: HideItem[] })
         ref={button}
         type="button"
         className={styles.menuButton}
-        aria-label={`Hide options for ${title}`}
+        aria-label={label ?? `Hide options for ${title}`}
         aria-expanded={open}
         aria-controls={id}
         onClick={() => setOpen((o) => !o)}

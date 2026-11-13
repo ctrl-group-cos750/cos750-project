@@ -367,7 +367,11 @@ export function ModulePage() {
           // the report gives, with its own moment if the student is ready for the lecture.
           if (module.id !== MASTERY_MODULE_ID) confetti('big')
           void queryClient.invalidateQueries({ queryKey: skillsKey }) // the medal is now earned
-          void navigate(next)
+          // The map hears which module was finished, for the study companion's word on it (#214).
+          void navigate(
+            next,
+            module.id === MASTERY_MODULE_ID ? {} : { state: { finishedModule: module.id } },
+          )
         },
       },
     )

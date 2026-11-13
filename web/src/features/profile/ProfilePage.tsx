@@ -28,6 +28,8 @@ import { useReport } from '../mastery/hooks.ts'
 import { prefersReducedMotion, useConfettiSetting } from '../progress/confetti.ts'
 import {
   BACKGROUNDS,
+  useCompanionChoice,
+  type CompanionChoice,
   usePreference,
   useBackground,
   type Background,
@@ -36,6 +38,7 @@ import { useRewards, useRewardsSettings } from '../rewards/hooks.ts'
 import { useChangePassword, useDeletePicture, useSetAvatar, useUploadPicture } from './hooks.ts'
 import { squarePicture } from './squarePicture.ts'
 import { BACKGROUND_LABELS } from '../../theme/background.ts'
+import { CHARACTERS } from '../companion/characters/index.ts'
 import { BackgroundSwatch } from '../../theme/BackgroundSwatch.tsx'
 import styles from './ProfilePage.module.css'
 
@@ -304,6 +307,61 @@ function BackgroundSetting({ note }: { note: string }) {
   )
 }
 
+/** The study companion (#214): the five characters, small, with their names, and Off. Off until
+ * the student says yes (asked once, after their first answer) or picks one here. Also changed or
+ * turned off from the companion's own "⋯". */
+function CompanionSetting({ note }: { note: string }) {
+  const [choice, setChoice] = useCompanionChoice()
+  const name = useId()
+  const heading = useRef<HTMLLegendElement>(null)
+  const { hash } = useLocation()
+  // Linked from the companion's "Change companion": straight here, once.
+  const jumped = useRef(false)
+  useEffect(() => {
+    if (hash !== '#companion' || jumped.current) return
+    jumped.current = true
+    heading.current?.scrollIntoView?.({ block: 'start' })
+    document.getElementById(`${name}-${choice ?? 'off'}`)?.focus()
+  }, [hash, name, choice])
+  const options: { value: CompanionChoice; label: string; picture: ReactNode }[] = [
+    ...CHARACTERS.map(({ id, name: label, Drawing }) => ({
+      value: id,
+      label,
+      picture: <Drawing pose="neutral" size={40} />,
+    })),
+    { value: 'off', label: 'Off', picture: null },
+  ]
+  return (
+    <fieldset
+      id="companion"
+      className={styles.backgrounds}
+      aria-describedby={`${name}-about ${note}`}
+    >
+      <legend ref={heading}>Study companion</legend>
+      <p id={`${name}-about`} className={styles.muted}>
+        A small character beside the feedback on your answers, with one short line about the task:
+        what was right, or which hint helps next. Never during a question or in the mastery check.
+      </p>
+      <div className={styles.companions}>
+        {options.map(({ value, label, picture }) => (
+          <label key={value} className={styles.companionChoice}>
+            <input
+              id={`${name}-${value}`}
+              type="radio"
+              name={`${name}-companion`}
+              value={value}
+              checked={(choice ?? 'off') === value}
+              onChange={() => setChoice(value)}
+            />
+            {picture ?? <span aria-hidden="true" className={styles.companionOff} />}
+            <span>{label}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  )
+}
+
 /**
  * What you see while you learn (#214): one switch for each motivational element, all on by
  * default, because some students find them demotivating (Self-Determination Theory: autonomy).
@@ -387,6 +445,7 @@ function LearningSettings() {
         onChange={setComments}
         note={deviceNote}
       />
+      <CompanionSetting note={deviceNote} />
       <BackgroundSetting note={deviceNote} />
       <p id={deviceNote} className={styles.muted}>
         Points and badges are kept with your account. The rest are kept on this device, for you

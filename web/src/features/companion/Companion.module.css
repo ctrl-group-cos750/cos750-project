@@ -1,0 +1,89 @@
+/* The study companion (#214), attached to a feedback message: the character on the left, its line
+ * in a bubble pointing back at it. On a solid surface of its own, so the drawing keeps its contrast
+ * on any page background. Nothing moves except a short fade of a new line. */
+.companion,
+.prompt {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-solid);
+}
+
+.figure {
+  flex: none;
+}
+
+.bubble {
+  position: relative;
+  flex: 1;
+  max-width: 34rem;
+  margin: var(--space-1) 0 0 var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-solid);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+/* The tail, pointing left at the character. */
+.bubble::before {
+  content: '';
+  position: absolute;
+  top: 0.9rem;
+  left: -7px;
+  width: 12px;
+  height: 12px;
+  border-bottom: 1px solid var(--color-control-border);
+  border-left: 1px solid var(--color-control-border);
+  background: var(--color-surface-solid);
+  transform: rotate(45deg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bubble {
+    animation: appear 180ms ease-out;
+  }
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+}
+
+.prompt {
+  flex-wrap: wrap;
+  align-items: center;
+  border: 1px solid var(--color-line);
+}
+
+.question {
+  flex: 1;
+  min-width: 12rem;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.answers {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* Touch: the answers are comfortable targets (WCAG 2.5.8). */
+@media (pointer: coarse) {
+  .answers button {
+    min-height: 44px;
+  }
+}
+
+/* In forced colours the bubble keeps a visible edge. */
+@media (forced-colors: active) {
+  .bubble,
+  .bubble::before {
+    border-color: CanvasText;
+  }
+}

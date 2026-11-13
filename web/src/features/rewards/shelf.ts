@@ -28,9 +28,24 @@ function stateOf(achievement: Achievement, earned?: EarnedBadge): AchievementSta
   return 'earned'
 }
 
-function item(achievement: Achievement, earned?: EarnedBadge): ShelfItem {
+/**
+ * A quest badge's ref is its activity id (stable if another quest is retired), so the shelf
+ * numbers the student's quests for display: "Quest 1", "Quest 2", in course order (by id).
+ */
+function questNumbers(earned: EarnedBadge[]): Map<string, number> {
+  const refs = earned
+    .filter((e) => e.badge === 'quest')
+    .map((e) => e.ref)
+    .sort((a, b) => Number(a) - Number(b) || a.localeCompare(b))
+  return new Map(refs.map((ref, index) => [ref, index + 1]))
+}
+
+function item(achievement: Achievement, earned?: EarnedBadge, number?: number): ShelfItem {
   const state = stateOf(achievement, earned)
-  const title = achievement.id === 'quest' && earned ? `Quest ${earned.ref}` : achievement.name
+  const title =
+    achievement.id === 'quest' && earned && number !== undefined
+      ? `Quest ${number}`
+      : achievement.name
   let next: string | undefined
   if (state === 'locked') {
     next =
@@ -64,10 +79,16 @@ export function buildShelf(earned: EarnedBadge[]) {
     quest: [],
     hidden: [],
   }
+  const numbers = questNumbers(earned)
   for (const achievement of ACHIEVEMENTS) {
     const mine = held(achievement.id)
     if (achievement.offered === false && mine.length === 0) continue
-    const items = mine.length > 0 ? mine.map((e) => item(achievement, e)) : [item(achievement)]
+    const order = (e: EarnedBadge) => numbers.get(e.ref) ?? 0
+    mine.sort((a, b) => order(a) - order(b))
+    const items =
+      mine.length > 0
+        ? mine.map((e) => item(achievement, e, numbers.get(e.ref)))
+        : [item(achievement)]
     groups[achievement.kind].push(...items)
   }
   return groups
@@ -75,10 +96,11 @@ export function buildShelf(earned: EarnedBadge[]) {
 
 /** Badges earned (or raised to gold) that the student has not been shown yet. */
 export function unseen(earned: EarnedBadge[]): ShelfItem[] {
+  const numbers = questNumbers(earned)
   return earned
     .filter((e) => !e.seen)
     .flatMap((e) => {
       const achievement = ACHIEVEMENTS.find((a) => a.id === e.badge)
-      return achievement ? [item(achievement, e)] : []
+      return achievement ? [item(achievement, e, numbers.get(e.ref))] : []
     })
 }

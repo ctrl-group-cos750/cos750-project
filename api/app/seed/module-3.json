@@ -113,6 +113,12 @@
           "kind": "activity",
           "title": "Closing task: fewest walkways",
           "activity_id": 316
+        },
+        {
+          "id": 380,
+          "kind": "activity",
+          "title": "Bonus quest: a walkway closes",
+          "activity_id": 380
         }
       ]
     }
@@ -764,6 +770,62 @@
         {
           "level": 4,
           "body": "Answer: 3 steps, H → J → L → M."
+        }
+      ]
+    },
+    {
+      "id": 380,
+      "kind": "multiple_choice",
+      "title": "Bonus quest: a walkway closes",
+      "module_id": 3,
+      "purpose": "bonus",
+      "objective_id": 4,
+      "config": {
+        "prompt": "Optional bonus quest. The walkway between the Bookshop (B) and Computer Science (C) is closed for repairs. The walkways still open are A–C, A–E, B–G, C–F, D–E and E–F. You run BFS from the Admin block (A). Which places can it no longer reach?",
+        "options": [
+          {
+            "id": "c",
+            "label": "None: BFS still reaches every place"
+          },
+          {
+            "id": "a",
+            "label": "The Bookshop (B) and the Green (G)"
+          },
+          {
+            "id": "d",
+            "label": "The Dining hall (D) and the Engineering building (E)"
+          },
+          {
+            "id": "b",
+            "label": "Only the Bookshop (B)"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "BFS from A reaches C and E, then F and D. With B–C closed, B and G are joined only to each other, so nothing BFS reaches leads to them: they are a separate piece of the graph.",
+        "correct": "a",
+        "feedback": {
+          "b": "Not quite. The Green's only walkway goes to the Bookshop, so once B can't be reached, G can't be either. Check G's walkways too.",
+          "c": "Not quite. With B–C closed, the Bookshop's only walkway goes to the Green, and the Green's only one goes back to the Bookshop. List what BFS reaches from A and see whether any of it leads to them.",
+          "d": "Not quite. A–E is still open, and D–E leads on to the Dining hall, so BFS reaches E and D in its first two rings. Look for places with no open walkway to anything BFS reaches."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "List what BFS from A can reach, ring by ring."
+        },
+        {
+          "level": 2,
+          "body": "Ring 1: C and E. Ring 2: F and D. Does any of them have an open walkway to B or G?"
+        },
+        {
+          "level": 3,
+          "body": "With B–C closed, B's only walkway goes to G, and G's only one goes to B. Nothing BFS reaches leads to either."
+        },
+        {
+          "level": 4,
+          "body": "Answer: the Bookshop (B) and the Green (G)."
         }
       ]
     }

@@ -91,6 +91,12 @@
           "kind": "activity",
           "title": "Closing task: BFS on the shuttle",
           "activity_id": 407
+        },
+        {
+          "id": 480,
+          "kind": "activity",
+          "title": "Bonus quest: the bus that can't get home",
+          "activity_id": 480
         }
       ]
     }
@@ -891,6 +897,62 @@
         {
           "level": 4,
           "body": "Answer: [\"K\", \"L\", \"N\", \"M\", \"P\"]."
+        }
+      ]
+    },
+    {
+      "id": 480,
+      "kind": "multiple_choice",
+      "title": "Bonus quest: the bus that can't get home",
+      "module_id": 4,
+      "purpose": "bonus",
+      "objective_id": 6,
+      "config": {
+        "prompt": "Optional bonus quest. A town's one-way bus routes are A → B, B → C, C → A, C → E, D → A and F → D. You build them with g = Graph(directed=True) and run your bfs from the depot stop, D. Which stop can it never reach?",
+        "options": [
+          {
+            "id": "b",
+            "label": "None: it reaches every stop"
+          },
+          {
+            "id": "c",
+            "label": "E"
+          },
+          {
+            "id": "a",
+            "label": "F"
+          },
+          {
+            "id": "d",
+            "label": "A"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "From D, BFS follows the arrows D → A → B → C, then C → E. The only arrow at F points out of F, to D, and no arrow points into F, so BFS never reaches it.",
+        "correct": "a",
+        "feedback": {
+          "b": "Not quite. An arrow can only be followed the way it points. F → D leaves F, but no route points into F. Check which stops have an arrow pointing to them.",
+          "c": "Not quite. BFS reaches C through D → A → B → C, and C → E points away from C, so it reaches E too. Follow the arrows from D one step at a time.",
+          "d": "Not quite. D → A points from the depot to A, so A is the first stop BFS finds. Look for a stop that no arrow leads to."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Follow only arrows that point away from a stop, starting at D."
+        },
+        {
+          "level": 2,
+          "body": "From D you can go to A. Where can you go from A, and from there?"
+        },
+        {
+          "level": 3,
+          "body": "D → A → B → C, and C → E. Which stop does no arrow from these lead to?"
+        },
+        {
+          "level": 4,
+          "body": "Answer: F."
         }
       ]
     }

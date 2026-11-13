@@ -56,6 +56,10 @@ KINDS_WITHOUT_STUDENT_UI: frozenset[str] = frozenset()
 # first answer counts (FR-7.1), and module 0's diagnostic, which finds gaps rather than gating.
 ONE_ANSWER_PURPOSES: frozenset[str] = frozenset({"mastery", "diagnostic"})
 
+# Purposes a student may skip (FR-8.3): a bonus quest is optional extra challenge, so its segment is
+# done whether or not it is answered, and Next is never held back by it.
+OPTIONAL_PURPOSES: frozenset[str] = frozenset({"bonus"})
+
 
 class ModuleNotFound(ValueError):
     """No module has this id."""
@@ -278,7 +282,15 @@ def done_segments(session: Session, user_id: int, segments: Sequence[Segment]) -
             )
         )
     )
-    answered: set[int] = set(no_ui)  # done: answered correctly, or after the last hint
+    optional = set(
+        session.scalars(
+            select(Activity.id).where(
+                Activity.id.in_(wanted), Activity.purpose.in_(OPTIONAL_PURPOSES)
+            )
+        )
+    )
+    # done: answered correctly, or after the last hint; or optional (a bonus quest)
+    answered: set[int] = set(no_ui) | optional
     passed: set[int] = set(no_ui)
     for activity_id, correct, hint_level in session.execute(
         select(Attempt.activity_id, Attempt.correct, Attempt.hint_level).where(
@@ -330,6 +342,14 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
     answered = _answered(session, user_id, [activity.id for activity in retrieval])
     videos = _videos(session, segments)
     done = done_segments(session, user_id, segments)
+    optional = set(
+        session.scalars(
+            select(Activity.id).where(
+                Activity.id.in_([s.activity_id for s in segments if s.activity_id]),
+                Activity.purpose.in_(OPTIONAL_PURPOSES),
+            )
+        )
+    )
     attempted = _answered(session, user_id, [s.activity_id for s in segments if s.activity_id])
     # TODO (FR-8.1): leave out the refreshers module 0's diagnostic has ruled out, once the
     # diagnostic records its result. Until then every refresher is shown.
@@ -348,6 +368,7 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
                 activity_id=segment.activity_id,
                 done=segment.id in done,
                 attempted=segment.activity_id is not None and segment.activity_id in attempted,
+                optional=segment.activity_id is not None and segment.activity_id in optional,
             )
             for index, segment in enumerate(segments)
         ],
@@ -504,14 +525,16 @@ def save_position(
 
 
 def _module_activities(session: Session, module_id: int) -> set[int]:
-    """The activities a module asks for: those its segments show, and its own (recall questions)."""
+    """The activities a module asks for: those its segments show, and its own (recall questions).
+    Not its optional bonus quests (FR-8.3), which earn their own reward (#87)."""
     shown = session.scalars(
         select(Segment.activity_id).where(
             Segment.module_id == module_id, Segment.activity_id.is_not(None)
         )
     )
     own = session.scalars(select(Activity.id).where(Activity.module_id == module_id))
-    return {a for a in shown if a is not None} | set(own)
+    bonus = set(session.scalars(select(Activity.id).where(Activity.purpose.in_(OPTIONAL_PURPOSES))))
+    return ({a for a in shown if a is not None} | set(own)) - bonus
 
 
 def reward_module(session: Session, user_id: int, module_id: int) -> bool:

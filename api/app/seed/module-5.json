@@ -46,6 +46,24 @@
           "kind": "activity",
           "title": "Choose the tests: appends-unreachable bug",
           "activity_id": 507
+        },
+        {
+          "id": 580,
+          "kind": "text",
+          "title": "Closing task: friends of friends",
+          "body": "You have written BFS, tested it and fixed it. Here is a new problem it solves.\n\nOn a study-group app, two people are joined when they have worked together. Thandi (T) has worked with Lebo (L) and Sipho (S). Lebo has worked with Kagiso (K). Sipho has worked with Kagiso and with Naledi (N). Kagiso has worked with Ofentse (O). Working together goes both ways, so the graph is undirected, with vertices K, L, N, O, S and T and edges K–L, K–O, K–S, L–T, N–S and S–T.\n\nThandi would like to meet Ofentse, through people who can introduce them. BFS from T finds everyone one introduction away first, then everyone two away, and so on. So the first time it reaches O, it has used the fewest introductions. Trace it, then use your trace to answer the question after it."
+        },
+        {
+          "id": 581,
+          "kind": "activity",
+          "title": "Closing task: trace BFS from Thandi (T)",
+          "activity_id": 581
+        },
+        {
+          "id": 582,
+          "kind": "activity",
+          "title": "Closing task: how many introductions?",
+          "activity_id": 582
         }
       ]
     }
@@ -651,6 +669,127 @@
         {
           "level": 4,
           "body": "Answer: Test 2. In that graph, at least one vertex cannot be reached from the start, so the extra loop adds it wrongly. The faulty version passes the other tests."
+        }
+      ]
+    },
+    {
+      "id": 581,
+      "kind": "trace",
+      "title": "Closing task: trace BFS from Thandi (T), one row each time a person leaves the queue",
+      "module_id": 5,
+      "purpose": "practice",
+      "objective_id": 5,
+      "config": {
+        "directed": false,
+        "vertices": [
+          "K",
+          "L",
+          "N",
+          "O",
+          "S",
+          "T"
+        ],
+        "edges": [
+          {
+            "source": "K",
+            "target": "L"
+          },
+          {
+            "source": "K",
+            "target": "O"
+          },
+          {
+            "source": "K",
+            "target": "S"
+          },
+          {
+            "source": "L",
+            "target": "T"
+          },
+          {
+            "source": "N",
+            "target": "S"
+          },
+          {
+            "source": "S",
+            "target": "T"
+          }
+        ],
+        "start_vertex": "T"
+      },
+      "solution": {},
+      "hints": [
+        {
+          "level": 1,
+          "body": "Start with only T in the queue. Nothing is visited yet. Row 1 is what happens when T leaves."
+        },
+        {
+          "level": 2,
+          "body": "For each row: take the person at the front of the queue. They are now visited and join the order. Then add their neighbours who haven't been found yet, in alphabetical order, at the back of the queue."
+        },
+        {
+          "level": 3,
+          "body": "Row 1: T leaves, and L and S join. Row 2: L leaves, and K joins. Row 3: S leaves. K is already waiting, so only N joins."
+        },
+        {
+          "level": 4,
+          "body": "Answer: the order is T, L, S, K, N, O. The queue after each row is [L, S], [S, K], [K, N], [N, O], [O], []. At row 3, K is not added again because it is already waiting in the queue."
+        }
+      ]
+    },
+    {
+      "id": 582,
+      "kind": "multiple_choice",
+      "title": "Closing task: how many introductions?",
+      "module_id": 5,
+      "purpose": "practice",
+      "objective_id": 8,
+      "config": {
+        "prompt": "Use your trace. At the fewest, how many introductions does Thandi (T) need to meet Ofentse (O)? Each introduction crosses one edge.",
+        "options": [
+          {
+            "id": "d",
+            "label": "2"
+          },
+          {
+            "id": "b",
+            "label": "5"
+          },
+          {
+            "id": "a",
+            "label": "3"
+          },
+          {
+            "id": "c",
+            "label": "4"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "Kagiso found Ofentse, Lebo found Kagiso and Thandi found Lebo: T → L → K → O, three introductions. BFS reaches each person by the fewest edges, so no shorter chain exists.",
+        "correct": "a",
+        "feedback": {
+          "b": "Not quite. 5 is how many people BFS visits before Ofentse, not how many edges lie between Thandi and Ofentse. Follow who found whom, back from O to T.",
+          "c": "Not quite. 4 counts the people on the chain, T, L, K and O, not the introductions between them, and each introduction is one edge. Follow who found whom, back from O to T, and count the edges.",
+          "d": "Not quite. Neither Lebo nor Sipho has worked with Ofentse, so Ofentse isn't two introductions away. It takes one more step, through Kagiso."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Ask: which person added O to the queue?"
+        },
+        {
+          "level": 2,
+          "body": "K added O. Which person added K?"
+        },
+        {
+          "level": 3,
+          "body": "L added K, and T added L. Count those edges."
+        },
+        {
+          "level": 4,
+          "body": "Answer: 3 introductions, T → L → K → O."
         }
       ]
     }

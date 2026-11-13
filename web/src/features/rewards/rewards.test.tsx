@@ -58,10 +58,20 @@ describe('buildShelf', () => {
     )
   })
 
-  it('gives each finished quest its own badge', () => {
-    const shelf = buildShelf([badge('quest', { ref: '1' }), badge('quest', { ref: '3' })])
-    expect(shelf.quest.map((i) => i.title)).toEqual(['Quest 1', 'Quest 3', 'All Quests'])
+  it('gives each finished quest its own badge, numbered in course order', () => {
+    // A quest badge's ref is the quest's activity id; the shelf numbers them for display (#196).
+    const shelf = buildShelf([badge('quest', { ref: '480' }), badge('quest', { ref: '380' })])
+    expect(shelf.quest.map((i) => i.title)).toEqual(['Quest 1', 'Quest 2', 'All Quests'])
+    expect(shelf.quest.map((i) => i.key)).toEqual(['quest:380', 'quest:480', 'all-quests'])
     expect(buildShelf([]).quest.map((i) => i.state)).toEqual(['locked', 'locked'])
+  })
+
+  it('announces a new quest by its number', () => {
+    const fresh = unseen([
+      badge('quest', { ref: '380' }),
+      badge('quest', { ref: '480', seen: false }),
+    ])
+    expect(fresh.map((i) => i.title)).toEqual(['Quest 2'])
   })
 
   it('ignores badge ids the app does not know', () => {

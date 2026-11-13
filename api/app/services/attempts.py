@@ -9,14 +9,14 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, Hint, HintView
+from app.models import Activity, Attempt, Hint, HintView, Segment
 from app.schemas.activities import CheckResult
 from app.services.checking import check_activity, is_blank
 from app.services.events import log_event
 from app.services.locks import hold_activity, lock_student
 from app.services.mastery import counts, in_check, recompute
 from app.services.modules import reward_completed_modules
-from app.services.rewards import SUPPORT_LEVEL, on_attempt
+from app.services.rewards import SUPPORT_LEVEL, on_attempt, on_bonus_quest
 
 
 def hint_level_seen(session: Session, user_id: int, activity_id: int) -> int:
@@ -35,6 +35,53 @@ class BlankAnswer(ValueError):
 
 class AlreadyAnswered(ValueError):
     """A one-answer item (the mastery check, #144) that this student has answered already."""
+
+
+def bonus_quests(session: Session) -> list[int]:
+    """The course's bonus quests (FR-8.3, #87): visible bonus activities that a module segment
+    shows, in id order. A hidden or unplaced one can't be reached, so it never counts towards All
+    Quests."""
+    placed = select(Segment.activity_id).where(
+        Segment.module_id.is_not(None), Segment.activity_id.is_not(None)
+    )
+    return list(
+        session.scalars(
+            select(Activity.id)
+            .where(
+                Activity.purpose == "bonus",
+                Activity.visible.is_(True),
+                Activity.id.in_(placed),
+            )
+            .order_by(Activity.id)
+        )
+    )
+
+
+def reward_bonus_quest(session: Session, user_id: int, activity: Activity) -> None:
+    """A bonus quest answered correctly before the hints gave it away (FR-8.3, FR-9.3; #87): its
+    20 points and its Quest badge, once, and All Quests once every quest in the course is earned.
+    The badge's ref is the quest's activity id, so it keeps pointing at the same quest if another
+    is retired; the badge shelf numbers them for display. Never touches mastery: a bonus item
+    counts towards no objective."""
+    quests = bonus_quests(session)
+    if activity.id not in quests:  # hidden or unplaced: only staff can answer it, as a preview
+        return
+    earned = set(
+        session.scalars(
+            select(Attempt.activity_id).where(
+                Attempt.user_id == user_id,
+                Attempt.activity_id.in_(quests),
+                Attempt.correct.is_(True),
+                Attempt.hint_level < SUPPORT_LEVEL,
+            )
+        )
+    )
+    on_bonus_quest(
+        session,
+        user_id,
+        activity.id,
+        all_quests_done=set(quests) <= earned,
+    )
 
 
 def record_attempt(
@@ -77,10 +124,17 @@ def record_attempt(
     )
     session.add(attempt)
     session.flush()
-    if not in_check(activity):  # a module 6 item's points wait for the end of the check (#144)
+    if activity.purpose == "bonus":
+        # A bonus quest earns its own points and badge instead of an activity's (FR-8.3, #87),
+        # and only for real work: hints 3 and 4 give the answer away, so after them it earns
+        # nothing (ID doc: badges mark real progress).
+        if result.correct and attempt.hint_level < SUPPORT_LEVEL:
+            reward_bonus_quest(session, user_id, activity)
+    elif not in_check(activity):  # a module 6 item's points wait for the end of the check (#144)
         on_attempt(session, attempt)  # points for a first correct answer (FR-9.1, FR-9.2)
-    if result.correct and attempt.hint_level < SUPPORT_LEVEL:
-        # Real work in a module already complete earns its reward now (#166 review).
+    if result.correct and attempt.hint_level < SUPPORT_LEVEL and activity.purpose != "bonus":
+        # Real work in a module already complete earns its reward now (#166 review). An optional
+        # bonus quest isn't the module's work: it earns its own reward.
         reward_completed_modules(session, user_id, activity)
     if counts(activity):
         recompute(session, user_id)  # the objective results, and what they earn (FR-7)

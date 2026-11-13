@@ -40,6 +40,9 @@ export type Segment = {
   done: boolean
   /** The student has answered its activity at least once, right or wrong. */
   attempted?: boolean
+  /** An optional bonus quest (FR-8.3): done whether or not it is answered, so it never holds
+   * Next back. */
+  optional?: boolean
 }
 
 /** A retrieval question the module asks before its segments (FR-2.4). */

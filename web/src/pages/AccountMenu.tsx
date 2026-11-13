@@ -4,6 +4,14 @@ import { Avatar, Button } from '../components'
 import type { User } from '../auth/api.ts'
 import styles from './AccountMenu.module.css'
 
+const LINKS = [
+  { to: '/', label: 'Modules', staff: false },
+  { to: '/report', label: 'Mastery report', staff: false },
+  { to: '/badges', label: 'Badges', staff: false },
+  { to: '/profile', label: 'Profile and settings', staff: false },
+  { to: '/staff', label: 'Staff portal', staff: true },
+]
+
 type AccountMenuProps = {
   user: User
   onLogout: () => void
@@ -12,7 +20,8 @@ type AccountMenuProps = {
 
 /**
  * The `Account` menu in the header (SE document wireframes, #111): the student's picture and name,
- * opening their profile, their badges and log out. A disclosure (a button that shows a list of
+ * opening the modules, their mastery report, badges, profile, the staff portal for team members,
+ * and log out. A disclosure (a button that shows a list of
  * links), not an ARIA menu, so it reads and works like any other links: Tab moves through it,
  * Escape or a click outside closes it and puts focus back on the button.
  */
@@ -60,20 +69,23 @@ export function AccountMenu({ user, onLogout, loggingOut }: AccountMenuProps) {
         </span>
       </button>
       <div id={listId} className={styles.panel} hidden={!open}>
+        {open && (
+          <p className={styles.who}>
+            <strong>{user.displayName}</strong>
+            <span>{user.email}</span>
+          </p>
+        )}
         <ul className={styles.items}>
-          <li>
-            <Link to="/profile" className={styles.item} onClick={close}>
-              Profile
-            </Link>
-          </li>
-          <li>
-            <Link to="/badges" className={styles.item} onClick={close}>
-              Badges
-            </Link>
-          </li>
+          {LINKS.filter((l) => !l.staff || user.isStaff).map((l) => (
+            <li key={l.to}>
+              <Link to={l.to} className={styles.item} onClick={close}>
+                {l.label}
+              </Link>
+            </li>
+          ))}
         </ul>
         <div className={styles.footer}>
-          <Button variant="secondary" size="sm" loading={loggingOut} onClick={onLogout}>
+          <Button variant="ghost" size="sm" loading={loggingOut} onClick={onLogout}>
             Log out
           </Button>
         </div>

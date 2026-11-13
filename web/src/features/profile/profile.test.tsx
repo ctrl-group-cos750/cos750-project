@@ -63,14 +63,17 @@ describe('account menu', () => {
     expect(trigger).toHaveAttribute('aria-expanded', 'false')
     await userEvent.click(trigger)
     expect(trigger).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByRole('link', { name: 'Profile' })).toHaveAttribute('href', '/profile')
+    expect(screen.getByRole('link', { name: 'Profile and settings' })).toHaveAttribute(
+      'href',
+      '/profile',
+    )
     expect(screen.getByRole('link', { name: 'Badges' })).toHaveAttribute('href', '/badges')
     expect(screen.getByRole('button', { name: 'Log out' })).toBeVisible()
 
     await userEvent.keyboard('{Escape}')
     expect(trigger).toHaveAttribute('aria-expanded', 'false')
     expect(trigger).toHaveFocus()
-    expect(screen.queryByRole('link', { name: 'Profile' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Profile and settings' })).toBeNull()
   })
 
   it('closes on a click outside it, and after choosing a page', async () => {
@@ -78,12 +81,12 @@ describe('account menu', () => {
     renderApp('/')
     await openMenu()
     await userEvent.click(screen.getByRole('heading', { name: 'Graphs and breadth-first search' }))
-    expect(screen.queryByRole('link', { name: 'Profile' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Profile and settings' })).toBeNull()
 
     await openMenu()
-    await userEvent.click(screen.getByRole('link', { name: 'Profile' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Profile and settings' }))
     expect(await screen.findByRole('heading', { name: 'Ada' })).toBeVisible()
-    expect(screen.queryByRole('link', { name: 'Profile' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Profile and settings' })).toBeNull()
   })
 })
 

@@ -1,4 +1,5 @@
 import { screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { ada, fakeApi, renderApp } from '../../test/app.tsx'
 import type { MasteryReport, ObjectiveReport } from './mastery.api.ts'
@@ -169,10 +170,11 @@ describe('ReportPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong.')
   })
 
-  it('is linked from the header', async () => {
+  it('is linked from the account menu', async () => {
     withReport({ ready: false, objectives: [] })
     renderApp('/')
-    expect(await screen.findByRole('link', { name: 'Report' })).toHaveAttribute('href', '/report')
+    await userEvent.click(await screen.findByRole('button', { name: /your account/ }))
+    expect(screen.getByRole('link', { name: 'Mastery report' })).toHaveAttribute('href', '/report')
   })
 
   it('links each open review path, worded for how far the student is', async () => {

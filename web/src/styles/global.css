@@ -48,10 +48,11 @@
   --sidebar-accent-foreground: rgb(13, 79, 165);
   --sidebar-border: rgb(230, 230, 230);
   --sidebar-ring: rgb(17, 102, 212);
-  --font-sans: 'Inter', 'Segoe UI', 'Helvetica Neue', sans-serif;
+  --font-sans: 'Geist Variable', 'Segoe UI', 'Helvetica Neue', sans-serif;
   --font-serif: Georgia, 'Times New Roman', serif;
   --font-mono: monospace;
-  --radius: 0.125rem;
+  /* Rounded, not square: shadcn's buttons, inputs and menus take their corners from this. */
+  --radius: 0.75rem;
   --shadow-2xs: 0 1px 4px rgb(0 0 0 / 3%);
   --shadow-xs: 0 1px 4px rgb(0 0 0 / 3%);
   --shadow-sm: 0 1px 4px rgb(0 0 0 / 5%), 0 1px 2px -1px rgb(0 0 0 / 5%);

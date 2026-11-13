@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router'
 import { Alert, Button, Spinner } from '../components'
+import { LandingPage } from '../pages/LandingPage.tsx'
 import { useCurrentUser } from './hooks.ts'
 import styles from './guards.module.css'
 
@@ -28,24 +29,30 @@ function Unreachable({ retry }: { retry: () => void }) {
   )
 }
 
-/** Signed-in pages. Anyone else goes to the log-in page and comes back here afterwards. */
+/** Signed-in pages. A visitor at `/` sees the landing page (what Ctrl Academy is, and the way in);
+ * anywhere else, they go to the log-in page and come back here afterwards. */
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { data: user, isPending, isError, refetch } = useCurrentUser()
   const location = useLocation()
   if (isPending) return <Checking />
   if (isError) return <Unreachable retry={() => void refetch()} />
   if (!user) {
+    if (location.pathname === '/') return <LandingPage />
     const from = location.pathname + location.search
     return <Navigate to="/login" replace state={{ from } satisfies FromState} />
   }
   return children
 }
 
-/** The log-in and register pages. Someone already logged in goes to the app instead. */
+/** The log-in and register pages. Someone already logged in goes to the app instead: to the page
+ * they were sent here from, if any. (This also runs the moment a login succeeds, before the log-in
+ * page's own redirect, so it must honour `from` too, or the student always lands on the home page.) */
 export function GuestOnly({ children }: { children: ReactNode }) {
   const { data: user, isPending } = useCurrentUser()
+  const from = (useLocation().state as FromState)?.from
   if (isPending) return <Checking />
-  if (user) return <Navigate to="/" replace />
+  if (user)
+    return <Navigate to={from?.startsWith('/') && !from.startsWith('//') ? from : '/'} replace />
   return children
 }
 

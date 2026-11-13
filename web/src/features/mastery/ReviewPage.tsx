@@ -1,11 +1,11 @@
 import { Link, useParams } from 'react-router'
 import { buttonVariants } from '@/components/ui/button-variants'
+import { cn } from '@/lib/utils'
 import { ApiError } from '../../api/client.ts'
-import { Alert, Card, MasteryStatus, Spinner, Tag, type Mastery } from '../../components'
+import { Alert, Card, Markdown, MasteryStatus, Spinner, Tag, type Mastery } from '../../components'
 import { backState } from '../../components/backState.ts'
 import { useReviewPath } from './hooks.ts'
 import type { ObjectiveState, ReviewStep } from './mastery.api.ts'
-import { Prose } from './Prose.tsx'
 import styles from './ReviewPage.module.css'
 
 const asMastery: Partial<Record<ObjectiveState, Mastery>> = {
@@ -20,7 +20,7 @@ function Step({ step, objectiveId }: { step: ReviewStep; objectiveId: number }) 
       <li className={styles.step}>
         <h2 className={styles.title}>{step.title}</h2>
         <div className={styles.prose}>
-          <Prose markdown={step.body} />
+          <Markdown>{step.body}</Markdown>
         </div>
       </li>
     )
@@ -47,7 +47,10 @@ function Step({ step, objectiveId }: { step: ReviewStep; objectiveId: number }) 
         to={`/activities/${step.activityId}`}
         // The activity page leads back to this path (#146).
         state={backState(`/review/${objectiveId}`, 'Back to the review path')}
-        className={buttonVariants({ variant: step.answered ? 'ghost' : 'secondary', size: 'sm' })}
+        className={cn(
+          buttonVariants({ variant: step.answered ? 'outline' : 'default' }),
+          'justify-self-start',
+        )}
       >
         {step.answered
           ? fresh

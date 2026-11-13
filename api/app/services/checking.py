@@ -60,6 +60,17 @@ UNKNOWN_TEST = "This is not one of the test cases."
 WRONG_TRACE_STEP = "This step does not match the traversal."
 MISSING_TRACE_STEP = "The traversal has more steps than this."
 EXTRA_TRACE_STEP = "The traversal is already finished by this step."
+# A queue no BFS can hold, whatever came before it: a vertex in it twice, or one that has already
+# left it (review of 13 Nov, item 618). Both come from marking a vertex only when it leaves the
+# queue, so a neighbour still waiting is added again; follow-through marking must not accept it.
+QUEUE_TWICE = (
+    "A vertex joined the queue twice: mark a vertex found when it joins the queue, not when it "
+    "leaves, and never add a found vertex again."
+)
+QUEUE_AFTER_VISIT = (
+    "A vertex that has already left the queue is back in it: mark a vertex found when it joins "
+    "the queue, not when it leaves, and never add a found vertex again."
+)
 # What to check in each column of a wrong trace row (ID document §7.3: the reason and the next
 # step, not just "wrong"). Named by column, never by the right value, so a row's message helps
 # without giving the answer away.
@@ -234,6 +245,16 @@ def _trace_columns_wrong(have: TraceRow, want: TraceRow | BfsStep) -> list[str]:
     ]
 
 
+def _impossible_queue(row: TraceRow) -> str | None:
+    """Why no BFS can reach this row's queue, or None: a vertex in it twice (`QUEUE_TWICE`), or one
+    the row lists as visited (`QUEUE_AFTER_VISIT`). Such a row is wrong on every reading."""
+    if len(set(row.queue)) < len(row.queue):
+        return QUEUE_TWICE
+    if set(row.queue) & set(row.visited):
+        return QUEUE_AFTER_VISIT
+    return None
+
+
 def _next_step(adjacency: dict[str, list[str]], start: str, row: TraceRow) -> TraceRow | None:
     """The step BFS takes from the state a student wrote in `row` (its queue and its order), or
     None when that queue is empty and BFS has finished. Found = everything already visited or
@@ -262,7 +283,13 @@ def check_trace(config: TraceConfig, submission: TraceSubmission) -> CheckResult
     it (`TRACE_COLUMN_HINTS`), never the right value. The traversal is the engine's, not a stored
     answer (SE document decision "BFS computed server-side"); no `solution` is kept for this kind.
     There are at least as many parts as the engine has steps, so a short answer leaves its missing
-    steps wrong; a step after the traversal has finished, on either reading, is wrong too."""
+    steps wrong; a step after the traversal has finished, on either reading, is wrong too.
+
+    A row whose queue no BFS can hold (a vertex in it twice, or one already visited) is wrong
+    whatever the readings say, and its message names the misconception behind it: marking a
+    vertex found only when it leaves the queue (`_impossible_queue`). Otherwise follow-through
+    would carry that misconception through every later row at the cost of one step, and pass
+    objective 5's "at most one error" (review of 13 Nov, item 618)."""
     scenario = GraphScenarioOut(
         id=0,
         name="",
@@ -288,6 +315,12 @@ def check_trace(config: TraceConfig, submission: TraceSubmission) -> CheckResult
             readings.append(follow)
         if not readings:
             parts.append(PartResult(ref=i, correct=False, message=EXTRA_TRACE_STEP))
+            continue
+        impossible = _impossible_queue(have)
+        if impossible is not None:
+            parts.append(
+                PartResult(ref=i, correct=False, message=f"{WRONG_TRACE_STEP} {impossible}")
+            )
             continue
         wrong = min((_trace_columns_wrong(have, want) for want in readings), key=len)
         if not wrong:

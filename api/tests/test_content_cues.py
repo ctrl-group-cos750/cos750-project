@@ -406,6 +406,7 @@ RETIRED = {
     1303: {"a", "b", "c"},
     1304: {"a", "b", "c"},
     1305: {"a", "b", "c"},
+    316: {"a", "b", "c"},  # a new closing task (#214 C3): routes from E, not a count from A
     614: {"a", "b", "c"},  # a new question: every staging id, the key's included
     615: {"c"},
     616: {"c"},

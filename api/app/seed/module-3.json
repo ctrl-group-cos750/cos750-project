@@ -480,46 +480,51 @@
       "purpose": "practice",
       "objective_id": 8,
       "config": {
-        "prompt": "On the campus graph, what is the fewest number of walkways from the Admin block (A) to the Green (G)? Use the BFS order you found: A, C, E, B, F, D, G.",
+        "prompt": "Closing task. BFS now starts at the Engineering building (E) on the campus graph (walkways A–C, A–E, B–C, B–G, C–F, D–E, E–F). It records who found each building. Walk back from the Bookshop (B) along those records: what route do you get, and how many walkways long is it?",
         "options": [
           {
-            "id": "c",
-            "label": "2"
+            "id": "f",
+            "label": "E → F → C → B: 3 walkways"
           },
           {
-            "id": "a",
-            "label": "3"
+            "id": "e",
+            "label": "E → A → C → B: 3 walkways"
           },
           {
-            "id": "b",
-            "label": "6"
+            "id": "g",
+            "label": "E → C → B: 2 walkways"
+          },
+          {
+            "id": "h",
+            "label": "E → A → C → B: 4 walkways"
           }
         ]
       },
       "solution": {
-        "explanation": "BFS reaches G through A, C, B, G: three walkways. BFS finds each vertex by the fewest edges from the start, so there is no shorter route.",
-        "correct": "a",
+        "explanation": "Correct. E finds A, D and F. A leaves the queue before F, so A finds C first, and C finds B. Walking back from B gives E → A → C → B: 3 walkways. BFS takes every building 2 walkways from E out of the queue before any 3 away, so no route is shorter.",
+        "correct": "e",
         "feedback": {
-          "b": "6 is how many vertices come before G in the order (G is 7th), not how many walkways separate it from A. Follow who found whom back to A.",
-          "c": "G is not joined to C or E. It needs one more walkway, from B."
+          "f": "Not quite. E → F → C → B is also 3 walkways, but it isn't the route BFS records. A and F both neighbour C, and A leaves the queue first, so A finds C. Ask: who took C into the queue?",
+          "g": "Not quite. There's no walkway between E and C: E's neighbours are A, D and F. Check E's walkways in the list, then walk back from B.",
+          "h": "Not quite. The route is right, but 4 counts the buildings E, A, C and B. Each walkway joins two of them, so there is one fewer walkway than buildings. Count the arrows."
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Ask: which vertex added G to the queue?"
+          "body": "Run BFS from E and write down who found each building."
         },
         {
           "level": 2,
-          "body": "B added G. Which vertex added B?"
+          "body": "E finds A, D and F, in that order. Which of A and F leaves the queue first?"
         },
         {
           "level": 3,
-          "body": "C added B, and A added C. Count those walkways."
+          "body": "A leaves first, so A finds C. Who finds B?"
         },
         {
           "level": 4,
-          "body": "Answer: 3 walkways, A → C → B → G."
+          "body": "Answer: E → A → C → B, 3 walkways."
         }
       ]
     },

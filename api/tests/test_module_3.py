@@ -54,14 +54,34 @@ def test_the_skip_check_answer_is_the_queue_after_c() -> None:
     assert chosen_label(314) == ", ".join(after_c.queue) == "E, B, F"
 
 
-def test_the_closing_task_answer_is_the_fewest_walkways_from_a_to_g() -> None:
-    # Who discovered whom: follow G back to A.
-    found_by = {v: s.visited_vertex for s in steps(CAMPUS) for v in s.discovered}
-    path = ["G"]
-    while path[-1] != CAMPUS.start_vertex:
-        path.append(found_by[path[-1]])
-    assert path[::-1] == ["A", "C", "B", "G"]
-    assert chosen_label(316) == str(len(path) - 1)
+def found_by(scenario: GraphScenarioOut) -> dict[str, str]:
+    return {v: s.visited_vertex for s in steps(scenario) for v in s.discovered}
+
+
+def route_back(scenario: GraphScenarioOut, goal: str) -> list[str]:
+    """Follow "found by" back from the goal to the start, as the lesson teaches."""
+    back, path = found_by(scenario), [goal]
+    while path[-1] != scenario.start_vertex:
+        path.append(back[path[-1]])
+    return path[::-1]
+
+
+FROM_E = CAMPUS.model_copy(update={"start_vertex": "E"})
+
+
+def test_the_closing_task_answer_is_the_route_bfs_records_from_e_to_b() -> None:
+    """316 asked module 1's opening question again, A to G, whose answer module 1's video, module
+    3's video and worked example 320 had all given (#214 C3). It now starts at E and asks for the
+    route to B, which turns on the tie-break: A leaves the queue before F, so A finds C."""
+    path = route_back(FROM_E, "B")
+    assert path == ["E", "A", "C", "B"]
+    assert chosen_label(316) == f"{' → '.join(path)}: {len(path) - 1} walkways"
+    assert activity(316).hints[-1].body == f"Answer: {' → '.join(path)}, {len(path) - 1} walkways."
+    # The tempting route is real and as short, but it isn't the one BFS records.
+    labels = {o["id"]: o["label"] for o in activity(316).config["options"]}
+    assert labels["f"] == "E → F → C → B: 3 walkways"
+    assert {"F", "C"} in [{e.source, e.target} for e in CAMPUS.edges]
+    assert {"E", "C"} not in [{e.source, e.target} for e in CAMPUS.edges]  # option g's walkway
 
 
 def test_the_trace_tables_last_hint_is_the_engines_answer() -> None:
@@ -78,15 +98,6 @@ def test_the_trace_tables_last_hint_is_the_engines_answer() -> None:
 def test_the_visualiser_link_opens_the_campus_graph() -> None:
     predict = next(s for s in MODULE.segments if s.title.startswith("Your turn: predict"))
     assert f"(/graphs/{CAMPUS.id})" in predict.body
-
-
-def test_the_closing_tasks_feedback_counts_g_s_place_right() -> None:
-    """316's feedback said G was 6th in A, C, E, B, F, D, G (#147)."""
-    order = run_bfs(CAMPUS).order
-    for text in activity(316).solution["feedback"].values():
-        for place in re.findall(r"G is (\d+)(?:st|nd|rd|th)", text):
-            assert int(place) == order.index("G") + 1
-    assert f"G is {order.index('G') + 1}th" in activity(316).solution["feedback"]["b"]
 
 
 def test_when_bfs_fits_cannot_be_done_by_elimination() -> None:

@@ -882,6 +882,56 @@
         }
       }
     },
+    "/api/me/skills": {
+      "get": {
+        "tags": [
+          "skills"
+        ],
+        "summary": "Get Skills",
+        "description": "The logged-in student's skill profile and module medals (FR-9.7, FR-9.8; #214).\n\nFor each learning objective: how many of its practice items they have answered correctly, of\nhow many, and its mastery result once the mastery check (or a review path) has decided it.\nFor each module with activities to mark: its medal once complete, and the medal the answers so\nfar are heading for. Worked out from attempts on each request (app/services/skills.py), so it\nfollows the current content and rules. Only ever the student's own.",
+        "operationId": "get_skills_api_me_skills_get",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/me/avatar": {
       "put": {
         "tags": [
@@ -1281,7 +1331,7 @@
           "modules"
         ],
         "summary": "Get Module",
-        "description": "One module with its full ordered segment list and the student's status.\n\nReturns 404 if the module does not exist; 403 if it is locked for this\nstudent (the previous module has not been completed yet).",
+        "description": "One module with its full ordered segment list and the student's status.\n\nReturns 404 if the module does not exist; 403 if it is locked for this\nstudent (only the mastery check is: until modules 1 to 5 are complete or tested out).",
         "operationId": "get_module_api_modules__module_id__get",
         "parameters": [
           {
@@ -1407,13 +1457,143 @@
         }
       }
     },
+    "/api/modules/{module_id}/quick-check": {
+      "get": {
+        "tags": [
+          "modules"
+        ],
+        "summary": "Get Quick Check",
+        "description": "The module's quick check, \"Already know this?\" (FR-8.2, #214): its questions while this\nstudent may take it (no answers or hints are in them), or its result once taken. 404 for a\nmodule with no quick check (modules 0 and 6).",
+        "operationId": "get_quick_check_api_modules__module_id__quick_check_get",
+        "parameters": [
+          {
+            "name": "module_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 2147483647,
+              "minimum": 0,
+              "title": "Module Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuickCheckOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "modules"
+        ],
+        "summary": "Take Quick Check",
+        "description": "Mark the quick check: one answer for every question, sent together, marked at once\n(FR-8.2, #214). At most one wrong passes, and marks the module tested out; the result says\nwhat was missed and where to go next either way. One try per module: 409 once taken, or once\nthe module is complete. 422 unless there is exactly one answer per question, each one of its\noptions; nothing is recorded then. 404 for a module with no quick check.",
+        "operationId": "take_quick_check_api_modules__module_id__quick_check_post",
+        "parameters": [
+          {
+            "name": "module_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 2147483647,
+              "minimum": 0,
+              "title": "Module Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuickCheckIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuickCheckResultOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/modules/{module_id}/restart": {
       "post": {
         "tags": [
           "modules"
         ],
         "summary": "Restart",
-        "description": "Start the module again to redo its questions (app/services/restart.py): it opens at its\nstart, and every question, retrieval question and video checkpoint in it shows unanswered,\nwith hints from level 1 again. The module stays complete and earned points and badges stay;\nearlier answers stay recorded for the evaluation but aren't shown. 404 if there is no such\nmodule, 403 while it is locked, 409 for the mastery check or a module not finished.",
+        "description": "Start the module again to redo its questions (app/services/restart.py): it opens at its\nstart, and every question, retrieval question and video checkpoint in it shows unanswered,\nwith hints from level 1 again. The module stays complete and earned points and badges stay;\nearlier answers stay recorded for the evaluation but aren't shown. 404 if there is no such\nmodule, 403 while it is locked, 409 for the mastery check or a module not finished. A module the\nstudent only tested out of (FR-8.2) isn't finished: `can_restart` is true exactly when this\nsucceeds. A restart doesn't reopen the quick check: it is one try per module.",
         "operationId": "restart_api_modules__module_id__restart_post",
         "parameters": [
           {
@@ -1456,7 +1636,7 @@
             }
           },
           "409": {
-            "description": "The mastery check, or a module not finished yet."
+            "description": "The mastery check, or a module not worked through to the end yet (one only tested out of is not)."
           },
           "422": {
             "description": "Validation Error",
@@ -2176,7 +2356,7 @@
           "staff"
         ],
         "summary": "Export Csv",
-        "description": "Download one table as CSV for every real student (FR-10.2), oldest first:\n\n- `attempts`: each answer; `submitted` and `detail` are what was answered and the per-part\n  result, as JSON.\n- `hints`: each hint shown. `round` is which time through its module (0, then one more for\n  each restart, app/services/restart.py); `after_attempt` is the newest attempt id when it\n  was shown, so it came before exactly that student's attempts with a higher `attempt_id`.\n- `events`: the timeline (app/services/events.py): videos started and finished, checkpoints\n  reached, segments viewed, hints shown, results changing, modules completed and restarted;\n  `payload` as JSON. Segment views and module completions give time per segment and per\n  module. Each `module_restarted` carries its `round` and `after_attempt`: a student's\n  attempts at that module's activities with an id above one restart's `after_attempt`, and\n  not above the next one's, are that round's.\n- `objective_results`: each student's current result per objective, with the attempts it was\n  decided from (`evidence`).",
+        "description": "Download one table as CSV for every real student (FR-10.2), oldest first:\n\n- `attempts`: each answer; `submitted` and `detail` are what was answered and the per-part\n  result, as JSON.\n- `hints`: each hint shown. `round` is which time through its module (0, then one more for\n  each restart, app/services/restart.py); `after_attempt` is the newest attempt id when it\n  was shown, so it came before exactly that student's attempts with a higher `attempt_id`.\n- `events`: the timeline (app/services/events.py): videos started and finished, checkpoints\n  reached, segments viewed, hints shown, results changing, modules completed and restarted,\n  quick checks taken; `payload` as JSON. Segment views and module completions give time per segment and per\n  module. Each `module_restarted` carries its `round` and `after_attempt`: a student's\n  attempts at that module's activities with an id above one restart's `after_attempt`, and\n  not above the next one's, are that round's.\n- `objective_results`: each student's current result per objective, with the attempts it was\n  decided from (`evidence`).",
         "operationId": "export_csv_api_staff_export__table__csv_get",
         "parameters": [
           {
@@ -3938,6 +4118,11 @@
           "hintLevel": {
             "type": "integer",
             "title": "Hintlevel"
+          },
+          "points": {
+            "type": "integer",
+            "title": "Points",
+            "default": 0
           }
         },
         "additionalProperties": false,
@@ -4277,6 +4462,17 @@
           "seen": {
             "type": "boolean",
             "title": "Seen"
+          },
+          "questNumber": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Questnumber"
           }
         },
         "additionalProperties": false,
@@ -4346,7 +4542,8 @@
               "retrieval",
               "mastery",
               "review",
-              "bonus"
+              "bonus",
+              "test_out"
             ],
             "title": "Purpose",
             "default": "practice"
@@ -4443,7 +4640,8 @@
               "retrieval",
               "mastery",
               "review",
-              "bonus"
+              "bonus",
+              "test_out"
             ],
             "title": "Purpose",
             "default": "practice"
@@ -4558,7 +4756,8 @@
               "retrieval",
               "mastery",
               "review",
-              "bonus"
+              "bonus",
+              "test_out"
             ],
             "title": "Purpose"
           }
@@ -5648,7 +5847,8 @@
               "locked",
               "open",
               "in_progress",
-              "complete"
+              "complete",
+              "tested_out"
             ],
             "title": "Status"
           },
@@ -5667,6 +5867,42 @@
           "shownSegmentsPassed": {
             "type": "integer",
             "title": "Shownsegmentspassed"
+          },
+          "recommended": {
+            "type": "boolean",
+            "title": "Recommended",
+            "default": false
+          },
+          "quickCheck": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "available",
+                  "passed",
+                  "not_passed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quickcheck"
+          },
+          "quickCheckScore": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuickCheckScoreOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lookAgainCount": {
+            "type": "integer",
+            "title": "Lookagaincount",
+            "default": 0
           },
           "restarted": {
             "type": "boolean",
@@ -5713,6 +5949,88 @@
         "title": "ModuleDetailOut",
         "description": "A module with its full ordered segment list.\n\nReturned by ``GET /api/modules/{moduleId}``.  Extends ``ModuleOut`` so the\nfrontend can use the same type for map cards and detail views."
       },
+      "ModuleMedalOut": {
+        "properties": {
+          "moduleId": {
+            "type": "integer",
+            "title": "Moduleid"
+          },
+          "complete": {
+            "type": "boolean",
+            "title": "Complete"
+          },
+          "firstTime": {
+            "type": "integer",
+            "title": "Firsttime"
+          },
+          "onYourOwn": {
+            "type": "integer",
+            "title": "Onyourown"
+          },
+          "answered": {
+            "type": "integer",
+            "title": "Answered"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "medal": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "gold",
+                  "silver",
+                  "bronze"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Medal"
+          },
+          "headingFor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "gold",
+                  "silver",
+                  "bronze"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Headingfor"
+          },
+          "objectives": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Objectives"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "moduleId",
+          "complete",
+          "firstTime",
+          "onYourOwn",
+          "answered",
+          "total",
+          "medal",
+          "headingFor",
+          "objectives"
+        ],
+        "title": "ModuleMedalOut",
+        "description": "A module's medal (FR-9.8): `medal` once the module is complete (gold, every activity right\nfirst time without hint 3 or 4; silver, every activity right without them; bronze, finished),\nand `headingFor`, what the answers so far are on course for. Never counts time or speed.\n`objectives` are the learning objectives its activities practise."
+      },
       "ModuleOut": {
         "properties": {
           "id": {
@@ -5748,7 +6066,8 @@
               "locked",
               "open",
               "in_progress",
-              "complete"
+              "complete",
+              "tested_out"
             ],
             "title": "Status"
           },
@@ -5767,6 +6086,42 @@
           "shownSegmentsPassed": {
             "type": "integer",
             "title": "Shownsegmentspassed"
+          },
+          "recommended": {
+            "type": "boolean",
+            "title": "Recommended",
+            "default": false
+          },
+          "quickCheck": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "available",
+                  "passed",
+                  "not_passed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quickcheck"
+          },
+          "quickCheckScore": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuickCheckScoreOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lookAgainCount": {
+            "type": "integer",
+            "title": "Lookagaincount",
+            "default": 0
           },
           "restarted": {
             "type": "boolean",
@@ -5972,6 +6327,268 @@
         ],
         "title": "PositionIn",
         "description": "Request body for ``POST /api/modules/{moduleId}/position`` (FR-2.5).\n\nThe client sends the zero-based position of the segment the student just\nreached. The server keeps the furthest one, and refuses a position more than one past it,\nso a module can't be finished by jumping to its end.\n\n``ge=0`` rejects negative values at the API boundary: a negative position stored in\n``ModuleProgress.current_segment_position`` would cause ``segments[-1]`` (undefined\nin JavaScript) on resume, crashing the ModulePage render."
+      },
+      "QuickCheckAnswerIn": {
+        "properties": {
+          "activityId": {
+            "type": "integer",
+            "title": "Activityid"
+          },
+          "selected": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Selected"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "activityId",
+          "selected"
+        ],
+        "title": "QuickCheckAnswerIn"
+      },
+      "QuickCheckIn": {
+        "properties": {
+          "answers": {
+            "items": {
+              "$ref": "#/components/schemas/QuickCheckAnswerIn"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Answers"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "answers"
+        ],
+        "title": "QuickCheckIn",
+        "description": "`POST /api/modules/{moduleId}/quick-check`: one answer for every question, sent together."
+      },
+      "QuickCheckItemResultOut": {
+        "properties": {
+          "activityId": {
+            "type": "integer",
+            "title": "Activityid"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "correct": {
+            "type": "boolean",
+            "title": "Correct"
+          },
+          "chosen": {
+            "type": "string",
+            "title": "Chosen"
+          },
+          "answer": {
+            "type": "string",
+            "title": "Answer"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "activityId",
+          "title",
+          "prompt",
+          "correct",
+          "chosen",
+          "answer",
+          "explanation"
+        ],
+        "title": "QuickCheckItemResultOut",
+        "description": "How one question went, shown once every question is answered."
+      },
+      "QuickCheckOptionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "QuickCheckOptionOut"
+      },
+      "QuickCheckOut": {
+        "properties": {
+          "moduleId": {
+            "type": "integer",
+            "title": "Moduleid"
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "passMark": {
+            "type": "integer",
+            "title": "Passmark"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/QuickCheckQuestionOut"
+            },
+            "type": "array",
+            "title": "Questions"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuickCheckResultOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "moduleId",
+          "available",
+          "passMark",
+          "questions"
+        ],
+        "title": "QuickCheckOut",
+        "description": "`GET /api/modules/{moduleId}/quick-check`. `available` while the student may take it;\n`questions` then holds its questions. Once taken, `result` holds how it went."
+      },
+      "QuickCheckQuestionOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/QuickCheckOptionOut"
+            },
+            "type": "array",
+            "title": "Options"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "prompt",
+          "options"
+        ],
+        "title": "QuickCheckQuestionOut",
+        "description": "One quick check question: multiple choice, no hints, no feedback until the end."
+      },
+      "QuickCheckResultOut": {
+        "properties": {
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          },
+          "correct": {
+            "type": "integer",
+            "title": "Correct"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "suggestion": {
+            "type": "string",
+            "enum": [
+              "move_on",
+              "start_with",
+              "work_through"
+            ],
+            "title": "Suggestion"
+          },
+          "suggestedModule": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggestedmodule"
+          },
+          "lookAt": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Lookat"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/QuickCheckItemResultOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "passed",
+          "correct",
+          "total",
+          "suggestion",
+          "suggestedModule",
+          "lookAt",
+          "items"
+        ],
+        "title": "QuickCheckResultOut",
+        "description": "The quick check's result (FR-8.2, #214). `passed` with at most one wrong. `suggestion`:\n`move_on` after a pass, `start_with` an earlier module after a fail that points there (see\napp/services/quick_check.py), else `work_through` this module. `suggested_module` is the\nmodule named: the next one to do after a pass (None if there is none), the earlier one, or\nthis one. `look_at` names what was missed: the titles of the questions answered wrongly."
+      },
+      "QuickCheckScoreOut": {
+        "properties": {
+          "correct": {
+            "type": "integer",
+            "title": "Correct"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "correct",
+          "total"
+        ],
+        "title": "QuickCheckScoreOut",
+        "description": "How a quick check went, for the map and the module page to link back to its result."
       },
       "Readiness": {
         "properties": {
@@ -6326,6 +6943,11 @@
             "title": "Attempted",
             "default": false
           },
+          "lookAgain": {
+            "type": "boolean",
+            "title": "Lookagain",
+            "default": false
+          },
           "optional": {
             "type": "boolean",
             "title": "Optional",
@@ -6342,6 +6964,100 @@
         ],
         "title": "SegmentOut",
         "description": "One segment of a module, in display order.\n\nKind-specific nullable fields:\n- ``body``        — Markdown content, for ``text`` / ``worked_example`` / ``refresher``.\n- ``video_id``    — FK to the video, present only for ``video`` segments.\n- ``activity_id`` — FK to the activity, present only for ``activity`` segments.\n\n``body``, ``video_id``, and ``activity_id`` are mutually exclusive in practice;\nthe schema keeps them separate and nullable so the frontend can branch on ``kind``."
+      },
+      "SkillOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "answered": {
+            "type": "integer",
+            "title": "Answered"
+          },
+          "correct": {
+            "type": "integer",
+            "title": "Correct"
+          },
+          "onYourOwn": {
+            "type": "integer",
+            "title": "Onyourown"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "not_started",
+              "practising",
+              "secure"
+            ],
+            "title": "Level"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "not_attempted",
+                  "met_independently",
+                  "met_with_support",
+                  "not_yet"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "answered",
+          "correct",
+          "onYourOwn",
+          "total",
+          "level",
+          "result"
+        ],
+        "title": "SkillOut",
+        "description": "One objective on the skill profile (FR-9.7). `level` is practice progress in three coarse\nsteps (not started, practising, secure: every practice item answered and at least 80% right\nwithout hint 3 or 4); the counts are the evidence behind it, of `total` practice items.\n`result` is the mastery result once the mastery check (or a review path) has decided it."
+      },
+      "SkillsOut": {
+        "properties": {
+          "objectives": {
+            "items": {
+              "$ref": "#/components/schemas/SkillOut"
+            },
+            "type": "array",
+            "title": "Objectives"
+          },
+          "modules": {
+            "items": {
+              "$ref": "#/components/schemas/ModuleMedalOut"
+            },
+            "type": "array",
+            "title": "Modules"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "objectives",
+          "modules"
+        ],
+        "title": "SkillsOut",
+        "description": "The logged-in student's skill profile and module medals. Only ever their own."
       },
       "StaffCheckpointIn": {
         "properties": {

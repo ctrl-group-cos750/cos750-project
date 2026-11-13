@@ -335,3 +335,82 @@ def test_the_evaluation_data_tells_the_rounds_apart(
     assert {h["after_attempt"] for h in hints[1:]} == {str(boundary)}
     (activity,) = client.get("/api/staff/insights").json()["activities"]
     assert activity["studentsWithSupport"] == 0  # hint 3 came after the right answer
+
+
+def wrong(client: TestClient, activity: int = 101) -> None:
+    response = client.post(
+        f"/api/activities/{activity}/attempts", json={"submitted": {"selected": "b"}}
+    )
+    assert response.status_code == 201
+
+
+def segment(client: TestClient, activity: int = 101) -> dict[str, Any]:
+    detail = client.get("/api/modules/0").json()
+    return next(s for s in detail["segments"] if s["activityId"] == activity)
+
+
+def map_count(client: TestClient, module: int = 0) -> int:
+    modules = client.get("/api/modules").json()
+    return int(next(m for m in modules if m["id"] == module)["lookAgainCount"])
+
+
+def test_two_tries_to_move_on_count_only_since_the_restart(
+    client: TestClient, db: Session, tmp_path: Path
+) -> None:
+    """Two wrong answers let a student move on (FR-2.7, #214), but only within one round: two
+    before a restart and one after it are one try in the new round, so the question still holds
+    them (FR-2.8). Counting every try would let the restarted module through on one answer."""
+    setup(client, db, tmp_path)
+    wrong(client)
+    wrong(client)  # two tries: may move on, marked to look at again
+    assert (segment(client)["done"], segment(client)["lookAgain"]) == (True, True)
+    assert client.post("/api/modules/0/position", json={"segmentPosition": 1}).status_code == 200
+    assert client.get("/api/modules/0").json()["status"] == "complete"
+
+    client.post("/api/modules/0/restart")
+    wrong(client)  # the first try of this round
+    held = segment(client)
+    assert (held["done"], held["attempted"], held["lookAgain"]) == (False, True, False)
+    assert map_count(client) == 0  # the map counts this round too
+
+    wrong(client)  # the second: may move on again, and marked again
+    assert (segment(client)["done"], segment(client)["lookAgain"]) == (True, True)
+    assert map_count(client) == 1
+
+
+def test_look_again_counts_only_since_the_restart(
+    client: TestClient, db: Session, tmp_path: Path
+) -> None:
+    """Right before a restart and wrong twice after it: this round has no right answer, so the
+    question is marked to look at again, on the module page and on the map (FR-2.7, FR-2.8)."""
+    setup(client, db, tmp_path)
+    finish_module_0(client)  # wrong, then right
+    assert (segment(client)["lookAgain"], map_count(client)) == (False, 0)
+
+    client.post("/api/modules/0/restart")
+    wrong(client)
+    wrong(client)
+    moved_on = segment(client)
+    assert (moved_on["done"], moved_on["lookAgain"]) == (True, True)
+    assert map_count(client) == 1
+
+
+def test_a_module_only_tested_out_of_cant_be_restarted(
+    client: TestClient, db: Session, tmp_path: Path
+) -> None:
+    """Testing out (FR-8.2) isn't working through: there is nothing to redo yet, so the restart is
+    neither offered nor allowed, and `canRestart` agrees with the route. Worked through to its end
+    it completes, and may be restarted then."""
+    setup(client, db, tmp_path)
+    user = db.scalar(select(User).where(User.email == "ada@example.com"))
+    assert user is not None
+    db.add(ModuleProgress(user_id=user.id, module_id=0, status="tested_out"))
+    db.commit()
+    module = client.get("/api/modules/0").json()
+    assert (module["status"], module["canRestart"]) == ("tested_out", False)
+    assert client.post("/api/modules/0/restart").status_code == 409
+
+    finish_module_0(client)
+    module = client.get("/api/modules/0").json()
+    assert (module["status"], module["canRestart"]) == ("complete", True)
+    assert client.post("/api/modules/0/restart").status_code == 200

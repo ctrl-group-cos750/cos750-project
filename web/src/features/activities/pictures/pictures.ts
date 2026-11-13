@@ -12,7 +12,6 @@ import {
   CAMPUS,
   CAMPUS_MAP,
   CLASSIFY,
-  PQRS,
   type MapPicture,
   type Situation,
 } from './situations.ts'
@@ -37,15 +36,8 @@ const campusGraph = mapDrawing(
   'The campus as a graph. Vertices A to G, one for each place: A Admin block, B Bookshop, C Computer Science, D Dining hall, E Engineering, F Fountain, G Green. Edges A–C, A–E, B–C, B–G, C–F, D–E and E–F.',
 )
 
-const pqrs = mapDrawing(
-  PQRS,
-  'The graph in this question',
-  'A graph with vertices P, Q, R and S, and edges P–Q, Q–R and Q–S.',
-)
-
 const ACTIVITIES: Record<number, ActivityPictures> = {
   101: { picture: { kind: 'map', map: CAMPUS_MAP } },
-  103: { picture: { kind: 'drawing', drawing: pqrs, name: 'The graph' } },
   104: { picture: { kind: 'map', map: BUS_MAP }, situation: BUS },
   105: { picture: { kind: 'map', map: CAMPUS_MAP }, situation: CAMPUS },
   106: {

@@ -6,13 +6,29 @@ import type { TagTone } from '../../components'
 import type { ModuleSummary } from './module.types.ts'
 import { fetchModules } from './module.api.ts'
 import { minutesProgress } from './minutes.ts'
+import { useSkills } from '../progress/hooks.ts'
+import { Medal } from '../progress/Medal.tsx'
+import { medalText } from '../progress/medals.ts'
+import type { Medal as MedalTier } from '../progress/skills.api.ts'
+import { SkillProfileCard } from '../progress/SkillProfileCard.tsx'
+import { useRewards } from '../rewards/hooks.ts'
+import { useMediaQuery } from '../activities/pictures/useMediaQuery.ts'
 import styles from './ModuleMap.module.css'
+
+/** From here the map is two columns: "next up" and the skill profile beside the list
+ * (ModuleMap.module.css). */
+const TWO_COLUMNS = '(min-width: 72rem)'
 
 /** A module with nothing to work through yet (no segments, so it can't be completed). It doesn't
  * lock the ones after it (#123), and it isn't shown as "open" for ever or offered by Continue:
  * it reads "coming soon" until it has content (#146). */
 function notReady(module: ModuleSummary): boolean {
-  return module.segmentCount === 0 && module.status !== 'complete' && module.status !== 'locked'
+  return module.segmentCount === 0 && module.status === 'open'
+}
+
+/** Done: worked through, or tested out with the quick check (#214). */
+function isDone(module: ModuleSummary): boolean {
+  return module.status === 'complete' || module.status === 'tested_out'
 }
 
 /** Maps a module status to a Tag tone and display label. */
@@ -27,6 +43,8 @@ function statusDisplay(module: ModuleSummary): { tone: TagTone; label: string; i
       return { tone: 'warning', label: 'in progress', icon: '◑' }
     case 'complete':
       return { tone: 'success', label: 'complete', icon: '✓' }
+    case 'tested_out':
+      return { tone: 'success', label: 'tested out', icon: '»' }
   }
 }
 
@@ -49,7 +67,7 @@ function NextUp({ modules, next }: { modules: ModuleSummary[]; next: ModuleSumma
   const navigate = useNavigate()
   const { data: user } = useCurrentUser()
   const started = modules.some((m) => m.status !== 'open' && m.status !== 'locked')
-  const allDone = modules.every((m) => m.status === 'complete' || m.segmentCount === 0)
+  const allDone = modules.every((m) => isDone(m) || m.segmentCount === 0)
   const name = user?.displayName
   if (allDone)
     return (
@@ -102,8 +120,10 @@ function NextUp({ modules, next }: { modules: ModuleSummary[]; next: ModuleSumma
   )
 }
 
-/** A single module row on the map. Locked modules are shown but not interactive. */
-function ModuleRow({ module }: { module: ModuleSummary }) {
+/** A single module row on the map. Only the mastery check is ever locked: shown but not
+ * interactive. The recommended next module says so, and a module the student could test out of
+ * offers its quick check under the card (FR-8.2, #214). */
+function ModuleRow({ module, medal }: { module: ModuleSummary; medal?: MedalTier | null }) {
   const { tone, label, icon } = statusDisplay(module)
   const isLocked = module.status === 'locked'
 
@@ -114,6 +134,16 @@ function ModuleRow({ module }: { module: ModuleSummary }) {
       </span>
       <div className={styles.info}>
         <span className={styles.title}>{module.title}</span>
+        {module.recommended && (
+          <span>
+            <Tag tone="accent" icon="→">
+              recommended next
+            </Tag>
+          </span>
+        )}
+        {(module.lookAgainCount ?? 0) > 0 && (
+          <span className={styles.lookAgain}>{module.lookAgainCount} marked to look at again</span>
+        )}
         {module.status === 'in_progress' && module.segmentCount > 0 && (
           <ProgressBar
             label={`Module ${module.number} progress`}
@@ -124,6 +154,9 @@ function ModuleRow({ module }: { module: ModuleSummary }) {
       </div>
       <span className={styles.meta}>
         <span className={styles.duration}>{formatDuration(module.estimatedMinutes)}</span>
+        {medal && (module.status === 'complete' || module.status === 'tested_out') && (
+          <Medal tier={medal} label={`Module ${module.number}: ${medalText(medal)}`} />
+        )}
         <Tag tone={tone} icon={icon}>
           {label}
         </Tag>
@@ -140,25 +173,50 @@ function ModuleRow({ module }: { module: ModuleSummary }) {
           {cardContent}
         </Link>
       )}
+      {module.quickCheck === 'available' && !isDone(module) && (
+        <Link to={`/modules/${module.id}/check`} className={styles.quickCheck}>
+          Already know module {module.number}? Take the quick check
+        </Link>
+      )}
+      {/* A taken quick check stays findable, passed or not (#215 review). */}
+      {module.quickCheckScore && (
+        <p className={styles.quickCheckScore}>
+          Quick check: {module.quickCheckScore.correct} of {module.quickCheckScore.total},{' '}
+          <Link
+            to={`/modules/${module.id}/check`}
+            aria-label={`Quick check: ${module.quickCheckScore.correct} of ${module.quickCheckScore.total}, see the results for module ${module.number}`}
+          >
+            see results
+          </Link>
+        </p>
+      )}
     </li>
   )
 }
 
-/** Picks the first in-progress module, else the first open module, to continue from; never one
- * with nothing in it yet (#146). */
+/** Picks the first in-progress module, else the recommended one, else the first open one, to
+ * continue from; never one with nothing in it yet (#146). */
 function findContinueTarget(modules: ModuleSummary[]): ModuleSummary | undefined {
   const ready = modules.filter((m) => m.segmentCount > 0)
-  return ready.find((m) => m.status === 'in_progress') ?? ready.find((m) => m.status === 'open')
+  return (
+    ready.find((m) => m.status === 'in_progress') ??
+    ready.find((m) => m.recommended === true) ??
+    ready.find((m) => m.status === 'open')
+  )
 }
 
 /**
- * The module map (FR-2.6): all seven modules with their state, estimated duration, and a
- * Continue button that picks up where the student left off.
+ * The module map (FR-2.1, FR-2.6): all seven modules in order with their state and estimated
+ * duration, the one recommended next, and a Continue button that picks up where the student left
+ * off. The student may open any module but the mastery check (#214).
  *
  * Route: / (index)
  */
 export function ModuleMap() {
   const query = useQuery({ queryKey: ['modules'], queryFn: fetchModules })
+  const twoColumns = useMediaQuery(TWO_COLUMNS)
+  const skills = useSkills()
+  const rewards = useRewards()
 
   if (query.isPending) return <Spinner label="Loading modules" />
   if (query.isError) return <Alert tone="danger">{query.error.message}</Alert>
@@ -166,6 +224,12 @@ export function ModuleMap() {
   const modules = query.data
   const continueTarget = findContinueTarget(modules)
   const minutes = minutesProgress(modules)
+  // A finished module's medal (#214), unless points and badges are hidden (FR-9.5).
+  const medals = new Map(
+    rewards.data?.hideRewards === false
+      ? (skills.data?.modules ?? []).map((m) => [m.moduleId, m.medal] as const)
+      : [],
+  )
 
   return (
     <div className={styles.page}>
@@ -191,6 +255,7 @@ export function ModuleMap() {
 
       <div className={styles.side}>
         <NextUp modules={modules} next={continueTarget} />
+        {twoColumns && <SkillProfileCard />}
       </div>
 
       <section aria-labelledby="all-modules" className={styles.all}>
@@ -199,10 +264,13 @@ export function ModuleMap() {
         </h2>
         <ul className={styles.list}>
           {modules.map((m) => (
-            <ModuleRow key={m.id} module={m} />
+            <ModuleRow key={m.id} module={m} medal={medals.get(m.id)} />
           ))}
         </ul>
       </section>
+      {/* In one column the skill profile comes after the modules, so it doesn't push the list
+          a screen or more down (about 1,500 px at 320 px, #215 review). */}
+      {!twoColumns && <SkillProfileCard />}
     </div>
   )
 }

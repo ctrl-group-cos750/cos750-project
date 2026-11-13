@@ -147,6 +147,10 @@ describe('staff members page', () => {
     await userEvent.click(within(matches).getByRole('button', { name: 'Make Ada staff' }))
 
     expect(await screen.findByText('Ada is a team member')).toBeInTheDocument()
+    // The results went: focus is on the message, not the page (A9).
+    await waitFor(() =>
+      expect(screen.getByText('Ada is a team member').closest('[role="alert"]')).toHaveFocus(),
+    )
     expect(api.callsTo('POST /api/staff/members')[0]?.body).toEqual({ email: 'ada@example.com' })
     expect(await screen.findByText('ada@example.com')).toBeInTheDocument() // now in the team
     expect(search).toHaveValue('')
@@ -165,14 +169,21 @@ describe('staff members page', () => {
     const row = (await screen.findByText('ada@example.com')).closest('li')!
 
     await userEvent.click(within(row).getByRole('button', { name: 'Remove access' }))
+    // Focus moves into the question, and back to the row's button on Cancel (A9).
+    expect(within(row).getByRole('button', { name: 'Remove access' })).toHaveFocus()
     await userEvent.click(within(row).getByRole('button', { name: 'Cancel' }))
+    expect(within(row).getByRole('button', { name: 'Remove access' })).toHaveFocus()
     expect(api.callsTo('DELETE /api/staff/members/1')).toHaveLength(0)
 
     await userEvent.click(within(row).getByRole('button', { name: 'Remove access' }))
     expect(within(row).getByText("Remove Ada's staff access?")).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    expect(within(row).queryByText("Remove Ada's staff access?")).not.toBeInTheDocument()
+    await userEvent.click(within(row).getByRole('button', { name: 'Remove access' }))
     await userEvent.click(within(row).getByRole('button', { name: 'Remove access' }))
 
     await waitFor(() => expect(screen.queryByText('ada@example.com')).not.toBeInTheDocument())
+    expect(screen.getByRole('heading', { name: 'Current team members' })).toHaveFocus()
     expect(api.callsTo('DELETE /api/staff/members/1')).toHaveLength(1)
   })
 })
@@ -196,6 +207,10 @@ describe('accounts pages', () => {
     expect(screen.getByText('75% of answers')).toBeInTheDocument()
     expect(screen.getByText('1 of 2 checkpoints passed')).toBeInTheDocument()
     expect(screen.getByText('Which leaves first?')).toBeInTheDocument()
+    // Not the pilot files' name for the student: beside the email it would put a name to every
+    // row of the CSV files (A13, #215 review).
+    expect(screen.queryByText(/CSV files/)).toBeNull()
+    expect(screen.queryByText(/^s-[0-9a-f]{12}$/)).toBeNull()
   })
 
   it('makes an account staff from its overview', async () => {
@@ -204,6 +219,22 @@ describe('accounts pages', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Make staff' }))
     expect(await screen.findByRole('button', { name: 'Remove staff access' })).toBeInTheDocument()
     expect(api.callsTo('POST /api/staff/members')).toHaveLength(1)
+  })
+
+  it('asks before removing staff access from the overview, as the members page does (A13)', async () => {
+    const api = portalApi([adaRow.id, grace.id])
+    renderApp('/staff/accounts/1')
+    await userEvent.click(await screen.findByRole('button', { name: 'Remove staff access' }))
+    expect(screen.getByText("Remove Ada's staff access?")).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Remove access' })).toHaveFocus()
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.getByRole('button', { name: 'Remove staff access' })).toHaveFocus()
+    expect(api.callsTo('DELETE /api/staff/members/1')).toHaveLength(0)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remove staff access' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Remove access' }))
+    expect(await screen.findByRole('button', { name: 'Make staff' })).toHaveFocus()
+    expect(api.callsTo('DELETE /api/staff/members/1')).toHaveLength(1)
   })
 
   it('deletes an account only once its email is typed, then goes back to the list', async () => {
@@ -219,6 +250,9 @@ describe('accounts pages', () => {
 
     expect(await screen.findByText('2 accounts')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Ada' })).not.toBeInTheDocument()
+    // It says so, and focus starts at the heading, not the page (A13).
+    expect(screen.getByText(/Ada's account was deleted/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Accounts' })).toHaveFocus()
     expect(api.callsTo('DELETE /api/staff/accounts/1')).toHaveLength(1)
   })
 

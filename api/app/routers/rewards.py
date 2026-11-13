@@ -6,12 +6,14 @@ from app.auth import CurrentUser
 from app.db import DbSession
 from app.models import User
 from app.schemas.rewards import EarnedBadgeOut, RewardsOut, RewardsSettingsIn
+from app.services.attempts import bonus_quests
 from app.services.rewards import Tier, badges_of, mark_seen, set_hide_rewards, total_points
 
 router = APIRouter(prefix="/api/rewards", tags=["rewards"])
 
 
 def _rewards(session: DbSession, user: User) -> RewardsOut:
+    quests = {str(quest): n for n, quest in enumerate(bonus_quests(session), start=1)}
     return RewardsOut(
         hide_rewards=user.hide_rewards,
         points=total_points(session, user.id),
@@ -23,6 +25,7 @@ def _rewards(session: DbSession, user: User) -> RewardsOut:
                 awarded_at=b.awarded_at,
                 upgraded_at=b.upgraded_at,
                 seen=b.seen_at is not None,
+                quest_number=quests.get(b.ref) if b.badge == "quest" else None,
             )
             for b in badges_of(session, user.id)
         ],

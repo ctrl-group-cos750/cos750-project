@@ -23,7 +23,8 @@ type AccountMenuProps = {
  * opening the modules, their mastery report, badges, profile, the staff portal for team members,
  * and log out. A disclosure (a button that shows a list of
  * links), not an ARIA menu, so it reads and works like any other links: Tab moves through it,
- * Escape or a click outside closes it and puts focus back on the button.
+ * Escape or a click outside closes it and puts focus back on the button; tabbing out of it
+ * closes it too.
  */
 export function AccountMenu({ user, onLogout, loggingOut }: AccountMenuProps) {
   const [open, setOpen] = useState(false)
@@ -36,16 +37,25 @@ export function AccountMenu({ user, onLogout, loggingOut }: AccountMenuProps) {
     function outside(event: PointerEvent) {
       if (!wrapper.current?.contains(event.target as Node)) setOpen(false)
     }
+    // Tab past the last item (or Shift+Tab out): the panel closes rather than staying open over
+    // whatever has focus next (WCAG 2.4.11).
+    function focusLeft(event: FocusEvent) {
+      const next = event.relatedTarget as Node | null
+      if (next && !wrapper.current?.contains(next)) setOpen(false)
+    }
     function escape(event: KeyboardEvent) {
       if (event.key !== 'Escape') return
       setOpen(false)
       button.current?.focus()
     }
+    const element = wrapper.current
     document.addEventListener('pointerdown', outside)
     document.addEventListener('keydown', escape)
+    element?.addEventListener('focusout', focusLeft)
     return () => {
       document.removeEventListener('pointerdown', outside)
       document.removeEventListener('keydown', escape)
+      element?.removeEventListener('focusout', focusLeft)
     }
   }, [open])
 

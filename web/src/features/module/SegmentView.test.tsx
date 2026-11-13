@@ -71,7 +71,7 @@ describe('SegmentView — video segment text (#149)', () => {
     const summary = screen.getByText('Text version')
     expect(summary.tagName).toBe('SUMMARY')
     // Below the video, never in a column beside it that would stand mostly empty (#211 review).
-    expect(document.querySelector('[data-two-column]')).toBeNull()
+    expect(document.querySelector('[data-two-column], [data-picture-beside]')).toBeNull()
     const player = screen.getByText('The recorded transcript.')
     expect(player.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(screen.getByText('queue')).not.toBeVisible()

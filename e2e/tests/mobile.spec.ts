@@ -67,14 +67,9 @@ test.describe('badge notes', () => {
   // Nothing closes the notes here: the test is about where they sit.
   test.use({ dismissOverlays: false })
 
-  // FIXME: fails on staging (5668d77). A new badge's note is fixed to the bottom of the screen and
-  // stays until dismissed (BadgeAnnouncer.tsx, BadgeAnnouncer.module.css); at 360 px it covers the
-  // module's Next button, so a tap lands on the note and a focused Next is hidden (WCAG 2.2
-  // 2.4.11). To file as a card; turn this into test() when it is fixed.
-  test.fixme("at 360 px a new badge's note doesn't cover the module's Next", async ({
-    page,
-    course,
-  }) => {
+  // On a phone a new badge's note is a compact banner at the top of the screen, so it never covers
+  // the module's Next at the bottom (WCAG 2.2 2.4.11), and its links are 44 px tall (#215 review).
+  test("at 360 px a new badge's note doesn't cover the module's Next", async ({ page, course }) => {
     // Module 1 finished earns the First Module badge (module 0, the warm-up, asks only diagnostic
     // questions and earns none); its note shows on the next page, module 2 (its recall questions
     // answered, so the module itself is on screen, with Next).
@@ -101,5 +96,12 @@ test.describe('badge notes', () => {
       return at !== null && !el.contains(at)
     })
     expect(covered, 'Next is covered by the badge note').toBe(false)
+    const note = page.getByRole('status')
+    for (const link of await note.getByRole('link').all()) {
+      const box = await link.boundingBox()
+      // Rounded to a hundredth: Firefox reports a 44 px box at a fractional offset as 43.999996.
+      const height = Math.round((box?.height ?? 0) * 100) / 100
+      expect(height, 'a link in the badge note is a 44 px target').toBeGreaterThanOrEqual(44)
+    }
   })
 })

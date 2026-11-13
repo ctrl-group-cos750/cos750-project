@@ -1,5 +1,5 @@
 import { reportEvent } from '../../api/events.ts'
-import { useEffect, useReducer } from 'react'
+import { useEffect, useReducer, useRef } from 'react'
 import { Gauge, Lightbulb, Pause, Play, RotateCcw, StepBack, StepForward } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -39,6 +39,22 @@ export function BfsVisualizer({ scenario }: BfsVisualizerProps) {
   })
   const isComplete = playback.frameIndex === playback.lastFrameIndex
   const predictionRequired = playback.predictionMode && expected !== null
+  const feedbackRef = useRef<HTMLDivElement>(null)
+  const stepForwardRef = useRef<HTMLButtonElement>(null)
+  const firstChoiceRef = useRef<HTMLButtonElement>(null)
+  const lastPhase = useRef(playback.phase)
+
+  // Focus follows the prediction (WCAG 2.4.3): the question's first vertex when it is asked,
+  // the feedback once a vertex is chosen (its buttons go), and Step forward after Continue.
+  useEffect(() => {
+    const from = lastPhase.current
+    lastPhase.current = playback.phase
+    if (from === playback.phase) return
+    if (playback.phase === 'answering' && document.activeElement === stepForwardRef.current)
+      firstChoiceRef.current?.focus()
+    else if (playback.phase === 'feedback') feedbackRef.current?.focus()
+    else if (document.activeElement === document.body) stepForwardRef.current?.focus()
+  }, [playback.phase])
 
   useEffect(() => {
     if (!playback.playing || playback.frameIndex === playback.lastFrameIndex) return
@@ -77,10 +93,7 @@ export function BfsVisualizer({ scenario }: BfsVisualizerProps) {
   }
 
   return (
-    <section
-      className="mx-auto w-full max-w-6xl space-y-5 px-4 py-6 sm:px-6"
-      aria-labelledby="bfs-title"
-    >
+    <section className="w-full min-w-0 space-y-5" aria-labelledby="bfs-title">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -151,9 +164,10 @@ export function BfsVisualizer({ scenario }: BfsVisualizerProps) {
                 </legend>
 
                 <div className="flex flex-wrap gap-2">
-                  {scenario.vertices.map((vertex) => (
+                  {scenario.vertices.map((vertex, index) => (
                     <Button
                       key={vertex.id}
+                      ref={index === 0 ? firstChoiceRef : undefined}
                       type="button"
                       variant="outline"
                       onClick={() => chooseVertex(vertex.id)}
@@ -167,6 +181,8 @@ export function BfsVisualizer({ scenario }: BfsVisualizerProps) {
 
             {playback.phase === 'feedback' && playback.feedback && (
               <Alert
+                ref={feedbackRef}
+                tabIndex={-1}
                 className={
                   playback.feedback.correct
                     ? 'border-success bg-success-soft'
@@ -202,10 +218,13 @@ export function BfsVisualizer({ scenario }: BfsVisualizerProps) {
             Reset
           </Button>
 
+          {/* Step back, Play and Step forward stay focusable at either end (aria-disabled), so
+              focus doesn't drop to the page when the student reaches the first or last step. */}
           <Button
             type="button"
             variant="outline"
             disabled={playback.frameIndex === 0}
+            focusableWhenDisabled
             onClick={() => dispatch({ type: 'BACK' })}
           >
             <StepBack aria-hidden="true" />
@@ -216,13 +235,20 @@ export function BfsVisualizer({ scenario }: BfsVisualizerProps) {
             type="button"
             variant="secondary"
             disabled={playback.phase !== 'ready' || isComplete}
+            focusableWhenDisabled
             onClick={() => dispatch({ type: 'TOGGLE_PLAY' })}
           >
             {playback.playing ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
             {playback.playing ? 'Pause' : 'Play'}
           </Button>
 
-          <Button type="button" disabled={isComplete} onClick={requestNext}>
+          <Button
+            ref={stepForwardRef}
+            type="button"
+            disabled={isComplete}
+            focusableWhenDisabled
+            onClick={requestNext}
+          >
             <StepForward aria-hidden="true" />
             Step forward
           </Button>

@@ -7,7 +7,8 @@ Every place an activity can appear is one of its *homes*:
 - **a module**: its own `module_id` (practice, retrieval, module 0's diagnostic, module 6's
   mastery items), a module segment that shows it, or a module segment that uses it as a skip
   check, if it is that module's or no module's, not a mastery item and on no review path. Open
-  when the module is not locked for this student (`modules._statuses`, the module map's rule).
+  when the module is not locked for this student (`modules._statuses`, the module map's rule:
+  since #214 only the mastery check is ever locked).
 - **a review path**: a segment of an objective's review path. Open once module 6 has marked that
   objective "not yet" (`mastery.review_open`), so its fresh items stay unseen until then.
 - **a video**: the question at one of the video's checkpoints. Open when the video is (below).
@@ -25,6 +26,9 @@ A video placed on a module segment or a review-path segment follows that home. A
 no segment (the staff video editor makes videos before anyone places them) stays open, as it was
 before these checks, so a link to it keeps working; placing it in a module then gates it.
 
+A module's quick check questions (purpose `test_out`, FR-8.2, #214) are refused here altogether:
+they are answered only through the quick check (app/services/quick_check.py), all together.
+
 Staff (`users.is_staff`) may open everything, so they can preview any activity or video while
 they write content. Their attempts are left out of the evaluation export (FR-10).
 """
@@ -40,7 +44,7 @@ from app.services.mastery import review_open
 from app.services.modules import _modules, _progress, _segment_counts, _segments, _statuses
 from app.services.support import hidden_segments
 
-Refusal = Literal["module_locked", "review_closed", "not_shown", "retired"]
+Refusal = Literal["module_locked", "review_closed", "not_shown", "retired", "quick_check"]
 
 
 @dataclass(frozen=True)
@@ -82,9 +86,13 @@ def activity_homes(session: Session, activity: Activity) -> Homes:
     ).all()
     modules = {m for m, _, _, _ in shown if m is not None}
     review_paths = frozenset(o for _, o, _, _ in shown if o is not None)
-    if activity.purpose != "mastery" and not review_paths:
+    # A practice item that is only a worked example's skip check is never shown: skipping a worked
+    # example (FR-8.2) isn't built. Until it is, it has no home, so it can't be answered by its URL
+    # for points (13 Nov audit). Module 0's diagnostic items are shown, and stay open.
+    unused_check = bool(checks) and not shown and not videos and activity.purpose == "practice"
+    if activity.purpose != "mastery" and not review_paths and not unused_check:
         modules |= {m for m in checks if m is not None and activity.module_id in (None, m)}
-    if activity.module_id is not None:
+    if activity.module_id is not None and not unused_check:
         modules.add(activity.module_id)
     return Homes(
         modules=frozenset(modules),
@@ -147,6 +155,10 @@ def activity_refusal(session: Session, user: User, activity: Activity) -> Refusa
     """None if this student may open the activity, else why not (see the module docstring)."""
     if user.is_staff:
         return None
+    if activity.purpose == "test_out":
+        # A quick check question is answered only in the quick check, all at once, with no hints
+        # or feedback before the end (FR-8.2, #214): never one by one here.
+        return "quick_check"
     return _first_refusal(session, user.id, activity_homes(session, activity))
 
 

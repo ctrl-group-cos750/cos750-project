@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { skillsKey } from '../progress/hooks.ts'
 import {
   fetchRewards,
   markRewardsSeen,
@@ -14,10 +15,15 @@ export function useRewards() {
   return useQuery({ queryKey: rewardsKey, queryFn: fetchRewards, staleTime: 30_000 })
 }
 
-/** Call after something that can earn points or badges, so they show up straight away. */
+/** Call after something that can earn points or badges, so they show up straight away, with the
+ * skill profile and medals. */
 export function useRefreshRewards() {
   const queryClient = useQueryClient()
-  return () => void queryClient.invalidateQueries({ queryKey: rewardsKey })
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: rewardsKey })
+    // The skill profile and the medals follow the same answers (#214).
+    void queryClient.invalidateQueries({ queryKey: skillsKey })
+  }
 }
 
 export function useMarkRewardsSeen() {

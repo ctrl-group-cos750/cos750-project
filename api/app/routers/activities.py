@@ -39,6 +39,7 @@ from app.services.attempts import (
 from app.services.locks import ActivityGone
 from app.services.mastery import in_check
 from app.services.restart import activity_round
+from app.services.rewards import activity_refs, points_for_refs
 from app.services.submissions import clean, submission_problem
 
 router = APIRouter(prefix="/api/activities", tags=["activities"])
@@ -53,11 +54,16 @@ NO_MORE_HINTS = "You have seen every hint for this activity."
 SOLVED = "You have already answered this correctly, so no more hints are given."
 REVIEW_CLOSED = "This activity is on a review path, which opens when the mastery check marks its objective 'not yet'."
 MODULE_LOCKED = (
-    "This activity is in a module that isn't open yet. Complete the module before it to unlock it."
+    "This activity is in the mastery check, which opens once modules 1 to 5 are each complete or "
+    "tested out."
+)
+QUICK_CHECK = (
+    "This question is part of a module's quick check. Take the quick check from the module's page."
 )
 ALREADY_ANSWERED = (
     "You have answered this mastery check question. Only your first answer counts, so it can't "
-    "be changed. Your results are in your mastery report once you finish the check."
+    "be changed. Your results are in your mastery report once every question in the check is "
+    "answered."
 )
 ANSWERED_NO_HINTS = "You have answered this mastery check question, so no more hints are given."
 HINT_LIMIT = (
@@ -65,7 +71,8 @@ HINT_LIMIT = (
     "if this objective comes out 'not yet', its review path teaches it again with every hint."
 )
 RECORDED = (
-    "Answer recorded. You will see your results in your mastery report when you finish the check."
+    "Answer recorded. Your results are in your mastery report once every question in the check "
+    "is answered."
 )
 NOT_SHOWN = "This activity is extra help that isn't part of your way through the module."
 SUPPORT_LEVEL = 3  # hint levels 3 and 4 make a correct answer count as "with support" (FR-7.2)
@@ -173,6 +180,8 @@ def _activity_or_404(session: DbSession, activity_id: int, user: User) -> Activi
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=REVIEW_CLOSED)
     if refusal == "module_locked":
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=MODULE_LOCKED)
+    if refusal == "quick_check":  # answered only in the quick check (FR-8.2, #214)
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=QUICK_CHECK)
     if refusal == "not_shown":  # a support item this student isn't shown (FR-8.4)
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=NOT_SHOWN)
     return activity
@@ -240,7 +249,10 @@ def submit_attempt(
         submitted = clean(activity.kind, body.submitted)
         if submission_problem(activity.kind, activity.config, submitted) is not None:
             raise HTTPException(422, detail=FOREIGN)
+        refs = activity_refs(activity.id)
+        before = points_for_refs(session, user.id, refs)
         attempt, _ = record_attempt(session, user.id, activity, submitted, one_answer=checked)
+        points = points_for_refs(session, user.id, refs) - before
     except AlreadyAnswered:  # the mastery check takes one answer (#144)
         raise HTTPException(status.HTTP_409_CONFLICT, detail=ALREADY_ANSWERED) from None
     except ValidationError as exc:  # the submission didn't match the kind's shape
@@ -250,7 +262,10 @@ def submit_attempt(
     except ActivityGone:  # the seed deleted it while this answer waited
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NOT_FOUND) from None
     session.commit()
-    return _attempt_out(attempt, checked)
+    out = _attempt_out(attempt, checked)
+    if not checked:  # a mastery check item's points wait for the end of the check (#144)
+        out.points = points
+    return out
 
 
 @router.get("/{activity_id}/hints")

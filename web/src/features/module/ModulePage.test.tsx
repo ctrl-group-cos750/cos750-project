@@ -1,8 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Link, MemoryRouter, Route, Routes } from 'react-router'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ada, fakeApi, renderApp } from '../../test/app.tsx'
 import { ModulePage } from './ModulePage.tsx'
 import type { ModuleDetail, ModuleSummary, Segment } from './module.types.ts'
@@ -127,6 +127,40 @@ describe('ModulePage — goals', () => {
     expect(screen.getByText('Recall how queues work.')).toBeInTheDocument()
     expect(screen.getByText('Use a queue in Python.')).toBeInTheDocument()
   })
+
+  describe('on the first segment', () => {
+    afterEach(() => vi.unstubAllGlobals())
+
+    /** A screen as wide or as narrow as a phone, as matchMedia reports it. */
+    function screenIsPhone(phone: boolean) {
+      vi.stubGlobal(
+        'matchMedia',
+        vi.fn((query: string) => ({
+          matches: phone && query.includes('max-width'),
+          media: query,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+        })),
+      )
+    }
+
+    const goals = async () =>
+      (await screen.findByText('By the end of this module you can:')).closest('details')
+
+    it('opens the goals on a wider screen', async () => {
+      screenIsPhone(false)
+      setupModuleApi(twoSegmentDetail)
+      renderApp('/modules/1')
+      expect(await goals()).toHaveAttribute('open')
+    })
+
+    it('keeps the goals closed on a phone, so the lesson starts on the first screen', async () => {
+      screenIsPhone(true)
+      setupModuleApi(twoSegmentDetail)
+      renderApp('/modules/1')
+      expect(await goals()).not.toHaveAttribute('open')
+    })
+  })
 })
 
 // A recall question is an ordinary activity: the page loads it like the activity page does.
@@ -221,6 +255,8 @@ describe('ModulePage — segment rendering', () => {
     expect(
       await screen.findByRole('heading', { name: 'Introduction to graphs' }),
     ).toBeInTheDocument()
+    // The tab names the module, not just "Module" (A8).
+    expect(document.title).toBe('Module 0: Warm-up and queue refresher · Ctrl Academy')
   })
 
   it('renders a text segment body as Markdown — heading', async () => {
@@ -444,8 +480,91 @@ describe('ModulePage — navigation and position saving', () => {
     renderApp('/modules/1')
     const next = await screen.findByRole('button', { name: 'Next →' })
     expect(next).toHaveAccessibleDescription(
-      'Get it right to continue. If you’re stuck, the hints can help.',
+      'Not yet right. Try again: after one more answer you can move on, though it earns no points then, and the hints can help.',
     )
+  })
+
+  it('lets the student move on after two answers, marked to look at again (#214)', async () => {
+    setupModuleApi({
+      ...allKindsDetail,
+      status: 'in_progress',
+      currentSegmentPosition: 2,
+      segments: [
+        textSegment,
+        videoSegment,
+        { ...activitySegment, done: true, attempted: true, lookAgain: true },
+        workedExampleSegment,
+      ],
+    })
+    renderApp('/modules/1')
+    const next = await screen.findByRole('button', { name: 'Next →' })
+    expect(next).not.toHaveAttribute('aria-disabled')
+    // Said plainly: moving on earns nothing for it (#215 review).
+    expect(
+      screen.getByText(
+        'You can move on: this one is marked to look at again. Moving on earns no points for it; answer it right later and it does.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('lists the activities to look at again, each a link that opens its segment (#215)', async () => {
+    setupModuleApi({
+      ...allKindsDetail,
+      status: 'in_progress',
+      currentSegmentPosition: 3,
+      segments: [
+        textSegment,
+        videoSegment,
+        { ...activitySegment, done: true, attempted: true, lookAgain: true },
+        workedExampleSegment,
+      ],
+    })
+    const user = userEvent.setup()
+    renderApp('/modules/1')
+    const strip = (await screen.findByText(/1 to look at again/)).closest('details')!
+    await user.click(within(strip).getByText('Your progress'))
+    const link = within(strip).getByRole('link', { name: activitySegment.title })
+    expect(link).toHaveAttribute('href', '/modules/1?segment=2')
+    await user.click(link)
+    expect(
+      await screen.findByRole('heading', { level: 2, name: activitySegment.title }),
+    ).toHaveFocus()
+  })
+
+  it('opens the segment a link names, if the student has reached it (#215)', async () => {
+    setupModuleApi({
+      ...allKindsDetail,
+      status: 'in_progress',
+      currentSegmentPosition: 1,
+      segments: [textSegment, videoSegment, activitySegment, workedExampleSegment],
+    })
+    renderApp('/modules/1?segment=0')
+    expect(await screen.findByRole('heading', { level: 2, name: textSegment.title })).toBeVisible()
+  })
+
+  it('links back to a taken quick check’s result (#215)', async () => {
+    setupModuleApi({
+      ...allKindsDetail,
+      quickCheck: 'not_passed',
+      quickCheckScore: { correct: 2, total: 4 },
+    })
+    renderApp('/modules/1')
+    const link = await screen.findByRole('link', { name: /Quick check: 2 of 4, see the results/ })
+    expect(link).toHaveAttribute('href', '/modules/1/check')
+  })
+
+  it('offers the quick check at the top while it can be taken (#214)', async () => {
+    setupModuleApi({ ...allKindsDetail, quickCheck: 'available' })
+    renderApp('/modules/1')
+    const link = await screen.findByRole('link', { name: 'Take the quick check' })
+    expect(link).toHaveAttribute('href', '/modules/1/check')
+  })
+
+  it('offers no quick check once taken, and says when the module was tested out (#214)', async () => {
+    setupModuleApi({ ...allKindsDetail, status: 'tested_out', quickCheck: 'passed' })
+    renderApp('/modules/1')
+    expect(await screen.findByText(/You tested out of this module/)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Take the quick check' })).toBeNull()
   })
 
   it('resumes an in-progress module on the segment the student is doing', async () => {

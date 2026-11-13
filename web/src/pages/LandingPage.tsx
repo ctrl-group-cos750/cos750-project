@@ -132,7 +132,7 @@ export function LandingPage() {
           </Link>
           <div className={styles.headerActions}>
             <ThemeToggle />
-            <Link to="/login" className={buttonVariants({ variant: 'ghost' })}>
+            <Link to="/login" className={`${buttonVariants({ variant: 'ghost' })} ${styles.logIn}`}>
               Log in
             </Link>
             <Link to="/register" className={buttonVariants({ variant: 'default' })}>

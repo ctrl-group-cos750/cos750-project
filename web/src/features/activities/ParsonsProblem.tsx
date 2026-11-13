@@ -245,7 +245,14 @@ export function ParsonsProblem({
                   Remove <span className="visually-hidden">{lineName(line.text)}</span>
                 </Button>
               </span>
-              {part?.message && (
+              {/* A checked line says whether it is right in words, not only by its colour
+                  (WCAG 1.4.1), as matching and choose tests do. */}
+              {part?.correct && (
+                <span className="basis-full text-sm text-success">
+                  <span aria-hidden="true">✓ </span>Correct
+                </span>
+              )}
+              {part && !part.correct && part.message && (
                 <span className="basis-full text-sm text-warning">{part.message}</span>
               )}
             </li>

@@ -1,0 +1,299 @@
+"""The skill profile and module medals (FR-9.7, FR-9.8; #214): GET /api/me/skills, and the points
+an answer reports earning."""
+
+import json
+from pathlib import Path
+from typing import Any
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.models import HintView, ModuleProgress
+from app.seed import load
+from app.services.skills import level_for, medal_for
+
+STUDENT = {"email": "grace@example.com", "password": "Correct horse 1", "displayName": "Grace"}
+RIGHT = {"submitted": {"selected": "a"}}
+WRONG = {"submitted": {"selected": "b"}}
+
+
+def mcq(id: int, objective: int | None, module: int | None, purpose: str = "practice") -> Any:
+    return {
+        "id": id,
+        "kind": "multiple_choice",
+        "title": f"Question {id}",
+        "module_id": module,
+        "objective_id": objective,
+        "purpose": purpose,
+        "config": {
+            "prompt": "Q",
+            "options": [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}],
+        },
+        "solution": {"correct": "a"},
+        "hints": [{"level": n, "body": f"Hint {n}"} for n in (1, 2, 3, 4)],
+    }
+
+
+def segment(id: int, activity: int, **extra: Any) -> dict[str, Any]:
+    return {"id": id, "kind": "activity", "title": f"Step {id}", "activity_id": activity} | extra
+
+
+def course() -> dict[str, Any]:
+    """Module 1 practises objective 1 on 101 to 104; 105 is support for objective 1 only shown
+    to a student who struggles, so it isn't counted. Module 6 holds the mastery items."""
+    return {
+        "objectives": [
+            {"id": 1, "text": "One", "bloom_level": "b", "criterion": "c", "pass_fraction": 1.0},
+            {"id": 2, "text": "Two", "bloom_level": "b", "criterion": "c", "pass_fraction": 1.0},
+        ],
+        "modules": [
+            {
+                "id": 1,
+                "slug": "m1",
+                "title": "M1",
+                "goals": ["g"],
+                "estimated_minutes": 5,
+                "segments": [
+                    segment(1001, 101),
+                    segment(1002, 102),
+                    segment(1003, 103),
+                    segment(1004, 104),
+                    segment(1005, 105, support_for=1),
+                ],
+            },
+            {
+                "id": 6,
+                "slug": "m6",
+                "title": "M6",
+                "goals": ["g"],
+                "estimated_minutes": 5,
+                "segments": [segment(6001, 601), segment(6002, 602)],
+            },
+        ],
+        "activities": [
+            mcq(101, 1, 1),
+            mcq(102, 1, 1),
+            mcq(103, 1, 1),
+            mcq(104, 2, 1),
+            mcq(105, 1, 1),
+            mcq(601, 1, 6, "mastery"),
+            mcq(602, 2, 6, "mastery"),
+            *(mcq(1000 + 100 * o + n, o, None, p) for o in (1, 2) for n, p in REVIEW),
+        ],
+        "review_paths": [review_path(o) for o in (1, 2)],
+    }
+
+
+REVIEW = ((1, "review"), (2, "mastery"))
+
+
+def review_path(objective: int) -> dict[str, Any]:
+    """Every objective needs one once module 6 exists: practice, then a fresh item."""
+    base = 1000 + 100 * objective
+    return {
+        "objective_id": objective,
+        "segments": [
+            {"id": base, "kind": "worked_example", "title": "Again", "body": "Like this."},
+            segment(base + 1, base + 1),
+            segment(base + 2, base + 2),
+        ],
+    }
+
+
+@pytest.fixture
+def loaded(tmp_path: Path, db: Session) -> None:
+    (tmp_path / "course.json").write_text(json.dumps(course()), encoding="utf-8")
+    load(db, tmp_path)
+
+
+def log_in(client: TestClient) -> int:
+    assert client.post("/api/auth/register", json=STUDENT).status_code == 201
+    return int(client.get("/api/auth/me").json()["id"])
+
+
+def answer(client: TestClient, activity: int, body: dict[str, Any] = RIGHT) -> dict[str, Any]:
+    response = client.post(f"/api/activities/{activity}/attempts", json=body)
+    assert response.status_code == 201, response.text
+    return dict(response.json())
+
+
+def see_hints(db: Session, user_id: int, activity: int, up_to: int) -> None:
+    for level in range(1, up_to + 1):
+        db.add(HintView(user_id=user_id, activity_id=activity, level=level))
+    db.commit()
+
+
+def complete(db: Session, user_id: int, module_id: int) -> None:
+    row = db.scalar(
+        select(ModuleProgress).where(
+            ModuleProgress.user_id == user_id, ModuleProgress.module_id == module_id
+        )
+    )
+    if row is None:
+        db.add(ModuleProgress(user_id=user_id, module_id=module_id, status="complete"))
+    else:
+        row.status = "complete"
+    db.commit()
+
+
+def profile(client: TestClient) -> dict[str, Any]:
+    response = client.get("/api/me/skills")
+    assert response.status_code == 200
+    return dict(response.json())
+
+
+@pytest.mark.parametrize(
+    ("first", "own", "tested_out", "medal"),
+    [
+        (4, 4, False, "gold"),
+        (3, 4, False, "silver"),
+        (0, 4, False, "silver"),
+        (3, 3, False, "bronze"),
+        (0, 1, False, "bronze"),
+        # Every answer wrong (moved on after two tries): no medal, as no module points (#215).
+        (0, 0, False, None),
+        (0, 0, True, "silver"),  # tested out through the quick check
+        (4, 4, True, "gold"),
+    ],
+)
+def test_the_medal_rule(first: int, own: int, tested_out: bool, medal: str | None) -> None:
+    assert medal_for(4, first, own, tested_out=tested_out) == medal
+
+
+@pytest.mark.parametrize(
+    ("answered", "own", "level"),
+    [(0, 0, "not_started"), (2, 2, "practising"), (5, 3, "practising"), (5, 4, "secure")],
+)
+def test_the_practice_level(answered: int, own: int, level: str) -> None:
+    assert level_for(answered, own, 5) == level
+
+
+def test_the_profile_needs_a_login(client: TestClient, db: Session) -> None:
+    assert client.get("/api/me/skills").status_code == 401
+
+
+def test_practice_progress_counts_right_answers_per_objective(
+    client: TestClient, loaded: None
+) -> None:
+    log_in(client)
+    answer(client, 101)
+    answer(client, 102, WRONG)
+    skills = {s["id"]: s for s in profile(client)["objectives"]}
+    # 105 is support only, and 601 is the mastery check: neither is practice anyone must meet.
+    assert skills[1] | {"text": ""} == {
+        "id": 1,
+        "text": "",
+        "answered": 2,
+        "correct": 1,
+        "onYourOwn": 1,
+        "total": 3,
+        "level": "practising",
+        "result": None,
+    }
+    assert (skills[2]["level"], skills[2]["total"]) == ("not_started", 1)
+    answer(client, 104)
+    assert {s["id"]: s for s in profile(client)["objectives"]}[2]["level"] == "secure"
+
+
+def test_the_result_appears_once_the_mastery_check_decides_it(
+    client: TestClient, db: Session, loaded: None
+) -> None:
+    user = log_in(client)
+    complete(db, user, 1)
+    answer(client, 601)
+    assert {s["result"] for s in profile(client)["objectives"]} == {None}  # withheld (#144)
+    answer(client, 602, WRONG)
+    results = {s["id"]: s["result"] for s in profile(client)["objectives"]}
+    assert results == {1: "met_independently", 2: "not_yet"}
+
+
+def test_a_medal_needs_the_module_finished(client: TestClient, db: Session, loaded: None) -> None:
+    user = log_in(client)
+    answer(client, 101)
+    answer(client, 102)
+    medal = profile(client)["modules"][0]
+    assert medal["moduleId"] == 1
+    assert (medal["medal"], medal["headingFor"], medal["answered"]) == (None, "gold", 2)
+    assert medal["objectives"] == [1, 2]
+    answer(client, 103)
+    answer(client, 104)
+    complete(db, user, 1)
+    assert profile(client)["modules"][0]["medal"] == "gold"
+
+
+def test_a_wrong_first_answer_makes_it_silver(
+    client: TestClient, db: Session, loaded: None
+) -> None:
+    user = log_in(client)
+    answer(client, 101, WRONG)
+    answer(client, 101)
+    answer(client, 102)
+    answer(client, 103)
+    answer(client, 104)
+    complete(db, user, 1)
+    medal = profile(client)["modules"][0]
+    assert (medal["medal"], medal["firstTime"], medal["onYourOwn"]) == ("silver", 3, 4)
+
+    see_hints(db, user, 102, 4)
+    # Already answered right without the hints, so it stays on your own: a medal never goes down.
+    assert profile(client)["modules"][0]["medal"] == "silver"
+
+
+def test_hint_3_before_the_only_right_answer_makes_it_bronze(
+    client: TestClient, db: Session, loaded: None
+) -> None:
+    user = log_in(client)
+    see_hints(db, user, 101, 3)
+    for activity in (101, 102, 103, 104):
+        answer(client, activity)
+    complete(db, user, 1)
+    medal = profile(client)["modules"][0]
+    assert (medal["medal"], medal["onYourOwn"], medal["total"]) == ("bronze", 3, 4)
+
+
+def test_a_module_with_nothing_to_mark_has_no_medal(client: TestClient, loaded: None) -> None:
+    log_in(client)
+    assert [m["moduleId"] for m in profile(client)["modules"]] == [1]  # not module 6
+
+
+def test_only_the_students_own(client: TestClient, db: Session, loaded: None) -> None:
+    log_in(client)
+    answer(client, 101)
+    client.post("/api/auth/logout")
+    other = STUDENT | {"email": "ada@example.com", "displayName": "Ada"}
+    assert client.post("/api/auth/register", json=other).status_code == 201
+    assert {s["correct"] for s in profile(client)["objectives"]} == {0}
+
+
+def test_an_answer_says_what_points_it_earned(
+    client: TestClient, db: Session, loaded: None
+) -> None:
+    user = log_in(client)
+    assert answer(client, 101, WRONG)["points"] == 0
+    assert answer(client, 101)["points"] == 10
+    assert answer(client, 101)["points"] == 0  # rewarded once
+    see_hints(db, user, 102, 3)
+    assert answer(client, 102)["points"] == 4
+
+
+def test_a_mastery_check_answer_reports_no_points(
+    client: TestClient, db: Session, loaded: None
+) -> None:
+    user = log_in(client)
+    complete(db, user, 1)
+    assert answer(client, 601)["points"] == 0
+    # The last answer finishes the check and gives its points, but still reports none (#144).
+    assert answer(client, 602)["points"] == 0
+
+
+def test_a_module_tested_out_through_its_quick_check_has_silver(
+    client: TestClient, db: Session, loaded: None
+) -> None:
+    """A module passed by testing out (FR-8.2, #214) shows a medal like a finished one."""
+    user = log_in(client)
+    db.add(ModuleProgress(user_id=user, module_id=1, status="tested_out"))
+    db.commit()
+    medal = profile(client)["modules"][0]
+    assert (medal["moduleId"], medal["complete"], medal["medal"]) == (1, True, "silver")

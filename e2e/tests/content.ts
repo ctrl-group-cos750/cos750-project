@@ -28,7 +28,7 @@ type Base = {
   id: number
   title: string
   module_id?: number
-  purpose: 'diagnostic' | 'practice' | 'retrieval' | 'mastery' | 'review'
+  purpose: 'diagnostic' | 'practice' | 'retrieval' | 'mastery' | 'review' | 'bonus' | 'test_out'
   objective_id?: number | null
 }
 

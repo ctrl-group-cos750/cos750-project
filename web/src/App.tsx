@@ -25,6 +25,7 @@ import { StaffVideoImportPage } from './features/staff/StaffVideoImportPage.tsx'
 import { StaffVideoEditorPage } from './features/staff/StaffVideoEditorPage.tsx'
 import { StaffVideosPage } from './features/staff/StaffVideosPage.tsx'
 import { ModulePage } from './features/module/ModulePage.tsx'
+import { QuickCheckPage } from './features/module/QuickCheckPage.tsx'
 import { VideoPage } from './features/video/VideoPage.tsx'
 import { HomePage } from './pages/HomePage.tsx'
 import { NotFoundPage } from './pages/NotFoundPage.tsx'
@@ -67,6 +68,7 @@ function App() {
           <Route path="/activities/:activityId" element={<ActivityPage />} />
           <Route path="videos/:videoId" element={<VideoPage />} />
           <Route path="modules/:moduleId" element={<ModulePage />} />
+          <Route path="modules/:moduleId/check" element={<QuickCheckPage />} />
           <Route path="report" element={<ReportPage />} />
           <Route path="review/:objectiveId" element={<ReviewPage />} />
           <Route path="badges" element={<BadgesPage />} />

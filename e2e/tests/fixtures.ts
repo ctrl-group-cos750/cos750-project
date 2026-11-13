@@ -27,7 +27,7 @@ export type ModuleDetail = {
   id: number
   number: number
   title: string
-  status: 'locked' | 'open' | 'in_progress' | 'complete'
+  status: 'locked' | 'open' | 'in_progress' | 'complete' | 'tested_out'
   currentSegmentPosition: number
   segments: {
     position: number

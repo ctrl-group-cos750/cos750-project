@@ -217,7 +217,7 @@ export function FixTheBug({
                 </label>
                 <select
                   id={selectId}
-                  className="w-full min-w-0 rounded border border-primary bg-background px-2 py-1 font-mono text-sm sm:w-auto sm:max-w-full"
+                  className="w-full min-w-0 rounded border border-primary bg-background px-2 py-1 font-mono text-base pointer-coarse:min-h-11 sm:pointer-fine:text-sm sm:w-auto sm:max-w-full"
                   value={row.current}
                   disabled={disabled}
                   aria-describedby={`${baseId}-how${part ? ` ${markId}` : ''}`}
@@ -295,7 +295,7 @@ export function FixTheBug({
         </label>
         <select
           id={`${baseId}-insert`}
-          className="min-w-0 max-w-full rounded border border-primary bg-background px-2 py-1 font-mono text-sm"
+          className="min-w-0 max-w-full rounded border border-primary bg-background px-2 py-1 font-mono text-base pointer-coarse:min-h-11 sm:pointer-fine:text-sm"
           value={insertId}
           onChange={(event) => setInsertId(event.target.value)}
         >
@@ -311,7 +311,7 @@ export function FixTheBug({
         </label>
         <select
           id={`${baseId}-after`}
-          className="min-w-0 max-w-full rounded border border-primary bg-background px-2 py-1 font-mono text-sm"
+          className="min-w-0 max-w-full rounded border border-primary bg-background px-2 py-1 font-mono text-base pointer-coarse:min-h-11 sm:pointer-fine:text-sm"
           value={
             insertAfter === 'start' || rows.some((row) => String(row.key) === insertAfter)
               ? insertAfter

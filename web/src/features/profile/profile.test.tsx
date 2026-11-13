@@ -25,7 +25,9 @@ function setup({
   hideRewards = false,
   states = ['met_independently', 'met_with_support', 'not_yet'],
   password = (): Response => new Response(null, { status: 204 }),
+  slowAvatar = false,
 }: {
+  slowAvatar?: boolean
   hideRewards?: boolean
   states?: string[]
   password?: (body: unknown) => Response
@@ -44,7 +46,8 @@ function setup({
           ],
         }),
       'GET /api/me/report': () => Response.json(report(states)),
-      'PUT /api/me/avatar': (body) => {
+      'PUT /api/me/avatar': async (body) => {
+        if (slowAvatar) await new Promise((resolve) => setTimeout(resolve, 100))
         me = { ...me, ...(body as { avatar: User['avatar'] }) }
         return Response.json(me)
       },
@@ -83,6 +86,19 @@ describe('account menu', () => {
     expect(trigger).toHaveAttribute('aria-expanded', 'false')
     expect(trigger).toHaveFocus()
     expect(screen.queryByRole('link', { name: 'Profile and settings' })).toBeNull()
+  })
+
+  it('closes when Tab leaves it (A12)', async () => {
+    setup()
+    renderApp('/')
+    await openMenu()
+    screen.getByRole('button', { name: 'Log out' }).focus()
+    await userEvent.tab()
+    expect(screen.queryByRole('link', { name: 'Profile and settings' })).toBeNull()
+    expect(screen.getByRole('button', { name: /your account/ })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
   })
 
   it('closes on a click outside it, and after choosing a page', async () => {
@@ -138,6 +154,24 @@ describe('profile page', () => {
     expect(await screen.findByText('Saved.')).toBeVisible()
     expect(screen.getByRole('radio', { name: 'A tree' })).toBeChecked()
     expect(screen.getByRole('radio', { name: 'Your initial' })).not.toBeChecked()
+  })
+
+  it('keeps focus on the pictures while arrowing through them, and saves the last (A2)', async () => {
+    const api = setup({ slowAvatar: true })
+    renderApp('/profile')
+    await userEvent.click(await screen.findByRole('radio', { name: 'A tree' }))
+    await userEvent.keyboard('{ArrowRight}{ArrowRight}')
+    // Still saving the tree: the radios stay enabled, so focus stays on the one chosen.
+    const focused = document.activeElement as HTMLInputElement
+    expect(focused).toHaveAttribute('type', 'radio')
+    expect(focused).toBeChecked()
+    expect(focused).not.toBeDisabled()
+    expect(api.callsTo('PUT /api/me/avatar')).toHaveLength(1)
+    await waitFor(() =>
+      expect(api.callsTo('PUT /api/me/avatar').at(-1)!.body).toEqual({ avatar: 'grid' }),
+    )
+    await screen.findByText('Saved.')
+    expect(document.activeElement).toBe(focused)
   })
 })
 
@@ -218,6 +252,8 @@ describe('an uploaded picture (FR-1.6)', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Remove it' }))
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Remove it' })).toBeNull())
+    // Focus goes to the upload button, not the page (A2).
+    expect(screen.getByRole('button', { name: 'Upload a picture' })).toHaveFocus()
     square.mockRestore()
   })
 

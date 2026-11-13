@@ -1,5 +1,5 @@
 import { api } from '../../api/client.ts'
-import type { ModuleDetail, ModuleSummary } from './module.types.ts'
+import type { ModuleDetail, ModuleSummary, QuickCheck, QuickCheckResult } from './module.types.ts'
 
 /** `GET /api/modules` — returns the full module list with per-student status. */
 export function fetchModules(): Promise<ModuleSummary[]> {
@@ -19,6 +19,22 @@ export function savePosition(moduleId: number, segmentPosition: number): Promise
   return api<ModuleDetail>(`/api/modules/${moduleId}/position`, {
     method: 'POST',
     body: { segmentPosition },
+  })
+}
+
+/** `GET /api/modules/{moduleId}/quick-check` — the module's quick check, or its result once taken. */
+export function fetchQuickCheck(moduleId: number): Promise<QuickCheck> {
+  return api<QuickCheck>(`/api/modules/${moduleId}/quick-check`)
+}
+
+/** `POST /api/modules/{moduleId}/quick-check` — one answer per question, marked together. */
+export function takeQuickCheck(
+  moduleId: number,
+  answers: { activityId: number; selected: string }[],
+): Promise<QuickCheckResult> {
+  return api<QuickCheckResult>(`/api/modules/${moduleId}/quick-check`, {
+    method: 'POST',
+    body: { answers },
   })
 }
 

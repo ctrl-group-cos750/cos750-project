@@ -6,6 +6,14 @@
   box-shadow: var(--shadow-card);
 }
 
+/* On a phone the page already has side padding: a card inside it keeps less of its own, so code
+ * and tables in an activity get more of the 320 px. */
+@media (max-width: 40rem) {
+  .card {
+    padding: var(--space-4) var(--space-3);
+  }
+}
+
 .card > :last-child {
   margin-bottom: 0;
 }

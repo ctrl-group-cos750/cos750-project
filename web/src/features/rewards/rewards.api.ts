@@ -11,6 +11,8 @@ export type EarnedBadge = {
   upgradedAt: string | null
   /** False until the app has announced it. */
   seen: boolean
+  /** A quest badge's place among the course's quests (1, 2, ...); absent for other badges. */
+  questNumber?: number | null
 }
 
 export type Rewards = {

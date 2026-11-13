@@ -192,7 +192,8 @@ describe('your graph, judged against the map', () => {
 })
 
 describe('the picture beside the question', () => {
-  const wrongPairs = { DE: 'DE', BG: 'FG', AC: 'AC', EF: 'EF', CF: 'CF', AE: 'CE', BC: 'DF' }
+  // Wrong answers from 105's spare edges, which are near misses (#214 C15).
+  const wrongPairs = { DE: 'DE', BG: 'CG', AC: 'AC', EF: 'EF', CF: 'CF', AE: 'CE', BC: 'BF' }
   const result = (correct: boolean, hintLevel = 0): AttemptResult => ({
     id: correct ? 2 : 1,
     activityId: 105,
@@ -234,7 +235,7 @@ describe('the picture beside the question', () => {
     expect(tabs.map((t) => t.textContent)).toEqual(['Your graph', 'Campus map'])
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true')
     const graph = screen.getByRole('img', { name: /your graph/i })
-    expect(graph).toHaveAccessibleDescription(/Not on the map: F–G, C–E and D–F\./)
+    expect(graph).toHaveAccessibleDescription(/Not on the map: C–G, C–E and B–F\./)
     for (const missing of ['A–E', 'B–C', 'B–G']) {
       expect(graph).not.toHaveAccessibleDescription(new RegExp(missing))
     }
@@ -288,12 +289,13 @@ describe('directed or undirected', () => {
         'Roads join Johannesburg to Pretoria and Johannesburg to Soweto. Cars drive both ways.',
       ],
     )
-    const chosen = ['directed', 'directed', 'undirected', 'undirected']
+    // The fifth row (#214 C4) has no edge list and no picture: it is decided from its meaning.
+    const chosen = ['directed', 'directed', 'undirected', 'undirected', 'directed']
     for (const [index, select] of screen.getAllByRole('combobox').entries())
       // oxlint-disable-next-line no-await-in-loop
       await user.selectOptions(select, chosen[index])
     await user.click(screen.getByRole('button', { name: 'Check answer' }))
-    const correctRows = [false, true, false, true]
+    const correctRows = [false, true, false, true, true]
     view.rerender(
       <ActivityRenderer
         {...props}
@@ -301,9 +303,9 @@ describe('directed or undirected', () => {
           id: 9,
           activityId: 106,
           correct: false,
-          score: 0.5,
+          score: 0.6,
           parts: correctRows.map((correct, ref) => ({ ref, correct, message: null })),
-          feedback: '2 of 4 correct.',
+          feedback: '3 of 5 correct.',
           hintLevel: 0,
         }}
       />,

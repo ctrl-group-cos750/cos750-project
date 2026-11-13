@@ -25,17 +25,11 @@ from app.schemas.activities import (
     ParsonsSolution,
     ParsonsStep,
     TraceConfig,
+    TraceSolution,
     flatten,
 )
-from app.schemas.base import ApiModel
 from app.schemas.graphs import GraphScenarioOut
 from app.services.bfs import InvalidGraph, run_bfs
-
-
-class NoSolution(ApiModel):
-    """A kind with no stored answer: the server derives it (trace is checked against the BFS
-    engine, FR-6.6). Its fixture solution must be empty, `{}`."""
-
 
 # The config and solution schemas for each kind (FR-4.1). Add a kind here when its checker lands.
 SHAPES: dict[str, tuple[type[BaseModel], type[BaseModel]]] = {
@@ -45,7 +39,7 @@ SHAPES: dict[str, tuple[type[BaseModel], type[BaseModel]]] = {
     "fill_in": (FillInConfig, FillInSolution),
     "fix_the_bug": (FixTheBugConfig, FixTheBugSolution),
     "choose_tests": (ChooseTestsConfig, ChooseTestsSolution),
-    "trace": (TraceConfig, NoSolution),
+    "trace": (TraceConfig, TraceSolution),
 }
 
 

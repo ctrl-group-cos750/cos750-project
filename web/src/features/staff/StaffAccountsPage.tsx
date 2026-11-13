@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Search, ShieldCheck } from 'lucide-react'
-import { useState } from 'react'
-import { Link } from 'react-router'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useLocation } from 'react-router'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
@@ -15,11 +15,17 @@ export function StaffAccountsPage() {
   const accounts = useQuery({ queryKey: ['staff', 'accounts'], queryFn: listAccounts })
   const [query, setQuery] = useState('')
   const shown = accounts.data?.filter((a) => matchesSearch(a, query)) ?? []
+  // Arrived here from deleting an account: say so, and start from the heading, not the page.
+  const deleted = (useLocation().state as { deleted?: string } | null)?.deleted
+  const heading = useRef<HTMLHeadingElement>(null)
+  useEffect(() => {
+    if (deleted) heading.current?.focus()
+  }, [deleted])
 
   return (
     <section className="grid gap-6" aria-labelledby="accounts-heading">
       <div className="grid gap-1">
-        <h1 id="accounts-heading" className="text-3xl font-semibold">
+        <h1 ref={heading} id="accounts-heading" tabIndex={-1} className="text-3xl font-semibold">
           Accounts
         </h1>
         <p className="text-muted-foreground">
@@ -27,6 +33,13 @@ export function StaffAccountsPage() {
           email and progress.
         </p>
       </div>
+      {deleted && (
+        <Alert className="border-success bg-success/15">
+          <AlertDescription className="text-foreground">
+            {deleted}&apos;s account was deleted, with everything stored about it.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid max-w-md gap-2">
         <Label htmlFor="account-search">Search by name</Label>

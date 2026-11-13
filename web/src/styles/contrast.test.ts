@@ -111,7 +111,7 @@ describe.each(themes)('$name theme contrast', ({ name: theme, selector, tokens }
     const t = (name: string) => colour({ css: tokensCss, selector: tokens, name })
     // dark values only exist in the .dark block; light ones in :root
     const card = g('--card')
-    for (const tier of ['bronze', 'gold']) {
+    for (const tier of ['bronze', 'silver', 'gold']) {
       const readTier = (name: string) => {
         try {
           return t(`--badge-${tier}${name}`)

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Link, MemoryRouter, Route, Routes } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
@@ -129,6 +129,34 @@ describe('code activities', () => {
     })
   })
 
+  it('checks for new badges after a wrong answer too (one can still meet an objective)', async () => {
+    const api = fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/activities/7': () => Response.json(parsons),
+        'GET /api/activities/7/hints': () => Response.json([]),
+        'POST /api/activities/7/attempts': () =>
+          Response.json({
+            id: 11,
+            activityId: 7,
+            correct: false,
+            score: 0,
+            parts: [{ ref: 0, correct: false, message: 'Wrong place.' }],
+            feedback: '0 of 1 correct.',
+            hintLevel: 0,
+          }),
+      },
+    })
+    const user = userEvent.setup()
+    renderApp('/activities/7')
+    const check = await screen.findByRole('button', { name: 'Check answer' })
+    await waitFor(() => expect(api.callsTo('GET /api/rewards').length).toBeGreaterThan(0))
+    const before = api.callsTo('GET /api/rewards').length
+    await user.click(check)
+    await waitFor(() => expect(api.callsTo('POST /api/activities/7/attempts')).toHaveLength(1))
+    await waitFor(() => expect(api.callsTo('GET /api/rewards').length).toBeGreaterThan(before))
+  })
+
   it('resets attempt result and unlocks when navigating to a new activity', async () => {
     fakeApi({
       user: ada,
@@ -168,6 +196,10 @@ describe('code activities', () => {
     // Submit correct answer on activity 7
     await user.click(await screen.findByRole('button', { name: 'Check answer' }))
     await screen.findByText('All correct!')
+    // A correct line says so in words, not only by colour (A13).
+    expect(
+      within(screen.getByRole('list', { name: 'Your answer, in order' })).getByText('Correct'),
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Check answer' })).toBeDisabled()
 
     // Navigate to activity 8
@@ -830,7 +862,7 @@ describe('the mastery check (#144)', () => {
     score: null,
     parts: [],
     feedback:
-      'Answer recorded. You will see your results in your mastery report when you finish the check.',
+      'Answer recorded. Your results are in your mastery report once every question in the check is answered.',
     hintLevel: 0,
     withheld: true,
   }

@@ -50,30 +50,43 @@ export function Matching({
         {activity.config.left.map((item, index) => {
           const id = `match-${activity.id}-${item.id}`
           const chosen = pairs[item.id] ?? ''
+          const chosenLabel = activity.config.right.find((choice) => choice.id === chosen)?.label
           const part = result && (checked[item.id] ?? '') === chosen ? parts.get(index) : undefined
           return (
             <li
               key={item.id}
-              className={`grid gap-2 rounded border p-3 sm:grid-cols-[1fr_minmax(0,16rem)] sm:items-center ${part ? (part.correct ? 'border-success bg-success/10' : 'border-warning bg-warning/10') : 'border-border'}`}
+              className={`grid gap-2 rounded border p-3 sm:grid-cols-[minmax(8rem,1fr)_minmax(0,2fr)] sm:items-start ${part ? (part.correct ? 'border-success bg-success/10' : 'border-warning bg-warning/10') : 'border-border'}`}
             >
-              <label htmlFor={id}>{item.label}</label>
-              <select
-                id={id}
-                value={chosen}
-                disabled={disabled}
-                aria-describedby={part ? `${id}-mark` : undefined}
-                className="w-full rounded border border-primary bg-background px-2 py-1"
-                onChange={(event) =>
-                  setPairs((current) => ({ ...current, [item.id]: event.target.value }))
-                }
-              >
-                <option value="">Choose a match</option>
-                {activity.config.right.map((choice) => (
-                  <option key={choice.id} value={choice.id}>
-                    {choice.label}
-                  </option>
-                ))}
-              </select>
+              <label htmlFor={id} className="sm:pt-2">
+                {item.label}
+              </label>
+              <div className="grid min-w-0 gap-1">
+                <select
+                  id={id}
+                  value={chosen}
+                  disabled={disabled}
+                  aria-describedby={part ? `${id}-mark` : undefined}
+                  className="w-full min-w-0 rounded border border-primary bg-background px-2 py-1 text-base pointer-coarse:min-h-11 sm:pointer-fine:text-sm"
+                  onChange={(event) =>
+                    setPairs((current) => ({ ...current, [item.id]: event.target.value }))
+                  }
+                >
+                  <option value="">Choose a match</option>
+                  {activity.config.right.map((choice) => (
+                    <option key={choice.id} value={choice.id}>
+                      {choice.label}
+                    </option>
+                  ))}
+                </select>
+                {/* A closed select shows one line, which cuts a long answer off: the whole chosen
+                    answer is written out under it, so the student can read back what they picked.
+                    Hidden from screen readers, which read the select's value already. */}
+                {chosenLabel && (
+                  <p className="m-0 text-sm" aria-hidden="true">
+                    {chosenLabel}
+                  </p>
+                )}
+              </div>
               {part && (
                 <span
                   id={`${id}-mark`}

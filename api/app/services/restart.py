@@ -35,7 +35,8 @@ from app.services.mastery import MASTERY_MODULE
 
 
 class CannotRestart(ValueError):
-    """The module can't be restarted: the mastery check, or one the student hasn't started."""
+    """The module can't be restarted: the mastery check, or one the student hasn't worked through
+    to the end (only tested out of, FR-8.2, counts as not finished)."""
 
 
 @dataclass(frozen=True)
@@ -102,7 +103,10 @@ def restart_module(session: Session, user_id: int, module_id: int) -> ModuleProg
     )
     if row is None or row.status != "complete":
         # Only a finished module: restarting one part-way through would lose the student's place
-        # and its progress on the map (13 Nov audit).
+        # and its progress on the map (13 Nov audit). A module only tested out of (`tested_out`,
+        # FR-8.2) has not been worked through, so there is nothing to redo yet: the student works
+        # through it, which completes it, and may restart it then. A restart never reopens the
+        # quick check, which is one try per module.
         raise CannotRestart(module_id)
     row.restarted_at = datetime.now(tz=UTC)
     row.restarted_after_attempt = session.scalar(select(func.max(Attempt.id))) or 0

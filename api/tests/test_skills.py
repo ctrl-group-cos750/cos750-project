@@ -319,3 +319,47 @@ def test_a_wrong_guess_at_an_opening_puzzle_costs_no_medal(
         answer(client, activity)
     complete(db, user, 1)
     assert profile(client)["modules"][0]["medal"] == "gold"
+
+
+def test_a_module_finished_before_its_medal_set_changed_keeps_its_medal(
+    client: TestClient, db: Session, tmp_path: Path
+) -> None:
+    """Module 1's warm-up question left its medal set and a graph-words item joined it, so a
+    student who finished module 1 with gold had answered 9 of the 10 items that now counted, and
+    dropped to bronze (review of #223, Must fix 2). A finished module is judged on what the student
+    was asked when they worked through it; a student who works through it now is asked the new
+    item, and it counts for them."""
+    (tmp_path / "course.json").write_text(json.dumps(course()), encoding="utf-8")
+    load(db, tmp_path)
+    user = log_in(client)
+    for activity in (101, 102, 103, 104):
+        answer(client, activity)
+    complete(db, user, 1)
+    assert profile(client)["modules"][0]["medal"] == "gold"
+    level = {s["id"]: s["level"] for s in profile(client)["objectives"]}
+
+    # A new practice item with no objective (as 194) joins module 1, and 101 becomes a warm-up.
+    data = course()
+    data["modules"][0]["segments"].insert(4, segment(1006, 106))
+    data["activities"].append(mcq(106, None, 1))
+    next(a for a in data["activities"] if a["id"] == 101)["purpose"] = "diagnostic"
+    next(a for a in data["activities"] if a["id"] == 101)["objective_id"] = None
+    (tmp_path / "course.json").write_text(json.dumps(data), encoding="utf-8")
+    load(db, tmp_path)
+    db.expire_all()
+    medal = profile(client)["modules"][0]
+    assert (medal["medal"], medal["firstTime"], medal["total"]) == ("gold", 3, 3)
+    assert {s["id"]: s["level"] for s in profile(client)["objectives"]} == level
+
+    # Working through the module after the change, the new item is asked and counts.
+    other = {"email": "ada@example.com", "password": "Correct horse 1", "displayName": "Ada"}
+    client.post("/api/auth/logout")
+    assert client.post("/api/auth/register", json=other).status_code == 201
+    newcomer = int(client.get("/api/auth/me").json()["id"])
+    for activity in (102, 103, 104):
+        answer(client, activity)
+    answer(client, 106, WRONG)
+    answer(client, 106)
+    complete(db, newcomer, 1)
+    medal = profile(client)["modules"][0]
+    assert (medal["medal"], medal["total"]) == ("silver", 4)

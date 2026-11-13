@@ -35,6 +35,13 @@ Then (`medal_for`, the one place the rule lives):
   same line as the module's points and First Module badge (app/services/modules.py
   `reward_module`), so walking through a module earns nothing (#215 review).
 
+A module the student worked through to the end is judged on the activities they answered on the
+way. An activity added to it afterwards isn't one they were asked, so it can't lower the medal they
+finished with (review of #223, Must fix 2: module 1's warm-up question left the medal set and a
+graph-words item joined it, and every finished student's gold became bronze). Working through a
+module answers every activity it asks for, so for anyone who finished it since, that is all of
+them.
+
 A module whose quick check the student passed earns silver: the check showed the student can do
 it on their own, but not every activity was answered. That stays when the student works through
 the module afterwards: more work never lowers a medal, so they get the better of the two
@@ -234,17 +241,19 @@ def module_medals(session: Session, user_id: int) -> list[ModuleMedal]:
         )
         if not mine:
             continue
-        first = sum(1 for a in mine if a in got.first_time)
-        own = sum(1 for a in mine if a in got.on_own)
         done = [a for a in mine if a in got.answered]
         finished = module.id in complete
+        # Judged on what the student was asked when they worked through it (see the docstring).
+        asked = done if statuses.get(module.id) == "complete" and done else mine
+        first = sum(1 for a in asked if a in got.first_time)
+        own = sum(1 for a in asked if a in got.on_own)
         so_far = medal_for(
             len(done),
             sum(1 for a in done if a in got.first_time),
             sum(1 for a in done if a in got.on_own),
         )
         medal = (
-            medal_for(len(mine), first, own, tested_out=module.id in tested_out)
+            medal_for(len(asked), first, own, tested_out=module.id in tested_out)
             if finished
             else None
         )
@@ -255,7 +264,7 @@ def module_medals(session: Session, user_id: int) -> list[ModuleMedal]:
                 first_time=first,
                 on_your_own=own,
                 answered=len(done),
-                total=len(mine),
+                total=len(asked),
                 medal=medal,
                 heading_for=medal if finished else so_far if done else None,
                 objectives=tuple(

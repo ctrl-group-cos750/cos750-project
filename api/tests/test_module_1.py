@@ -232,8 +232,24 @@ def test_the_graph_words_are_taught_on_the_campus_and_are_true_of_it() -> None:
     assert len(tree) == len(CAMPUS.vertices) - 1  # and with no cycle
     item = activity(194)
     assert item.kind == "matching"
-    assert item.objective_id == 2
     assert len(item.config["right"]) == len(item.config["left"]) + 2  # two spares
+    # A path visits no vertex twice: the tree's "exactly one path" relies on it (#223 review).
+    assert "never visits a vertex twice" in body
+    assert "found in the puzzle" not in body  # the puzzle is now a warm-up question
+
+
+def test_the_graph_words_item_has_no_objective() -> None:
+    """Path, cycle, connected, tree and weighted aren't objective 2 ("vertices and edges ...
+    directed and undirected"), and no mastery item tests them. Tagged objective 2, 194 counted
+    towards its practice total and, placed before objective 2's support block, a wrong answer on
+    graph words could bring up arrows-and-edges support (#223 review, Should fix 5)."""
+    item = activity(194)
+    assert item.objective_id is None
+    labels = [r["label"] for r in item.config["right"]]
+    assert not any(label.endswith(".") for label in labels)
+    # A spare is no example of any word: "the Admin block on its own" was a tree, a connected
+    # graph and a path of length 0 (#223 review).
+    assert "The Admin block on its own" not in labels
 
 
 def test_enqueue_and_dequeue_are_defined_before_they_are_used() -> None:

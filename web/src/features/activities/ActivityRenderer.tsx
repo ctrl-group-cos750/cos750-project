@@ -83,8 +83,8 @@ export function ActivityRenderer(props: ActivityRendererProps) {
     check &&
     (!answeredInCheck ? (
       <p className="mb-4 text-sm text-muted-foreground">
-        Only your first answer counts, so check it before you send it. You will see your results in
-        your mastery report when you finish the check.
+        Only your first answer counts, so check it before you send it. Your results are in your
+        mastery report once every question in the check is answered.
       </p>
     ) : (
       props.result && (
@@ -171,7 +171,7 @@ export function ActivityRenderer(props: ActivityRendererProps) {
       {answeredInCheck && !props.result && (
         <Alert tone="info" title="Answer recorded">
           You have answered this question. Only your first answer counts, so it can't be changed.
-          Your results are in your mastery report when you finish the check.
+          Your results are in your mastery report once every question in the check is answered.
         </Alert>
       )}
       <fieldset

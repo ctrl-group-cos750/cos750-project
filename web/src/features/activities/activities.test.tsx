@@ -858,7 +858,7 @@ describe('the mastery check (#144)', () => {
     score: null,
     parts: [],
     feedback:
-      'Answer recorded. You will see your results in your mastery report when you finish the check.',
+      'Answer recorded. Your results are in your mastery report once every question in the check is answered.',
     hintLevel: 0,
     withheld: true,
   }

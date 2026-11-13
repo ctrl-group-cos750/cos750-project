@@ -165,7 +165,7 @@ def test_the_key_terms_cannot_be_matched_by_their_own_words() -> None:
     with no spare description, so the last pair was forced (#214 C6)."""
     a = activity(102)
     terms = {item["id"]: item["label"].lower() for item in a.config["left"]}
-    for left, right in a.solution["pairs"].items():
+    for left in a.solution["pairs"]:
         label = right_label(a, left).lower()
         for word in re.findall(r"\w+", terms[left]):
             assert not re.search(rf"\b{word}", label), (terms[left], label)

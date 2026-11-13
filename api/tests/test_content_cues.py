@@ -790,23 +790,36 @@ WORDING_ONLY = {
 }
 # Matching items that left an item: 609 and 1205 classify new situations by meaning (#214 C4), and
 # 603 matches three terms instead of "graph" (#214 C5).
-GONE_LEFT = {
-    (609, i)
-    for i in (
-        "phone-calls",
-        "shared-walls-between-houses",
-        "module-prerequisites",
-        "two-way-radio-links",
-    )
-} | {(603, "t1")} | {
-    (1205, i)
-    for i in ("emails", "train-tracks-between-stations", "teammates-in-a-project", "a-tournament")
-}
-GONE_RIGHT = {(603, "e1"), (603, "e3")} | {  # 603's examples: a family tree, a stack of plates
-    (105, e) for e in ("AB", "DF", "FG")  # random non-edges, now near misses (#214 C15)
-} | {  # 607 and 1204 named the places by their initials, a free lexical link (#214 C15)
-    (607, e) for e in ("vK", "vL", "vM", "vN", "eKL", "eKM", "eLN", "eMN")
-} | {(1204, e) for e in ("vR", "vS", "vT", "vU", "eRS", "eST", "eTU", "eSR", "eTS", "eUT")}
+GONE_LEFT = (
+    {
+        (609, i)
+        for i in (
+            "phone-calls",
+            "shared-walls-between-houses",
+            "module-prerequisites",
+            "two-way-radio-links",
+        )
+    }
+    | {(603, "t1")}
+    | {
+        (1205, i)
+        for i in (
+            "emails",
+            "train-tracks-between-stations",
+            "teammates-in-a-project",
+            "a-tournament",
+        )
+    }
+)
+# Right entries that left an item (#214): 603's family tree and stack of plates (C5), 105's random
+# non-edges, now near misses, and 607's and 1204's vertices and edges, which named the places by
+# their initials (C15).
+GONE_RIGHT = (
+    {(603, "e1"), (603, "e3")}
+    | {(105, e) for e in ("AB", "DF", "FG")}
+    | {(607, e) for e in ("vK", "vL", "vM", "vN", "eKL", "eKM", "eLN", "eMN")}
+    | {(1204, e) for e in ("vR", "vS", "vT", "vU", "eRS", "eST", "eTU", "eSR", "eTS", "eUT")}
+)
 # Fix-the-bug corrections that left an item: 621 is a new bug (#214 C2), so all its corrections are.
 RETIRED_CORRECTIONS = {621: {20, 21, 22, 23}, 1703: {22}}
 # Ids that left an item; they must never come back (RETIRED, plus the retired corrections).

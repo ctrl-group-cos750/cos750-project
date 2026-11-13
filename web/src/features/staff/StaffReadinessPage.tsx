@@ -107,7 +107,10 @@ export function StaffReadinessPage() {
                       <CardContent className="grid gap-1">
                         <p className="m-0 font-medium">
                           {w.title}
-                          {w.objectiveId !== null && ` (objective ${w.objectiveId})`}
+                          {/* Not when the title already names it ("Objective 1 · item 1 of 5"). */}
+                          {w.objectiveId !== null &&
+                            !/^objective\b/i.test(w.title) &&
+                            ` (objective ${w.objectiveId})`}
                         </p>
                         <p className="m-0">
                           {w.wrong} of {w.answered} got it wrong; {w.chosenBy} chose &ldquo;

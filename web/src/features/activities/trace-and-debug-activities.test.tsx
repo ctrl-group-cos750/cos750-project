@@ -210,6 +210,22 @@ describe('trace table', () => {
     expect(screen.getAllByRole('combobox')).toHaveLength(1)
   })
 
+  it("doesn't let a phone keyboard change what is typed: capitals, no autocorrect", () => {
+    render(
+      <TraceTable
+        activity={trace}
+        result={undefined}
+        submitting={false}
+        onSubmit={vi.fn<(value: unknown) => Promise<void>>()}
+      />,
+    )
+    for (const input of screen.getAllByRole('textbox')) {
+      expect(input).toHaveAttribute('autocapitalize', 'characters')
+      expect(input).toHaveAttribute('autocorrect', 'off')
+      expect(input).toHaveAttribute('spellcheck', 'false')
+    }
+  })
+
   it('submits each step as the server reads it, matching labels to the graph', async () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn<(rows: TraceRow[]) => Promise<void>>().mockResolvedValue(undefined)

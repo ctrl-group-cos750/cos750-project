@@ -567,7 +567,11 @@ def test_every_support_block_in_the_course_is_reached_by_wrong_answers(db: Sessi
     load(db)
     blocks = 0
     for module_id in sorted(
-        {s.module_id for s in db.scalars(select(Segment).where(Segment.support_for.is_not(None)))}
+        {
+            s.module_id
+            for s in db.scalars(select(Segment).where(Segment.support_for.is_not(None)))
+            if s.module_id is not None
+        }
     ):
         segments = list(
             db.scalars(

@@ -556,3 +556,52 @@ def test_a_support_item_in_a_locked_module_is_locked(client: TestClient, db: Ses
     _register(client, ADA)
     response = client.get("/api/activities/21")
     assert (response.status_code, response.json()["detail"]) == (403, MODULE_LOCKED)
+
+
+def test_every_support_block_in_the_course_is_reached_by_wrong_answers(db: Session) -> None:
+    """A student who answers every practice item before a support block wrong first time is shown
+    it, for every block in the real course (13 Nov audit: four blocks follow a single practice
+    item, where 2 wrong of 3 could never happen)."""
+    from app.seed import load
+
+    load(db)
+    blocks = 0
+    for module_id in sorted(
+        {s.module_id for s in db.scalars(select(Segment).where(Segment.support_for.is_not(None)))}
+    ):
+        segments = list(
+            db.scalars(
+                select(Segment).where(Segment.module_id == module_id).order_by(Segment.position)
+            )
+        )
+        for objective in sorted({s.support_for for s in segments if s.support_for is not None}):
+            blocks += 1
+            first = min(i for i, s in enumerate(segments) if s.support_for == objective)
+            student = User(
+                email=f"s{module_id}-{objective}@example.com",
+                display_name="S",
+                password_hash="x",  # noqa: S106
+            )
+            db.add(student)
+            db.flush()
+            for segment in segments[:first]:
+                activity = db.get(Activity, segment.activity_id) if segment.activity_id else None
+                if (
+                    activity is not None
+                    and activity.purpose == "practice"
+                    and activity.objective_id == objective
+                ):
+                    db.add(
+                        Attempt(
+                            user_id=student.id,
+                            activity_id=activity.id,
+                            submitted={},
+                            correct=False,
+                            score=0.0,
+                            detail={},
+                        )
+                    )
+            db.flush()
+            found = support.struggling_objectives(db, student.id, segments, {objective})
+            assert objective in found, f"module {module_id}, objective {objective}"
+    assert blocks == 9

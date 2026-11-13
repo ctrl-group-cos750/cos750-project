@@ -24,7 +24,7 @@ const NONE: readonly number[] = []
  * The rows are native disclosure widgets: the label and the words are the accessible text, the
  * bar is hidden from screen readers. `highlight` marks the objectives a module teaches.
  * Beside each row, a link to where the objective can be improved (`improveLink`): a real link
- * next to the disclosure, never inside its summary. `bars={false}` leaves the bars out, for the list under the radar chart (SkillRadar), which
+ * next to the disclosure, never inside its summary; in the compact panel, inside the opened row. `bars={false}` leaves the bars out, for the list under the radar chart (SkillRadar), which
  * draws the levels itself; the words and the evidence stay.
  */
 export function SkillProfile({
@@ -46,6 +46,15 @@ export function SkillProfile({
         const status = skillStatus(skill)
         const here = highlight.includes(skill.id)
         const link = improveLink(skill)
+        const improve = link && (
+          <Link
+            to={link.to}
+            aria-label={link.label}
+            className={`${styles.improve} ${link.quiet ? styles.quiet : ''}`}
+          >
+            {link.text}
+          </Link>
+        )
         return (
           <li
             key={skill.id}
@@ -71,17 +80,12 @@ export function SkillProfile({
               <div className={styles.evidence}>
                 <p>{skill.text}</p>
                 <p>{evidence(skill)}</p>
+                {/* In the narrow panel the link is in the opened row, so the panel stays one
+                    screen tall (1366 × 900, #215 review). */}
+                {compact && improve}
               </div>
             </details>
-            {link && (
-              <Link
-                to={link.to}
-                aria-label={link.label}
-                className={`${styles.improve} ${link.quiet ? styles.quiet : ''}`}
-              >
-                {link.text}
-              </Link>
-            )}
+            {link && !compact && improve}
           </li>
         )
       })}

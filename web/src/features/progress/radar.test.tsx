@@ -295,7 +295,7 @@ describe('the way to improve each objective (#214)', () => {
     expect(within(gold as HTMLElement).queryByRole('link')).toBeNull()
   })
 
-  it('shows the same links in the progress panel’s list', async () => {
+  it('shows the same links in the progress panel’s list, in the opened row', async () => {
     vi.stubGlobal(
       'matchMedia',
       (query: string) =>
@@ -323,8 +323,10 @@ describe('the way to improve each objective (#214)', () => {
     })
     renderApp('/activities/7')
     const aside = await screen.findByRole('complementary', { name: 'Your progress' })
+    // In the narrow panel, inside the opened row.
+    await userEvent.click(await within(aside).findByText('Why BFS'))
     expect(
-      await within(aside).findByRole('link', { name: 'Improve Why BFS: follow its review path' }),
+      within(aside).getByRole('link', { name: 'Improve Why BFS: follow its review path' }),
     ).toHaveAttribute('href', '/review/4')
   })
 })

@@ -1,6 +1,7 @@
 import {
   BookOpenText,
   ChartColumn,
+  GraduationCap,
   Clapperboard,
   ShieldCheck,
   UsersRound,
@@ -40,6 +41,13 @@ export const STAFF_SECTIONS: StaffSection[] = [
     title: 'Accounts',
     description: 'Every account that has been created: progress and stats, and deleting one.',
     icon: UsersRound,
+  },
+  {
+    path: 'readiness',
+    title: 'Before the lecture',
+    description:
+      'For the lecturer: who is ready, each objective across the class, and the wrong answers to address first.',
+    icon: GraduationCap,
   },
   {
     path: 'pilot',

@@ -4,7 +4,7 @@
       "id": 6,
       "slug": "mastery-check",
       "title": "Mastery check and report",
-      "estimated_minutes": 10,
+      "estimated_minutes": 55,
       "goals": [
         "Show what you can do on every objective, on questions you have not seen.",
         "Read your report and see what to review before the lecture."
@@ -159,6 +159,30 @@
           "kind": "activity",
           "title": "Objective 7 · item 4 of 4: choose the tests that catch the bug",
           "activity_id": 624
+        },
+        {
+          "id": 626,
+          "kind": "activity",
+          "title": "Objective 8 · item 1 of 4",
+          "activity_id": 626
+        },
+        {
+          "id": 627,
+          "kind": "activity",
+          "title": "Objective 8 · item 2 of 4",
+          "activity_id": 627
+        },
+        {
+          "id": 628,
+          "kind": "activity",
+          "title": "Objective 8 · item 3 of 4",
+          "activity_id": 628
+        },
+        {
+          "id": 629,
+          "kind": "activity",
+          "title": "Objective 8 · item 4 of 4",
+          "activity_id": 629
         }
       ]
     }
@@ -2301,6 +2325,211 @@
         {
           "level": 4,
           "body": "Answer: a graph containing a cycle."
+        }
+      ]
+    },
+    {
+      "id": 626,
+      "kind": "multiple_choice",
+      "title": "Objective 8 · item 1 of 4",
+      "module_id": 6,
+      "purpose": "mastery",
+      "objective_id": 8,
+      "config": {
+        "prompt": "A bus network joins stops with these routes, each one bus ride: P–Q, P–R, Q–S, R–S, R–T, S–U, T–U and U–V. How many rides does the quickest trip from P to V take?",
+        "options": [
+          {
+            "id": "a",
+            "label": "5 rides, one for each stop on the trip"
+          },
+          {
+            "id": "b",
+            "label": "3 rides"
+          },
+          {
+            "id": "c",
+            "label": "4 rides"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "c",
+        "feedback": {
+          "b": "Not quite. V is joined only to U, and U is 3 rides from P, so V is one more. Ask: in which ring of BFS does V appear?",
+          "a": "Not quite. A trip such as P, Q, S, U, V has 5 stops but 4 rides between them. Count the edges, not the vertices."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Run BFS from P and note how many rides away each stop is."
+        },
+        {
+          "level": 2,
+          "body": "Q and R are 1 ride away. Which stops are 2 rides away?"
+        },
+        {
+          "level": 3,
+          "body": "S and T are 2 away, U is 3 away. Where does V come in?"
+        },
+        {
+          "level": 4,
+          "body": "Answer: 4 rides, for example P, Q, S, U, V."
+        }
+      ]
+    },
+    {
+      "id": 627,
+      "kind": "multiple_choice",
+      "title": "Objective 8 · item 2 of 4",
+      "module_id": 6,
+      "purpose": "mastery",
+      "objective_id": 8,
+      "config": {
+        "prompt": "Two-way roads join six towns: J–K, J–L, K–M, L–M, L–N, M–P and N–P. BFS runs from J, takes neighbours in alphabetical order, and records which vertex found each one. Following those records back from P, which route does it give?",
+        "options": [
+          {
+            "id": "c",
+            "label": "J, L, N, P"
+          },
+          {
+            "id": "a",
+            "label": "J, K, M, P"
+          },
+          {
+            "id": "b",
+            "label": "J, L, M, P"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "a",
+        "feedback": {
+          "c": "Not quite. J, L, N, P also has 3 edges, but it isn't the route BFS records: M leaves the queue before N, so M finds P first. Ask: which vertex took P into the queue?",
+          "b": "Not quite. L doesn't find M: K leaves the queue before L and finds M first. Ask: who found M?"
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Write down the order BFS visits the vertices."
+        },
+        {
+          "level": 2,
+          "body": "For each vertex, note which vertex put it in the queue."
+        },
+        {
+          "level": 3,
+          "body": "K found M. Which of M and N leaves the queue first?"
+        },
+        {
+          "level": 4,
+          "body": "Answer: J, K, M, P."
+        }
+      ]
+    },
+    {
+      "id": 628,
+      "kind": "multiple_choice",
+      "title": "Objective 8 · item 3 of 4",
+      "module_id": 6,
+      "purpose": "mastery",
+      "objective_id": 8,
+      "config": {
+        "prompt": "In a graph where every edge counts the same, why does the route BFS records always have the fewest edges?",
+        "options": [
+          {
+            "id": "d",
+            "label": "It empties the queue ring by ring, so each vertex is first reached along a fewest-edge route."
+          },
+          {
+            "id": "a",
+            "label": "BFS takes the neighbours of each vertex in alphabetical order, which leads it straight towards the goal."
+          },
+          {
+            "id": "b",
+            "label": "BFS compares every possible route from the start vertex to the goal and then keeps whichever one turned out shortest."
+          },
+          {
+            "id": "c",
+            "label": "BFS marks each vertex as visited, so it never goes round a cycle, and that keeps every route it records short."
+          }
+        ]
+      },
+      "solution": {
+        "correct": "d",
+        "feedback": {
+          "b": "Not quite. BFS never compares routes: each vertex joins the queue once. The guarantee comes from the order it works in. Ask: what does BFS finish before it moves further out?",
+          "c": "Not quite. Marking vertices stops BFS repeating work, but depth-first search marks them too and can still find a long route first. Ask: in what order do vertices leave the queue?",
+          "a": "Not quite. Alphabetical order only breaks ties between neighbours, and BFS doesn't know where the goal is. Ask: in what order do vertices leave the queue?"
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Think about the order in which vertices leave the queue."
+        },
+        {
+          "level": 2,
+          "body": "Which vertices does BFS finish before it looks any further from the start?"
+        },
+        {
+          "level": 3,
+          "body": "So when BFS first reaches a vertex, could a shorter route still be waiting?"
+        },
+        {
+          "level": 4,
+          "body": "Answer: it works ring by ring, so it first reaches each vertex along a fewest-edge route."
+        }
+      ]
+    },
+    {
+      "id": 629,
+      "kind": "multiple_choice",
+      "title": "Objective 8 · item 4 of 4",
+      "module_id": 6,
+      "purpose": "mastery",
+      "objective_id": 8,
+      "config": {
+        "prompt": "BFS from S reaches T for the first time while it is working through the vertices 3 edges from S. A friend says there is a route from S to T with only 2 edges. Who is right?",
+        "options": [
+          {
+            "id": "b",
+            "label": "BFS. A 2-edge route would mean BFS found T sooner."
+          },
+          {
+            "id": "c",
+            "label": "Your friend, because BFS stops at the first route it meets and never goes back to check for a shorter one later."
+          },
+          {
+            "id": "a",
+            "label": "Either could be: BFS finds a short route, but it only promises the shortest one when the graph has no cycles at all."
+          }
+        ]
+      },
+      "solution": {
+        "correct": "b",
+        "feedback": {
+          "c": "Not quite. BFS doesn't need to go back: it finishes every vertex 1 edge away before any 2 away, so a 2-edge route would have put T in the queue earlier. Ask: when would BFS have found T?",
+          "a": "Not quite. Cycles don't change the guarantee: BFS marks visited vertices and still works ring by ring. Ask: if T were 2 edges away, which vertex would have found it, and when?"
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "If T were 2 edges from S, which kind of vertex would be joined to T?"
+        },
+        {
+          "level": 2,
+          "body": "When does BFS take the vertices 1 edge from S out of the queue?"
+        },
+        {
+          "level": 3,
+          "body": "Each of them would have put T in the queue during the 1-edge ring."
+        },
+        {
+          "level": 4,
+          "body": "Answer: BFS. A 2-edge route would mean BFS found T sooner."
         }
       ]
     }

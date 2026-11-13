@@ -144,7 +144,7 @@ export function GraphCanvas({ scenario, frame }: GraphCanvasProps) {
   return (
     <svg
       ref={svgRef}
-      className="block min-h-72 w-full rounded-lg bg-muted/40 ring-1 ring-border"
+      className="block max-h-[60vh] min-h-72 w-full rounded-lg bg-muted/40 ring-1 ring-border"
       // An SVG needs role="img" to expose its text alternative as one accessible graphic.
       // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
       role="img"

@@ -1,16 +1,17 @@
 .avatar,
-.initial {
+.initial,
+.photo {
   flex: none;
   border-radius: 50%;
 }
 
 .ground {
-  fill: var(--color-accent-soft);
+  fill: var(--ground, var(--color-accent-soft));
 }
 
 .drawing {
-  fill: var(--color-accent);
-  stroke: var(--color-accent);
+  fill: var(--ink, var(--color-accent));
+  stroke: var(--ink, var(--color-accent));
   stroke-width: 2.4;
   stroke-linecap: round;
 }
@@ -21,4 +22,85 @@
   font-weight: 700;
   color: var(--color-text);
   background: var(--color-line);
+}
+
+.photo {
+  object-fit: cover;
+  background: var(--color-line);
+}
+
+/* Each of the team's pictures in its own colour, so they don't all look alike. Pairs checked: the
+ * drawing on its ground >= 3:1 (WCAG 1.4.11), in both themes. */
+.avatar[data-avatar='vertex'] {
+  --ground: #dbeafe;
+  --ink: #1d4ed8;
+}
+.avatar[data-avatar='edge'] {
+  --ground: #ccfbf1;
+  --ink: #0f766e;
+}
+.avatar[data-avatar='path'] {
+  --ground: #dcfce7;
+  --ink: #15803d;
+}
+.avatar[data-avatar='cycle'] {
+  --ground: #fef3c7;
+  --ink: #a16207;
+}
+.avatar[data-avatar='tree'] {
+  --ground: #ffedd5;
+  --ink: #c2410c;
+}
+.avatar[data-avatar='star'] {
+  --ground: #ffe4e6;
+  --ink: #be123c;
+}
+.avatar[data-avatar='grid'] {
+  --ground: #ede9fe;
+  --ink: #6d28d9;
+}
+.avatar[data-avatar='queue'] {
+  --ground: #e2e8f0;
+  --ink: #334155;
+}
+
+:global(.dark) .avatar[data-avatar='vertex'],
+:global([data-theme='dark']) .avatar[data-avatar='vertex'] {
+  --ground: #1e3a8a;
+  --ink: #bfdbfe;
+}
+:global(.dark) .avatar[data-avatar='edge'],
+:global([data-theme='dark']) .avatar[data-avatar='edge'] {
+  --ground: #134e4a;
+  --ink: #99f6e4;
+}
+:global(.dark) .avatar[data-avatar='path'],
+:global([data-theme='dark']) .avatar[data-avatar='path'] {
+  --ground: #14532d;
+  --ink: #bbf7d0;
+}
+:global(.dark) .avatar[data-avatar='cycle'],
+:global([data-theme='dark']) .avatar[data-avatar='cycle'] {
+  --ground: #713f12;
+  --ink: #fde68a;
+}
+:global(.dark) .avatar[data-avatar='tree'],
+:global([data-theme='dark']) .avatar[data-avatar='tree'] {
+  --ground: #7c2d12;
+  --ink: #fed7aa;
+}
+:global(.dark) .avatar[data-avatar='star'],
+:global([data-theme='dark']) .avatar[data-avatar='star'] {
+  --ground: #881337;
+  --ink: #fecdd3;
+}
+:global(.dark) .avatar[data-avatar='grid'],
+:global([data-theme='dark']) .avatar[data-avatar='grid'] {
+  --ground: #4c1d95;
+  --ink: #ddd6fe;
+}
+:global(.dark) .avatar[data-avatar='queue'],
+:global([data-theme='dark']) .avatar[data-avatar='queue'] {
+  --ground: #334155;
+  --ink: #e2e8f0;
 }

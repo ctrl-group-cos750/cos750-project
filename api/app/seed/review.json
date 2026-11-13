@@ -407,45 +407,45 @@
       "purpose": "mastery",
       "objective_id": 1,
       "config": {
-        "prompt": "Which of these stores data, making it a data structure?",
+        "prompt": "Which of these is an example of a data structure?",
         "options": [
           {
-            "id": "a",
-            "label": "The steps for sorting the names in a list alphabetically"
+            "id": "d",
+            "label": "The seating plan for an exam venue: which learner sits in which seat"
+          },
+          {
+            "id": "e",
+            "label": "How a cashier works out your change"
           },
           {
             "id": "c",
             "label": "Walking to every shop in a mall along its corridors"
-          },
-          {
-            "id": "b",
-            "label": "A list of the names of everyone in a tutorial group"
           }
         ]
       },
       "solution": {
-        "correct": "b",
+        "correct": "d",
         "feedback": {
-          "a": "Not quite. That's an algorithm. Steps that do something are an algorithm. Find the option that stores information.",
-          "c": "Not quite. That's a traversal. Visiting everything by following connections is a traversal. Find the option that stores information."
+          "e": "Not quite. That's an algorithm: a method the cashier follows. It doesn't hold the information itself. Ask: does it hold information, or is it a method for doing something?",
+          "c": "Not quite. That's a traversal. Visiting everything by following connections is something done, not something kept. Ask: does it hold information, or is it a method for doing something?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "A data structure stores data."
+          "body": "Ask of each: does it hold information, or is it a way of doing something?"
         },
         {
           "level": 2,
-          "body": "Sorting is something you do, so it's an algorithm."
+          "body": "Working out change and walking a mall are both things done."
         },
         {
           "level": 3,
-          "body": "Which option holds information?"
+          "body": "Which option holds information a program could look up?"
         },
         {
           "level": 4,
-          "body": "Answer: the list of names."
+          "body": "Answer: the seating plan, which holds which learner sits in which seat."
         }
       ]
     },
@@ -457,45 +457,50 @@
       "purpose": "mastery",
       "objective_id": 1,
       "config": {
-        "prompt": "Which of these is a list of steps, making it an algorithm?",
+        "prompt": "Which of these is an example of an algorithm?",
         "options": [
           {
-            "id": "b",
-            "label": "A network of roads between the towns and cities in a province"
+            "id": "d",
+            "label": "A phone's contact list, sorted by surname"
           },
           {
-            "id": "c",
-            "label": "The steps for checking whether a word is in a dictionary"
+            "id": "e",
+            "label": "Long division, the way you learnt it at school"
           },
           {
-            "id": "a",
-            "label": "A dictionary that maps each word to its meaning"
+            "id": "f",
+            "label": "A map of the taxi routes between suburbs"
+          },
+          {
+            "id": "g",
+            "label": "A shopping list, written in the order of the aisles"
           }
         ]
       },
       "solution": {
-        "correct": "c",
+        "correct": "e",
         "feedback": {
-          "a": "Not quite. That's a data structure. A dictionary stores data; it doesn't do anything by itself. Find the option that is a set of steps.",
-          "b": "Not quite. That's a graph. Roads between towns are a graph, which stores connections. Find the option that is a set of steps."
+          "d": "Not quite. The list has been sorted, but the list itself only holds the contacts. Something that holds information is a data structure. Ask: does it hold something, or is it a method for doing something?",
+          "f": "Not quite. That's a graph: suburbs joined by taxi routes. It holds connections; it doesn't work anything out. Ask: is it a method for doing something?",
+          "g": "Not quite. The list is in a useful order, but it only holds the items, and something that holds information is a data structure. Ask: does it hold something, or is it a method for doing something?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "An algorithm is a list of steps."
+          "body": "An algorithm is a method that solves a problem."
         },
         {
           "level": 2,
-          "body": "Dictionaries and road networks store data."
+          "body": "A contact list, a map and a shopping list each hold information."
         },
         {
           "level": 3,
-          "body": "Which option describes doing something?"
+          "body": "Which option is a way of working something out?"
         },
         {
           "level": 4,
-          "body": "Answer: the steps for checking a word."
+          "body": "Answer: long division."
         }
       ]
     },
@@ -507,11 +512,15 @@
       "purpose": "mastery",
       "objective_id": 1,
       "config": {
-        "prompt": "Match each term to an example of it.",
+        "prompt": "Match each term to an example of it. One example matches none of them.",
         "left": [
           {
             "id": "t1",
             "label": "Data structure"
+          },
+          {
+            "id": "t3",
+            "label": "Algorithm"
           },
           {
             "id": "t2",
@@ -522,6 +531,10 @@
           {
             "id": "e2",
             "label": "Finding every friend-of-a-friend by following friend links"
+          },
+          {
+            "id": "e4",
+            "label": "A bar chart of the rainfall in each month"
           },
           {
             "id": "e3",
@@ -536,29 +549,31 @@
       "solution": {
         "pairs": {
           "t1": "e1",
+          "t3": "e3",
           "t2": "e2"
         },
         "feedback": {
-          "t1": "Check “data structure”. A data structure stores data, like a queue of jobs. Find the example that stores things.",
-          "t2": "Check “graph traversal”. A traversal follows connections to visit everything reachable. Find the example that follows links."
+          "t1": "Not quite. A data structure keeps information organised, like a queue of print jobs. Find the example that holds things.",
+          "t3": "Not quite. An algorithm is a method that solves a problem, like a recipe. Find the example that is a way of doing something.",
+          "t2": "Not quite. A traversal follows connections to visit everything it can reach, like following friend links. Find the example that follows links."
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "One example stores things; one follows connections; one is neither."
+          "body": "One example holds things, one is a method, one follows connections, and one is none of these."
         },
         {
           "level": 2,
-          "body": "A recipe is a list of steps, but not one that visits a graph."
+          "body": "A bar chart is the everyday kind of graph, a picture of values: it is none of these terms."
         },
         {
           "level": 3,
-          "body": "Following friend links is moving along edges."
+          "body": "Following friend links is moving along connections."
         },
         {
           "level": 4,
-          "body": "Answer: data structure → queue of print jobs; graph traversal → following friend links."
+          "body": "Answer: data structure → queue of print jobs; algorithm → recipe for pancakes; graph traversal → following friend links."
         }
       ]
     },
@@ -570,45 +585,50 @@
       "purpose": "mastery",
       "objective_id": 1,
       "config": {
-        "prompt": "What is a graph?",
+        "prompt": "A chess club's secretary draws a circle for each member, and a line between every two members who have played each other. What has she made?",
         "options": [
           {
-            "id": "a",
-            "label": "A set of vertices joined by edges"
+            "id": "e",
+            "label": "A graph traversal"
           },
           {
-            "id": "c",
-            "label": "A chart with an x-axis and a y-axis"
+            "id": "d",
+            "label": "A graph"
           },
           {
-            "id": "b",
-            "label": "A list of steps for visiting every vertex and edge"
+            "id": "f",
+            "label": "A bar chart"
+          },
+          {
+            "id": "g",
+            "label": "An algorithm"
           }
         ]
       },
       "solution": {
-        "correct": "a",
+        "correct": "d",
         "feedback": {
-          "b": "Not quite. That's an algorithm. A graph is the thing being visited, not the steps. Think about vertices and edges.",
-          "c": "Not in computer science. Here a graph means vertices and edges, not a plotted chart. Think about the campus map from module 1."
+          "e": "Not quite. A traversal moves along the lines to visit every member. She has only drawn the members and their games. Ask: is this something that is done, or something that is there?",
+          "f": "Not quite. A bar chart plots values against axes. Here there are no axes, only members joined by lines. Ask: what are the circles and the lines?",
+          "g": "Not quite. An algorithm is a method for doing something. The drawing doesn't do anything: it shows members joined by games. Ask: is this a method, or things joined by connections?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Think back to the campus map."
+          "body": "What are the circles, and what are the lines?"
         },
         {
           "level": 2,
-          "body": "Buildings were one part; walkways were the other."
+          "body": "Each circle is a member, and each line joins two members."
         },
         {
           "level": 3,
-          "body": "Buildings are vertices; walkways are edges."
+          "body": "Things joined by connections: which term is that?"
         },
         {
           "level": 4,
-          "body": "Answer: a set of vertices joined by edges."
+          "body": "Answer: a graph: the members are vertices and the games are edges."
         }
       ]
     },

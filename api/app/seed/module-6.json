@@ -199,42 +199,42 @@
         "prompt": "Which of these is a data structure?",
         "options": [
           {
-            "id": "a",
-            "label": "A Python dictionary that maps each vertex to its neighbours"
-          },
-          {
             "id": "c",
             "label": "Visiting every page of a website by following links"
           },
           {
-            "id": "b",
-            "label": "The steps BFS follows to visit every vertex of a graph, one by one"
+            "id": "d",
+            "label": "A bus timetable listing every stop and the time the bus gets there"
+          },
+          {
+            "id": "e",
+            "label": "How a sat-nav works out which turn you should take next"
           }
         ]
       },
       "solution": {
-        "correct": "a",
+        "correct": "d",
         "feedback": {
-          "b": "Not quite. That's an algorithm. A list of steps that does something is an algorithm. A data structure stores data. Find the option that stores information.",
-          "c": "Not quite. That's a traversal. Visiting vertices by following edges is a graph traversal, which is an algorithm. Find the option that stores information."
+          "c": "Not quite. That's a graph traversal: it visits pages by following links, so it is something done, not something kept. Ask: does it hold information, or is it a method for doing something?",
+          "e": "Not quite. That's an algorithm: a method the sat-nav follows to decide. It doesn't hold the information itself. Ask: does it hold information, or is it a method for doing something?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "A data structure organises and stores data."
+          "body": "Ask of each: does it hold information, or is it a way of doing something?"
         },
         {
           "level": 2,
-          "body": "An algorithm is a list of steps; it doesn't store anything."
+          "body": "Something that keeps information organised is a data structure. A method, or a way of moving through something, is not."
         },
         {
           "level": 3,
-          "body": "Which option holds data that a program can look up?"
+          "body": "Choosing a turn and visiting pages are both things done."
         },
         {
           "level": 4,
-          "body": "Answer: the dictionary of neighbour lists."
+          "body": "Answer: the bus timetable, which holds the stops and times."
         }
       ]
     },
@@ -253,38 +253,38 @@
             "label": "A map of the stations on a train line and the tracks between them"
           },
           {
-            "id": "a",
-            "label": "A queue of students waiting at the library desk to borrow books"
+            "id": "e",
+            "label": "A playlist, in the order the songs will play"
           },
           {
-            "id": "b",
-            "label": "Steps for finding the largest mark in a class list"
+            "id": "d",
+            "label": "The rules for deciding whether a year is a leap year"
           }
         ]
       },
       "solution": {
-        "correct": "b",
+        "correct": "d",
         "feedback": {
-          "a": "Not quite. That's a data structure. A queue stores items in order. It doesn't do anything by itself. Find the option that is a set of steps.",
-          "c": "Not quite. That's a graph. A map of stations and tracks is a graph, which is a data structure. Find the option that is a set of steps."
+          "c": "Not quite. That's a graph. A map of stations and tracks is a graph, which is a data structure. Find the option that is a method for working something out.",
+          "e": "Not quite. The songs are in an order, but the playlist only holds them, and something that holds information is a data structure. Ask: does it hold information, or is it a method for doing something?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "An algorithm is a finite list of steps that solves a problem."
+          "body": "An algorithm is a method that solves a problem."
         },
         {
           "level": 2,
-          "body": "Queues and graphs store data."
+          "body": "A map and a playlist hold information."
         },
         {
           "level": 3,
-          "body": "Which option describes doing something step by step?"
+          "body": "Which option tells you how to work something out?"
         },
         {
           "level": 4,
-          "body": "Answer: the steps for finding the largest mark."
+          "body": "Answer: the rules for deciding whether a year is a leap year."
         }
       ]
     },
@@ -296,11 +296,15 @@
       "purpose": "mastery",
       "objective_id": 1,
       "config": {
-        "prompt": "Match each term to its example.",
+        "prompt": "Match each term to its example. One example matches none of them.",
         "left": [
           {
-            "id": "t1",
-            "label": "Graph"
+            "id": "t3",
+            "label": "Data structure"
+          },
+          {
+            "id": "t4",
+            "label": "Algorithm"
           },
           {
             "id": "t2",
@@ -309,45 +313,51 @@
         ],
         "right": [
           {
-            "id": "e3",
-            "label": "A stack of plates"
-          },
-          {
-            "id": "e1",
-            "label": "A family tree showing who is a parent of whom"
+            "id": "e6",
+            "label": "A bar chart of the test marks in a class"
           },
           {
             "id": "e2",
             "label": "Checking every room in a building by walking through its doors"
+          },
+          {
+            "id": "e5",
+            "label": "The method for working out a 15% tip on a bill"
+          },
+          {
+            "id": "e4",
+            "label": "A phone's list of recent calls, newest first"
           }
         ]
       },
       "solution": {
         "pairs": {
-          "t1": "e1",
+          "t3": "e4",
+          "t4": "e5",
           "t2": "e2"
         },
         "feedback": {
-          "t1": "Check “graph”. A graph is things joined by connections, like people joined by parent links. Find the example with things and connections.",
-          "t2": "Check “graph traversal”. A traversal visits every vertex by following edges, like walking through every room via its doors. Find the example about visiting everything."
+          "t3": "Not quite. A data structure keeps information organised so a program can use it, like a phone's list of recent calls. Find the example that holds information for a program.",
+          "t4": "Not quite. An algorithm is a method that solves a problem, like working out a tip. Find the example that is a way of working something out.",
+          "t2": "Not quite. A traversal goes to every one of a set of connected things by moving along the connections, like walking through every room by its doors. Find the example about visiting everything."
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "One example stores connections; one visits things; one is neither."
+          "body": "One example holds information, one is a way of working something out, one visits connected things, and one is none of these."
         },
         {
           "level": 2,
-          "body": "A stack of plates is a stack, not a graph."
+          "body": "A bar chart is the everyday kind of graph, a picture of values: it is none of these terms."
         },
         {
           "level": 3,
-          "body": "Walking through every room is visiting every vertex."
+          "body": "Walking through every room by its doors is visiting connected things."
         },
         {
           "level": 4,
-          "body": "Answer: graph → family tree; graph traversal → checking every room."
+          "body": "Answer: data structure → the list of recent calls; algorithm → working out a tip; graph traversal → checking every room."
         }
       ]
     },
@@ -359,45 +369,50 @@
       "purpose": "mastery",
       "objective_id": 1,
       "config": {
-        "prompt": "What is a graph traversal?",
+        "prompt": "A municipal inspector starts at the waterworks and follows the pipes until every reservoir they can reach has been checked. Which term describes what the inspector does?",
         "options": [
           {
-            "id": "a",
-            "label": "Drawing a graph's vertices and edges on paper"
+            "id": "f",
+            "label": "A data structure"
           },
           {
-            "id": "b",
-            "label": "Adding vertices and edges to a graph until it matches a map"
+            "id": "e",
+            "label": "A graph"
           },
           {
-            "id": "c",
-            "label": "Visiting the vertices of a graph by following its edges"
+            "id": "g",
+            "label": "Building a graph"
+          },
+          {
+            "id": "d",
+            "label": "A graph traversal"
           }
         ]
       },
       "solution": {
-        "correct": "c",
+        "correct": "d",
         "feedback": {
-          "a": "Not quite. Drawing shows a graph; a traversal moves through it. Think about what BFS does to a graph.",
-          "b": "Not quite. That's building a graph. add_vertex and add_edge build a graph; a traversal visits what's already there. Think about what BFS does to a graph."
+          "e": "Not quite. The pipes and reservoirs are a graph, but the inspector isn't the pipes: they move along them. Ask: is this something that stores, or something that is done?",
+          "f": "Not quite. The pipes and reservoirs could be stored in a data structure, but the inspector isn't storing anything: they move along the pipes. Ask: is this something that stores, or something that is done?",
+          "g": "Not quite. Nothing new is added: the pipes and reservoirs are already there, and the inspector moves along them. Ask: is the inspector adding connections, or following them?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "BFS is one kind of graph traversal."
+          "body": "Ask: is the inspector something that stores, or something that is done?"
         },
         {
           "level": 2,
-          "body": "What does BFS do with the vertices?"
+          "body": "The pipes and reservoirs are the graph. What is the inspector doing to it?"
         },
         {
           "level": 3,
-          "body": "It visits them, moving along edges."
+          "body": "The inspector goes to every reservoir they can reach by moving along the pipes."
         },
         {
           "level": 4,
-          "body": "Answer: visiting the vertices of a graph by following its edges."
+          "body": "Answer: a graph traversal."
         }
       ]
     },

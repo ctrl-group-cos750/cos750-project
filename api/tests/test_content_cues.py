@@ -406,7 +406,14 @@ RETIRED = {
     1303: {"a", "b", "c"},
     1304: {"a", "b", "c"},
     1305: {"a", "b", "c"},
-    316: {"a", "b", "c"},  # a new closing task (#214 C3): routes from E, not a count from A
+    316: {"a", "b", "c"},
+    # Objective 1 (#214 C5): examples to classify instead of the definition's own words.
+    601: {"a", "b"},
+    602: {"a", "b"},
+    604: {"a", "b", "c"},
+    1102: {"a", "b"},
+    1103: {"a", "b", "c"},
+    1105: {"a", "b", "c"},  # a new closing task (#214 C3): routes from E, not a count from A
     614: {"a", "b", "c"},  # a new question: every staging id, the key's included
     615: {"c"},
     616: {"c"},
@@ -754,12 +761,7 @@ WORDING_ONLY = {
         (312, "a"),
         (312, "b"),
         (312, "c"),
-        (601, "b"),
-        (602, "a"),
-        (602, "b"),
         (602, "c"),
-        (604, "a"),
-        (604, "b"),
         (605, "b"),
         (615, "a"),
         (615, "b"),
@@ -768,10 +770,6 @@ WORDING_ONLY = {
         (617, "a"),
         (617, "c"),
         (1101, "a"),
-        (1102, "a"),
-        (1103, "a"),
-        (1103, "b"),
-        (1105, "b"),
         (1106, "c"),
         (1401, "a"),
         (1401, "b"),
@@ -788,7 +786,8 @@ WORDING_ONLY = {
     "matching_left": {(a, m) for a in (606, 607, 608, 1202, 1203, 1204) for m in ("1", "2", "3")},
     "matching_right": set(),
 }
-# Matching items that left an item: 609 and 1205 classify new situations by meaning (#214 C4).
+# Matching items that left an item: 609 and 1205 classify new situations by meaning (#214 C4), and
+# 603 matches three terms instead of "graph" (#214 C5).
 GONE_LEFT = {
     (609, i)
     for i in (
@@ -797,10 +796,11 @@ GONE_LEFT = {
         "module-prerequisites",
         "two-way-radio-links",
     )
-} | {
+} | {(603, "t1")} | {
     (1205, i)
     for i in ("emails", "train-tracks-between-stations", "teammates-in-a-project", "a-tournament")
 }
+GONE_RIGHT = {(603, "e1"), (603, "e3")}  # 603's examples: a family tree, a stack of plates
 # Fix-the-bug corrections that left an item: 621 is a new bug (#214 C2), so all its corrections are.
 RETIRED_CORRECTIONS = {621: {20, 21, 22, 23}, 1703: {22}}
 # Ids that left an item; they must never come back (RETIRED, plus the retired corrections).
@@ -830,7 +830,7 @@ def test_an_id_from_staging_keeps_its_text_unless_retired_or_listed(kind: str) -
                 changed.add((int(activity_id), item_id))
     assert sorted(changed - WORDING_ONLY[kind]) == []
     assert sorted(WORDING_ONLY[kind] - changed) == []  # the list says only what is true
-    assert gone == {"options": GONE, "matching_left": GONE_LEFT, "matching_right": set()}[kind]
+    assert gone == {"options": GONE, "matching_left": GONE_LEFT, "matching_right": GONE_RIGHT}[kind]
 
 
 def test_counting_the_places_a_marker_names_does_not_meet_objective_2() -> None:

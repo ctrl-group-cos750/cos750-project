@@ -523,6 +523,30 @@ describe('ModulePage — navigation and position saving', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Finish module' }))
     expect(await screen.findByText('First Module')).toBeVisible()
   })
+  it('fetches the rewards after a Next only when that save completes the module', async () => {
+    const worked = {
+      ...twoSegmentDetail,
+      status: 'in_progress' as const,
+      currentSegmentPosition: 1,
+    }
+    const api = setupModuleApi(twoSegmentDetail, worked)
+    renderApp('/modules/1')
+    await waitFor(() => expect(api.callsTo('GET /api/rewards').length).toBeGreaterThan(0))
+    const before = api.callsTo('GET /api/rewards').length
+    await userEvent.click(await screen.findByRole('button', { name: 'Next →' }))
+    await screen.findByRole('button', { name: 'Finish module' })
+    await waitFor(() => expect(api.callsTo('GET /api/modules/1').length).toBeGreaterThan(1))
+    expect(api.callsTo('GET /api/rewards')).toHaveLength(before)
+  })
+  it('fetches the rewards after a Next that completes the module', async () => {
+    const done = { ...twoSegmentDetail, status: 'complete' as const, currentSegmentPosition: 1 }
+    const api = setupModuleApi(twoSegmentDetail, done)
+    renderApp('/modules/1')
+    await waitFor(() => expect(api.callsTo('GET /api/rewards').length).toBeGreaterThan(0))
+    const before = api.callsTo('GET /api/rewards').length
+    await userEvent.click(await screen.findByRole('button', { name: 'Next →' }))
+    await waitFor(() => expect(api.callsTo('GET /api/rewards').length).toBeGreaterThan(before))
+  })
   it('finishing module 6, the mastery check, opens the mastery report (#144)', async () => {
     const api = fakeApi({
       user: ada,

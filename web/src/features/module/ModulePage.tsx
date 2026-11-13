@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { Alert, Button, ProgressBar, Spinner } from '../../components'
 import { ActivityView } from '../activities/ActivityPage.tsx'
-import { rewardsKey } from '../rewards/hooks.ts'
+import { useRefreshRewards } from '../rewards/hooks.ts'
 import { fetchModule, savePosition } from './module.api.ts'
 import { SegmentView } from './SegmentView.tsx'
 import {
@@ -40,6 +40,7 @@ export function ModulePage() {
   const validId = MODULE_ID.test(param)
   const id = Number(param)
   const queryClient = useQueryClient()
+  const refreshRewards = useRefreshRewards()
   const navigate = useNavigate()
 
   const query = useQuery({
@@ -72,14 +73,15 @@ export function ModulePage() {
   // Saves how far the student has got. The server keeps the furthest segment reached, so only
   // moving forward is saved; stepping back just changes what's on screen.
   const mutation = useMutation({
-    mutationFn: (position: number) => savePosition(id, position),
-    onSuccess: () => {
+    mutationFn: ({ position }: { position: number; finishing: boolean; wasComplete: boolean }) =>
+      savePosition(id, position),
+    onSuccess: (saved, { finishing, wasComplete }) => {
       void queryClient.invalidateQueries({ queryKey: ['modules'] })
       void queryClient.invalidateQueries({ queryKey: ['module', id] })
-      // Finishing a module can earn its points and the First Module badge: fetch them now, so the
+      // Completing a module can earn its points and the First Module badge: fetch them now, so the
       // badge note comes with the finish, not with the next answer (which read as if that answer
-      // had earned it).
-      void queryClient.invalidateQueries({ queryKey: rewardsKey })
+      // had earned it). Only then: a Next that completes nothing earns nothing.
+      if (finishing || (saved.status === 'complete' && !wasComplete)) refreshRewards()
     },
   })
   // Another module opened in place (a link, or Back and Forward): start it afresh, so a segment
@@ -248,12 +250,19 @@ export function ModulePage() {
       setSegmentIndex(next)
       return
     }
-    mutation.mutate(segments[next].position, {
-      onSuccess: () => {
-        moveFocus.current = true
-        setSegmentIndex(next)
+    mutation.mutate(
+      {
+        position: segments[next].position,
+        finishing: false,
+        wasComplete: module.status === 'complete',
       },
-    })
+      {
+        onSuccess: () => {
+          moveFocus.current = true
+          setSegmentIndex(next)
+        },
+      },
+    )
   }
 
   // Saving the last segment again once it is done is what completes the module (the server
@@ -263,7 +272,14 @@ export function ModulePage() {
   function handleFinish() {
     if (blocked) return
     const next = module.id === MASTERY_MODULE_ID ? '/report' : '/'
-    mutation.mutate(segments[currentIndex].position, { onSuccess: () => void navigate(next) })
+    mutation.mutate(
+      {
+        position: segments[currentIndex].position,
+        finishing: true,
+        wasComplete: module.status === 'complete',
+      },
+      { onSuccess: () => void navigate(next) },
+    )
   }
 
   return (

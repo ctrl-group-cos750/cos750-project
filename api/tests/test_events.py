@@ -253,6 +253,8 @@ def test_a_result_changing_is_logged_with_where_it_came_from(
     body = {"submitted": {"selected": "a"}}
     # A mastery check item takes one answer (#144).
     assert client.post("/api/activities/601/attempts", json=body).status_code == 409
+    # The path's practice first: its fresh item opens once that is done (review of 13 Nov).
+    assert client.post("/api/activities/1101/attempts", json=body).status_code == 201
     assert client.post("/api/activities/1102/attempts", json=body).status_code == 201
     assert events_of(db, user) == [
         (

@@ -191,6 +191,7 @@ def activity_refusal(session: Session, user: User, activity: Activity) -> Refusa
     if (
         refusal is None
         and on_review_path(activity)
+        and homes.review_paths
         and not any(
             review_open(session, user.id, objective)
             and review_practice_done(session, user.id, objective)

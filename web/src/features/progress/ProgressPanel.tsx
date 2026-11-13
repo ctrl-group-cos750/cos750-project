@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import { Link } from 'react-router'
 import { AchievementBadge, ProgressBar } from '../../components'
 import { useMediaQuery } from '../activities/pictures/useMediaQuery.ts'
@@ -6,6 +7,11 @@ import { buildShelf, type ShelfItem } from '../rewards/shelf.ts'
 import { useSkills } from './hooks.ts'
 import { Medal } from './Medal.tsx'
 import { MEDAL_NAMES, MEDAL_RULES } from './medals.ts'
+import { HiddenNote } from './HiddenNote.tsx'
+import { HideMenu, type HideItem } from './HideMenu.tsx'
+import { PanelHeader } from './PanelHeader.tsx'
+import { usePanelMinimised } from './preferences.ts'
+import { useHideable, useHideableRewards } from './useHideable.ts'
 import { SkillProfile } from './SkillProfile.tsx'
 import type { ModuleMedal } from './skills.api.ts'
 import styles from './progress.module.css'
@@ -63,11 +69,34 @@ function MedalLine({ medal }: { medal: ModuleMedal | undefined }) {
   )
 }
 
+/** What the student can turn off from the panel itself (#214), shared by its header and its body:
+ * the header's "⋯" hides, the body shows the note where the hidden part was. */
+type Hiding = {
+  profile: ReturnType<typeof useHideable>
+  rewards: ReturnType<typeof useHideableRewards>
+  panel: ReturnType<typeof useHideable>
+}
+
+function hideItems({ profile, rewards, panel }: Hiding): HideItem[] {
+  return [
+    ...(profile.on ? [{ label: 'Hide skill profile', onSelect: profile.hide }] : []),
+    ...(rewards.on ? [{ label: 'Hide points and badges', onSelect: rewards.hide }] : []),
+    { label: 'Hide progress panel', onSelect: panel.hide },
+  ]
+}
+
 /** The panel's contents, the same beside the lesson and in the strip under it. */
-function PanelBody({ moduleId, moduleNumber, place, lookAgain }: ProgressPanelProps) {
+function PanelBody({
+  moduleId,
+  moduleNumber,
+  place,
+  lookAgain,
+  hiding,
+}: ProgressPanelProps & { hiding: Hiding }) {
   const rewards = useRewards()
   const skills = useSkills()
   const hidden = rewards.data?.hideRewards !== false // hidden until known, never flashed
+  const { profile } = hiding
   const medal = skills.data?.modules.find((m) => m.moduleId === moduleId)
   const recent = rewards.data
     ? recentBadges(Object.values(buildShelf(rewards.data.badges)).flat())
@@ -107,12 +136,16 @@ function PanelBody({ moduleId, moduleNumber, place, lookAgain }: ProgressPanelPr
           </ul>
         </section>
       )}
+      {hiding.rewards.justHidden && (
+        <HiddenNote text="Points and badges hidden." onUndo={hiding.rewards.undo} />
+      )}
       {!hidden && (
         <p className={styles.points}>
           <span className={styles.pointsValue}>{rewards.data?.points ?? 0}</span> points
         </p>
       )}
-      {skills.data && skills.data.objectives.length > 0 && (
+      {profile.justHidden && <HiddenNote text="Skill profile hidden." onUndo={profile.undo} />}
+      {profile.on && skills.data && skills.data.objectives.length > 0 && (
         <section className={styles.block} aria-label="Skill profile">
           <h3 className={styles.blockTitle}>Skill profile</h3>
           <SkillProfile skills={skills.data.objectives} highlight={medal?.objectives} compact />
@@ -150,6 +183,10 @@ function PanelBody({ moduleId, moduleNumber, place, lookAgain }: ProgressPanelPr
  * On wide screens it is a column beside the lesson (`placement="beside"`); below that it is a
  * one-line strip that opens, placed under the lesson (`placement="below"`), so it never pushes the
  * lesson down. The page renders it in both places and each shows only where it belongs.
+ *
+ * Its heading minimises it to a narrow rail beside the lesson (kept on this device), and its "⋯"
+ * turns off the panel, the skill profile or points and badges where they are. Switched off
+ * (`progressPanel` in preferences.ts), neither shows, and the page gives the lesson the width.
  */
 export function ProgressPanel({
   placement,
@@ -157,17 +194,69 @@ export function ProgressPanel({
 }: ProgressPanelProps & { placement: 'beside' | 'below' }) {
   const beside = useMediaQuery(PANEL_BESIDE)
   const rewards = useRewards()
+  const hiding: Hiding = {
+    profile: useHideable('skillProfile'),
+    rewards: useHideableRewards(),
+    panel: useHideable('progressPanel'),
+  }
+  const [minimised, setMinimised] = usePanelMinimised('progressPanel')
+  const body = useId()
   if (beside !== (placement === 'beside')) return null
+  if (hiding.panel.justHidden)
+    return (
+      <HiddenNote
+        text="Progress panel hidden."
+        onUndo={hiding.panel.undo}
+        className={placement === 'beside' ? styles.hiddenToast : undefined}
+      />
+    )
+  if (!hiding.panel.on) return null
+  const hidden = rewards.data?.hideRewards !== false
+  if (placement === 'beside' && minimised) {
+    const count = !hidden ? rewards.data?.points : props.lookAgain?.length
+    return (
+      <aside className={styles.rail} aria-label="Your progress">
+        <h2 className={styles.railHeading}>
+          <button
+            type="button"
+            className={styles.railButton}
+            aria-expanded={false}
+            aria-controls={body}
+            // The count's meaning in words; the visible number is in the name (WCAG 2.5.3).
+            aria-label={
+              count !== undefined && count > 0
+                ? `Your progress, ${count} ${!hidden ? 'points' : 'to look at again'}`
+                : 'Your progress'
+            }
+            onClick={() => setMinimised(false)}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M5 19V11M12 19V5M19 19v-6" />
+            </svg>
+            {count !== undefined && count > 0 && <span className={styles.railCount}>{count}</span>}
+          </button>
+        </h2>
+        <div id={body} hidden />
+      </aside>
+    )
+  }
   if (placement === 'beside')
     return (
       <aside className={styles.panel} aria-labelledby="progress-panel-heading">
-        <h2 id="progress-panel-heading" className={styles.panelTitle}>
-          Your progress
-        </h2>
-        <PanelBody {...props} />
+        <PanelHeader
+          id="progress-panel-heading"
+          title="Your progress"
+          minimised={false}
+          onToggle={() => setMinimised(true)}
+          controls={body}
+          hide={hideItems(hiding)}
+          className={styles.panelTitle}
+        />
+        <div id={body}>
+          <PanelBody {...props} hiding={hiding} />
+        </div>
       </aside>
     )
-  const hidden = rewards.data?.hideRewards !== false
   return (
     <details className={styles.strip}>
       <summary>
@@ -177,7 +266,10 @@ export function ProgressPanel({
           <span className={styles.muted}> · {props.lookAgain.length} to look at again</span>
         )}
       </summary>
-      <PanelBody {...props} />
+      <div className={styles.stripMenu}>
+        <HideMenu title="your progress" items={hideItems(hiding)} />
+      </div>
+      <PanelBody {...props} hiding={hiding} />
     </details>
   )
 }

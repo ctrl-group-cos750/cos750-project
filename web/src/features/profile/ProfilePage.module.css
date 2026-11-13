@@ -91,7 +91,8 @@
   font-weight: 600;
 }
 
-.nextToggle {
+/* One switch in "What you see while you learn", with its line on what it does. */
+.setting {
   margin-top: var(--space-4);
 }
 

@@ -1,3 +1,5 @@
+import { Link } from 'react-router'
+import { improveLink } from './improve.ts'
 import { objectiveLabel } from './objectiveLabels.ts'
 import { skillStatus } from './skillStatus.ts'
 import type { Skill } from './skills.api.ts'
@@ -21,23 +23,35 @@ const NONE: readonly number[] = []
  *
  * The rows are native disclosure widgets: the label and the words are the accessible text, the
  * bar is hidden from screen readers. `highlight` marks the objectives a module teaches.
+ * Beside each row, a link to where the objective can be improved (`improveLink`): a real link
+ * next to the disclosure, never inside its summary. `bars={false}` leaves the bars out, for the list under the radar chart (SkillRadar), which
+ * draws the levels itself; the words and the evidence stay.
  */
 export function SkillProfile({
   skills,
   highlight = NONE,
   compact = false,
+  bars = true,
 }: {
   skills: Skill[]
   highlight?: readonly number[]
   compact?: boolean
+  bars?: boolean
 }) {
   return (
-    <ul className={`${styles.profile} ${compact ? styles.compact : ''}`}>
+    <ul
+      className={`${styles.profile} ${compact ? styles.compact : ''} ${bars ? '' : styles.noBars}`}
+    >
       {skills.map((skill) => {
         const status = skillStatus(skill)
         const here = highlight.includes(skill.id)
+        const link = improveLink(skill)
         return (
-          <li key={skill.id} className={here ? styles.here : undefined}>
+          <li
+            key={skill.id}
+            className={`${styles.row} ${here ? styles.here : ''}`}
+            data-objective={skill.id}
+          >
             <details className={styles.skill}>
               <summary className={styles.summary}>
                 <span className={styles.label}>
@@ -45,11 +59,13 @@ export function SkillProfile({
                   {objectiveLabel(skill.id)}
                   {here && <span className="visually-hidden"> (this module)</span>}
                 </span>
-                <span className={`${styles.track} ${styles[status.tone]}`} aria-hidden="true">
-                  {[1, 2, 3].map((step) => (
-                    <span key={step} data-on={status.steps >= step || undefined} />
-                  ))}
-                </span>
+                {bars && (
+                  <span className={`${styles.track} ${styles[status.tone]}`} aria-hidden="true">
+                    {[1, 2, 3].map((step) => (
+                      <span key={step} data-on={status.steps >= step || undefined} />
+                    ))}
+                  </span>
+                )}
                 <span className={styles.status}>{status.text}</span>
               </summary>
               <div className={styles.evidence}>
@@ -57,6 +73,15 @@ export function SkillProfile({
                 <p>{evidence(skill)}</p>
               </div>
             </details>
+            {link && (
+              <Link
+                to={link.to}
+                aria-label={link.label}
+                className={`${styles.improve} ${link.quiet ? styles.quiet : ''}`}
+              >
+                {link.text}
+              </Link>
+            )}
           </li>
         )
       })}

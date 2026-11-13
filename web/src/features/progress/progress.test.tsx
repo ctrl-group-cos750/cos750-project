@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ada, fakeApi, renderApp } from '../../test/app.tsx'
 import type { AttemptResult } from '../activities/activities.types.ts'
@@ -194,9 +195,11 @@ function panel(hideRewards: boolean | undefined, skills?: Skill[]) {
     client.setQueryData(rewardsKey, { hideRewards, points: 0, badges: [] })
   if (skills) client.setQueryData(skillsKey, { objectives: skills, modules: [] })
   const view = (result: AttemptResult | undefined) => (
-    <QueryClientProvider client={client}>
-      <FeedbackPanel result={result} />
-    </QueryClientProvider>
+    <MemoryRouter>
+      <QueryClientProvider client={client}>
+        <FeedbackPanel result={result} />
+      </QueryClientProvider>
+    </MemoryRouter>
   )
   const { rerender } = render(view(undefined))
   return (result: AttemptResult | undefined) => rerender(view(result))
@@ -270,12 +273,48 @@ describe('the success moment', () => {
     drawableCanvas()
     panel(false)(right)
     expect(document.querySelector('canvas[data-confetti="small"]')).not.toBeNull()
+    // One quiet "⋯" beside the moment (#214), opening the ways to turn its parts off.
+    const more = screen.getByRole('button', { name: 'Hide options for this feedback' })
+    expect(more).toHaveAttribute('aria-expanded', 'false')
+    await userEvent.click(more)
+    expect(more).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('button', { name: 'Hide encouraging comments' })).toBeVisible()
     await userEvent.click(screen.getByRole('button', { name: 'Turn off confetti' }))
     expect(confettiEnabled()).toBe(false)
     expect(document.querySelector('canvas')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Turn off confetti' })).toBeNull()
-    // Focus isn't dropped on the page with the button: it goes to the line saying it is off.
-    expect(screen.getByText(/Confetti is off/)).toHaveFocus()
+    // Focus isn't dropped on the page with the button: it goes to the line saying it is off,
+    // which links to the settings and offers Undo.
+    const note = screen.getByText(/Confetti is off/).closest('output')!
+    expect(note).toHaveFocus()
+    expect(within(note).getByRole('link', { name: 'your profile' })).toHaveAttribute(
+      'href',
+      '/profile#what-you-see',
+    )
+    await userEvent.click(within(note).getByRole('button', { name: 'Undo' }))
+    expect(confettiEnabled()).toBe(true)
+  })
+
+  it('hides encouraging comments from the moment itself', async () => {
+    panel(false)(right)
+    await userEvent.click(screen.getByRole('button', { name: 'Hide options for this feedback' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Hide encouraging comments' }))
+    expect(screen.queryByText(praiseFor(right.id, 0), { exact: false })).toBeNull()
+    expect(screen.getByText(/Encouraging comments hidden/).closest('output')).toHaveFocus()
+    expect(localStorage.getItem('ctrl-academy.comments')).toBe('off')
+  })
+
+  it('closes the "⋯" with Escape and gives focus back to it', async () => {
+    panel(false)(right)
+    const more = screen.getByRole('button', { name: 'Hide options for this feedback' })
+    await userEvent.click(more)
+    // Focus goes to the first way to turn something off.
+    expect(document.activeElement).toHaveTextContent(
+      /^(Turn off confetti|Hide encouraging comments)$/,
+    )
+    await userEvent.keyboard('{Escape}')
+    expect(more).toHaveAttribute('aria-expanded', 'false')
+    expect(more).toHaveFocus()
   })
 
   it('is never shown in the mastery check, not even for its recall questions (#215)', () => {
@@ -517,11 +556,25 @@ describe('the mastery report', () => {
   })
 })
 
-describe('the feedback switches on the profile page', () => {
-  it('are together under "Feedback", on by default, and kept on this device', async () => {
+describe('the switches on the profile page', () => {
+  it('are together under "What you see while you learn", on by default, and kept on this device', async () => {
     fakeApi({ user: ada })
     renderApp('/profile')
-    const section = (await screen.findByRole('heading', { name: 'Feedback' })).closest('section')!
+    const section = (
+      await screen.findByRole('heading', { name: 'What you see while you learn' })
+    ).closest('section')!
+    await waitFor(() => expect(within(section).getAllByRole('checkbox')).toHaveLength(5))
+    for (const name of [
+      'Points and badges',
+      'Skill profile',
+      'Progress panel beside lessons',
+      'Confetti when you get something right',
+      'Encouraging comments',
+    ])
+      expect(within(section).getByRole('checkbox', { name })).toBeChecked()
+    expect(section).toHaveTextContent(
+      'Your mastery report and your quick check results are always shown.',
+    )
     const box = within(section).getByRole('checkbox', {
       name: 'Confetti when you get something right',
     })
@@ -548,5 +601,106 @@ describe('the feedback switches on the profile page', () => {
     expect(confettiEnabled()).toBe(true)
     setPreferenceOwner(1)
     expect(confettiEnabled()).toBe(false)
+  })
+})
+
+describe('the progress panel: minimised, hidden or off (#214)', () => {
+  const overrides = {
+    'GET /api/activities/7': () =>
+      Response.json({
+        id: 7,
+        kind: 'multiple_choice',
+        title: 'Pick one',
+        visible: true,
+        config: { prompt: 'Q', options: [{ id: 'a', label: 'A' }] },
+      }),
+    'GET /api/activities/7/hints': () => Response.json([]),
+    'GET /api/me/skills': () => Response.json({ objectives: eight(), modules: [] }),
+    'GET /api/rewards': () => Response.json({ hideRewards: false, points: 135, badges: [] }),
+  }
+
+  it('minimises to a rail with its count, which opens it again; nothing else changes', async () => {
+    media('(min-width: 64rem)')
+    fakeApi({ user: ada, overrides })
+    renderApp('/activities/7')
+    const aside = await screen.findByRole('complementary', { name: 'Your progress' })
+    await waitFor(() => expect(aside).toHaveTextContent('135 points'))
+    const toggle = within(aside).getByRole('button', { name: 'Your progress' })
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    await userEvent.click(toggle)
+    const rail = await screen.findByRole('complementary', { name: 'Your progress' })
+    const open = within(rail).getByRole('button', { name: 'Your progress, 135 points' })
+    expect(open).toHaveAttribute('aria-expanded', 'false')
+    expect(within(rail).queryByRole('region', { name: 'Skill profile' })).toBeNull()
+    expect(localStorage.getItem(`ctrl-academy.${ada.id}.minimised.progressPanel`)).toBe('yes')
+    // The lesson gets the width: the page's column for the panel is a narrow rail.
+    expect(rail.parentElement!.className).toContain('lg:grid-cols-[minmax(0,1fr)_3rem]')
+    await userEvent.click(open)
+    expect(await screen.findByRole('region', { name: 'Skill profile' })).toBeInTheDocument()
+  })
+
+  it('hides the skill profile from its "⋯", and shows the note where it was', async () => {
+    media('(min-width: 64rem)')
+    fakeApi({ user: ada, overrides })
+    renderApp('/activities/7')
+    const aside = await screen.findByRole('complementary', { name: 'Your progress' })
+    await within(aside).findByRole('region', { name: 'Skill profile' })
+    await userEvent.click(
+      within(aside).getByRole('button', { name: 'Hide options for your progress' }),
+    )
+    await userEvent.click(within(aside).getByRole('button', { name: 'Hide skill profile' }))
+    expect(within(aside).queryByRole('region', { name: 'Skill profile' })).toBeNull()
+    expect(
+      within(aside)
+        .getByText(/Skill profile hidden/)
+        .closest('output'),
+    ).toHaveFocus()
+  })
+
+  it('hides the whole panel from its "⋯": the lesson takes the width', async () => {
+    media('(min-width: 64rem)')
+    fakeApi({ user: ada, overrides })
+    renderApp('/activities/7')
+    const aside = await screen.findByRole('complementary', { name: 'Your progress' })
+    const page = aside.parentElement!
+    await userEvent.click(
+      within(aside).getByRole('button', { name: 'Hide options for your progress' }),
+    )
+    await userEvent.click(within(aside).getByRole('button', { name: 'Hide progress panel' }))
+    expect(screen.queryByRole('complementary')).toBeNull()
+    expect(screen.getByText(/Progress panel hidden/).closest('output')).toHaveFocus()
+    expect(page.className).not.toContain('lg:grid-cols')
+  })
+
+  it('shows no panel and no strip once switched off, and none of its skill profile', async () => {
+    localStorage.setItem(`ctrl-academy.${ada.id}.progressPanel`, 'off')
+    fakeApi({ user: ada, overrides })
+    renderApp('/activities/7')
+    await screen.findByText('Q')
+    expect(screen.queryByText('Your progress')).toBeNull()
+    media('(min-width: 64rem)')
+  })
+
+  it('leaves the skill profile out of the panel when it is switched off', async () => {
+    media('(min-width: 64rem)')
+    localStorage.setItem(`ctrl-academy.${ada.id}.skillProfile`, 'off')
+    fakeApi({ user: ada, overrides })
+    renderApp('/activities/7')
+    const aside = await screen.findByRole('complementary', { name: 'Your progress' })
+    await waitFor(() => expect(aside).toHaveTextContent('135 points'))
+    expect(within(aside).queryByRole('region', { name: 'Skill profile' })).toBeNull()
+  })
+
+  it('offers the same "⋯" inside the strip on a phone', async () => {
+    fakeApi({ user: ada, overrides })
+    renderApp('/activities/7')
+    const strip = (await screen.findByText('Your progress')).closest('details')!
+    await userEvent.click(within(strip).getByText('Your progress'))
+    await userEvent.click(
+      within(strip).getByRole('button', { name: 'Hide options for your progress' }),
+    )
+    await userEvent.click(within(strip).getByRole('button', { name: 'Hide progress panel' }))
+    expect(screen.queryByRole('group', { name: /Your progress/ })).toBeNull()
+    expect(screen.getByText(/Progress panel hidden/).closest('output')).toHaveFocus()
   })
 })

@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { Alert, Button, ProgressBar, Spinner } from '../../components'
 import { ActivityView } from '../activities/ActivityPage.tsx'
 import { CelebrationAllowed } from '../activities/celebration.ts'
 import { useRefreshRewards, useRewards } from '../rewards/hooks.ts'
-import { fetchModule, restartModule, savePosition } from './module.api.ts'
+import { fetchModule, fetchModules, restartModule, savePosition } from './module.api.ts'
+import { LockedNote } from './LockedNote.tsx'
+import { unlockNeeds } from './unlock.ts'
 import type { ModuleDetail, ModuleSummary } from './module.types.ts'
 import { SegmentView } from './SegmentView.tsx'
 import {
@@ -23,6 +25,7 @@ import { useMediaQuery } from '../activities/pictures/useMediaQuery.ts'
 import { confetti } from '../progress/confetti.ts'
 import { skillsKey } from '../progress/hooks.ts'
 import { ProgressPanel } from '../progress/ProgressPanel.tsx'
+import { usePanelMinimised, usePreference } from '../progress/preferences.ts'
 
 /** Phones, where the module's goals start closed so the lesson starts on the first screen. */
 const PHONE_WIDTH = '(max-width: 40rem)'
@@ -60,6 +63,10 @@ export function ModulePage() {
   const segmentParam = search.get('segment') ?? ''
   const askedFor = SEGMENT.test(segmentParam) ? Number(segmentParam) : null
   const hideRewards = useRewards().data?.hideRewards !== false
+  // Switched off (#214): no panel, and the lesson takes its column.
+  const [panelOn] = usePreference('progressPanel')
+  const [panelRail] = usePanelMinimised('progressPanel')
+  const [goalsMinimised, setGoalsMinimised] = usePanelMinimised('moduleGoals')
 
   const query = useQuery({
     queryKey: ['module', id],
@@ -155,6 +162,7 @@ export function ModulePage() {
   if (query.isError) {
     if (!refused(query.error)) return <Alert tone="danger">{query.error.message}</Alert>
     const status = query.error instanceof ApiError ? query.error.status : 0
+    if (status === 403) return <ModuleLocked moduleId={id} message={query.error.message} />
     return (
       <ModuleRefused
         title={
@@ -377,7 +385,9 @@ export function ModulePage() {
   return (
     // Nothing in the mastery check celebrates a right answer (#215 review).
     <CelebrationAllowed.Provider value={module.id !== MASTERY_MODULE_ID}>
-      <div className="grid w-full items-start gap-6 lg:grid-cols-[minmax(0,1fr)_19rem] lg:gap-8">
+      <div
+        className={`grid w-full items-start gap-6 lg:gap-8 ${!panelOn ? '' : panelRail ? 'lg:grid-cols-[minmax(0,1fr)_3rem]' : 'lg:grid-cols-[minmax(0,1fr)_19rem]'}`}
+      >
         <div className="@container min-w-0">
           <section
             ref={contentRef}
@@ -415,9 +425,14 @@ export function ModulePage() {
             2), then one click away, so the question isn't pushed down the screen every time. On
             a phone they start closed: open, they fill the first screen. */}
               {module.goals.length > 0 && (
+                // Closed by the student, it stays closed on every segment until opened (#214).
                 <details
-                  key={place.number === 1 && !phone ? 'first' : 'later'}
-                  open={place.number === 1 && !phone}
+                  key={place.number === 1 && !phone && !goalsMinimised ? 'first' : 'later'}
+                  open={place.number === 1 && !phone && !goalsMinimised}
+                  onToggle={(event) => {
+                    const open = event.currentTarget.open
+                    if (open === goalsMinimised) setGoalsMinimised(!open)
+                  }}
                   className="rounded-lg border border-border bg-card px-4 py-3"
                 >
                   <summary className="cursor-pointer font-semibold">
@@ -514,13 +529,38 @@ export function ModulePage() {
   )
 }
 
+/** A locked module opened by its address or from its card on the map (#214): how to open it,
+ * with a link to each module still to do, worked out from the module list; the API's sentence
+ * until the list has loaded, or if it can't be had. */
+function ModuleLocked({ moduleId, message }: { moduleId: number; message: string }) {
+  const modules = useQuery({ queryKey: ['modules'], queryFn: fetchModules })
+  const module = modules.data?.find((m) => m.id === moduleId)
+  const needs = module && modules.data ? unlockNeeds(modules.data, module) : null
+  return (
+    <ModuleRefused
+      title={module ? `Module ${module.number} isn’t open yet` : 'This module isn’t open yet'}
+      message={message}
+    >
+      {needs && <LockedNote needs={needs} className="m-0 [&_a]:font-semibold [&_a]:underline" />}
+    </ModuleRefused>
+  )
+}
+
 /** Why a module can't be shown, in the API's words, with the way back to the map instead of a
  * spinner that never ends. */
-function ModuleRefused({ title, message }: { title: string; message: string }) {
+function ModuleRefused({
+  title,
+  message,
+  children,
+}: {
+  title: string
+  message: string
+  children?: ReactNode
+}) {
   return (
     <section className="grid justify-items-start gap-3">
       <h1 className="text-2xl font-bold">{title}</h1>
-      <Alert tone="info">{message}</Alert>
+      <Alert tone="info">{children ?? message}</Alert>
       <Link to="/" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
         Back to your modules
       </Link>

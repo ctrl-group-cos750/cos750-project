@@ -1,5 +1,13 @@
-import { useId, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-import { Link } from 'react-router'
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type ReactNode,
+} from 'react'
+import { Link, useLocation } from 'react-router'
 import { ApiError } from '../../api/client.ts'
 import type { User } from '../../auth/api.ts'
 import { useCurrentUser } from '../../auth/hooks.ts'
@@ -204,76 +212,131 @@ function Picture({ user }: { user: User }) {
   )
 }
 
-/** "Hide points and badges" (FR-9.5), the same setting as on the badges page. */
-function RewardsSetting() {
-  const rewards = useRewards()
-  const settings = useRewardsSettings()
+/** One switch in "What you see while you learn": a checkbox, its label and a line on what it
+ * does, read with it (`aria-describedby`, with the group's note on where it is kept). */
+function Setting({
+  label,
+  about,
+  checked,
+  onChange,
+  disabled,
+  note,
+}: {
+  label: string
+  about: ReactNode
+  checked: boolean
+  onChange: (on: boolean) => void
+  disabled?: boolean
+  note?: string
+}) {
   const id = useId()
   return (
-    <section aria-labelledby="rewards-heading" className={styles.section}>
-      <h2 id="rewards-heading">Points and badges</h2>
+    <div className={styles.setting}>
       <div className={styles.toggle}>
         <input
           id={id}
           type="checkbox"
-          checked={rewards.data?.hideRewards ?? false}
-          disabled={rewards.isPending || settings.isPending}
-          onChange={(e) => settings.mutate({ hideRewards: e.target.checked })}
+          checked={checked}
+          disabled={disabled}
+          aria-describedby={note ? `${id}-about ${note}` : `${id}-about`}
+          onChange={(e) => onChange(e.target.checked)}
         />
-        <label htmlFor={id}>Hide points and badges</label>
+        <label htmlFor={id}>{label}</label>
       </div>
-      <p className={styles.muted}>
-        You'll still earn them, and you can turn them back on at any time. Your results for each
-        objective are always shown.
+      <p id={`${id}-about`} className={styles.muted}>
+        {about}
       </p>
-      {settings.isError && <Alert tone="danger">{settings.error.message}</Alert>}
-    </section>
+    </div>
   )
 }
 
-/** The feedback switches (#214), together under "Feedback": confetti and encouraging comments.
- * Both on by default and kept on this device, per student (features/progress/preferences.ts). */
-function FeedbackSettings() {
+/**
+ * What you see while you learn (#214): one switch for each motivational element, all on by
+ * default, because some students find them demotivating (Self-Determination Theory: autonomy).
+ *
+ * - Points and badges (FR-9.5): kept on the account, the same setting as on the badges page. The
+ *   module medals follow it, so they have no switch of their own.
+ * - Skill profile, progress panel, confetti and encouraging comments: kept on this device, per
+ *   student (features/progress/preferences.ts).
+ *
+ * The mastery report and quick check results are never hidden.
+ */
+function LearningSettings() {
+  const rewards = useRewards()
+  const settings = useRewardsSettings()
   const [confettiOn, setConfetti] = useConfettiSetting()
   const [comments, setComments] = usePreference('comments')
-  const confettiId = useId()
-  const commentsId = useId()
-  const feedbackNote = useId()
+  const [profile, setProfile] = usePreference('skillProfile')
+  const [panel, setPanel] = usePreference('progressPanel')
+  const deviceNote = useId()
+  const heading = useRef<HTMLHeadingElement>(null)
+  const { hash } = useLocation()
+  // Linked from "… hidden. Turn it back on in your profile" (#214): straight to this group.
+  useEffect(() => {
+    if (hash !== '#what-you-see') return
+    heading.current?.scrollIntoView?.({ block: 'start' })
+    heading.current?.focus()
+  }, [hash])
   return (
-    <section aria-labelledby="feedback-heading" className={styles.section}>
-      <h2 id="feedback-heading">Feedback</h2>
-      <div className={styles.toggle}>
-        <input
-          id={confettiId}
-          type="checkbox"
-          checked={confettiOn}
-          aria-describedby={`${confettiId}-about ${feedbackNote}`}
-          onChange={(e) => setConfetti(e.target.checked)}
-        />
-        <label htmlFor={confettiId}>Confetti when you get something right</label>
-      </div>
-      <p id={`${confettiId}-about`} className={styles.muted}>
-        A short burst for a right answer, and a bigger one when you finish a module or are ready for
-        the lecture. Never during the mastery check.
-        {prefersReducedMotion() && ' Your device asks for reduced motion, so it stays off anyway.'}
+    <section
+      id="what-you-see"
+      aria-labelledby="learning-settings-heading"
+      className={styles.section}
+    >
+      <h2 id="learning-settings-heading" ref={heading} tabIndex={-1}>
+        What you see while you learn
+      </h2>
+      <p className={styles.muted}>
+        Turn off anything you would rather not see. Your mastery report and your quick check results
+        are always shown.
       </p>
-      <div className={`${styles.toggle} ${styles.nextToggle}`}>
-        <input
-          id={commentsId}
-          type="checkbox"
-          checked={comments}
-          aria-describedby={`${commentsId}-about ${feedbackNote}`}
-          onChange={(e) => setComments(e.target.checked)}
-        />
-        <label htmlFor={commentsId}>Encouraging comments</label>
-      </div>
-      <p id={`${commentsId}-about`} className={styles.muted}>
-        A short line under a right answer, and a word on how far you have come. Off, you see only
-        the explanation of why the answer is right.
-      </p>
-      <p id={feedbackNote} className={styles.muted}>
-        Both are kept on this device, for you only: on a shared computer they don&apos;t change
-        anyone else&apos;s, and on another device they start on again.
+      <Setting
+        label="Points and badges"
+        about="Points for each answer, badges and module medals. Off, you still earn them, and they come back when you turn this on."
+        checked={rewards.data ? !rewards.data.hideRewards : true}
+        disabled={rewards.isPending || settings.isPending}
+        onChange={(on) => settings.mutate({ hideRewards: !on })}
+      />
+      {settings.isError && <Alert tone="danger">{settings.error.message}</Alert>}
+      <Setting
+        label="Skill profile"
+        about="The chart of the eight objectives on your home page, and the list of them in the progress panel."
+        checked={profile}
+        onChange={setProfile}
+        note={deviceNote}
+      />
+      <Setting
+        label="Progress panel beside lessons"
+        about="Your progress in the module, the activities to look at again and your latest badges, beside a lesson or under it on a phone. Off, the lesson takes the full width."
+        checked={panel}
+        onChange={setPanel}
+        note={deviceNote}
+      />
+      <Setting
+        label="Confetti when you get something right"
+        about={
+          <>
+            A short burst for a right answer, and a bigger one when you finish a module or are ready
+            for the lecture. Never during the mastery check.
+            {prefersReducedMotion() &&
+              ' Your device asks for reduced motion, so it stays off anyway.'}
+          </>
+        }
+        checked={confettiOn}
+        onChange={setConfetti}
+        note={deviceNote}
+      />
+      <Setting
+        label="Encouraging comments"
+        about="A short line under a right answer, and a word on how far you have come. Off, you see only the explanation of why the answer is right."
+        checked={comments}
+        onChange={setComments}
+        note={deviceNote}
+      />
+      <p id={deviceNote} className={styles.muted}>
+        Points and badges are kept with your account. The other four are kept on this device, for
+        you only: on a shared computer they don&apos;t change anyone else&apos;s, and on another
+        device they start on again.
       </p>
     </section>
   )
@@ -404,8 +467,7 @@ export function ProfilePage() {
       </div>
       <Stats />
       <Picture user={user} />
-      <RewardsSetting />
-      <FeedbackSettings />
+      <LearningSettings />
       <Password user={user} />
     </>
   )

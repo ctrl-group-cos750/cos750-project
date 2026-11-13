@@ -6,6 +6,16 @@ export type SkillLevel = 'not_started' | 'practising' | 'secure'
 
 export type Medal = 'gold' | 'silver' | 'bronze'
 
+/** Where to work on an objective (#214), worked out by the API from the content: `practise` in a
+ * module (at `segment`, 0-based, when the student can open it there), `revisit` a module, or its
+ * `review` path once module 6 has said "not yet". Never module 6 itself. */
+export type Improve = {
+  kind: 'practise' | 'revisit' | 'review'
+  moduleId: number | null
+  segment: number | null
+  objectiveId: number | null
+}
+
 /** One objective on the skill profile, as `GET /api/me/skills` sends it. */
 export type Skill = {
   id: number
@@ -18,6 +28,8 @@ export type Skill = {
   level: SkillLevel
   /** The mastery result once the mastery check (or a review path) has decided it. */
   result: ObjectiveState | null
+  /** Where to work on it next; null once met on your own (or nowhere to go). */
+  improve?: Improve | null
 }
 
 /** A module's medal (FR-9.8): `medal` once complete, `headingFor` while in progress. */

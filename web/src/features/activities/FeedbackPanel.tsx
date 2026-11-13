@@ -5,8 +5,10 @@ import { confetti, prefersReducedMotion, useConfettiSetting } from '../progress/
 import { useSkills } from '../progress/hooks.ts'
 import { usePreference } from '../progress/preferences.ts'
 import { praiseFor, progressRemark } from '../progress/praise.ts'
+import { HiddenNote } from '../progress/HiddenNote.tsx'
+import { HideMenu, type HideItem } from '../progress/HideMenu.tsx'
 import { rewardsKey } from '../rewards/hooks.ts'
-import type { Rewards } from '../rewards/rewards.api.ts'
+import { updateRewardsSettings, type Rewards } from '../rewards/rewards.api.ts'
 import type { AttemptResult } from './activities.types.ts'
 import { CelebrationAllowed } from './celebration.ts'
 import styles from './FeedbackPanel.module.css'
@@ -29,8 +31,8 @@ type FeedbackPanelProps = { result: AttemptResult | undefined; partName?: 'line'
  * A correct answer leads with the content's explanation of why it is right. One just given also
  * gets a short success moment (#214): a check mark that draws itself, a calm varied line and a
  * progress remark (both only with "Encouraging comments" on), the points it earned (unless
- * rewards are hidden) and a small confetti burst from the result, with a "Turn off confetti" link
- * beside it. A wrong answer stays
+ * rewards are hidden) and a small confetti burst from the result, with a quiet "⋯" beside it to
+ * turn any of them off right there. A wrong answer stays
  * as calm as before, and nothing in the mastery check (module 6: `CelebrationAllowed`) gets any of
  * it, withheld or not. Under
  * prefers-reduced-motion the check mark is drawn at once and there is no confetti.
@@ -100,19 +102,66 @@ const GENERIC = /^\s*(all )?correct\.?\s*$/i
  * are hidden; and the way to turn confetti off. */
 function SuccessMoment({ result }: { result: AttemptResult }) {
   // The rewards the page already has (the header's badge announcer loads them); points only when
-  // they are known to be shown (FR-9.5). Read from the cache, so the panel needs no provider.
+  // they are known to be shown (FR-9.5). Read from the cache, so the panel makes no request.
   const client = useContext(QueryClientContext)
   const rewards = client?.getQueryData<Rewards>(rewardsKey)
+  // Points and badges are kept on the account: saved straight to the API and the cache (no
+  // mutation hook, so the panel still needs no provider, as above).
+  const setHideRewards = (hideRewards: boolean, then?: () => void) =>
+    void updateRewardsSettings({ hideRewards })
+      .then((saved) => {
+        client?.setQueryData<Rewards>(rewardsKey, saved)
+        then?.()
+      })
+      .catch(() => {})
   const [confettiOn, setConfetti] = useConfettiSetting()
-  const [comments] = usePreference('comments')
-  // "Turn off confetti" goes once pressed: focus moves to the line that says it is off.
-  const [turnedOff, setTurnedOff] = useState(false)
-  const offNote = useRef<HTMLParagraphElement>(null)
-  useEffect(() => {
-    if (turnedOff) offNote.current?.focus()
-  }, [turnedOff])
+  const [comments, setComments] = usePreference('comments')
+  // What was just turned off from here, for the note that takes its place (and focus, WCAG 2.4.3).
+  const [turnedOff, setTurnedOff] = useState<{ text: string; undo: () => void } | null>(null)
   const points = result.points ?? 0
   const showPoints = points > 0 && rewards?.hideRewards === false
+  // The one "⋯" beside the moment (#214): each part of it can be turned off right here.
+  const items: HideItem[] = [
+    ...(confettiOn && !prefersReducedMotion()
+      ? [
+          {
+            label: 'Turn off confetti',
+            onSelect: () => {
+              setConfetti(false)
+              setTurnedOff({ text: 'Confetti is off.', undo: () => setConfetti(true) })
+            },
+          },
+        ]
+      : []),
+    ...(comments
+      ? [
+          {
+            label: 'Hide encouraging comments',
+            onSelect: () => {
+              setComments(false)
+              setTurnedOff({
+                text: 'Encouraging comments hidden.',
+                undo: () => setComments(true),
+              })
+            },
+          },
+        ]
+      : []),
+    ...(showPoints
+      ? [
+          {
+            label: 'Hide points and badges',
+            onSelect: () =>
+              setHideRewards(true, () =>
+                setTurnedOff({
+                  text: 'Points and badges hidden.',
+                  undo: () => setHideRewards(false),
+                }),
+              ),
+          },
+        ]
+      : []),
+  ]
   return (
     <div className={styles.moment} data-success-moment>
       <svg className={styles.check} viewBox="0 0 32 32" aria-hidden="true" focusable="false">
@@ -128,23 +177,16 @@ function SuccessMoment({ result }: { result: AttemptResult }) {
         )}
         {comments && client && <ProgressRemark />}
       </div>
-      {confettiOn && !prefersReducedMotion() && (
-        <button
-          type="button"
-          className={styles.off}
-          onClick={() => {
-            setConfetti(false)
-            setTurnedOff(true)
+      <HideMenu title="this feedback" items={items} />
+      {turnedOff && (
+        <HiddenNote
+          key={turnedOff.text}
+          text={turnedOff.text}
+          onUndo={() => {
+            turnedOff.undo()
+            setTurnedOff(null)
           }}
-        >
-          Turn off confetti
-        </button>
-      )}
-      {turnedOff && !confettiOn && (
-        // Where focus goes once the button has gone, so it isn't dropped on the page (WCAG 2.4.3).
-        <p ref={offNote} tabIndex={-1} className={styles.remark}>
-          Confetti is off. You can turn it back on in your profile.
-        </p>
+        />
       )}
     </div>
   )

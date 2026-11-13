@@ -247,6 +247,9 @@ describe('Badge announcements', () => {
     expect(await screen.findByText('Badges and points are off')).toBeVisible()
     expect(api.callsTo('PUT /api/rewards/settings')[0]!.body).toEqual({ hideRewards: true })
     expect(screen.queryByText('Queue Tracer')).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'profile' })).toHaveAttribute('href', '/profile')
+    expect(screen.getByRole('link', { name: 'profile' })).toHaveAttribute(
+      'href',
+      '/profile#what-you-see',
+    )
   })
 })

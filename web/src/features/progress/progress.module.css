@@ -343,3 +343,157 @@
   color: var(--color-text-muted);
   font-size: var(--text-sm);
 }
+
+/* The list under the radar chart (#214): the name and the level in words, no bars; two columns
+ * where the card is wide enough. */
+.noBars .summary {
+  grid-template-columns: 1fr auto;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-1) var(--space-2);
+}
+
+.noBars .status {
+  text-align: end;
+}
+
+.profileCard {
+  container-type: inline-size;
+}
+
+/* Each row with its link to where to improve it (#214): beside the row where there is room,
+ * under its name in the narrow panel and on a phone. */
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: var(--space-3);
+}
+
+.improve {
+  padding-block: var(--space-2);
+  color: var(--color-accent-text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  white-space: nowrap;
+}
+
+.improve.quiet {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.compact .row {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.compact .improve {
+  justify-self: end;
+  padding-block: 0 var(--space-1);
+  font-size: var(--text-xs);
+}
+
+@container (max-width: 30rem) {
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .improve {
+    justify-self: start;
+    padding: 0 var(--space-2) var(--space-2) calc(1.25rem + var(--space-4));
+  }
+}
+
+@media (pointer: coarse) {
+  .improve {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}
+
+/* The home page's skill profile body: minimised, only its header stays (#214). */
+.profileBody {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.profileBody[hidden] {
+  display: none;
+}
+
+/* The progress panel minimised to a rail beside the lesson (#214): one button, an icon and a
+ * count (the points, or the activities to look at again), that opens it again. */
+.rail {
+  position: sticky;
+  top: 6rem;
+  justify-self: end;
+}
+
+.railHeading {
+  margin: 0;
+  font-size: inherit;
+}
+
+.railButton {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  width: 3rem;
+  min-height: 44px;
+  padding: var(--space-3) var(--space-1);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  color: var(--color-text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.railButton:hover {
+  color: var(--color-text);
+}
+
+.railButton:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.railButton svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.railCount {
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* "Progress panel hidden" beside the lesson: the column has gone, so the note sits at the foot of
+ * the screen until it is dismissed by moving on. */
+.hiddenToast {
+  position: fixed;
+  z-index: 30;
+  inset-inline-end: var(--space-4);
+  bottom: var(--space-4);
+  max-width: 24rem;
+  border-style: solid;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+/* The strip's "⋯", at the top of the opened strip. */
+.stripMenu {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 var(--space-2);
+}

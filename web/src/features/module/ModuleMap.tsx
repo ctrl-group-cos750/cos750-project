@@ -10,9 +10,11 @@ import { useSkills } from '../progress/hooks.ts'
 import { Medal } from '../progress/Medal.tsx'
 import { medalText } from '../progress/medals.ts'
 import type { Medal as MedalTier } from '../progress/skills.api.ts'
-import { SkillProfileCard } from '../progress/SkillProfileCard.tsx'
+import { HomeSkillProfile } from '../progress/SkillProfileCard.tsx'
 import { useRewards } from '../rewards/hooks.ts'
 import { useMediaQuery } from '../activities/pictures/useMediaQuery.ts'
+import { LockedNote } from './LockedNote.tsx'
+import { unlockNeeds, type UnlockNeeds } from './unlock.ts'
 import styles from './ModuleMap.module.css'
 
 /** From here the map is two columns: "next up" and the skill profile beside the list
@@ -120,15 +122,25 @@ function NextUp({ modules, next }: { modules: ModuleSummary[]; next: ModuleSumma
   )
 }
 
-/** A single module row on the map. Only the mastery check is ever locked: shown but not
- * interactive. The recommended next module says so, and a module the student could test out of
- * offers its quick check under the card (FR-8.2, #214). */
-function ModuleRow({ module, medal }: { module: ModuleSummary; medal?: MedalTier | null }) {
+/** A single module row on the map. Only the mastery check is ever locked: its card still opens
+ * (to a page that says why it isn't open yet), and the line under it says how to open it, with a
+ * link to each module still to do. The recommended next module says so, and a module the student
+ * could test out of offers its quick check under the card (FR-8.2, #214). */
+function ModuleRow({
+  module,
+  medal,
+  needs,
+}: {
+  module: ModuleSummary
+  medal?: MedalTier | null
+  needs?: UnlockNeeds | null
+}) {
   const { tone, label, icon } = statusDisplay(module)
   const isLocked = module.status === 'locked'
+  const noteId = `module-${module.id}-unlock`
 
   const cardContent = (
-    <Card interactive={!isLocked} className={`${styles.row} ${isLocked ? styles.locked : ''}`}>
+    <Card interactive className={`${styles.row} ${isLocked ? styles.locked : ''}`}>
       <span className={styles.number} aria-hidden="true">
         {module.number}
       </span>
@@ -166,13 +178,14 @@ function ModuleRow({ module, medal }: { module: ModuleSummary; medal?: MedalTier
 
   return (
     <li>
-      {isLocked ? (
-        cardContent
-      ) : (
-        <Link to={`/modules/${module.id}`} className={styles.cardLink}>
-          {cardContent}
-        </Link>
-      )}
+      <Link
+        to={`/modules/${module.id}`}
+        className={styles.cardLink}
+        aria-describedby={isLocked && needs ? noteId : undefined}
+      >
+        {cardContent}
+      </Link>
+      {isLocked && needs && <LockedNote needs={needs} id={noteId} className={styles.unlock} />}
       {module.quickCheck === 'available' && !isDone(module) && (
         <Link to={`/modules/${module.id}/check`} className={styles.quickCheck}>
           Already know module {module.number}? Take the quick check
@@ -217,6 +230,8 @@ export function ModuleMap() {
   const twoColumns = useMediaQuery(TWO_COLUMNS)
   const skills = useSkills()
   const rewards = useRewards()
+  // The radar chart; it handles being minimised or switched off itself (#214).
+  const profile = <HomeSkillProfile />
 
   if (query.isPending) return <Spinner label="Loading modules" />
   if (query.isError) return <Alert tone="danger">{query.error.message}</Alert>
@@ -255,7 +270,7 @@ export function ModuleMap() {
 
       <div className={styles.side}>
         <NextUp modules={modules} next={continueTarget} />
-        {twoColumns && <SkillProfileCard />}
+        {twoColumns && profile}
       </div>
 
       <section aria-labelledby="all-modules" className={styles.all}>
@@ -264,13 +279,18 @@ export function ModuleMap() {
         </h2>
         <ul className={styles.list}>
           {modules.map((m) => (
-            <ModuleRow key={m.id} module={m} medal={medals.get(m.id)} />
+            <ModuleRow
+              key={m.id}
+              module={m}
+              medal={medals.get(m.id)}
+              needs={unlockNeeds(modules, m)}
+            />
           ))}
         </ul>
       </section>
       {/* In one column the skill profile comes after the modules, so it doesn't push the list
           a screen or more down (about 1,500 px at 320 px, #215 review). */}
-      {!twoColumns && <SkillProfileCard />}
+      {!twoColumns && profile}
     </div>
   )
 }

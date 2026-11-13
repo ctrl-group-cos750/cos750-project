@@ -1,20 +1,26 @@
 import { useSyncExternalStore } from 'react'
 
 /**
- * The student's feedback switches (#214), kept on this device (localStorage), both on by default:
+ * The student's switches for what they see while they learn (#214), kept on this device
+ * (localStorage), all on by default. Points and badges (with the module medals) are the one
+ * switch kept on the account instead (`hideRewards`, FR-9.5).
  *
  * - `confetti`: a short confetti burst for a right answer, a bigger one for a finished module or
  *   being ready for the lecture (confetti.ts).
  * - `comments`: encouraging comments: the varied line under a right answer and the progress
  *   remark ("You've practised 3 of 8 objectives so far"). Off, a right answer shows only its own
  *   explanation.
+ * - `skillProfile`: the skill profile on the home page (the radar chart) and in the progress panel.
+ *   The mastery report keeps its profile: the report is never hidden (FR-7.3).
+ * - `progressPanel`: the progress panel beside a lesson, and its strip under it on a phone. Off,
+ *   the lesson takes the full width.
  *
  * Kept on this device rather than on the account (storing them would need a migration), but per
  * student: the key carries the signed-in student's id (`setPreferenceOwner`, from the signed-in
  * layout), so on a shared lab computer one student turning confetti off doesn't turn it off for
  * the next (#215 review). The profile says they are kept on this device.
  */
-export type Preference = 'confetti' | 'comments'
+export type Preference = 'confetti' | 'comments' | 'skillProfile' | 'progressPanel'
 
 const PREFIX = 'ctrl-academy.'
 const CHANGED = 'ctrl-academy:preference-changed'
@@ -76,4 +82,49 @@ export function usePreference(name: Preference): [boolean, (on: boolean) => void
     () => true,
   )
   return [on, (next: boolean) => setPreference(name, next)]
+}
+
+/**
+ * Panels a student can minimise (#214), separate from switching a feature off: a minimised panel
+ * is still there, as its header (the progress panel as a narrow rail), and opens again with one
+ * press. Kept per student on this device like the switches, until reopened. Minimising changes
+ * nothing that is recorded or earned.
+ *
+ * - `skillProfile`: the skill profile card on the home page.
+ * - `progressPanel`: the progress panel beside a lesson (a rail when minimised).
+ * - `moduleGoals`: a module's "By the end of this module you can" box: minimised, it stays
+ *   closed on every segment until opened again.
+ */
+export type Panel = 'skillProfile' | 'progressPanel' | 'moduleGoals'
+
+function panelKey(name: Panel): string {
+  return owner === null ? `${PREFIX}minimised.${name}` : `${PREFIX}${owner}.minimised.${name}`
+}
+
+export function panelMinimised(name: Panel): boolean {
+  try {
+    return localStorage.getItem(panelKey(name)) === 'yes'
+  } catch {
+    return false
+  }
+}
+
+export function setPanelMinimised(name: Panel, minimised: boolean): void {
+  try {
+    if (minimised) localStorage.setItem(panelKey(name), 'yes')
+    else localStorage.removeItem(panelKey(name))
+  } catch {
+    // storage blocked: it lasts as long as the page
+  }
+  window.dispatchEvent(new Event(CHANGED))
+}
+
+/** Whether a panel is minimised, kept in step across the page. */
+export function usePanelMinimised(name: Panel): [boolean, (minimised: boolean) => void] {
+  const minimised = useSyncExternalStore(
+    subscribe,
+    () => panelMinimised(name),
+    () => false,
+  )
+  return [minimised, (next: boolean) => setPanelMinimised(name, next)]
 }

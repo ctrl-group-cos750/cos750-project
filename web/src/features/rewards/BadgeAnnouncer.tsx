@@ -6,6 +6,7 @@ import { PHONE, useMediaQuery } from '../activities/pictures/useMediaQuery.ts'
 import { useMarkRewardsSeen, useRewards, useRewardsSettings } from './hooks.ts'
 import { unseen, type ShelfItem } from './shelf.ts'
 import styles from './BadgeAnnouncer.module.css'
+import { SETTINGS_LINK } from '../progress/HiddenNote.tsx'
 
 const READY = 'ready-for-lecture'
 // More than this at once (a burst after a mastery check) collapse into one line.
@@ -241,7 +242,11 @@ export function BadgeAnnouncer() {
               <strong>Badges and points are off</strong>
               <span>
                 You still earn them. Turn them back on in your{' '}
-                <Link to="/profile" className={styles.link} onClick={() => setTurnedOff(false)}>
+                <Link
+                  to={SETTINGS_LINK}
+                  className={styles.link}
+                  onClick={() => setTurnedOff(false)}
+                >
                   profile
                 </Link>
                 .

@@ -64,6 +64,10 @@
 }
 
 .group legend {
+  /* Floated, so it sits inside the group rather than in its top border (the line between the
+   * groups would otherwise run through it). */
+  float: left;
+  width: 100%;
   padding: var(--space-1) var(--space-3);
   color: var(--color-text-muted);
   font-size: var(--text-sm);

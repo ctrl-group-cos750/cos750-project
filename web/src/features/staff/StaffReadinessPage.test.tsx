@@ -44,6 +44,8 @@ describe('Before the lecture (staff)', () => {
     expect(await screen.findByText('1 of 3')).toBeVisible()
     expect(screen.getByText('On their own: 1 · With support: 0 · Not yet: 2')).toBeVisible()
     expect(screen.getByText(/2 of 3 got it wrong; 2 chose/)).toBeVisible()
+    // The title names the objective already, so it isn't repeated (A13).
+    expect(screen.getByText('Objective 4 · item 1 of 4')).toBeVisible()
     expect(screen.getByText('Not quite. That describes depth-first search.')).toBeVisible()
   })
 

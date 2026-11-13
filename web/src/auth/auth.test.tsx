@@ -48,7 +48,8 @@ describe('log-in page', () => {
     await userEvent.type(await screen.findByLabelText('Email'), 'ada@example.com')
     await userEvent.type(screen.getByLabelText('Password'), 'wrong horse')
     await userEvent.click(screen.getByRole('button', { name: 'Log in' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent(detail)
+    // The message takes focus, so it is read and focus isn't lost (A7).
+    expect(await screen.findByRole('group', { name: detail })).toHaveFocus()
     expect(screen.getByRole('heading', { name: 'Log in' })).toBeInTheDocument()
   })
 
@@ -60,9 +61,11 @@ describe('log-in page', () => {
     await userEvent.type(await screen.findByLabelText('Email'), 'ada@example.com')
     await userEvent.type(screen.getByLabelText('Password'), 'Correct horse 1')
     await userEvent.click(screen.getByRole('button', { name: 'Log in' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      "Can't reach Ctrl Academy. Check your connection and try again.",
-    )
+    expect(
+      await screen.findByRole('group', {
+        name: "Can't reach Ctrl Academy. Check your connection and try again.",
+      }),
+    ).toHaveFocus()
   })
 
   it('links to the register page', async () => {

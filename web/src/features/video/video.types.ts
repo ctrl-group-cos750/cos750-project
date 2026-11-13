@@ -6,6 +6,7 @@ export type Checkpoint = {
 
 export type VideoMetadata = {
   id: number
+  title: string
   mediaPath: string
   captionsPath: string
   transcript: string

@@ -23,6 +23,7 @@ import { ProgressPanel } from '../progress/ProgressPanel.tsx'
 
 /** Phones, where the module's goals start closed so the lesson starts on the first screen. */
 const PHONE_WIDTH = '(max-width: 40rem)'
+import { usePageTitle } from '../../pages/usePageTitle.ts'
 
 /** The API refused the request (any 4xx: 403 locked, 404 no such module, 429 too many): asking
  * again gets the same answer, so it isn't retried and the page says so at once instead of spinning
@@ -54,6 +55,7 @@ export function ModulePage() {
     enabled: validId,
     retry: (failures, error) => !refused(error) && failures < 3,
   })
+  usePageTitle(query.data && `Module ${query.data.number}: ${query.data.title}`)
 
   // Drive current index from the fetched position; update locally on navigation.
   const [segmentIndex, setSegmentIndex] = useState<number | null>(null)

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Search, UserPlus } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -35,6 +35,11 @@ function AddMemberForm() {
       void queryClient.invalidateQueries({ queryKey: ['staff'] })
     },
   })
+  // The results (and the button pressed) go once someone is added: focus the message instead.
+  const added = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (add.data) added.current?.focus()
+  }, [add.data])
   const students = accounts.data?.filter((a) => !a.isStaff) ?? []
   const matches = query.trim() ? students.filter((a) => matchesSearch(a, query)) : []
 
@@ -90,6 +95,7 @@ function AddMemberForm() {
                     </div>
                     <Button
                       disabled={add.isPending}
+                      focusableWhenDisabled
                       onClick={() => add.mutate(a.id)}
                       aria-label={`Make ${a.displayName} staff`}
                     >
@@ -114,9 +120,10 @@ function AddMemberForm() {
           </Alert>
         )}
         {add.isSuccess && (
-          <Alert className="border-success bg-success/15">
+          <Alert ref={added} tabIndex={-1} className="border-success bg-success/15">
             <AlertTitle>{add.data.displayName} is a team member</AlertTitle>
-            <AlertDescription>
+            {/* Full-strength text: the muted colour fails 4.5:1 on the success tint. */}
+            <AlertDescription className="text-foreground">
               They see the staff portal the next time a page loads.
             </AlertDescription>
           </Alert>
@@ -127,13 +134,35 @@ function AddMemberForm() {
 }
 
 /** One team member, with "Remove access" behind a confirmation. Never on your own row. */
-function MemberRow({ member, isYou }: { member: StaffMember; isYou: boolean }) {
+function MemberRow({
+  member,
+  isYou,
+  onRemoved,
+}: {
+  member: StaffMember
+  isYou: boolean
+  /** After access is removed and the row is about to go: where focus should go. */
+  onRemoved: () => void
+}) {
   const queryClient = useQueryClient()
   const [confirming, setConfirming] = useState(false)
   const remove = useMutation({
     mutationFn: removeMember,
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['staff'] }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['staff'] })
+      onRemoved()
+    },
   })
+  // Focus follows the question (WCAG 2.4.3): to its "Remove access" when it opens, and back to
+  // the row's own button when it is cancelled, never to the page.
+  const trigger = useRef<HTMLButtonElement>(null)
+  const confirm = useRef<HTMLButtonElement>(null)
+  const wasConfirming = useRef(false)
+  useEffect(() => {
+    if (confirming) confirm.current?.focus()
+    else if (wasConfirming.current) trigger.current?.focus()
+    wasConfirming.current = confirming
+  }, [confirming])
 
   return (
     <Card size="sm">
@@ -149,23 +178,29 @@ function MemberRow({ member, isYou }: { member: StaffMember; isYou: boolean }) {
             <span className="text-muted-foreground">{member.email}</span>
           </div>
           {!isYou && !confirming && (
-            <Button variant="destructive" onClick={() => setConfirming(true)}>
+            <Button ref={trigger} variant="destructive" onClick={() => setConfirming(true)}>
               Remove access
             </Button>
           )}
         </div>
         {confirming && (
-          <Alert>
+          <Alert
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') setConfirming(false)
+            }}
+          >
             <AlertTitle>Remove {member.displayName}&apos;s staff access?</AlertTitle>
-            <AlertDescription className="grid gap-3">
+            <AlertDescription className="grid gap-3 text-foreground">
               <p>
                 They keep their account, but lose the staff portal straight away. You can add them
                 again later.
               </p>
               <div className="flex flex-wrap gap-3">
                 <Button
+                  ref={confirm}
                   variant="destructive"
                   disabled={remove.isPending}
+                  focusableWhenDisabled
                   onClick={() => remove.mutate(member.id)}
                 >
                   {remove.isPending ? 'Removing...' : 'Remove access'}
@@ -192,6 +227,7 @@ function MemberRow({ member, isYou }: { member: StaffMember; isYou: boolean }) {
 export function StaffMembersPage() {
   const { data: me } = useCurrentUser()
   const members = useQuery({ queryKey: MEMBERS, queryFn: listMembers })
+  const membersHeading = useRef<HTMLHeadingElement>(null)
   return (
     <section className="grid gap-6" aria-labelledby="staff-members-heading">
       <div className="grid gap-1">
@@ -204,7 +240,12 @@ export function StaffMembersPage() {
       </div>
       <AddMemberForm />
       <section className="grid gap-3" aria-labelledby="current-members-heading">
-        <h2 id="current-members-heading" className="text-xl font-semibold">
+        <h2
+          ref={membersHeading}
+          id="current-members-heading"
+          tabIndex={-1}
+          className="text-xl font-semibold"
+        >
           Current team members
         </h2>
         {members.isPending && <Spinner label="Loading team members" />}
@@ -216,7 +257,11 @@ export function StaffMembersPage() {
         <ul className="grid list-none gap-3 p-0">
           {members.data?.map((m) => (
             <li key={m.id}>
-              <MemberRow member={m} isYou={m.id === me?.id} />
+              <MemberRow
+                member={m}
+                isYou={m.id === me?.id}
+                onRemoved={() => membersHeading.current?.focus()}
+              />
             </li>
           ))}
         </ul>

@@ -8,6 +8,7 @@ type OnHint = (input: { activityId: number }) => Promise<Hint>
 
 const video = {
   id: 1,
+  title: 'The queue in BFS',
   mediaPath: '/media/videos/x.mp4',
   captionsPath: '/media/videos/x.vtt',
   transcript: 'Line one.\nLine two.',

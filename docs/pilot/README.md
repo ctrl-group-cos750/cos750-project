@@ -66,7 +66,9 @@ for modules 1 to 4 on the way to module 5, so his session is still close to full
 - Each participant gets a code, **P1 to P7**, and gives only that code in the survey, never their
   name. One member keeps a private list of which code is which account's email, so the survey can
   be joined to the pilot data. The list is never committed or shared outside the team.
-- After the pilot, the data identifies students by an internal id only (SE document FR-10.3).
+- After the pilot, the data identifies students by a pseudonym only, never by their account id
+  (SE document FR-10.3). To join the survey, the member with the code list opens each account in
+  the staff portal, where its page shows the pseudonym the CSV files use.
 
 ## Running a session
 

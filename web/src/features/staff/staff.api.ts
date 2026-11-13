@@ -109,6 +109,8 @@ export type AccountSummary = {
 }
 
 export type AccountDetail = AccountSummary & {
+  /** How the pilot's CSV files name this student: a pseudonym, never the account id. */
+  pilotName: string
   stats: {
     attempts: number
     correctAttempts: number

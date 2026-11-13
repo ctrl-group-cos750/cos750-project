@@ -62,21 +62,54 @@ function Stats() {
   )
 }
 
-/** Upload a picture of their own, or choose one from the team's set (FR-1.6). Saved at once. */
+/** Upload a picture of their own, or choose one from the team's set (FR-1.6). Saved at once.
+ * Nothing here is disabled while it saves, so keyboard focus never drops to the page (WCAG
+ * 2.4.3): arrowing through the pictures saves the last one chosen, and a press that can't run yet
+ * is ignored (aria-disabled). */
 function Picture({ user }: { user: User }) {
   const setAvatar = useSetAvatar()
   const upload = useUploadPicture()
   const remove = useDeletePicture()
   const [problem, setProblem] = useState<string | null>(null)
   const [preparing, setPreparing] = useState(false)
+  // A picture chosen while another was saving: saved as soon as that one is done.
+  const [queued, setQueued] = useState<{ choice: AvatarId | null } | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
   const name = useId()
+  const uploadId = useId()
   const choices: (AvatarId | null)[] = [null, ...AVATARS]
-  const busy = setAvatar.isPending || upload.isPending || remove.isPending || preparing
+  const fileBusy = upload.isPending || remove.isPending || preparing
+  const busy = setAvatar.isPending || fileBusy
   // Show the picked picture straight away, while it saves; the saved one again if saving fails.
-  const shown = setAvatar.isPending ? setAvatar.variables : user.pictureUrl ? 'own' : user.avatar
+  const shown = queued
+    ? queued.choice
+    : setAvatar.isPending
+      ? setAvatar.variables
+      : user.pictureUrl
+        ? 'own'
+        : user.avatar
   const error = problem ?? (setAvatar.error ?? upload.error ?? remove.error)?.message
   const saved = setAvatar.isSuccess || upload.isSuccess || remove.isSuccess
+
+  const queue = useRef<{ choice: AvatarId | null } | null>(null)
+
+  function save(choice: AvatarId | null) {
+    setAvatar.mutate(choice, {
+      onSettled: () => {
+        const next = queue.current
+        queue.current = null
+        setQueued(null)
+        if (next) save(next.choice)
+      },
+    })
+  }
+  function pick(choice: AvatarId | null) {
+    if (fileBusy) return
+    if (setAvatar.isPending) {
+      queue.current = { choice }
+      setQueued({ choice })
+    } else save(choice)
+  }
 
   async function choose(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -115,10 +148,12 @@ function Picture({ user }: { user: User }) {
             onChange={(e) => void choose(e)}
           />
           <Button
+            id={uploadId}
             variant="secondary"
             loading={preparing || upload.isPending}
-            disabled={busy}
-            onClick={() => fileInput.current?.click()}
+            keepFocusWhileLoading
+            aria-disabled={busy || undefined}
+            onClick={() => !busy && fileInput.current?.click()}
           >
             Upload a picture
           </Button>
@@ -126,8 +161,15 @@ function Picture({ user }: { user: User }) {
             <Button
               variant="ghost"
               loading={remove.isPending}
-              disabled={busy}
-              onClick={() => remove.mutate()}
+              keepFocusWhileLoading
+              aria-disabled={busy || undefined}
+              onClick={() =>
+                !busy &&
+                remove.mutate(undefined, {
+                  // The button goes with the picture: focus the upload button, not the page.
+                  onSuccess: () => document.getElementById(uploadId)?.focus(),
+                })
+              }
             >
               Remove it
             </Button>
@@ -145,8 +187,8 @@ function Picture({ user }: { user: User }) {
                 type="radio"
                 name={name}
                 checked={shown === choice}
-                disabled={busy}
-                onChange={() => setAvatar.mutate(choice)}
+                aria-disabled={fileBusy || undefined}
+                onChange={() => pick(choice)}
               />
               <Avatar avatar={choice} name={user.displayName} size={48} />
               <span className="visually-hidden">{label}</span>

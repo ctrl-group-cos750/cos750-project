@@ -53,6 +53,8 @@
   --color-danger: var(--destructive, #c93b31);
   --color-danger-soft: var(--destructive-soft, rgb(255, 232, 232));
   --shadow-card: var(--shadow-sm, 0 1px 4px rgb(0 0 0 / 5%));
+  /* Behind a modal dialog (its ::backdrop): dims the page so the dialog is the one thing in view. */
+  --overlay: rgb(15 23 42 / 55%);
   --focus-ring:
     0 0 0 3px var(--background, var(--brand-paper)), 0 0 0 5px var(--ring, var(--brand-accent));
 
@@ -138,4 +140,5 @@
   --badge-gold-soft: #4a3a14;
   --badge-silver: #c9d1da;
   --badge-silver-soft: #343b43;
+  --overlay: rgb(0 0 0 / 70%);
 }

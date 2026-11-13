@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { ada, fakeApi, renderApp } from '../../test/app.tsx'
 import type { EarnedBadge, Rewards } from './rewards.api.ts'
 import { buildShelf, unseen } from './shelf.ts'
@@ -170,6 +170,42 @@ describe('Badge announcements', () => {
     expect(dialog).toHaveFocus()
     await userEvent.click(within(dialog).getByRole('button', { name: 'Close' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    // Focus goes back to the page, not <body> (A1).
+    expect(screen.getByRole('heading', { level: 1 })).toHaveFocus()
+  })
+
+  it('moves focus to the next note when one is dismissed, then back to the page (A5)', async () => {
+    withRewards({
+      hideRewards: false,
+      points: 30,
+      badges: ['lo4', 'lo5'].map((id) => badge(id, { tier: 'bronze', seen: false })),
+    })
+    renderApp('/')
+    const first = await screen.findByRole('button', { name: 'Dismiss Queue Tracer' })
+    first.focus()
+    await userEvent.keyboard('{Enter}')
+    const next = screen.getByRole('button', { name: /^Dismiss / })
+    expect(next).toHaveFocus()
+    await userEvent.keyboard('{Enter}')
+    expect(screen.queryByRole('button', { name: /^Dismiss / })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveFocus()
+  })
+
+  it('shows a phone one card for a burst of badges (D9)', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === '(max-width: 480px)',
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }))
+    withRewards({
+      hideRewards: false,
+      points: 75,
+      badges: ['lo1', 'lo2', 'lo3'].map((id) => badge(id, { tier: 'bronze', seen: false })),
+    })
+    renderApp('/')
+    expect(await screen.findByText('3 new badges')).toBeVisible()
+    expect(screen.queryByText('Queue Tracer')).not.toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: /^Dismiss/ })).toHaveLength(1)
   })
 
   it('announces nothing while rewards are hidden', async () => {

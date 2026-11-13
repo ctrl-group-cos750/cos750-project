@@ -255,6 +255,8 @@ describe('ModulePage — segment rendering', () => {
     expect(
       await screen.findByRole('heading', { name: 'Introduction to graphs' }),
     ).toBeInTheDocument()
+    // The tab names the module, not just "Module" (A8).
+    expect(document.title).toBe('Module 0: Warm-up and queue refresher · Ctrl Academy')
   })
 
   it('renders a text segment body as Markdown — heading', async () => {

@@ -511,6 +511,8 @@ Pilot testers said the course felt "like doing a test, with no motivating boosts
 
 Both the confetti and the encouraging comments can be switched off on the profile page, and the confetti beside the success moment too, because the same reward that pleases one student patronises another (autonomy [43]). None of these counts speed, and none is shown to anyone else. Whether they change the ARCS ratings is a question for the pilot (Section 8).
 
+A pilot tester asked for a small helper character, so there is an optional **study companion** (#214): five original 2D characters themed on the course, Inka the octopus (whose arms are edges) by default. Pedagogical agents have a small positive effect on learning, g = .19, larger for school pupils than for university students and with on-screen text rather than narration [79]; 2D agents did better than 3D ones [80]; and their effect on motivation is small, g = 0.20, mostly where the agent shows facial expressions [81]. That is a modest case, so the companion is opt-in (asked once, after the first answer), off with one press, and kept small: flat, three expressions, no idle movement, text only. It plays the mentor role, information and support together, which raised learners' self-efficacy more than an expert-only agent [82]. Each line is task feedback (why the answer is right, what to check, which hint helps next), never praise of the person, and it says less to a student on a run of right answers. It speaks only at a feedback moment the student asked for and never interrupts a question, because interruptions raise errors and annoyance, more so under load [83], and people do best when they decide when to attend [84]. It is never in the mastery check.
+
 The page background is a soft glow of the brand's blue and a warm honey in the corners by default (#214): pleasant colours in learning materials improved learners' affect and, modestly, their learning in a meta-analysis of emotional design [76]. A student who finds it distracting can choose a plain page, or a wallpaper of doodles from the course, in the profile or the header. Decoration that has nothing to do with the content is a seductive detail and can draw attention from learning [77], so it stays on the overview pages: lessons, activities and the quick check keep solid cards behind every line of reading.
 
 We leave out a public leaderboard. A classroom study found that a course with leaderboards and badges led to lower motivation and lower exam scores than the same course without them [35]. Public ranking also discourages students who are motivated by avoiding failure [41], and these are often the students who most need the application. Points and badges are therefore private to each student.
@@ -1010,5 +1012,17 @@ Marcelo Pias, Susan Reiser, Christian Servin, Rahul Simha, Titus Winters, and Qi
 [77]	G. D. Rey. A review of research and a meta-analysis of the seductive detail effect. *Educational Research Review*, 7(3):216–237, 2012. https://doi.org/10.1016/j.edurev.2012.05.003
 
 [78]	M. Sailer, J. U. Hense, S. K. Mayr, and H. Mandl. How gamification motivates: An experimental study of the effects of specific game design elements on psychological need satisfaction. *Computers in Human Behavior*, 69:371–380, 2017. https://doi.org/10.1016/j.chb.2016.12.033
+
+[79]	N. L. Schroeder, O. O. Adesope, and R. B. Gilbert. How effective are pedagogical agents for learning? A meta-analytic review. *Journal of Educational Computing Research*, 49(1):1–39, 2013. https://doi.org/10.2190/EC.49.1.a
+
+[80]	J. C. Castro-Alonso, R. M. Wong, O. O. Adesope, and F. Paas. Effectiveness of multimedia pedagogical agents predicted by diverse theories: A meta-analysis. *Educational Psychology Review*, 33(3):989–1015, 2021. https://doi.org/10.1007/s10648-020-09587-1
+
+[81]	J. R. Gladstone, N. L. Schroeder, et al. Do pedagogical agents enhance student motivation? Unraveling the evidence through meta-analysis. *Educational Psychology Review*, 37(3), 2025. https://doi.org/10.1007/s10648-025-10050-2
+
+[82]	A. L. Baylor and Y. Kim. Simulating instructional roles through pedagogical agents. *International Journal of Artificial Intelligence in Education*, 15:95–115, 2005.
+
+[83]	B. P. Bailey and J. A. Konstan. On the need for attention-aware systems: Measuring effects of interruption on task performance, error rate, and affective state. *Computers in Human Behavior*, 22(4):685–708, 2006. https://doi.org/10.1016/j.chb.2005.12.009
+
+[84]	D. C. McFarlane. Comparison of four primary methods for coordinating the interruption of people in human-computer interaction. *Human-Computer Interaction*, 17(1):63–139, 2002.
 
 </div>

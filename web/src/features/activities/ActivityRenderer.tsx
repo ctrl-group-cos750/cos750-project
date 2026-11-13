@@ -245,7 +245,8 @@ export function ActivityRenderer(props: ActivityRendererProps) {
           data-two-column
           className="grid grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] items-start gap-7"
         >
-          <div className="sticky top-4 grid gap-3">
+          {/* Sticks below the sticky header, whose height AppShell keeps in --header-h. */}
+          <div className="sticky top-[calc(var(--header-h,4.5rem)_+_1rem)] grid gap-3">
             {prompt}
             {panel}
           </div>

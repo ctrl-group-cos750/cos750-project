@@ -1139,3 +1139,34 @@ def test_the_course_length_is_public_and_sums_every_module(client: TestClient, d
     res = client.get("/api/modules/length")  # nobody logged in
     assert res.status_code == 200
     assert res.json() == {"minutes": 5 + 12 + 10}
+
+
+def test_a_module_of_diagnostic_questions_only_earns_no_module_reward(
+    client: TestClient, db: Session
+) -> None:
+    """Module 0, the warm-up, asks only diagnostic questions: they find gaps rather than teach, so
+    finishing it earns no module points and not the First Module badge, which comes with the first
+    module that teaches. The same right answers as practice do earn it."""
+    _make_gated_module(db)
+    _register_and_login(client, ALICE)
+    user = db.scalars(select(User).where(User.email == ALICE["email"])).one()
+    activities = [db.get_one(Activity, a) for a in (1, 3)]  # the two module 0 shows
+    for activity in activities:
+        activity.purpose = "diagnostic"
+        db.add(
+            Attempt(
+                user_id=user.id,
+                activity_id=activity.id,
+                submitted={},
+                correct=True,
+                score=1.0,
+                detail={},
+                hint_level=0,
+            )
+        )
+    db.commit()
+    assert modules_service.reward_module(db, user.id, 0) is False
+    for activity in activities:
+        activity.purpose = "practice"
+    db.commit()
+    assert modules_service.reward_module(db, user.id, 0) is True

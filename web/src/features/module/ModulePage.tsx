@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { Alert, Button, ProgressBar, Spinner } from '../../components'
 import { ActivityView } from '../activities/ActivityPage.tsx'
+import { rewardsKey } from '../rewards/hooks.ts'
 import { fetchModule, savePosition } from './module.api.ts'
 import { SegmentView } from './SegmentView.tsx'
 import {
@@ -75,6 +76,10 @@ export function ModulePage() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['modules'] })
       void queryClient.invalidateQueries({ queryKey: ['module', id] })
+      // Finishing a module can earn its points and the First Module badge: fetch them now, so the
+      // badge note comes with the finish, not with the next answer (which read as if that answer
+      // had earned it).
+      void queryClient.invalidateQueries({ queryKey: rewardsKey })
     },
   })
   // Another module opened in place (a link, or Back and Forward): start it afresh, so a segment

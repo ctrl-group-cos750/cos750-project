@@ -488,6 +488,41 @@ describe('ModulePage — navigation and position saving', () => {
       await screen.findByRole('heading', { name: 'Graphs and breadth-first search' }),
     ).toBeInTheDocument()
   })
+  it('announces a badge the finish earned at once, not after the next answer', async () => {
+    let finished = false
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules': () => Response.json([{ ...moduleSummary, status: 'complete' }]),
+        'GET /api/modules/:id': () =>
+          Response.json({ ...twoSegmentDetail, currentSegmentPosition: 1 }),
+        'POST /api/modules/:id/position': () => {
+          finished = true
+          return Response.json(twoSegmentDetail)
+        },
+        'GET /api/rewards': () =>
+          Response.json({
+            hideRewards: false,
+            points: finished ? 25 : 0,
+            badges: finished
+              ? [
+                  {
+                    badge: 'first-module',
+                    ref: '',
+                    tier: null,
+                    awardedAt: '2026-11-13T10:00:00Z',
+                    upgradedAt: null,
+                    seen: false,
+                  },
+                ]
+              : [],
+          }),
+      },
+    })
+    renderApp('/modules/1')
+    await userEvent.click(await screen.findByRole('button', { name: 'Finish module' }))
+    expect(await screen.findByText('First Module')).toBeVisible()
+  })
   it('finishing module 6, the mastery check, opens the mastery report (#144)', async () => {
     const api = fakeApi({
       user: ada,

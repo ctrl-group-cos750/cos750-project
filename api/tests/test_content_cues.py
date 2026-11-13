@@ -250,6 +250,42 @@ def test_an_assessed_fix_offers_a_correction_for_a_line_that_is_not_faulty(
     assert elsewhere, f"every wrong correction rewrites the faulty line: {faulty}"
 
 
+def _head(text: str) -> str:
+    """The first word of a line of code: which line a correction looks like a fix for."""
+    return re.split(r"[ (.=:]", text.strip())[0]
+
+
+@pytest.mark.parametrize("a", ASSESSED_FIXES, ids=lambda a: str(a.id))
+def test_the_faulty_line_is_not_the_only_one_with_two_corrections(a: ActivityFixture) -> None:
+    """In 621, 622 and 1702 the faulty line was the only one with two candidate corrections, and
+    in 1703 two of three corrections rewrote it, so counting the corrections found the bug (#223
+    review, Should fix 4). Another line has as many candidates as the faulty one."""
+    fixed = {i for x in a.solution["order"] for i in (x if isinstance(x, list) else [x])}
+    lines = {x["id"]: x["text"] for x in a.config["lines"]}
+    faulty = {_head(lines[i]) for i in lines if i not in fixed}
+    candidates = Counter(_head(c["text"]) for c in a.config["corrections"])
+    most_on_faulty = max(candidates[h] for h in faulty)
+    elsewhere = max((n for h, n in candidates.items() if h not in faulty), default=0)
+    assert elsewhere >= most_on_faulty >= 2, (a.id, candidates)
+
+
+@pytest.mark.parametrize("a", ASSESSED_FIXES, ids=lambda a: str(a.id))
+def test_hints_1_and_2_of_an_assessed_fix_are_about_what_the_program_does(
+    a: ActivityFixture,
+) -> None:
+    """Module 6 counts an answer after hints 1 and 2 as met independently, and "Look at the line
+    that loops over v's neighbours" located the bug for the student (#223 review, Should fix 4).
+    Hints 1 and 2 talk about the output; neither points at a line or quotes the code."""
+    fixed = {i for x in a.solution["order"] for i in (x if isinstance(x, list) else [x])}
+    faulty = [x["text"].strip() for x in a.config["lines"] if x["id"] not in fixed]
+    for hint in a.hints[:2]:
+        low = hint.body.lower()
+        assert "line" not in low, (a.id, hint.body)
+        for text in faulty:
+            assert text.lower() not in low, (a.id, hint.body)
+        assert not re.search(r"queue\.\w|found =|graph\.adjacency|\bif n\b", hint.body), hint.body
+
+
 @pytest.mark.parametrize("a", MASTERY + REVIEWS, ids=lambda a: str(a.id))
 def test_alphabetical_order_is_never_called_a_rule_of_bfs(a: ActivityFixture) -> None:
     """Module 4 teaches that alphabetical order is a choice the course makes, not a rule of BFS
@@ -591,6 +627,8 @@ def test_a_retired_correction_id_is_never_reused() -> None:
     """1703's correction 22 was a harmless extra condition; its replacement breaks BFS, a different
     meaning, so it has a new id (23) and 22 is retired. 621's corrections went with its old bug."""
     for activity_id, retired in RETIRED_CORRECTIONS.items():
+        if activity_id in RETIRED_ACTIVITIES:
+            continue  # the whole activity is gone, and its id is never reused
         a = ACTIVITIES[activity_id]
         used = {c["id"] for c in a.config["corrections"]} | {x["id"] for x in a.config["lines"]}
         assert not retired & used, activity_id
@@ -977,8 +1015,8 @@ GONE_RIGHT = (
 RETIRED_CORRECTIONS = {621: {20, 21, 22, 23}, 622: {21}, 1702: {22}, 1703: {22}}
 # Ids that left an item; they must never come back (RETIRED, plus the retired corrections).
 GONE = {(a, i) for a, ids in RETIRED.items() if a != 612 for i in ids} | {
-    (a, str(i)) for a, ids in RETIRED_CORRECTIONS.items() for i in ids
-}  # 612 left whole (RETIRED_ACTIVITIES below), not option by option
+    (a, str(i)) for a, ids in RETIRED_CORRECTIONS.items() if a != 621 for i in ids
+}  # 612 and 621 left whole (RETIRED_ACTIVITIES below), not option by option
 # Whole activities taken out of the course; their ids must never return with other content. 107,
 # module 1's closing task, matched four situations against one shared list, so each situation's
 # own nouns gave its answer away; it became four questions, 108-111, each with its own options,
@@ -986,8 +1024,13 @@ GONE = {(a, i) for a, ids in RETIRED.items() if a != 612 for i in ids} | {
 # 612, objective 3's house-building item, asked the student to recognise a model among four; it
 # became 630, a matching item in which the student builds it: the jobs, the link, its direction
 # and the kind of graph (review 13 Nov, High 10). Segment 613, which showed 612, is retired with it.
-RETIRED_ACTIVITIES = {107, 612}
-RETIRED_SEGMENTS = {110, 613}
+# 621, objective 7's first fix-the-bug item, had no real bug: its program took neighbours in the
+# order their edges were added, still breadth-first, so it only broke the course's alphabetical
+# convention. It became 631, whose loop takes the start's neighbours every time (#223 review,
+# Should fix 6). Segment 622, which showed 621, is retired with it. A student's answer to 612 or 621
+# stands in for 630 or 631 (app/services/mastery.py, REPLACES).
+RETIRED_ACTIVITIES = {107, 612, 621}
+RETIRED_SEGMENTS = {110, 613, 622}
 
 
 def _now(a: ActivityFixture, kind: str) -> dict[str, str]:

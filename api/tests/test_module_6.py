@@ -31,7 +31,7 @@ from app.schemas.graphs import GraphEdge, GraphScenarioOut
 from app.seed import ActivityFixture, FixtureFile, ReviewPathFixture, read_fixtures
 from app.services.bfs import run_bfs
 from app.services.checking import check_activity
-from app.services.mastery import MASTERY_MODULE, Rule
+from app.services.mastery import MASTERY_MODULE, REPLACES, WHOLE_ITEMS, Rule
 
 CONTENT: FixtureFile = read_fixtures()
 ACTIVITIES = {a.id: a for a in CONTENT.activities}
@@ -158,7 +158,10 @@ def passes_hidden(code: str) -> bool:
 
 
 def parts(a: ActivityFixture) -> int:
-    """How many parts the checker grades, which the mastery rule counts (app/services/mastery.py)."""
+    """How many parts the mastery rule counts (app/services/mastery.py): the checker's parts, or
+    one for an item graded whole."""
+    if a.id in WHOLE_ITEMS:
+        return 1
     match a.kind:
         case "multiple_choice":
             return 1
@@ -218,8 +221,16 @@ def test_module_6_opens_with_what_the_check_is_then_only_mastery_items() -> None
 
 def test_activity_ids_are_in_their_ranges() -> None:
     # 601-624, then objective 8's 626-629 (#70): 625 was already a module 6 retrieval item. 630
-    # took 612's place: objective 3's model is built, not chosen (review 13 Nov, High 10).
-    assert [a.id for a in CHECK] == [*range(601, 612), 630, *range(613, 625), *range(626, 630)]
+    # took 612's place: objective 3's model is built, not chosen (review 13 Nov, High 10). 631 took
+    # 621's: a real BFS bug, not a break of the course's alphabetical convention (#223 review).
+    assert [a.id for a in CHECK] == [
+        *range(601, 612),
+        630,
+        *range(613, 621),
+        631,
+        *range(622, 625),
+        *range(626, 630),
+    ]
     for o, path in PATHS.items():
         base = 1000 + 100 * o
         assert all(base < s.id < base + 100 for s in path.segments)
@@ -244,6 +255,40 @@ def test_each_objective_has_enough_parts_for_its_rule(where: str, objective: int
         assert o.pass_fraction is not None
         assert total >= round(1 / (1 - o.pass_fraction))
         assert Rule(pass_fraction=o.pass_fraction).met(total - 1, total)
+
+
+def test_objective_3_counts_situations() -> None:
+    """ "At least 3 of 4 situations modelled correctly": 630's four pairs made it 4 of objective
+    3's 7 parts, so getting 630 right alone came close to the rule (#223 review, Must fix 3). Each
+    situation is one part now, and 630 is right only when its whole model is."""
+    items = items_of("module 6", 3)
+    assert [parts(a) for a in items] == [1, 1, 1, 1]
+    assert 630 in WHOLE_ITEMS
+
+
+def test_630_states_which_way_a_must_be_finished_before_arrow_points() -> None:
+    """Nothing in modules 1 to 6 teaches which way a "must be finished before" edge points, and a
+    dependency arrow from the walls to the foundations is as defensible as the other way round
+    (#223 review, Must fix 3). The prompt says it; hint 2 is about the situation, not about the
+    direction, which "does it work both ways?" gave away."""
+    item = ACTIVITIES[630]
+    assert (
+        "an arrow from one job to another means the first job must be finished before the second"
+        in item.config["prompt"]
+    )
+    hint_2 = item.hints[1].body.lower()
+    for word in ("arrow", "way", "direct", "point"):
+        assert word not in hint_2, word
+
+
+def test_a_replacement_takes_a_retired_items_place() -> None:
+    """A replacement (REPLACES) is a module 6 item for the same objective as the item it replaced
+    had, and the replaced item is gone from the fixtures (its answers stand in for the new one)."""
+    for new, old in REPLACES.items():
+        assert new in {a.id for a in CHECK}
+        assert old not in ACTIVITIES
+    assert ACTIVITIES[630].objective_id == 3  # as 612's
+    assert ACTIVITIES[631].objective_id == 7  # as 621's
 
 
 def test_the_kinds_follow_table_1() -> None:

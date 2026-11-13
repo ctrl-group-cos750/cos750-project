@@ -2076,6 +2076,10 @@
           {
             "id": 21,
             "text": "            if n not in queue:"
+          },
+          {
+            "id": 25,
+            "text": "        v = queue[0]"
           }
         ]
       },
@@ -2169,7 +2173,7 @@
         },
         {
           "level": 2,
-          "body": "Look at the condition before a neighbour joins the queue."
+          "body": "On the square A–B, B–C, C–D, D–A from A, it gives A, B, D, C, C. B and D both add C before C has left the queue. When D looks at C, has C been found already?"
         },
         {
           "level": 3,
@@ -2256,6 +2260,10 @@
           {
             "id": 20,
             "text": "    found = {start}"
+          },
+          {
+            "id": 24,
+            "text": "            if n not in queue:"
           }
         ]
       },
@@ -2349,7 +2357,7 @@
         },
         {
           "level": 2,
-          "body": "Look at what's in the found set before the loop."
+          "body": "On the triangle A–B, B–C, C–A from A, it gives A, B, C, A: A comes out again after its neighbours. When C looks at A, has A been found already?"
         },
         {
           "level": 3,

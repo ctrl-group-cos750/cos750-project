@@ -137,10 +137,10 @@
           "activity_id": 620
         },
         {
-          "id": 622,
+          "id": 631,
           "kind": "activity",
           "title": "Objective 7 · item 1 of 4: fix the faulty BFS",
-          "activity_id": 621
+          "activity_id": 631
         },
         {
           "id": 623,
@@ -914,7 +914,7 @@
       "objective_id": 3,
       "purpose": "mastery",
       "config": {
-        "prompt": "Building a house: the foundations must be finished before the walls go up, and the walls before the roof. A builder wants a graph of which job must be finished before which. Build the graph: match each part of the situation to what it becomes in the graph. Some choices fit nothing.",
+        "prompt": "Building a house: the foundations must be finished before the walls go up, and the walls before the roof. A builder wants a graph of which job must be finished before which. In the graph, an arrow from one job to another means the first job must be finished before the second. Build the graph: match each part of the situation to what it becomes in the graph. Some choices fit nothing.",
         "left": [
           {
             "id": "p1",
@@ -989,7 +989,7 @@
         },
         {
           "level": 2,
-          "body": "A link that works only one way needs an arrow. Does “must be finished before” work both ways?"
+          "body": "Read the situation again: three jobs, and a rule about which job comes first. Which words name the jobs, and which words link two of them?"
         },
         {
           "level": 3,
@@ -1584,14 +1584,14 @@
       ]
     },
     {
-      "id": 621,
+      "id": 631,
       "kind": "fix_the_bug",
       "title": "Objective 7 · item 1 of 4: fix the faulty BFS",
       "module_id": 6,
       "purpose": "mastery",
       "objective_id": 7,
       "config": {
-        "prompt": "Our BFS takes each vertex's neighbours in alphabetical order, as in module 4: a convention this course uses so that everyone's traces agree, not a rule of BFS. On a graph whose edges were added in the order A–C, A–B, B–D, C–E, our BFS from A gives A, B, C, D, E, but this one gives A, C, B, E, D. Replace the faulty line with a correction.",
+        "prompt": "On a graph with undirected edges A–B, A–C, B–D and C–E, a correct BFS from A gives A, B, C, D, E, but this one gives only A, B, C. Replace the faulty line with a correction.",
         "lines": [
           {
             "id": 1,
@@ -1627,7 +1627,7 @@
           },
           {
             "id": 9,
-            "text": "        for n in graph.adjacency[v]:"
+            "text": "        for n in sorted(graph.adjacency[start]):"
           },
           {
             "id": 10,
@@ -1648,20 +1648,24 @@
         ],
         "corrections": [
           {
-            "id": 27,
+            "id": 20,
             "text": "        v = queue.pop()"
           },
           {
-            "id": 25,
-            "text": "        for n in sorted(graph.adjacency):"
+            "id": 21,
+            "text": "        for n in sorted(graph.adjacency[v]):"
           },
           {
-            "id": 28,
+            "id": 22,
             "text": "            if n not in order:"
           },
           {
+            "id": 23,
+            "text": "        for n in sorted(graph.adjacency):"
+          },
+          {
             "id": 24,
-            "text": "        for n in sorted(graph.adjacency[v]):"
+            "text": "        v = queue[0]"
           }
         ]
       },
@@ -1677,7 +1681,7 @@
           6,
           7,
           8,
-          24,
+          21,
           10,
           [
             11,
@@ -1696,7 +1700,7 @@
             ],
             6,
             7,
-            24,
+            21,
             10,
             [
               11,
@@ -1715,7 +1719,7 @@
             6,
             7,
             8,
-            24,
+            21,
             10,
             [
               11,
@@ -1733,7 +1737,7 @@
             ],
             6,
             7,
-            24,
+            21,
             10,
             [
               11,
@@ -1745,25 +1749,25 @@
           ]
         ],
         "feedback": {
-          "9": "Not quite. This loop takes v's neighbours in the order their edges were added, so C, added first, joins the queue before B. That is still breadth-first, but our BFS takes neighbours in alphabetical order, the course's convention so that traces agree. Sort v's own list of neighbours."
+          "9": "Not quite. This loop takes the start vertex's neighbours every time, whichever vertex v has just left the queue, so only the start and its neighbours are ever found. Take v's own neighbours."
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Compare the two orders. Which vertices come out in a different order, and are they in the same ring?"
+          "body": "Compare the two outputs. Which vertices are missing, and how many edges are they from A?"
         },
         {
           "level": 2,
-          "body": "Look at the line that loops over v's neighbours. In what order does it take them?"
+          "body": "Every vertex in the output is A or one of A's neighbours. To find D, whose neighbours must the program look at?"
         },
         {
           "level": 3,
-          "body": "It takes them in the order their edges were added, so C comes before B. Our BFS takes each vertex's neighbours in alphabetical order: the course's convention, not a rule of BFS."
+          "body": "The loop takes the start vertex's neighbours every time, so B's and C's neighbours are never looked at."
         },
         {
           "level": 4,
-          "body": "Answer: replace for n in graph.adjacency[v]: with for n in sorted(graph.adjacency[v]):, which sorts v's own neighbours."
+          "body": "Answer: replace for n in sorted(graph.adjacency[start]): with for n in sorted(graph.adjacency[v]):, which takes the neighbours of v, the vertex that has just left the queue."
         }
       ]
     },
@@ -1846,6 +1850,10 @@
           {
             "id": 24,
             "text": "            if n not in order:"
+          },
+          {
+            "id": 25,
+            "text": "        for n in sorted(graph.adjacency):"
           }
         ]
       },
@@ -1935,11 +1943,11 @@
       "hints": [
         {
           "level": 1,
-          "body": "The order is wrong even on simple graphs. Which line takes a vertex from the queue?"
+          "body": "Try it on a small graph: edges A–B, A–C and B–D, from A. BFS gives A, B, C, D. What does this program give?"
         },
         {
           "level": 2,
-          "body": "BFS must take the vertex that has waited longest."
+          "body": "It gives A, C, B, D: after A it takes C, which joined the queue after B. Which vertex has waited longest when A is done?"
         },
         {
           "level": 3,

@@ -31,6 +31,19 @@ points or badges are given for its items, until the student has answered **every
 badge gives away whether an earlier answer was right. The attempt response says nothing about it
 either (app/routers/activities.py), and each item takes one answer only.
 
+**A replaced item.** When a mastery item is taken out and a new one put in its place
+(`REPLACES`), a student who answered the old one before the change keeps that answer: it stands in
+for the new item until they answer the new one themselves, and then theirs counts instead. So a
+student who had finished the check stays finished, with the same results, the same review paths
+open and the same answers in the report (review of #223, Must fix 1: retiring 612 for 630 made
+every finished student "not attempted"). Without it, nobody had answered the new item, so nobody
+had finished.
+
+**An item graded whole** (`WHOLE_ITEMS`) counts as one part, right only when every part of it is:
+630 asks the student to build one model of one situation, and objective 3's criterion counts
+situations ("at least 3 of 4 situations modelled correctly"), so its four pairs counted
+separately outweighed the other three situations together (review of #223, Must fix 3).
+
 Everything here is worked out from attempts, so a changed rule or item is applied by running it
 again (FR-7.6): `recompute` after each mastery attempt, `recompute_all` on every seed. The report
 (GET /api/me/report) calls `evaluate` on each request, so it always follows the current rules.
@@ -65,6 +78,15 @@ SUPPORT_LEVEL = rewards.SUPPORT_LEVEL  # hint 3 or 4 makes a correct answer "wit
 # have it (review of 13 Nov, Critical 1).
 WORKED_LEVEL = 4
 MET: tuple[State, ...] = ("met_independently", "met_with_support")
+
+# A mastery item that replaced a retired one: the new item's id and the id it replaced. The old
+# item's first answer stands in for the new one until the student answers the new one (see the
+# module docstring). 630 builds the house-building model that 612 asked the student to recognise;
+# 631 is objective 7's first fix-the-bug item with a real BFS bug, where 621's only fault broke the
+# course's alphabetical convention (review of #223, Must fix 1 and Should fix 6).
+REPLACES: dict[int, int] = {630: 612, 631: 621}
+# Mastery items graded as one part, right only when all of it is (see the module docstring).
+WHOLE_ITEMS: frozenset[int] = frozenset({630})
 
 # The rewards service names the results more briefly (app/services/rewards.py).
 _REWARD_NAMES: dict[State, rewards.Mastery] = {
@@ -139,8 +161,11 @@ def decide(rule: Rule, answers: Sequence[Answer | None]) -> State:
     return "not_yet"
 
 
-def _parts(attempt: Attempt) -> tuple[bool, ...]:
-    """The graded parts the checker stored in `detail`; the whole answer if it stored none."""
+def _parts(attempt: Attempt, item_id: int | None = None) -> tuple[bool, ...]:
+    """The graded parts the checker stored in `detail`; the whole answer if it stored none, or if
+    the item is graded whole (`WHOLE_ITEMS`)."""
+    if item_id in WHOLE_ITEMS:
+        return (attempt.correct,)
     parts: list[dict[str, Any]] = attempt.detail.get("parts") or []
     return tuple(bool(p.get("correct")) for p in parts) or (attempt.correct,)
 
@@ -182,7 +207,8 @@ class Outcome:
 
 def _tally(rule: Rule, items: Sequence[Activity], first: dict[int, Attempt]) -> Tally:
     answers = [
-        Answer(a.id, _parts(a), a.hint_level) if (a := first.get(i.id)) else None for i in items
+        Answer(a.id, _parts(a, i.id), a.hint_level) if (a := first.get(i.id)) else None
+        for i in items
     ]
     given = tuple(a.attempt_id for a in answers if a is not None)
     return Tally(decide(rule, answers), len(given), len(items), given)
@@ -213,29 +239,41 @@ def _check_items(session: Session) -> Sequence[Activity]:
 
 
 def _first_attempts(session: Session, user_id: int, ids: Sequence[int]) -> dict[int, Attempt]:
-    """This student's first attempt at each of these activities, by activity id."""
+    """This student's first attempt at each of these activities, by activity id. A replaced item's
+    first answer stands in for its replacement while the replacement has none (`REPLACES`)."""
+    replaced = {REPLACES[i]: i for i in ids if i in REPLACES}
     first_ids = (
         select(func.min(Attempt.id))
-        .where(Attempt.user_id == user_id, Attempt.activity_id.in_(ids))
+        .where(Attempt.user_id == user_id, Attempt.activity_id.in_([*ids, *replaced]))
         .group_by(Attempt.activity_id)
     )
-    return {
+    found = {
         a.activity_id: a for a in session.scalars(select(Attempt).where(Attempt.id.in_(first_ids)))
     }
+    for old, new in replaced.items():
+        if new not in found and old in found:
+            found[new] = found[old]
+        found.pop(old, None)
+    return found
+
+
+def stood_in(session: Session, attempt_ids: Sequence[int]) -> dict[int, int]:
+    """Of these attempts, the ones at a replaced item, mapped to the item that replaced it: the
+    report lists such an answer under the new item (`REPLACES`)."""
+    replaced_by = {old: new for new, old in REPLACES.items()}
+    rows = session.execute(
+        select(Attempt.id, Attempt.activity_id).where(
+            Attempt.id.in_(attempt_ids), Attempt.activity_id.in_(replaced_by)
+        )
+    ).all()
+    return {attempt_id: replaced_by[activity_id] for attempt_id, activity_id in rows}
 
 
 def check_finished(session: Session, user_id: int) -> bool:
     """Whether this student has answered every module 6 item: the check is over, and its results
-    can be shown (#144)."""
+    can be shown (#144). An answer to a replaced item counts for its replacement (`REPLACES`)."""
     items = [i.id for i in _check_items(session)]
-    answered = set(
-        session.scalars(
-            select(Attempt.activity_id).where(
-                Attempt.user_id == user_id, Attempt.activity_id.in_(items)
-            )
-        )
-    )
-    return bool(items) and answered >= set(items)
+    return bool(items) and set(_first_attempts(session, user_id, items)) >= set(items)
 
 
 def evaluate(session: Session, user_id: int) -> list[Outcome]:

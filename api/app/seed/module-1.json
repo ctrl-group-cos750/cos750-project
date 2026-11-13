@@ -324,11 +324,11 @@
         "options": [
           {
             "id": "a",
-            "label": "A queue."
+            "label": "The line of people at a till."
           },
           {
             "id": "b",
-            "label": "The steps for finding the largest number in a list."
+            "label": "Finding the largest number in a list."
           },
           {
             "id": "c",
@@ -336,17 +336,17 @@
           },
           {
             "id": "d",
-            "label": "Walking to every building along walkways."
+            "label": "A tour guide walking to every building."
           }
         ]
       },
       "solution": {
-        "explanation": "A traversal visits the vertices of a graph by following its edges, like walking to every building along the walkways. A queue is a data structure, the steps are an algorithm, and the buildings joined by walkways are the graph itself.",
+        "explanation": "A traversal visits the vertices of a graph by following its edges, like a tour guide walking to every building. The line at a till is a data structure, finding the largest number is an algorithm, and the buildings joined by walkways are the graph itself.",
         "correct": "d",
         "feedback": {
-          "a": "A queue is a data structure: it stores data. A traversal is something you do on a graph.",
-          "b": "Those steps are an algorithm, but they don't follow the edges of a graph.",
-          "c": "That is the graph itself. A traversal is the visiting of its vertices along its edges."
+          "a": "Not quite. The line at a till is a data structure: it stores people in order. A traversal is something you do on a graph, moving along its edges.",
+          "b": "Not quite. Finding the largest number is an algorithm, but it doesn't follow the edges of a graph. Look for the one that moves along connections.",
+          "c": "Not quite. That is the graph itself. A traversal is the visiting of its vertices along its edges."
         }
       }
     },

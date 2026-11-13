@@ -240,8 +240,11 @@ def test_350_the_one_that_isnt_a_job_for_bfs_is_module_3s_not_a_fit() -> None:
         s["label"]: reasons[fits.solution["pairs"][s["id"]]].startswith("Good fit")
         for s in fits.config["left"]
     }
-    assert set(labels(350).values()) == set(verdict)
-    assert [label for label, fit in verdict.items() if not fit] == [right(350)]
+    # Every option is one of 313's situations, and the only one that isn't a job for BFS is the
+    # answer (313 has more situations than the four options here).
+    options = set(labels(350).values())
+    assert options <= set(verdict)
+    assert [label for label, fit in verdict.items() if not fit and label in options] == [right(350)]
 
 
 def test_351_the_order_is_the_engines() -> None:

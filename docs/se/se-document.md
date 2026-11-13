@@ -144,7 +144,7 @@ learning outcomes. The Product Owner's duties are shared instead:
 | Retrospective | Sunday to Monday, a Discord thread: what went well, what to change, one concrete action for the next sprint. | Retro notes kept with the sprint (`docs/se/sprints/`). |
 | Sprint planning | Monday morning. The Scrum Master proposes the sprint goal and the items from the top of the backlog that fit; the team confirms or changes them in Discord before work starts. | Sprint goal and sprint backlog on the board. |
 
-Sprints run from Monday to Sunday. The only meeting is the Thursday call; the events at the sprint boundary are asynchronous, because seven students with different timetables can't meet twice a week during exams. Discord keeps a dated record of all of them.
+Sprints run from Monday to Sunday. The plan was a single meeting, the Thursday call, with the events at the sprint boundary asynchronous, because seven students with different timetables can't easily meet twice a week during exams. In practice the team also met by call on Sunday evenings at the sprint boundary, for review and planning, and two Thursday calls were skipped. Appendix B lists every meeting with its attendance. Discord keeps a dated record of all of them.
 
 
 ## Engineering practices that support the process
@@ -167,6 +167,7 @@ These are what make a working increment at the end of every week possible. Detai
 |---|---|
 | Backlog, sprints, estimates, burn-up | GitHub Project board: <https://github.com/orgs/ctrl-group-cos750/projects/1> |
 | Daily stand-ups | Discord #general channel; the record from 2 to 12 November is Appendix A |
+| Team meetings and attendance | Appendix B: each meeting with its evidence (Discord events and notes, an audio recording), confirmed by the team |
 | Reviews, retros and planning | `docs/se/sprints/` in the repository |
 | Code review and Definition of Done | Merged PRs and their reviews on GitHub |
 | CI and continuous delivery | GitHub Actions history; Coolify deployment log |
@@ -1432,7 +1433,7 @@ Table: Known limitations of the build on `staging`.
 
 The daily stand-up (§2.5) was asynchronous: a message in the team's Discord #general channel saying what was done, what is next and what blocks it, with a weekly call for review, retrospective and planning. This appendix is the record from 2 to 12 November (Sprints 1 and 2), taken from the channel's export, dated as Discord records them (UTC, two hours behind South African time). Each update is summarised in a line; issue and PR numbers are the repository's. Only members' names are given. Credentials, contact details and personal circumstances that were posted are left out.
 
-Not every member posted every day, and many updates were made on pull requests and the board rather than in the channel; Table A1 shows who posted in #general on each day. The record is evidence of the process as it ran, not as it was planned: posting was most regular when work was being handed between people, and thinnest on 4 November, when most of the team was working on their first pull requests.
+Not every member posted every day, and many updates were made on pull requests and the board rather than in the channel; the table below shows who posted in #general on each day. The record is evidence of the process as it ran, not as it was planned: posting was most regular when work was being handed between people, and thinnest on 4 November, when most of the team was working on their first pull requests.
 
 | Member | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -1513,6 +1514,36 @@ Reece: module 0 work done apart from the refresher skip; checked his tickets aga
 Ayanda: module 5 (#86) up for review.
 Jacobus: reviewed #184 and #185; working on #171 and #87; closed issues already resolved; #195 and #196 up for review.
 Matthew: the weekly call skipped by agreement, with updates on Discord instead; drawn graph answers (#184) and the documents (#185) up for review.
+
+# Appendix B: Meeting record
+
+The team met by voice call in the General voice channel of its Discord server, at 19:00 South African time, on Thursdays (the weekly check-in, §2.5) and on Sundays at the sprint boundary. The first table below lists each meeting, and the second who attended it.
+
+Attendance was not taken during the first four calls, so it was compiled afterwards from what each meeting left behind: RSVPs to the Discord event, messages in the voice channel's chat, the notes posted after the meeting, and an audio recording that has one track per member. Where no record names a member, attendance is the Scrum Master's account. That list was posted in #general on 13 November for every member to check and correct. Attendance at the final meeting on 15 November was taken during the call.
+
+| Date | Meeting | Purpose | Evidence |
+|---|---|---|---|
+| Sun 25 Oct | Initial meeting | Topic (graphs and BFS), languages, how learning should work, the split into software engineering and instructional design, the Thursday call | Discord event with RSVPs; messages in the voice channel's chat at the start; decisions posted in #general during the call |
+| Thu 29 Oct | Skipped | Clashed with another module's poster day (COS700) | — |
+| Sun 1 Nov | Sprint 0 review and Sprint 1 planning | Recording, Scrum Master vote, the Sprint 1 board, ID content, repository access, the Thursday time | Agenda and meeting notes in #announcements |
+| Thu 5 Nov | Weekly check-in | Mid-sprint progress and blockers | Audio recording of the call |
+| Sun 8 Nov | Sprint 1 review and Sprint 2 planning | Review of Sprint 1, work for Sprint 2 | Confirmed by the team |
+| Thu 12 Nov | Skipped | By agreement, so the time went to the documents and the remaining items; updates were posted in #general instead (Appendix A) | Message in #general |
+| Sun 15 Nov | Final meeting before the demo | Release check, a walkthrough of both documents, the presentation and a timed demo rehearsal, Sprint 2 review and retrospective, the plan for Monday | Discord event with RSVPs and agenda |
+
+Table: Team meetings, 22 October to 15 November.
+
+| Member | 25 Oct | 1 Nov | 5 Nov | 8 Nov | 15 Nov |
+|---|---|---|---|---|---|
+| Matthew Els | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Jacobus Hoogenboezem | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Mohtashim Hussain | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Ayanda Juqu | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Simphiwe Nhlapo |  | ✓ | ✓ |  | ✓ |
+| Reece Schmidt | ✓ |  |  | ✓ | ✓ |
+| Joshua Wereley | ✓ | ✓ | ✓ | ✓ | ✓ |
+
+Table: Members who attended each meeting. Six of the seven attended each of the first four calls, and all seven the last. Simphiwe joined the team's server on 28 October, after the initial meeting.
 
 *End of the Software Engineering document, Draft 2. Instructional-design content is in the separate ID document, as the examination specification requires.*
 

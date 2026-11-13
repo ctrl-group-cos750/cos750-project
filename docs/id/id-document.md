@@ -743,54 +743,34 @@ If the pilot shows that our choices do not work as intended, the first thing we 
 
 ## Software engineering
 
-**Tool:** Claude Code, Anthropic's coding assistant, using the Claude Opus 5.5 model, run in the software engineers' development environment.
+Each software engineer records their own use, in the same format.
 
-**What it was used for:** drafting and revising the SE document; proposing options for engineering decisions, which the team then made; writing the project's tooling and infrastructure (CI checks, the database layer, deployment on Coolify, the staging login page, the "coming soon" page, the document builder and its PDF format); organising the course material in the repository; setting up the project board and its backlog; and drafting reviews of other members' pull requests, which the reviewer read, edited and posted.
+### Matthew Els
 
-**How its output was checked:** every change went through a pull request that a team member reviewed, and all code passes the project's automated checks (formatting, linting, type checks, tests and builds). Each decision it proposed was accepted, changed or rejected by the team; the decisions are recorded in the SE document (§2, §15.3).
+**Tools:**
 
-**Main prompts**, as typed:
+- **Claude** (Anthropic), through Claude Code, its coding assistant: the engineering work and the documents.
+- **Gemini** (Google): images, namely the team's brand pack and some of the images in the course content.
+- **ChatGPT** (OpenAI): finding research papers.
 
-| Date | Prompt | Used for |
+**What they were used for:** with Claude, drafting and revising the SE document; proposing options for engineering decisions, which the team then made; writing the project's tooling and infrastructure (CI checks, the database layer, deployment on Coolify, the staging login page, the document builder and its PDF format); splitting the work into items on the project board; and checking his own pull requests and his reviews of other members' pull requests. With Gemini, designing the brand pack (logo, colours and fonts) and drawing images for questions in the course content. With ChatGPT, finding research papers on features that the lecture slides and module content did not cover, as a starting point for deciding whether to add them.
+
+**How the output was checked:** every change went through a pull request that a team member reviewed, and all code passes the project's automated checks (formatting, linting, type checks, tests and builds). Each decision Claude proposed was accepted, changed or rejected by the team; the decisions are recorded in the SE document (§2, §15.3). The brand pack and the images were reviewed by the team before use. Papers that ChatGPT suggested were found and read before anything was taken from them, and only papers that were read are cited.
+
+**Main prompts.** Examples of the prompts used with each tool.
+
+| Tool | Prompt | Used for |
 |---|---|---|
-| 31 Oct 2026 | "is cos750 project hosted yet? has my personal coolify api been used to host and add the project" | Hosting the app on Coolify |
-| 31 Oct 2026 | "for now the master version should just have a "something great coming soon, until the next deploy to master." | The "coming soon" page on production (GUI) |
-| 31 Oct 2026 | "what about the repo now. are tests and linitng rules etc in place?" and "this needs to be enhanced then" | CI checks, tests and linting |
-| 31 Oct 2026 | "i think only users with some sort of password should be able to see what is going on in staging" | The staging login page (GUI) |
-| 1 Nov 2026 | "as a software engineer based on the spec what am i supposed to be doing" | Planning the SE work against the specification |
-| 1 Nov 2026 | "i haved dumpped all of the course material into the docs folder, orgnaize all of this. as this will be what the project is based on" | Organising the course material and its index |
-| 1 Nov 2026 | "look over it and see if we discagree on anything? or if anything is missing." | Reviewing SE document draft 1 |
-| 1 Nov 2026 | "lets get the techstack matching what weve built unless there is a good reason to do it her way." | SE document: technology stack |
-| 1 Nov 2026 | "lets start on the next missing section. what are the choices i have to make here?" | SE document: methodology options |
-| 1 Nov 2026 | "i think we need to include these docs in the repo. and md files, this is what the team will work with, but we will have a script that generates pdfs in a standard format" | The document builder and PDF format |
-| 1 Nov 2026 | "okay, for the se doc, what is the next thing we need to add/ make desisions on or correct" | SE document: alignment with this document |
-| 1 Nov 2026 | "yes lets carry on with the nes things we need to do in the se doc. ask me questions if the asnswer requires inout" | SE document: testing strategy and diagrams |
-| 1 Nov 2026 | "okay lets continue building it. ask me questions you need imput on" | SE document: stakeholders, wireframes, references; the Sprint 0 record |
-| 2 Nov 2026 | "okay now lets start on the login logout work." | Registration, login and logout (FR-1) |
-| 2 Nov 2026 | "lets try see if we can break it. try any sort of attack to bypass the auth or steal someones auth / impernonate someone else." | Security testing of authentication, repeated after each fix (SE §14.6) |
-| 2 Nov 2026 | "don have a list of passwords to not accept rather just have password rules and ui for password rules." | Password rules and the checklist on the register page (NFR-S1) |
-| 3 Nov 2026 | "what if a student tries to kill the sever by running an infinate loop or loading pakages or things like this. how do we stop this." | The code sandbox's limits, later removed (SE §15.3) |
-| 3 Nov 2026 | "this is too formal i want something like, hi guys, i have been working on the code sandbox today and i think we should rather pivit from it because xyz and rtaher do abc" | Drafting the team message proposing to drop the sandbox; the team decided |
-| 3 Nov 2026 | "first remove all of the code from staging regard it, save in in a local stash incase i want to bring it back. then update the 2 docs to record the change." | Removing the code runner; recording the decision in both documents |
-| 3 Nov 2026 | "i think we should use some sort of inline documentation or something." | Docstrings and the OpenAPI schema as code documentation (NFR-M2) |
-| 5 Nov 2026 | "build the staff portal on the navbar, in here it will be where all the staff can setup everything, for example the videos configuration page." | The staff portal (FR-10, FR-11) |
-| 5 Nov 2026 | "begin research on how badges and achievements work in educational software development. based on the lecture slides additional papers research in the field, the bible app, duolingo, khan academy etc." | Research for the badge design (ID document, Motivation) |
-| 5 Nov 2026 | "lets build what is decided then. How are we going to get icons or images for the badges, lets geneare the images for the 12 badges" | The badge artwork and the rewards feature (FR-9) (GUI) |
-| 6 Nov 2026 | "can we not generate a better colour pallete based on the logo for readbility? in both darkmode and light mode." | Colour palette options for readability, given to the frontend developer (GUI) |
-| 7 Nov 2026 | "lets generate all of the screens based on his new ui chnages" | Screen mock-ups for the SE document's wireframes (GUI) |
-| 7 Nov 2026 | "do we have a ticket for the user profile/ dropdown. this is where the pagedges section will be wheere the user can set a profile picture chnage password see their stats etc" | The profile page and account menu (FR-1.5–FR-1.7) (GUI) |
-| 8–10 Nov 2026 | "review pr 105", "begin the review on #122" and similar, then "make the chnages and push to the branch" | Drafting reviews of team members' pull requests; the reviewer read, edited and posted them |
-| 11 Nov 2026 | "What is still assigned to me and not in staging yet? All of this needs to be resolved asap." | Navigation, mastery-check rules, review paths that teach again (#146, #144, #148); module 1's drawn graph answers (#155); evidence-based content edits and support items (#150, #173) |
-| 12 Nov 2026 | "look at savys branch and ours. compare them to ensure the final version is as rock solida as possible" | Combining the two end-to-end test branches (#35) |
-| 12 Nov 2026 | "before we waste money please try this properly locally so we know if it fails beforehand" and "the end to end test should only run on github for a pr to master from staging" | Running the end-to-end tests locally; the CI rule (#194) |
-| 12 Nov 2026 | "I will give you a few small examples, but your job will be to find everything else ... look at the research material on educational software devlopment ... read the spec of this exam again and ensure we have met all of the requirements." | A UI, research and specification audit; the landing page, header, layout and profile pictures (#198, #199) |
-| 12 Nov 2026 | "you job is to do all i have assigend you. keep checking discord and prs and make any contnent that is missing." | Objective 8's assessment (#70), honest module timings, the stand-up record (#79), this prompt record (#74) |
+| Claude | "I've opened a PR for this feature. Review it and tell me what I should change before the team reviews it." | Checking his own pull requests before review |
+| Claude | "Help me break this assignment into tasks on our GitHub Project board, so the team can assign work to themselves." | The backlog on the project board |
+| Claude | "I've reviewed this PR and didn't find any issues. Go through it again and tell me if I missed anything." | A second check on his reviews of other members' pull requests |
+| Gemini | "Help us design a media pack for our team, with a logo, a colour palette and fonts." | The brand pack (`assets/`) (GUI) |
+| Gemini | "Create a map for this question, based on the scenario we've described, that the student can use to answer it." | Images for questions in the course content (content) |
+| ChatGPT | "We want to add this feature, but it isn't covered in the lecture slides or the module content. Find research papers on it, so I can start investigating whether it's a good feature for an educational software application." | Research for features beyond the course material |
 
-Table: Generative AI prompts for the software engineering work.
+Table: Generative AI prompts, Matthew Els.
 
-The prompts above are Matthew Els's, taken from his assistant's session logs (1 to 12 November). Prompts that only asked for a status, approved a step ("push it", "open a pr") or contained a teammate's message are left out.
-
-**Course content made with the assistant.** Some of what students see was drafted with the same tool from the prompts above, then checked by the automated content tests (`api/tests/`: every answer is run through the BFS engine or the checker, mastery items are checked for answer cues, support items for overlap with assessed items) and reviewed in pull requests: module 1's drawn graph answers and their images (#155), the evidence-based edits and support items (#150, #173), the review paths' worked examples and practice (#148), the narration as text (#149) and objective 8's items (#70). The narration scripts for modules 1 to 4 were generated by Matthew Els before this record starts; the prompt he used is to be added (#74).
+**Course content made with these tools.** Some of what students see was drafted with Claude, then checked by the automated content tests (`api/tests/`: every answer is run through the BFS engine or the checker, mastery items are checked for answer cues, support items for overlap with assessed items) and reviewed in pull requests: module 1's drawn graph answers (#155), the evidence-based edits and support items (#150, #173), the review paths' worked examples and practice (#148), the narration as text (#149) and objective 8's items (#70). Some images in the questions were drawn with Gemini. The placeholder narration scripts for modules 1 to 4 were also drafted with Claude, from those modules' content, and are replaced by the recorded narration.
 
 ### Ayanda Juqu
 

@@ -96,6 +96,11 @@ function item(
   }
 }
 
+/** Whether an objective was met with support (its badge bronze): Solo Run can't come then. */
+function soloRunOutOfReach(earned: EarnedBadge[]): boolean {
+  return earned.some((e) => /^lo\d+$/.test(e.badge) && e.tier === 'bronze')
+}
+
 /**
  * Every badge the student can see, earned or not, grouped for the shelf. Unearned badges show how
  * to earn them, so the shelf doubles as a map of the objectives; the hidden one stays a "?".
@@ -116,6 +121,9 @@ export function buildShelf(earned: EarnedBadge[], skills: readonly Skill[] = [])
   for (const achievement of ACHIEVEMENTS) {
     const mine = held(achievement.id)
     if (achievement.offered === false && mine.length === 0) continue
+    // Solo Run needs every objective met without hint 3 or 4; an objective met with support
+    // (bronze) stays so, so once one is, it can't be earned and isn't offered (13 Nov review).
+    if (achievement.id === 'solo-run' && mine.length === 0 && soloRunOutOfReach(earned)) continue
     const order = (e: EarnedBadge) => numbers.get(e.ref) ?? 0
     mine.sort((a, b) => order(a) - order(b))
     const skill = skills.find((x) => x.id === achievement.objective)

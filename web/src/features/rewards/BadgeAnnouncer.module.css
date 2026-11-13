@@ -109,6 +109,9 @@
 
 /* A modal <dialog> (showModal), centred by the browser in the top layer; ::backdrop dims the page. */
 .dialog {
+  /* Centred in the viewport: Tailwind's reset sets a <dialog>'s margin to 0, which put it in
+   * the top-left corner (13 Nov review). */
+  margin: auto;
   max-width: min(28rem, calc(100vw - 2 * var(--space-4)));
   padding: var(--space-6) var(--space-5);
   border: 0;

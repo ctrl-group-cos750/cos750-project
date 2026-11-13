@@ -48,7 +48,17 @@ describe('buildShelf', () => {
     expect(shelf.objective.find((i) => i.achievement.id === 'lo2')?.next).toBe(
       'Met with support. Gold is for meeting it without hint 3 or 4.',
     )
-    expect(shelf.milestone.map((i) => i.state)).toEqual(['locked', 'locked', 'locked', 'locked'])
+    // Solo Run is left off: Edge Spotter was met with support, so it can't be earned now.
+    expect(shelf.milestone.map((i) => i.achievement.id)).not.toContain('solo-run')
+    expect(shelf.milestone.map((i) => i.state)).toEqual(['locked', 'locked', 'locked'])
+  })
+
+  it('offers Solo Run while every objective met so far was met on your own', () => {
+    const ids = (earned: EarnedBadge[]) => buildShelf(earned).milestone.map((i) => i.achievement.id)
+    expect(ids([badge('lo5', { tier: 'gold' }), badge('lo1', { tier: 'practised' })])).toContain(
+      'solo-run',
+    )
+    expect(ids([badge('lo5', { tier: 'bronze' })])).not.toContain('solo-run')
   })
 
   it('offers Shortcut Finder now that objective 8 is assessed (#70)', () => {

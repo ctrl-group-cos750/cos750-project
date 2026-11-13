@@ -37,7 +37,10 @@ for the new item until they answer the new one themselves, and then theirs count
 student who had finished the check stays finished, with the same results, the same review paths
 open and the same answers in the report (review of #223, Must fix 1: retiring 612 for 630 made
 every finished student "not attempted"). Without it, nobody had answered the new item, so nobody
-had finished.
+had finished. Only a student still part-way through the check can answer the new item: once the
+check is finished, the old answer uses up the new item's one answer too (`check_answered`), so
+nobody who has seen their results gets a second go at it. `REPLACES` doesn't chain: an item that
+later replaces 630 would need 612 mapped to it as well.
 
 **An item graded whole** (`WHOLE_ITEMS`) counts as one part, right only when every part of it is:
 630 asks the student to build one model of one situation, and objective 3's criterion counts
@@ -274,6 +277,26 @@ def check_finished(session: Session, user_id: int) -> bool:
     can be shown (#144). An answer to a replaced item counts for its replacement (`REPLACES`)."""
     items = [i.id for i in _check_items(session)]
     return bool(items) and set(_first_attempts(session, user_id, items)) >= set(items)
+
+
+def check_answered(session: Session, user_id: int, activity_id: int) -> bool:
+    """Whether this student's one answer to a module 6 item is used up (#144): they have an
+    attempt at it, or they finished the check with an answer to the item it replaced
+    (`REPLACES`). That answer stands in for the new item, so once the results are out the new item
+    is answered as far as the one-answer rule goes, and a second answer can't overwrite them
+    (review of #223, new finding 1). A student part-way through can still answer the new item,
+    and their own answer then counts instead (see the module docstring)."""
+    ids = [activity_id]
+    if activity_id in REPLACES and check_finished(session, user_id):
+        ids.append(REPLACES[activity_id])
+    return (
+        session.scalar(
+            select(Attempt.id)
+            .where(Attempt.user_id == user_id, Attempt.activity_id.in_(ids))
+            .limit(1)
+        )
+        is not None
+    )
 
 
 def evaluate(session: Session, user_id: int) -> list[Outcome]:

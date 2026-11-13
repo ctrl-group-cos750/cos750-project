@@ -45,7 +45,10 @@ point at them.
 - To replace a module 6 mastery item, give the new one a new id too, and add the pair to
   `REPLACES` in `app/services/mastery.py` (new id: old id). A student who answered the old item
   keeps that answer for the new one until they answer it, so a student who had finished the check
-  isn't marked "not attempted" again. Without the entry, nobody has answered the new item yet.
+  isn't marked "not attempted" again. A student who had finished it can't answer the new item:
+  their old answer is its one answer. Without the entry, nobody has answered the new item yet. The
+  pairs don't chain: replacing 630 later needs the new id mapped to 612 as well as 630, or answers
+  to 612 are lost.
 
 Text is plain, short sentences, in British/South African spelling. Segment bodies and activity
 prompts are Markdown, so you can use **bold**, lists and code blocks (` ```python `).

@@ -26,6 +26,7 @@ from app.models import (
     User,
 )
 from app.routers.activities import (
+    ALREADY_ANSWERED,
     RECORDED,
     REVIEW_HINT_LIMIT_REACHED,
     attempts_limiter,
@@ -1194,18 +1195,42 @@ def test_part_way_through_the_check_an_answered_replaced_item_counts(
     answer(client, 612)
     replace_612(before_630, db)
     answer(client, 601)
-    answer(client, 602)  # 630 is not asked again: 612's answer stands in for it
+    answer(client, 602)  # 612's answer stands in for 630, so this finishes the check
     assert client.get("/api/me/report").json()["ready"] is True
+
+
+def test_a_student_who_finished_the_check_cannot_answer_a_replaced_item_again(
+    client: TestClient, before_630: Path, db: Session
+) -> None:
+    """The old answer uses up the new item's one answer once the results are out (#144; review of
+    #223, new finding 1): a second answer would overwrite a result the student has already seen."""
+    log_in(client)
+    for item in (601, 602):
+        answer(client, item)
+    answer(client, 612, WRONG)
+    assert states(client)[2] == "not_yet"
+
+    replace_612(before_630, db)
+    assert client.get("/api/activities/630").json()["answered"] is True
+    response = client.post("/api/activities/630/attempts", json=RIGHT)
+    assert response.status_code == 409
+    assert response.json()["detail"] == ALREADY_ANSWERED
+    assert client.post("/api/activities/630/hints").status_code == 409
+    assert states(client)[2] == "not_yet"
+    assert client.get("/api/me/report").json()["ready"] is False
+    assert db.scalars(select(Attempt).where(Attempt.activity_id == 630)).all() == []
 
 
 def test_the_students_own_answer_to_the_replacement_counts_instead(
     client: TestClient, before_630: Path, db: Session
 ) -> None:
+    """Part-way through the check: once it is finished, the old answer is the one (next tests)."""
     log_in(client)
-    for item in (601, 602, 612):
+    for item in (601, 612):
         answer(client, item)
     replace_612(before_630, db)
     answer(client, 630, WRONG)
+    answer(client, 602)
     assert states(client)[2] == "not_yet"
     [mine] = client.get("/api/me/report").json()["objectives"][1]["answers"]
     assert (mine["activityId"], mine["title"]) == (630, "Question 630")

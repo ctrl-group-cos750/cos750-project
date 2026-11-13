@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type MouseEvent } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type MouseEvent } from 'react'
 import { Link } from 'react-router'
 import { AchievementBadge, Button } from '../../components'
 import { focusedElement, focusSafely } from '../../lib/focus.ts'
@@ -180,6 +180,30 @@ export function BadgeAnnouncer() {
     }, NOTE_SECONDS * 1000)
     return () => clearTimeout(timer)
   }, [focusInside, pointerInside, notes, medals])
+
+  // On a phone the note is as wide as the page, so under the header it covered the page's heading
+  // (#222 re-review, B3). While a note shows, the page moves down to make room for it (`--note-space`
+  // on <main>, AppShell.module.css), but only when the note arrives near the top: further down,
+  // pushing the page would move the text being read, so the note sits over it as before, and goes
+  // by itself. After every render, so the space follows the notes as they come and go.
+  const reserved = useRef(false)
+  useLayoutEffect(() => {
+    const element = region.current
+    const main = element?.closest('main')
+    if (!element || !main) return
+    const box = element.getBoundingClientRect()
+    const room = phone && box.height > 0 && (reserved.current || window.scrollY < box.bottom)
+    // How far the note reaches below the top of <main> (under the header), whatever the scroll.
+    if (room) main.style.setProperty('--note-space', `${Math.ceil(box.bottom - main.offsetTop)}px`)
+    else main.style.removeProperty('--note-space')
+    reserved.current = room
+  })
+  useEffect(
+    () => () => {
+      region.current?.closest('main')?.style.removeProperty('--note-space')
+    },
+    [],
+  )
 
   /** Runs a dismiss, then moves focus to the × now in the same place (or back to the page). */
   const dismissing = (event: MouseEvent<HTMLElement>, change: () => void) => {

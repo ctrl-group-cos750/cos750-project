@@ -91,9 +91,11 @@
     width: 100%;
   }
 
-  /* Less space around the page on a phone, so code and tables get more of the width. */
+  /* Less space around the page on a phone, so code and tables get more of the width. While a
+   * badge note shows under the header, the page moves down by its height (`--note-space`, set by
+   * BadgeAnnouncer), so the note never covers the page's heading (#222 re-review). */
   .main {
-    padding: var(--space-5) var(--space-4) var(--space-7);
+    padding: calc(var(--space-5) + var(--note-space, 0px)) var(--space-4) var(--space-7);
   }
 }
 

@@ -106,41 +106,56 @@ test.describe('badge notes', () => {
   })
 
   // At 320 px the note sits under the header, as at every width: over it, it covered the theme
-  // toggle, the account menu and the module's heading (#222 review).
-  test("at 320 px a new badge's note sits under the header", async ({ page, course }) => {
-    await page.setViewportSize({ width: 320, height: 640 })
-    await course.walk(0)
-    await course.walk(1)
-    await course.walk(2, 0)
-    const module = await course.module(2)
-    await page.goto(`/modules/${module.id}`)
-    await expect(segmentRegion(page, module.segments[0].title)).toBeVisible()
-    const dismiss = page
-      .getByRole('status')
-      .getByRole('button', { name: /^Dismiss/ })
-      .first()
-    await expect(dismiss).toBeVisible()
-    const header = await page.locator('header').first().boundingBox()
-    // The notes' region: its top is the first note's.
-    const note = await page
-      .getByRole('status')
-      .filter({ has: page.getByRole('button', { name: /^Dismiss/ }) })
-      .first()
-      .boundingBox()
-    expect(header, 'the header').not.toBeNull()
-    expect(note, 'the badge note').not.toBeNull()
-    expect(note?.y ?? 0, 'the note starts under the header').toBeGreaterThanOrEqual(
-      (header?.y ?? 0) + (header?.height ?? 0),
-    )
-    // Nothing in the header is under the note: its buttons can still be pressed.
-    const covered = await page.locator('header').first().evaluate((el) =>
-      [...el.querySelectorAll('button, a')].some((control) => {
-        const box = control.getBoundingClientRect()
-        if (box.width === 0) return false
-        const at = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)
-        return at !== null && !control.contains(at)
-      }),
-    )
-    expect(covered, 'a header control is covered by the badge note').toBe(false)
-  })
+  // toggle, the account menu and the module's heading (#222 review). And the page moves down to
+  // make room, so it doesn't cover the heading under the header either (#222 re-review).
+  for (const width of [320, 360]) {
+    test(`at ${width} px a new badge's note sits under the header and above the heading`, async ({
+      page,
+      course,
+    }) => {
+      await page.setViewportSize({ width, height: 640 })
+      await course.walk(0)
+      await course.walk(1)
+      await course.walk(2, 0)
+      const module = await course.module(2)
+      await page.goto(`/modules/${module.id}`)
+      await expect(segmentRegion(page, module.segments[0].title)).toBeVisible()
+      const dismiss = page
+        .getByRole('status')
+        .getByRole('button', { name: /^Dismiss/ })
+        .first()
+      await expect(dismiss).toBeVisible()
+      const header = await page.locator('header').first().boundingBox()
+      // The notes' region: its top is the first note's.
+      const note = await page
+        .getByRole('status')
+        .filter({ has: page.getByRole('button', { name: /^Dismiss/ }) })
+        .first()
+        .boundingBox()
+      expect(header, 'the header').not.toBeNull()
+      expect(note, 'the badge note').not.toBeNull()
+      expect(note?.y ?? 0, 'the note starts under the header').toBeGreaterThanOrEqual(
+        (header?.y ?? 0) + (header?.height ?? 0),
+      )
+      // Nothing in the header is under the note: its buttons can still be pressed.
+      const covered = await page
+        .locator('header')
+        .first()
+        .evaluate((el) =>
+          [...el.querySelectorAll('button, a')].some((control) => {
+            const box = control.getBoundingClientRect()
+            if (box.width === 0) return false
+            const at = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)
+            return at !== null && !control.contains(at)
+          }),
+        )
+      expect(covered, 'a header control is covered by the badge note').toBe(false)
+      // Nor is the module's heading: the page moves down while the note shows (#222 re-review, B3).
+      const heading = await page.getByRole('heading', { level: 1 }).boundingBox()
+      expect(heading, 'the module heading').not.toBeNull()
+      expect(heading?.y ?? 0, 'the heading starts under the badge note').toBeGreaterThanOrEqual(
+        (note?.y ?? 0) + (note?.height ?? 0),
+      )
+    })
+  }
 })

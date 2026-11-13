@@ -35,6 +35,9 @@ point at them.
 - Review paths use 1000 + 100 × the objective: objective 5 uses 1501, 1502, ….
 - The portal uses ids from 50 000 and the video editor from 100 000. Stay below 50 000.
 - Before you pick an id, search the folder for it (`grep -rn '"id": 305' api/app/seed/*.json`).
+- To replace a segment, give the new one a new id rather than reusing the old one's. A student's
+  saved place follows the segment, not its number: a student on a segment you take out goes back
+  to the nearest segment before it, and Next then brings them to the new one.
 
 Text is plain, short sentences, in British/South African spelling. Segment bodies and activity
 prompts are Markdown, so you can use **bold**, lists and code blocks (` ```python `).

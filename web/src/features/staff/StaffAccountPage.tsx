@@ -192,7 +192,7 @@ function Access({ account }: { account: AccountDetail }) {
             }}
           >
             <AlertTitle>Remove {account.displayName}&apos;s staff access?</AlertTitle>
-            <AlertDescription className="grid gap-3">
+            <AlertDescription className="grid gap-3 text-foreground">
               <p>
                 They keep their account, but lose the staff portal straight away. You can add them
                 again later.

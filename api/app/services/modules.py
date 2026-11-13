@@ -696,12 +696,17 @@ def _module_activities(session: Session, module_id: int) -> set[int]:
 
 def reward_module(session: Session, user_id: int, module_id: int) -> bool:
     """Give a complete module's 25 points, and the First Module badge with the first, once
-    (FR-9.1, FR-9.3), if the student has done real work in it: at least one of its activities
-    answered correctly without hint 3 or 4. A module walked through by opening every hint and
-    sending anything earns nothing (FR-9.6, ID document §7.2: badges mark real progress, not
-    clicks; #166 review). Called when the module completes, when such a right answer comes later,
+    (FR-9.1, FR-9.3), if the student has done real work in it: at least one of its activities,
+    other than a diagnostic question, answered correctly without hint 3 or 4. A module walked
+    through by opening every hint and sending anything earns nothing (FR-9.6, ID document §7.2:
+    badges mark real progress, not clicks; #166 review). Called when the module completes, when such a right answer comes later,
     and by the seed for modules completed before this rule. Returns whether it was earned."""
-    activities = _module_activities(session, module_id)
+    # The diagnostic finds gaps, it doesn't teach (FR-8.1): answering it isn't the work a module's
+    # reward is for. So module 0, the warm-up, which asks only diagnostic questions, earns none,
+    # and the First Module badge comes with the first module that teaches (Matthew, 13 Nov: it
+    # came after module 0 and read as if module 1's first answer had earned it).
+    diagnostic = set(session.scalars(select(Activity.id).where(Activity.purpose == "diagnostic")))
+    activities = _module_activities(session, module_id) - diagnostic
     earned = (
         session.scalar(
             select(Attempt.id)

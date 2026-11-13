@@ -4,7 +4,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { Alert, Button, ProgressBar, Spinner } from '../../components'
 import { ActivityView } from '../activities/ActivityPage.tsx'
 import { CelebrationAllowed } from '../activities/celebration.ts'
-import { useRewards } from '../rewards/hooks.ts'
+import { useRefreshRewards, useRewards } from '../rewards/hooks.ts'
 import { fetchModule, restartModule, savePosition } from './module.api.ts'
 import type { ModuleDetail, ModuleSummary } from './module.types.ts'
 import { SegmentView } from './SegmentView.tsx'
@@ -54,6 +54,7 @@ export function ModulePage() {
   const validId = MODULE_ID.test(param)
   const id = Number(param)
   const queryClient = useQueryClient()
+  const refreshRewards = useRefreshRewards()
   const navigate = useNavigate()
   const [search] = useSearchParams()
   const segmentParam = search.get('segment') ?? ''
@@ -101,10 +102,15 @@ export function ModulePage() {
   // Saves how far the student has got. The server keeps the furthest segment reached, so only
   // moving forward is saved; stepping back just changes what's on screen.
   const mutation = useMutation({
-    mutationFn: (position: number) => savePosition(id, position),
-    onSuccess: () => {
+    mutationFn: ({ position }: { position: number; finishing: boolean; wasComplete: boolean }) =>
+      savePosition(id, position),
+    onSuccess: (saved, { finishing, wasComplete }) => {
       void queryClient.invalidateQueries({ queryKey: ['modules'] })
       void queryClient.invalidateQueries({ queryKey: ['module', id] })
+      // Completing a module can earn its points and the First Module badge: fetch them now, so the
+      // badge note comes with the finish, not with the next answer (which read as if that answer
+      // had earned it). Only then: a Next that completes nothing earns nothing.
+      if (finishing || (saved.status === 'complete' && !wasComplete)) refreshRewards()
     },
   })
   // Restart the module to redo its questions: it reopens at its start (or its recall questions),
@@ -318,12 +324,19 @@ export function ModulePage() {
       setSegmentIndex(next)
       return
     }
-    mutation.mutate(segments[next].position, {
-      onSuccess: () => {
-        moveFocus.current = true
-        setSegmentIndex(next)
+    mutation.mutate(
+      {
+        position: segments[next].position,
+        finishing: false,
+        wasComplete: module.status === 'complete',
       },
-    })
+      {
+        onSuccess: () => {
+          moveFocus.current = true
+          setSegmentIndex(next)
+        },
+      },
+    )
   }
 
   // Saving the last segment again once it is done is what completes the module (the server
@@ -333,15 +346,22 @@ export function ModulePage() {
   function handleFinish() {
     if (blocked) return
     const next = module.id === MASTERY_MODULE_ID ? '/report' : '/'
-    mutation.mutate(segments[currentIndex].position, {
-      onSuccess: () => {
-        // Finishing a module is worth a full burst (#214); not the mastery check, whose results
-        // the report gives, with its own moment if the student is ready for the lecture.
-        if (module.id !== MASTERY_MODULE_ID) confetti('big')
-        void queryClient.invalidateQueries({ queryKey: skillsKey }) // the medal is now earned
-        void navigate(next)
+    mutation.mutate(
+      {
+        position: segments[currentIndex].position,
+        finishing: true,
+        wasComplete: module.status === 'complete',
       },
-    })
+      {
+        onSuccess: () => {
+          // Finishing a module is worth a full burst (#214); not the mastery check, whose results
+          // the report gives, with its own moment if the student is ready for the lecture.
+          if (module.id !== MASTERY_MODULE_ID) confetti('big')
+          void queryClient.invalidateQueries({ queryKey: skillsKey }) // the medal is now earned
+          void navigate(next)
+        },
+      },
+    )
   }
 
   // On wide screens the progress panel sits beside the lesson (#214). The lesson column is a

@@ -101,6 +101,8 @@ describe('the radar chart', () => {
       ['2', '3'],
       ['3', '1'],
     ])
+    // Each point drawn by its level, not by colour alone: gold, bronze, an open "not yet".
+    expect(points.map((p) => p.getAttribute('data-kind'))).toEqual(['gold', 'bronze', 'notYet'])
     // Objective 1 is at the top: straight up from the centre, at the outer ring.
     const top = points[0]!
     expect(Number(top.getAttribute('cx'))).toBeCloseTo(200)
@@ -110,6 +112,19 @@ describe('the radar chart', () => {
     const r = radiusFor(3)
     expect(Number(second.getAttribute('cx'))).toBeCloseTo(200 + r * Math.SQRT1_2)
     expect(Number(second.getAttribute('cy'))).toBeCloseTo(160 - r * Math.SQRT1_2)
+  })
+
+  it('draws a practising point apart from a secure one', () => {
+    const { container } = render(<SkillRadar skills={partWay} />)
+    const kinds = [...container.querySelectorAll('circle[data-objective]')].map((p) => [
+      p.getAttribute('data-objective'),
+      p.getAttribute('data-kind'),
+    ])
+    expect(kinds).toEqual([
+      ['1', 'secure'],
+      ['2', 'practising'],
+      ['4', 'secure'],
+    ])
   })
 
   it('draws no shape before anything is practised, only the rings', () => {

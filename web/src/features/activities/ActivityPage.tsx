@@ -6,6 +6,7 @@ import { ApiError } from '../../api/client.ts'
 import { retryUnlessRefused } from '../../api/retry.ts'
 import { Alert, Spinner } from '../../components'
 import { BackLink } from '../../components/BackLink.tsx'
+import { lessonGrid } from '../progress/lessonGrid.ts'
 import { ProgressPanel } from '../progress/ProgressPanel.tsx'
 import { usePanelMinimised, usePreference } from '../progress/preferences.ts'
 import { usePageTitle } from '../../pages/usePageTitle.ts'
@@ -170,7 +171,7 @@ export function ActivityPage() {
   // neither, and the activity has the width.
   return (
     <div
-      className={`grid w-full items-start gap-6 lg:gap-8 ${!panelOn ? '' : panelRail ? 'lg:grid-cols-[minmax(0,1fr)_3rem]' : 'lg:grid-cols-[minmax(0,1fr)_19rem]'}`}
+      className={`grid w-full items-start gap-6 lg:gap-8 ${lessonGrid(panelOn, panelRail, false)}`}
     >
       <div className="mx-auto grid w-full max-w-3xl justify-items-start gap-4">
         <BackLink fallback={{ backTo: '/', backLabel: 'Your modules' }} />

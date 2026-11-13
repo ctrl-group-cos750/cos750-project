@@ -32,7 +32,7 @@
 }
 
 .ring[data-ring='3'] {
-  stroke: var(--badge-bronze);
+  stroke: var(--skill-bronze);
   stroke-dasharray: 4 3;
 }
 
@@ -59,14 +59,24 @@
   stroke-width: 2;
 }
 
-.practice {
+/* Practising: a lighter point with the blue edge; secure: solid blue. The ring says which as
+ * well, so the shade is never the only sign. */
+.practising {
+  fill: color-mix(in srgb, var(--color-primary) 35%, var(--color-surface));
+  stroke: var(--color-primary);
+  stroke-width: 2;
+  border: 2px solid var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 35%, var(--color-surface));
+}
+
+.secure {
   fill: var(--color-primary);
   background: var(--color-primary);
 }
 
 .bronze {
-  fill: var(--badge-bronze);
-  background: var(--badge-bronze);
+  fill: var(--skill-bronze);
+  background: var(--skill-bronze);
 }
 
 .gold {

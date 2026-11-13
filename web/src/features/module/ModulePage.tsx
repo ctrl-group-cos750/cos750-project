@@ -24,6 +24,7 @@ import { ApiError } from '../../api/client.ts'
 import { useMediaQuery } from '../activities/pictures/useMediaQuery.ts'
 import { confetti } from '../progress/confetti.ts'
 import { skillsKey } from '../progress/hooks.ts'
+import { lessonGrid } from '../progress/lessonGrid.ts'
 import { ProgressPanel } from '../progress/ProgressPanel.tsx'
 import { usePanelMinimised, usePreference } from '../progress/preferences.ts'
 
@@ -385,9 +386,7 @@ export function ModulePage() {
   return (
     // Nothing in the mastery check celebrates a right answer (#215 review).
     <CelebrationAllowed.Provider value={module.id !== MASTERY_MODULE_ID}>
-      <div
-        className={`grid w-full items-start gap-6 lg:gap-8 ${!panelOn ? '' : panelRail ? 'lg:grid-cols-[minmax(0,1fr)_3rem]' : 'lg:grid-cols-[minmax(0,1fr)_19rem]'}`}
-      >
+      <div className={`grid w-full items-start gap-6 lg:gap-8 ${lessonGrid(panelOn, panelRail)}`}>
         <div className="@container min-w-0">
           <section
             ref={contentRef}

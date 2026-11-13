@@ -8,12 +8,12 @@ import {
   WIDTH,
   labelStyle,
   point,
+  pointKind,
   polygon,
   radarSummary,
   radiusFor,
   ringFor,
 } from './radar.ts'
-import { skillStatus } from './skillStatus.ts'
 import type { Skill } from './skills.api.ts'
 import styles from './SkillRadar.module.css'
 
@@ -33,7 +33,7 @@ export function SkillRadar({ skills }: { skills: Skill[] }) {
   const shape = skills.map((skill, i) => ({
     skill,
     ring: ringFor(skill),
-    tone: skillStatus(skill).tone,
+    kind: pointKind(skill),
     at: point(i, count, radiusFor(ringFor(skill))),
   }))
   const reached = shape.some((s) => s.ring > 0)
@@ -78,7 +78,8 @@ export function SkillRadar({ skills }: { skills: Skill[] }) {
                 cx={s.at.x}
                 cy={s.at.y}
                 r={5}
-                className={`${styles.point} ${styles[s.tone]}`}
+                className={`${styles.point} ${styles[s.kind]}`}
+                data-kind={s.kind}
                 data-objective={s.skill.id}
                 data-ring={s.ring}
               />
@@ -102,11 +103,11 @@ export function SkillRadar({ skills }: { skills: Skill[] }) {
         <span className={styles.legendTitle}>Rings, centre outwards:</span>
         <span>centre: not started</span>
         <span>
-          <i className={`${styles.swatch} ${styles.practice}`} aria-hidden="true" />
+          <i className={`${styles.swatch} ${styles.practising}`} aria-hidden="true" />
           practising
         </span>
         <span>
-          <i className={`${styles.swatch} ${styles.practice}`} aria-hidden="true" />
+          <i className={`${styles.swatch} ${styles.secure}`} aria-hidden="true" />
           secure in practice
         </span>
         <span>

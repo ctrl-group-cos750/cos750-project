@@ -634,7 +634,7 @@ describe('the progress panel: minimised, hidden or off (#214)', () => {
     expect(within(rail).queryByRole('region', { name: 'Skill profile' })).toBeNull()
     expect(localStorage.getItem(`ctrl-academy.${ada.id}.minimised.progressPanel`)).toBe('yes')
     // The lesson gets the width: the page's column for the panel is a narrow rail.
-    expect(rail.parentElement!.className).toContain('lg:grid-cols-[minmax(0,1fr)_3rem]')
+    expect(rail.parentElement!.className).toContain('lg:grid-cols-[minmax(0,48rem)_3rem]')
     await userEvent.click(open)
     expect(await screen.findByRole('region', { name: 'Skill profile' })).toBeInTheDocument()
   })

@@ -47,6 +47,16 @@ export function point(index: number, count: number, radius: number): { x: number
   return { x: CX + radius * Math.sin(angle), y: CY - radius * Math.cos(angle) }
 }
 
+export type PointKind = 'practising' | 'secure' | 'bronze' | 'gold' | 'notYet'
+
+const KINDS: PointKind[] = ['practising', 'practising', 'secure', 'bronze', 'gold']
+
+/** How an objective's point is drawn: a lighter point for practising, solid for secure, bronze
+ * and gold in their colours, and an open point for "not yet". The ring carries the level too. */
+export function pointKind(skill: Skill): PointKind {
+  return skill.result === 'not_yet' ? 'notYet' : KINDS[ringFor(skill)]!
+}
+
 /** The radius an objective's point sits at, in the drawing's units. */
 export function radiusFor(ring: number): number {
   return (RADIUS * ring) / MAX_RING

@@ -2004,9 +2004,9 @@ export interface components {
     }
     /**
      * ModuleMedalOut
-     * @description A module's medal (FR-9.8): `medal` once the module is complete (gold, every activity
-     *     answered right without hint 3 or 4; silver, at least half; bronze, finished), and
-     *     `headingFor`, what the answers so far are on course for. Never counts attempts or time.
+     * @description A module's medal (FR-9.8): `medal` once the module is complete (gold, every activity right
+     *     first time without hint 3 or 4; silver, every activity right without them; bronze, finished),
+     *     and `headingFor`, what the answers so far are on course for. Never counts time or speed.
      *     `objectives` are the learning objectives its activities practise.
      */
     ModuleMedalOut: {
@@ -2014,6 +2014,8 @@ export interface components {
       moduleId: number
       /** Complete */
       complete: boolean
+      /** Firsttime */
+      firstTime: number
       /** Onyourown */
       onYourOwn: number
       /** Answered */
@@ -2320,19 +2322,29 @@ export interface components {
     }
     /**
      * SkillOut
-     * @description One objective on the skill profile (FR-9.7). `correct` of `total` is practice progress:
-     *     the objective's practice items answered correctly. `result` is the mastery result once the
-     *     mastery check (or a review path) has decided it, else null.
+     * @description One objective on the skill profile (FR-9.7). `level` is practice progress in three coarse
+     *     steps (not started, practising, secure: every practice item answered and at least 80% right
+     *     without hint 3 or 4); the counts are the evidence behind it, of `total` practice items.
+     *     `result` is the mastery result once the mastery check (or a review path) has decided it.
      */
     SkillOut: {
       /** Id */
       id: number
       /** Text */
       text: string
+      /** Answered */
+      answered: number
       /** Correct */
       correct: number
+      /** Onyourown */
+      onYourOwn: number
       /** Total */
       total: number
+      /**
+       * Level
+       * @enum {string}
+       */
+      level: 'not_started' | 'practising' | 'secure'
       /** Result */
       result: ('not_attempted' | 'met_independently' | 'met_with_support' | 'not_yet') | null
     }

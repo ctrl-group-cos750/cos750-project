@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.models import HintView, ModuleProgress
 from app.seed import load
-from app.services.skills import medal_for
+from app.services.skills import level_for, medal_for
 
 STUDENT = {"email": "grace@example.com", "password": "Correct horse 1", "displayName": "Grace"}
 RIGHT = {"submitted": {"selected": "a"}}
@@ -145,11 +145,27 @@ def profile(client: TestClient) -> dict[str, Any]:
 
 
 @pytest.mark.parametrize(
-    ("own", "total", "medal"),
-    [(4, 4, "gold"), (3, 4, "silver"), (2, 4, "silver"), (1, 4, "bronze"), (0, 4, "bronze")],
+    ("first", "own", "tested_out", "medal"),
+    [
+        (4, 4, False, "gold"),
+        (3, 4, False, "silver"),
+        (0, 4, False, "silver"),
+        (3, 3, False, "bronze"),
+        (0, 0, False, "bronze"),
+        (0, 0, True, "silver"),  # tested out through the quick check
+        (4, 4, True, "gold"),
+    ],
 )
-def test_the_medal_rule(own: int, total: int, medal: str) -> None:
-    assert medal_for(own, total) == medal
+def test_the_medal_rule(first: int, own: int, tested_out: bool, medal: str) -> None:
+    assert medal_for(4, first, own, tested_out=tested_out) == medal
+
+
+@pytest.mark.parametrize(
+    ("answered", "own", "level"),
+    [(0, 0, "not_started"), (2, 2, "practising"), (5, 3, "practising"), (5, 4, "secure")],
+)
+def test_the_practice_level(answered: int, own: int, level: str) -> None:
+    assert level_for(answered, own, 5) == level
 
 
 def test_the_profile_needs_a_login(client: TestClient, db: Session) -> None:
@@ -167,11 +183,16 @@ def test_practice_progress_counts_right_answers_per_objective(
     assert skills[1] | {"text": ""} == {
         "id": 1,
         "text": "",
+        "answered": 2,
         "correct": 1,
+        "onYourOwn": 1,
         "total": 3,
+        "level": "practising",
         "result": None,
     }
-    assert (skills[2]["correct"], skills[2]["total"]) == (0, 1)
+    assert (skills[2]["level"], skills[2]["total"]) == ("not_started", 1)
+    answer(client, 104)
+    assert {s["id"]: s for s in profile(client)["objectives"]}[2]["level"] == "secure"
 
 
 def test_the_result_appears_once_the_mastery_check_decides_it(
@@ -186,11 +207,8 @@ def test_the_result_appears_once_the_mastery_check_decides_it(
     assert results == {1: "met_independently", 2: "not_yet"}
 
 
-def test_a_medal_needs_the_module_finished_and_follows_hints_not_tries(
-    client: TestClient, db: Session, loaded: None
-) -> None:
+def test_a_medal_needs_the_module_finished(client: TestClient, db: Session, loaded: None) -> None:
     user = log_in(client)
-    answer(client, 101, WRONG)  # a wrong try first doesn't cost the medal
     answer(client, 101)
     answer(client, 102)
     medal = profile(client)["modules"][0]
@@ -203,23 +221,34 @@ def test_a_medal_needs_the_module_finished_and_follows_hints_not_tries(
     assert profile(client)["modules"][0]["medal"] == "gold"
 
 
-def test_hint_3_before_a_right_answer_turns_gold_into_silver(
+def test_a_wrong_first_answer_makes_it_silver(
     client: TestClient, db: Session, loaded: None
 ) -> None:
     user = log_in(client)
-    see_hints(db, user, 101, 3)
+    answer(client, 101, WRONG)
     answer(client, 101)
     answer(client, 102)
     answer(client, 103)
     answer(client, 104)
     complete(db, user, 1)
     medal = profile(client)["modules"][0]
-    assert (medal["medal"], medal["onYourOwn"], medal["total"]) == ("silver", 3, 4)
+    assert (medal["medal"], medal["firstTime"], medal["onYourOwn"]) == ("silver", 3, 4)
 
     see_hints(db, user, 102, 4)
-    see_hints(db, user, 103, 4)
-    # Already answered right without them, so they stay on your own: the medal never goes down.
+    # Already answered right without the hints, so it stays on your own: a medal never goes down.
     assert profile(client)["modules"][0]["medal"] == "silver"
+
+
+def test_hint_3_before_the_only_right_answer_makes_it_bronze(
+    client: TestClient, db: Session, loaded: None
+) -> None:
+    user = log_in(client)
+    see_hints(db, user, 101, 3)
+    for activity in (101, 102, 103, 104):
+        answer(client, activity)
+    complete(db, user, 1)
+    medal = profile(client)["modules"][0]
+    assert (medal["medal"], medal["onYourOwn"], medal["total"]) == ("bronze", 3, 4)
 
 
 def test_a_module_with_nothing_to_mark_has_no_medal(client: TestClient, loaded: None) -> None:

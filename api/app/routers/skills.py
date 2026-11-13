@@ -20,7 +20,14 @@ def get_skills(user: CurrentUser, session: DbSession) -> SkillsOut:
     return SkillsOut(
         objectives=[
             SkillOut(
-                id=s.objective_id, text=s.text, correct=s.correct, total=s.total, result=s.result
+                id=s.objective_id,
+                text=s.text,
+                answered=s.answered,
+                correct=s.correct,
+                on_your_own=s.on_your_own,
+                total=s.total,
+                level=s.level,
+                result=s.result,
             )
             for s in skills(session, user.id)
         ],
@@ -28,6 +35,7 @@ def get_skills(user: CurrentUser, session: DbSession) -> SkillsOut:
             ModuleMedalOut(
                 module_id=m.module_id,
                 complete=m.complete,
+                first_time=m.first_time,
                 on_your_own=m.on_your_own,
                 answered=m.answered,
                 total=m.total,

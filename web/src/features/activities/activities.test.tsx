@@ -938,6 +938,53 @@ describe('the mastery check (#144)', () => {
   })
 })
 
+describe('the warning before hint 3 (review of 13 Nov)', () => {
+  const second: Hint = { level: 2, body: 'Second hint.', hasMore: true, nextCountsAsSupport: true }
+
+  async function warn(assessed?: 'review-path') {
+    const user = userEvent.setup()
+    render(
+      <HintLadder
+        activityId={7}
+        loadHints={() => Promise.resolve([second])}
+        requestHint={vi.fn<(activityId: number) => Promise<Hint>>()}
+        assessed={assessed}
+      />,
+    )
+    await user.click(await screen.findByRole('button', { name: 'Show next hint' }))
+    return screen.getByText(/The next hint gives a lot away/).closest('[role]') ?? document.body
+  }
+
+  it('is about points on practice, which decides no objective', async () => {
+    const warning = await warn()
+    expect(warning).toHaveTextContent('Answer after it and this one earns fewer points.')
+    expect(warning).not.toHaveTextContent(/met with support/)
+  })
+
+  it('says met with support on a review path question that decides the objective', async () => {
+    const warning = await warn('review-path')
+    expect(warning).toHaveTextContent(/this objective counts as met with support/)
+  })
+
+  it('stops a review path question at hint 3 without pointing to the review path', async () => {
+    render(
+      <HintLadder
+        activityId={7}
+        loadHints={() =>
+          Promise.resolve([
+            { ...second, hasMore: false, nextCountsAsSupport: false, level: 3, limitReached: true },
+          ])
+        }
+        requestHint={vi.fn<(activityId: number) => Promise<Hint>>()}
+        assessed="review-path"
+      />,
+    )
+    expect(await screen.findByText('No more hints on this question')).toBeInTheDocument()
+    expect(screen.getByText(/The last hint is the worked answer/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Show next hint' })).not.toBeInTheDocument()
+  })
+})
+
 describe('coming back to an answered activity (#171)', () => {
   const choice = {
     id: 41,

@@ -16,6 +16,17 @@ type HintLadderProps = {
   onLevel?: (level: number) => void
   /** An optional bonus quest: after hint 3 it earns nothing, rather than counting as support. */
   bonus?: boolean
+  /** A question that decides an objective's result: in the mastery check (hints 1 and 2 only) or
+   * a fresh question on a review path (hints 1 to 3). Unset for practice, which decides nothing. */
+  assessed?: 'mastery-check' | 'review-path'
+}
+
+/** What the warning before hint 3 says. Only a question that decides an objective is "met with
+ * support" after it; practice decides nothing, so there it is about points (review of 13 Nov). */
+function supportWarning(bonus: boolean, assessed: HintLadderProps['assessed']) {
+  if (bonus) return 'After it, this quest earns no points or badge. '
+  if (assessed) return 'Answer after it and this objective counts as met with support. '
+  return 'Answer after it and this one earns fewer points. '
 }
 
 /**
@@ -35,6 +46,7 @@ export function HintLadder({
   loadHints = fetchActivityHints,
   onLevel,
   bonus = false,
+  assessed,
 }: HintLadderProps) {
   const [hints, setHints] = useState<readonly Hint[]>([])
   const [error, setError] = useState('')
@@ -117,19 +129,25 @@ export function HintLadder({
       {/* Only while another hint is on offer: once solved, there is no button left to press. */}
       {confirmingSupport && hasMore && (
         <Alert tone="warning" title="The next hint gives a lot away">
-          {bonus
-            ? 'After it, this quest earns no points or badge. '
-            : 'Using it means a later correct answer counts as met with support. '}
+          {supportWarning(bonus, assessed)}
           Choose “Show next hint” again if you want to continue.
         </Alert>
       )}
-      {/* The mastery check gives hints 1 and 2 only (#144). */}
-      {lastHint?.limitReached && !solved && (
-        <Alert tone="info" title="No more hints in the mastery check">
-          Answer as best you can. If this objective comes out “not yet”, your report opens its
-          review path, which teaches it again with every hint.
-        </Alert>
-      )}
+      {/* The mastery check gives hints 1 and 2 only (#144), a review path's fresh question 1 to
+          3 (hint 4 is the worked answer; review of 13 Nov). */}
+      {lastHint?.limitReached &&
+        !solved &&
+        (assessed === 'review-path' ? (
+          <Alert tone="info" title="No more hints on this question">
+            The last hint is the worked answer, so a question that decides your result stops before
+            it. Answer as best you can.
+          </Alert>
+        ) : (
+          <Alert tone="info" title="No more hints in the mastery check">
+            Answer as best you can. If this objective comes out “not yet”, your report opens its
+            review path, which teaches it again with every hint.
+          </Alert>
+        ))}
       {error && <Alert tone="danger">{error}</Alert>}
       {hasMore && (
         <div>

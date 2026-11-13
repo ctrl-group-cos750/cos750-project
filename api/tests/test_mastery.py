@@ -24,6 +24,7 @@ from app.models import (
     Segment,
     User,
 )
+from app.routers.activities import REVIEW_HINT_LIMIT_REACHED, attempts_limiter, hints_limiter
 from app.schemas.activities import FixTheBugSolution, ParsonsSolution
 from app.schemas.graphs import GraphScenarioOut
 from app.seed import FixtureFile, ObjectiveFixture, check_references, load, read_fixtures
@@ -119,6 +120,15 @@ def test_needing_an_answer_given_after_hint_3_or_4_is_with_support() -> None:
 def test_the_worked_solution_on_an_item_that_was_not_needed_is_still_independent() -> None:
     answers = [ans(True, hint=4), ans(True), ans(True), ans(True), ans(True)]
     assert decide(FOUR_OF_FIVE, answers) == "met_independently"
+
+
+def test_an_answer_needing_the_worked_answer_does_not_meet_even_with_support() -> None:
+    """Hint 4 is the worked answer: an answer given after it is the hint's, so it counts as wrong
+    (review of 13 Nov, Critical 1). Hint 3 still gives "met with support"."""
+    answers = [ans(True, hint=4), ans(True), ans(True), ans(True), ans(False)]
+    assert decide(FOUR_OF_FIVE, answers) == "not_yet"
+    trace = Rule(max_wrong=1)
+    assert decide(trace, [ans(True, True, False, True, hint=4)]) == "not_yet"
 
 
 def test_not_meeting_the_rule_even_with_support_is_not_yet() -> None:
@@ -222,6 +232,11 @@ def open_module_6(db: Session, user_id: int) -> None:
 
 def answer(client: TestClient, activity: int, body: dict[str, Any] = RIGHT) -> None:
     assert client.post(f"/api/activities/{activity}/attempts", json=body).status_code == 201
+
+
+def practise(client: TestClient, objective: int) -> None:
+    """Do the review path's practice item, so its fresh items open (review of 13 Nov)."""
+    answer(client, 1001 + 100 * objective)
 
 
 def states(client: TestClient) -> dict[int, str]:
@@ -333,14 +348,14 @@ def test_meeting_objectives_earns_badges_and_ready_for_the_lecture(
     client: TestClient, course: Path, db: Session
 ) -> None:
     user = log_in(client)
-    db.add(HintView(user_id=user, activity_id=603, level=4))
+    db.add(HintView(user_id=user, activity_id=603, level=3))
     db.commit()
     for item in (601, 602, 603):
         answer(client, item)
     held = {(b.badge, b.tier) for b in rewards.badges_of(db, user)}
     # The course has objectives 1 and 2, so those are the ones Ready for the Lecture needs.
     assert held == {("lo1", "gold"), ("lo2", "bronze"), (rewards.READY_FOR_LECTURE, None)}
-    # 601 and 602 alone, 603 after the worked solution; objective 1 alone, objective 2 with support.
+    # 601 and 602 alone, 603 after hint 3; objective 1 alone, objective 2 with support.
     assert rewards.total_points(db, user) == 10 + 10 + 4 + 30 + 15
 
 
@@ -725,6 +740,11 @@ def test_not_yet_opens_the_review_path(client: TestClient, course: Path) -> None
         ("activity", 1202, "mastery", False),
     ]
     assert path["steps"][0]["body"] == "Like this."
+    # The fresh item waits for the practice (review of 13 Nov, Critical 1).
+    assert [s["locked"] for s in path["steps"]] == [False, False, True]
+    assert client.get("/api/activities/1202").status_code == 403
+    practise(client, 2)
+    assert [s["locked"] for s in client.get("/api/me/review/2").json()["steps"]] == [False] * 3
     assert client.get("/api/activities/1202").status_code == 200
 
 
@@ -744,6 +764,7 @@ def test_the_fresh_items_decide_the_result_and_the_student_comes_back_stronger(
     fail_objective_2(client)
     assert client.get("/api/me/report").json()["ready"] is False
     answer(client, 1201, WRONG)  # practice: getting it wrong costs nothing
+    answer(client, 1201, WRONG)  # and two tries are enough to move on (FR-2.7)
     answer(client, 1202)
     report = client.get("/api/me/report").json()
     assert states(client) == {1: "met_independently", 2: "met_independently"}
@@ -769,6 +790,7 @@ def test_all_fresh_items_must_be_answered_before_they_decide(
     answer(client, 601)
     answer(client, 602, WRONG)
     answer(client, 603)
+    practise(client, 1)
     answer(client, 1102)
     assert states(client)[1] == "not_yet"  # module 6's result stands until 1103 is answered
     assert client.get("/api/me/report").json()["objectives"][0]["review"] == {
@@ -782,6 +804,7 @@ def test_all_fresh_items_must_be_answered_before_they_decide(
 def test_still_not_yet_after_the_path(client: TestClient, course: Path) -> None:
     log_in(client)
     fail_objective_2(client)
+    practise(client, 2)
     answer(client, 1202, WRONG)
     answer(client, 1202, RIGHT)  # only the first answer to a fresh item counts too
     report = client.get("/api/me/report").json()
@@ -794,8 +817,35 @@ def test_hint_3_on_a_fresh_item_makes_it_met_with_support(
 ) -> None:
     user = log_in(client)
     fail_objective_2(client)
+    practise(client, 2)
     db.add(HintView(user_id=user, activity_id=1202, level=3))
     db.commit()
+    answer(client, 1202)
+    assert states(client)[2] == "met_with_support"
+
+
+def test_a_fresh_item_gives_three_hints_at_most(
+    client: TestClient, tmp_path: Path, db: Session
+) -> None:
+    """Review of 13 Nov, Critical 1: opening hint 4 (the worked answer) on every path's fresh items
+    and submitting what it printed made a student Ready for the lecture. A fresh item now stops at
+    hint 3, as the mastery check stops at hint 2; hint 3 still counts as "met with support"."""
+    course = small_course()
+    for activity in course["activities"]:
+        if activity["id"] == 1202:
+            activity["hints"] = ladder()
+    (tmp_path / "course.json").write_text(json.dumps(course), encoding="utf-8")
+    load(db, tmp_path)
+    log_in(client)
+    fail_objective_2(client)
+    practise(client, 2)
+    assert client.get("/api/activities/1202").json()["reviewCheck"] is True
+    assert client.get("/api/activities/1201").json()["reviewCheck"] is False
+    levels = [client.post("/api/activities/1202/hints").json() for _ in range(3)]
+    assert [(h["level"], h["limitReached"]) for h in levels] == [(1, False), (2, False), (3, True)]
+    assert levels[1]["nextCountsAsSupport"] is True  # the warning before hint 3 still shows
+    fourth = client.post("/api/activities/1202/hints")
+    assert (fourth.status_code, fourth.json()["detail"]) == (409, REVIEW_HINT_LIMIT_REACHED)
     answer(client, 1202)
     assert states(client)[2] == "met_with_support"
 
@@ -833,13 +883,45 @@ def test_the_committed_review_paths_can_take_a_student_to_ready(
         answer(client, item.id, {"submitted": wrong_submission(item)})
     assert set(states(client).values()) == {"not_yet"}
     for objective in range(1, 9):
+        # The practice first (review of 13 Nov): the fresh items open once it is done. More
+        # answers than one student gives in a minute, so the rate limit is reset (NFR-S6).
+        attempts_limiter.reset()
         for step in client.get(f"/api/me/review/{objective}").json()["steps"]:
-            if step["purpose"] == "mastery":
+            if step["purpose"] is not None:
                 item = db.get_one(Activity, step["activityId"])
                 answer(client, item.id, {"submitted": correct_submission(item)})
     report = client.get("/api/me/report").json()
     assert set(states(client).values()) == {"met_independently"}
     assert report["ready"] is True
+
+
+def test_no_committed_fresh_item_gives_its_worked_answer(client: TestClient, db: Session) -> None:
+    """Review of 13 Nov, Critical 1, on the real course: every objective "not yet", then on each
+    path hint after hint on every fresh item. None gives hint 4, the worked answer, so answering
+    what the hints print can't make a student Ready without support."""
+    load(db)
+    open_module_6(db, log_in(client))
+    check = db.scalars(
+        select(Activity).where(Activity.module_id == 6, Activity.purpose == "mastery")
+    ).all()
+    for item in check:
+        answer(client, item.id, {"submitted": wrong_submission(item)})
+    for objective in range(1, 9):
+        attempts_limiter.reset()
+        hints_limiter.reset()
+        steps = client.get(f"/api/me/review/{objective}").json()["steps"]
+        for step in steps:
+            if step["purpose"] == "review":
+                item = db.get_one(Activity, step["activityId"])
+                answer(client, item.id, {"submitted": correct_submission(item)})
+        for step in steps:
+            if step["purpose"] == "mastery":
+                levels = []
+                while (
+                    hint := client.post(f"/api/activities/{step['activityId']}/hints")
+                ).is_success:
+                    levels.append(hint.json()["level"])
+                assert max(levels, default=0) <= 3, step["activityId"]
 
 
 # --- The mastery check's own rules (#144) ----------------------------------------------------------
@@ -910,6 +992,7 @@ def test_practice_and_review_items_are_not_in_the_check(client: TestClient, cour
     assert (practice["correct"], practice["withheld"]) == (True, False)
     assert client.get("/api/activities/301").json()["masteryCheck"] is False
     fail_objective_2(client)
+    practise(client, 2)
     fresh = client.post("/api/activities/1202/attempts", json=WRONG).json()
     assert (fresh["correct"], fresh["withheld"]) == (False, False)
 

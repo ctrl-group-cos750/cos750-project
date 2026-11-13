@@ -51,8 +51,9 @@ export function CheckpointQuestion(props: CheckpointQuestionProps) {
   }
 
   async function handleHint() {
-    // Hint 3 makes this objective count as "met with support": say so before it (ID doc §7.4).
-    // After that, hint 4 changes nothing, so no second warning.
+    // Hint 3 gives a lot away: say so before it (ID doc §7.4). A checkpoint is practice, which
+    // decides no objective, so the cost is in points (review of 13 Nov). After that, hint 4
+    // changes nothing, so no second warning.
     if (lastHint?.nextCountsAsSupport && lastHint.level < 3 && !confirmingSupport) {
       setConfirmingSupport(true)
       return
@@ -114,8 +115,8 @@ export function CheckpointQuestion(props: CheckpointQuestionProps) {
             <Alert>
               <AlertTitle>The next hint gives a lot away</AlertTitle>
               <AlertDescription>
-                If you use it, this objective counts as &quot;met with support&quot; instead of
-                &quot;met independently&quot;. Press &quot;Show next hint&quot; again to see it.
+                Answer after it and this question earns fewer points. Press &quot;Show next
+                hint&quot; again to see it.
               </AlertDescription>
             </Alert>
           )}

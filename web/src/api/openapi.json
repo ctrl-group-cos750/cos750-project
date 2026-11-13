@@ -381,7 +381,7 @@
           "activities"
         ],
         "summary": "Reveal Hint",
-        "description": "Reveal this student's next hint level, one at a time, and record it (FR-4.4, FR-4.5).\n\nNo body. Each call returns the next level (1, then 2, …); once every level has been shown,\nor once the student has answered correctly, it is 409. When `nextCountsAsSupport` is true,\nwarn the student before calling again: a correct answer after hint 3 or 4 counts as \"met\nwith support\" (ID document §7.4).\n\nA module 6 mastery item gives hints 1 and 2 only (#144): asking for a third is 409, and the\nsecond says `limitReached`. Once the item is answered it is 409 too, with a message that\ndoesn't say whether the answer was right.\n\n403 and 404 as for GET. 429 with `Retry-After` past 30 reveals a minute from one student. Two\nrequests sent at once reveal two levels in turn, never the same level twice.",
+        "description": "Reveal this student's next hint level, one at a time, and record it (FR-4.4, FR-4.5).\n\nNo body. Each call returns the next level (1, then 2, …); once every level has been shown,\nor once the student has answered correctly, it is 409. When `nextCountsAsSupport` is true,\nwarn the student before calling again: a correct answer after hint 3 or 4 counts as \"met\nwith support\" (ID document §7.4).\n\nA module 6 mastery item gives hints 1 and 2 only (#144): asking for a third is 409, and the\nsecond says `limitReached`; once the item is answered it is 409 too, with a message that\ndoesn't say whether the answer was right. A fresh item on a review path gives hints 1 to 3\nonly, the same way: hint 4 is the worked answer, and the item decides the result (review of\n13 Nov).\n\n403 and 404 as for GET. 429 with `Retry-After` past 30 reveals a minute from one student. Two\nrequests sent at once reveal two levels in turn, never the same level twice.",
         "operationId": "reveal_hint_api_activities__activity_id__hints_post",
         "parameters": [
           {
@@ -827,7 +827,7 @@
           "mastery"
         ],
         "summary": "Get Review Path",
-        "description": "The objective's review path: its steps in order, and which the student has answered\n(FR-7.5). 404 if the objective has no path; 403 until module 6 marks it \"not yet\", so the\nfresh items stay unseen until the student needs them. Staff may always open it, to preview.",
+        "description": "The objective's review path: its steps in order, and which the student has answered\n(FR-7.5). 404 if the objective has no path; 403 until module 6 marks it \"not yet\", so the\nfresh items stay unseen until the student needs them. A fresh item is `locked` until the\npath's practice is done (review of 13 Nov). Staff may always open it, to preview.",
         "operationId": "get_review_path_api_me_review__objective_id__get",
         "parameters": [
           {
@@ -4028,6 +4028,11 @@
             "title": "Answered",
             "default": false
           },
+          "reviewCheck": {
+            "type": "boolean",
+            "title": "Reviewcheck",
+            "default": false
+          },
           "lastAttempt": {
             "anyOf": [
               {
@@ -5686,7 +5691,7 @@
           "nextCountsAsSupport"
         ],
         "title": "HintOut",
-        "description": "The hint just revealed. `next_counts_as_support` is true when the *next* hint would be level\n3 or 4: show the \"this counts as met with support\" warning before asking for it (ID doc §7.4)."
+        "description": "The hint just revealed. `next_counts_as_support` is true when the *next* hint would be level\n3 or 4: warn before asking for it (ID doc §7.4). On an item that decides an objective an\nanswer after it counts as \"met with support\"; on practice it earns fewer points."
       },
       "Insights": {
         "properties": {
@@ -6801,6 +6806,11 @@
           "answered": {
             "type": "boolean",
             "title": "Answered"
+          },
+          "locked": {
+            "type": "boolean",
+            "title": "Locked",
+            "default": false
           }
         },
         "additionalProperties": false,

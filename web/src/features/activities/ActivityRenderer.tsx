@@ -195,6 +195,7 @@ export function ActivityRenderer(props: ActivityRendererProps) {
       loadHints={props.loadHints}
       onLevel={onLevel}
       bonus={props.bonus}
+      assessed={check ? 'mastery-check' : props.activity.reviewCheck ? 'review-path' : undefined}
     />
   )
   const title = props.showTitle !== false && (

@@ -15,6 +15,7 @@ from app.schemas.mastery import (
     ReviewProgressOut,
     ReviewStepOut,
 )
+from app.services.access import review_practice_done
 from app.services.mastery import Tally, evaluate, is_ready, review_items
 
 router = APIRouter(prefix="/api/me", tags=["mastery"])
@@ -58,7 +59,8 @@ def get_report(user: CurrentUser, session: DbSession) -> MasteryReportOut:
 def get_review_path(objective_id: RowId, user: CurrentUser, session: DbSession) -> ReviewPathOut:
     """The objective's review path: its steps in order, and which the student has answered
     (FR-7.5). 404 if the objective has no path; 403 until module 6 marks it "not yet", so the
-    fresh items stay unseen until the student needs them. Staff may always open it, to preview."""
+    fresh items stay unseen until the student needs them. A fresh item is `locked` until the
+    path's practice is done (review of 13 Nov). Staff may always open it, to preview."""
     segments = session.scalars(
         select(Segment)
         .where(Segment.review_objective_id == objective_id)
@@ -93,6 +95,8 @@ def get_review_path(objective_id: RowId, user: CurrentUser, session: DbSession) 
             )
         )
     )
+    # Fresh items open once the practice is done (app/services/access.py, review of 13 Nov).
+    practice_first = not user.is_staff and not review_practice_done(session, user.id, objective_id)
     return ReviewPathOut(
         objective_id=objective_id,
         objective_text=outcome.objective.text,
@@ -112,6 +116,7 @@ def get_review_path(objective_id: RowId, user: CurrentUser, session: DbSession) 
                     else None
                 ),
                 answered=s.activity_id in answered,
+                locked=practice_first and purposes.get(s.activity_id or 0) == "mastery",
             )
             for s in segments
         ],

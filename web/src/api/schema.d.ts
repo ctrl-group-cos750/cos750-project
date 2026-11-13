@@ -171,8 +171,10 @@ export interface paths {
      *     with support" (ID document §7.4).
      *
      *     A module 6 mastery item gives hints 1 and 2 only (#144): asking for a third is 409, and the
-     *     second says `limitReached`. Once the item is answered it is 409 too, with a message that
-     *     doesn't say whether the answer was right.
+     *     second says `limitReached`; once the item is answered it is 409 too, with a message that
+     *     doesn't say whether the answer was right. A fresh item on a review path gives hints 1 to 3
+     *     only, the same way: hint 4 is the worked answer, and the item decides the result (review of
+     *     13 Nov).
      *
      *     403 and 404 as for GET. 429 with `Retry-After` past 30 reveals a minute from one student. Two
      *     requests sent at once reveal two levels in turn, never the same level twice.
@@ -349,7 +351,8 @@ export interface paths {
      * Get Review Path
      * @description The objective's review path: its steps in order, and which the student has answered
      *     (FR-7.5). 404 if the objective has no path; 403 until module 6 marks it "not yet", so the
-     *     fresh items stay unseen until the student needs them. Staff may always open it, to preview.
+     *     fresh items stay unseen until the student needs them. A fresh item is `locked` until the
+     *     path's practice is done (review of 13 Nov). Staff may always open it, to preview.
      */
     get: operations['get_review_path_api_me_review__objective_id__get']
     put?: never
@@ -1325,6 +1328,11 @@ export interface components {
        * @default false
        */
       answered: boolean
+      /**
+       * Reviewcheck
+       * @default false
+       */
+      reviewCheck: boolean
       lastAttempt?: components['schemas']['LastAttemptOut'] | null
     }
     /**
@@ -1953,7 +1961,8 @@ export interface components {
     /**
      * HintOut
      * @description The hint just revealed. `next_counts_as_support` is true when the *next* hint would be level
-     *     3 or 4: show the "this counts as met with support" warning before asking for it (ID doc §7.4).
+     *     3 or 4: warn before asking for it (ID doc §7.4). On an item that decides an objective an
+     *     answer after it counts as "met with support"; on practice it earns fewer points.
      */
     HintOut: {
       /** Level */
@@ -2465,6 +2474,11 @@ export interface components {
       purpose: ('review' | 'mastery') | null
       /** Answered */
       answered: boolean
+      /**
+       * Locked
+       * @default false
+       */
+      locked: boolean
     }
     /**
      * RewardsOut

@@ -41,6 +41,8 @@ export type ReviewStep = {
   activityId: number | null
   purpose: 'review' | 'mastery' | null
   answered: boolean
+  /** A fresh question that opens once the path's practice is done (review of 13 Nov). */
+  locked?: boolean
 }
 
 export type ReviewPath = {

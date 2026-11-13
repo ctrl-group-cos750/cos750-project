@@ -134,7 +134,7 @@ Successful performance means meeting a clear criterion for each objective. An ef
 
 We judge each objective separately instead of giving one overall mark. A student may do well on learning objectives 1 to 4 but fail learning objective 6. One overall mark would hide this problem. Separate results show exactly what to review. This fits mastery learning, where students show that they have learned one step before they move on. A meta-analysis found that mastery learning programmes improved student achievement [12].
 
-Each objective ends in one of three states. "Met independently" means the student met the criterion without needing hint level 3 or 4. "Met with support" means the student met the criterion after using one of those levels. "Not yet" means the student did not meet the criterion. For example, a student who needs the worked solution to write BFS is shown as "Met with support" for objective 6. This separates "can do" from "can do alone". The student sees both. This honest picture helps students decide how much more practice they need.
+Each objective ends in one of three states. "Met independently" means the student met the criterion without needing hint level 3 or 4. "Met with support" means the student met the criterion after using one of those levels. "Not yet" means the student did not meet the criterion. For example, a student who needs the third hint, which gives most of the code, to write BFS is shown as "Met with support" for objective 6. An answer copied from the fourth hint, the worked answer, is not the student's own, so it never meets an objective: on the items that decide a result the hints stop before it (Section 7.4). This separates "can do" from "can do alone". The student sees both. This honest picture helps students decide how much more practice they need.
 
 A student is ready for the lecture when no objective is marked "Not yet". The student does not need every objective to be "Met independently". The lecture will deepen the work. A student with a "Not yet" result is sent to a review path, which Section 7 describes. This meets the requirement that the application gives extra scaffolding to students who need it.
 
@@ -606,7 +606,7 @@ Every activity offers a four-level hint ladder. Hints are shown one level at a t
 3. Partial solution: shows part of the answer, such as the next state of the queue or one key line of code.
 4. Worked solution: shows the full answer with an explanation of each step. On a graph question in module 1 it also offers the correct graph (#155). Mastery items never show a correct graph.
 
-Before level 3, the application warns the student that using it will mark the objective as “Met with support”. This keeps the student in control and keeps the result honest (Section 3.2). In the mastery check (module 6) hints stop at level 2, because levels 3 and 4 give the answer away. A student who needs the worked solution there goes to the objective's review path, where "Met with support" can still be earned (#144).
+Before level 3, the application warns the student what it costs. On a question that decides an objective it says that an answer after it counts as “Met with support”; on practice, which decides nothing, it says that the question then earns fewer points. This keeps the student in control and keeps the result honest (Section 3.2). In the mastery check (module 6) hints stop at level 2, because levels 3 and 4 give the answer away. A student who needs more help there goes to the objective's review path, where the practice has every hint and "Met with support" can still be earned on its fresh items (#144). Those fresh items stop at level 3: level 4 is the worked answer, and a reviewer showed that a student who answered nothing in module 6 could reach "ready for the lecture" by opening level 4 on every fresh item and typing in what it printed (review of 13 November).
 
 Support also fades through the lesson [26]. Modules 1 to 3 start with worked examples. Module 4 moves from a Parsons problem, to filling in missing lines, to a version with most of the lines left blank. Module 5 starts with a worked debugging example, then gives faulty code to fix with less help (#189). Because guidance that helps beginners can slow down stronger students [10], a student who passes a module's quick check can skip the whole module (SE document FR-8.2, #214), rather than one worked example at a time.
 
@@ -616,7 +616,7 @@ The examination specification requires an assessment that gives struggling stude
 
 1. A worked example, different from the module's, that teaches the objective again step by step.
 2. Practice activities on that objective, of the same kinds as its mastery items (a trace for objective 5, a Parsons problem and a fill-in for objective 6, fix-the-bug and choose-tests for objective 7), with the full hint ladder (#148).
-3. Fresh mastery items for that objective only.
+3. Fresh mastery items for that objective only. They open once the practice is done (each practice item answered right, answered after its last hint, or answered twice, as in a module), so the path teaches before it tests, and they give hints 1 to 3 only.
 
 The objective’s result updates when the student finishes the path. The student does not repeat the whole application, and objectives already met are not tested again. Figure 1 shows the path.
 

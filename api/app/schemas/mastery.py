@@ -48,6 +48,9 @@ class ReviewStepOut(ApiModel):
     activity_id: int | None
     purpose: Literal["review", "mastery"] | None
     answered: bool
+    # A fresh item that waits for the path's practice to be done (review of 13 Nov): shown, but
+    # not opened yet. Never for staff, who preview everything.
+    locked: bool = False
 
 
 class ReviewPathOut(ApiModel):

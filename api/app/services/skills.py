@@ -7,8 +7,13 @@ shows practice progress as one of three coarse levels, not a percentage of a han
 
 - **not started**: none of the objective's practice items answered yet,
 - **practising**: some answered,
-- **secure**: every one answered, and at least 80% of them right without hint 3 or 4 (the
+- **secure**: every one answered, and at least 80% of them right on your own (below; the
   same line as the ID document's typical criterion, "at least 4 of 5").
+
+**On your own** is real work under the evidence rule every reward shares (FR-9.6,
+`rewards.real_work_on`, the same call module points use, so the two can't drift apart): the
+student's first attempt ever at the question was right, before hint 3 or 4 in any round. A right
+answer after a wrong one never counts, and a restart doesn't make a new first attempt.
 
 The counts behind the level are sent too, for the profile to show on request. Practice items are
 the module activities tagged with the objective whose purpose is practice or retrieval, that every
@@ -23,12 +28,15 @@ review path) has given the objective a result, `result` carries it, and the prof
 never for effort or speed. Each activity the module asks every student to answer (as above;
 module 0's diagnostic finds gaps rather than marking, so it isn't one) is:
 
-- *first time* if the student's first answer to it was right without hint 3 or 4,
-- *on your own* if some answer to it was right without hint 3 or 4 (FR-7.2 and FR-9.2's line).
+- *on your own* if the student's first answer to it was right, before hint 3 or 4 (above),
+- *first time* if it was also given before any hint at all.
+
+Under the evidence rule a retry never counts, so "first time" can't mean "not after a wrong
+answer" (that is every activity on your own); it means without a hint.
 
 Then (`medal_for`, the one place the rule lives):
 
-- **gold**: every activity right first time,
+- **gold**: every activity right first time, without a hint,
 - **silver**: every activity right on your own,
 - **bronze**: the module finished with at least one activity right on your own,
 - **none**: the module finished without one (every answer wrong, moved on after two tries): the
@@ -55,7 +63,7 @@ from sqlalchemy.orm import Session
 from app.models import Activity, Attempt, Checkpoint, Module, ModuleProgress, Segment
 from app.services import quick_check
 from app.services.mastery import MASTERY_MODULE, State, evaluate
-from app.services.rewards import SUPPORT_LEVEL
+from app.services.rewards import answer_given_away, first_tries, real_work_on
 
 Medal = Literal["gold", "silver", "bronze"]
 
@@ -75,7 +83,7 @@ class Skill:
     text: str
     answered: int  # practice items answered at all
     correct: int  # answered right at some point
-    on_your_own: int  # answered right without hint 3 or 4
+    on_your_own: int  # answered right on your own: the first attempt, before hint 3 or 4
     total: int
     level: Level
     result: State | None  # None until the mastery check (or a review path) decides it
@@ -85,8 +93,8 @@ class Skill:
 class ModuleMedal:
     module_id: int
     complete: bool
-    first_time: int  # activities whose first answer was right without hint 3 or 4
-    on_your_own: int  # activities answered right without hint 3 or 4
+    first_time: int  # activities whose first answer was right before any hint
+    on_your_own: int  # activities whose first answer was right before hint 3 or 4
     answered: int  # activities answered at all
     total: int
     medal: Medal | None  # set once the module is complete
@@ -106,9 +114,9 @@ def level_for(answered: int, on_your_own: int, total: int) -> Level:
 def medal_for(
     total: int, first_time: int, on_your_own: int, *, tested_out: bool = False
 ) -> Medal | None:
-    """The medal for a finished module with `total` activities: gold if every one was right first
-    time without hint 3 or 4, silver if every one was right without them, bronze if at least one
-    was, else none. A module passed by testing out (`tested_out`) earns silver, or better if its
+    """The medal for a finished module with `total` activities: gold if every one's first answer
+    was right before any hint, silver if every one's was right before hint 3 or 4 (on your own),
+    bronze if at least one's was, else none. A module passed by testing out (`tested_out`) earns silver, or better if its
     activities earn it."""
     if total > 0 and first_time >= total:
         return "gold"
@@ -152,23 +160,31 @@ class _Answers:
 
 
 def _answers(session: Session, user_id: int, ids: Collection[int]) -> _Answers:
-    """Of these activities: those answered at all, right at some point, right without hint 3 or
-    4, and right without them at the first answer."""
+    """Of these activities: those answered at all, right at some point, right on your own (real
+    work, `rewards.real_work_on`: the first attempt ever, right, before hint 3 or 4 in any round,
+    the line module points use), and right first time (that, before any hint)."""
     if not ids:
         return _Answers(set(), set(), set(), set())
     rows = session.execute(
-        select(Attempt.activity_id, Attempt.correct, Attempt.hint_level)
+        select(Attempt.activity_id, Attempt.correct)
         .where(Attempt.user_id == user_id, Attempt.activity_id.in_(ids))
         .order_by(Attempt.id)
     ).all()
-    first: dict[int, bool] = {}
-    for activity, correct, hint in rows:
-        first.setdefault(activity, bool(correct) and hint < SUPPORT_LEVEL)
+    on_own = real_work_on(session, user_id, ids)
+    firsts = session.scalars(
+        select(Attempt).where(Attempt.id.in_(first_tries(session, user_id, list(on_own))))
+    )
+    first_time = {
+        a.activity_id
+        for a in firsts
+        if a.hint_level == 0
+        and not answer_given_away(session, user_id, a.activity_id, before=a.id, level=1)
+    }
     return _Answers(
-        answered=set(first),
-        right={a for a, correct, _ in rows if correct},
-        on_own={a for a, correct, hint in rows if correct and hint < SUPPORT_LEVEL},
-        first_time={a for a, ok in first.items() if ok},
+        answered={a for a, _ in rows},
+        right={a for a, correct in rows if correct},
+        on_own=on_own,
+        first_time=first_time,
     )
 
 

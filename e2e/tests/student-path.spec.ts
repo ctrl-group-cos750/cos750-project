@@ -191,7 +191,7 @@ test('module 1: two wrong answers and the student may move on, marked to look at
   await page.reload()
   await answerActivity(page, segmentRegion(page, segment.title), a, 'wrong')
   await expect(status).toHaveText(
-    'You can move on: this one is marked to look at again. It earns no points now that the first answer was wrong, but answer it right later and it counts towards your medal.',
+    'You can move on: this one is marked to look at again. It earns no points or medal now that the first answer was wrong; answering it right later still helps you learn it.',
   )
   await expect(next).not.toHaveAttribute('aria-disabled', 'true')
   await next.click()

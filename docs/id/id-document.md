@@ -504,7 +504,7 @@ From the ID side, we confirm the default points rules in the SE document (FR-9, 
 Pilot testers said the course felt "like doing a test, with no motivating boosts" (13 November, #214). We added four things, each tied to learning rather than to time or speed, and kept them grown-up for university students:
 
 - **A skill profile** on the module map, the report and a progress panel beside each lesson: the eight objectives, each *not started*, *practising* or *secure* in practice, then gold, bronze or *not yet* from the mastery check. Each row opens to the evidence behind it, so it never rests on a percentage of a few answers. This is competence made visible (Self-Determination Theory [43]) and ARCS confidence: the student sees where they stand before the check.
-- **Module medals** for mastery, with the rule shown beside them: bronze for finishing, silver when every activity was right without hint 3 or 4, gold when every one was also right first time.
+- **Module medals** for mastery, with the rule shown beside them: bronze for finishing, silver when every first answer was right without hint 3 or 4, gold when every one was also right without a hint. Like points, a right answer after a wrong one counts for no medal.
 - **A success moment** on a right answer: the item's explanation first, a drawn tick, a short calm line and a word on progress, and the points earned. Satisfaction in ARCS terms; specific feedback rather than a bare "Correct".
 - **Confetti**: a short burst for a right answer and a fuller one for a finished module or being ready for the lecture. None in the mastery check, where results are withheld, and none under reduced motion.
 

@@ -344,7 +344,7 @@ describe('the skill profile', () => {
     expect(row.querySelector('details')).toHaveAttribute('open')
     expect(row).toHaveTextContent('Objective 5 in full.')
     expect(row).toHaveTextContent(
-      '3 of 4 practice questions answered, 2 right without hint 3 or 4.',
+      '3 of 4 practice questions answered, 2 right first time, without hint 3 or 4.',
     )
     expect(row).not.toHaveTextContent('%')
   })
@@ -402,7 +402,7 @@ describe('the module map', () => {
     expect(await screen.findByRole('heading', { name: 'Skill profile' })).toBeInTheDocument()
     expect(
       await screen.findByRole('img', {
-        name: 'Module 3: Gold medal: every activity right first time, without hint 3 or 4',
+        name: 'Module 3: Gold medal: every first answer right, without a hint',
       }),
     ).toBeInTheDocument()
   })

@@ -576,9 +576,7 @@ def test_one_slip_in_the_current_vertex_column_costs_one_row(file: str, activity
                 continue
             slipped = [dict(r) for r in rows]
             slipped[i] = {**row, "visited_vertex": vertex}
-            result = checking.check_trace(
-                config, TraceSubmission.model_validate({"rows": slipped})
-            )
+            result = checking.check_trace(config, TraceSubmission.model_validate({"rows": slipped}))
             wrong = [p.ref for p in result.parts if not p.correct]
             assert wrong == [i], (activity_id, i, vertex, wrong)
             assert objective_5.met(len(result.parts) - 1, len(result.parts))

@@ -9,7 +9,8 @@ Medal = Literal["gold", "silver", "bronze"]
 class SkillOut(ApiModel):
     """One objective on the skill profile (FR-9.7). `level` is practice progress in three coarse
     steps (not started, practising, secure: every practice item answered and at least 80% right
-    without hint 3 or 4); the counts are the evidence behind it, of `total` practice items.
+    on your own, the first answer right before hint 3 or 4); the counts are the evidence behind
+    it, of `total` practice items.
     `result` is the mastery result once the mastery check (or a review path) has decided it."""
 
     id: int
@@ -23,8 +24,8 @@ class SkillOut(ApiModel):
 
 
 class ModuleMedalOut(ApiModel):
-    """A module's medal (FR-9.8): `medal` once the module is complete (gold, every activity right
-    first time without hint 3 or 4; silver, every activity right without them; bronze, finished),
+    """A module's medal (FR-9.8): `medal` once the module is complete (gold, every first answer
+    right without a hint; silver, every first answer right without hint 3 or 4; bronze, finished),
     and `headingFor`, what the answers so far are on course for. Never counts time or speed.
     `objectives` are the learning objectives its activities practise."""
 

@@ -1064,7 +1064,7 @@
         ]
       },
       "solution": {
-        "explanation": "Correct. The stations are the vertices, and each stretch of line, which joins two neighbouring stations, is an edge. Trains run along it in both directions, so the connection works both ways: undirected. A train moving from one station to the next doesn't make the edge one-way.",
+        "explanation": "The stations are the vertices, and each stretch of line, which joins two neighbouring stations, is an edge. Trains run along it in both directions, so the connection works both ways: undirected. A train moving from one station to the next doesn't make the edge one-way.",
         "correct": "c",
         "feedback": {
           "a": "Not quite. Trains do run both ways, but that swaps them. A stretch of line connects two stations, so the stretch of line is the edge and the stations are the vertices. Ask which of the two kinds of thing connects two of the other kind: that is the edge.",
@@ -1125,7 +1125,7 @@
         ]
       },
       "solution": {
-        "explanation": "Correct. The accounts are the vertices and each follow is an edge joining two of them. A follow goes from the follower to the account followed, and the other account needn't follow back, so the edges are arrows: directed. Two accounts that follow each other are two arrows, one each way.",
+        "explanation": "The accounts are the vertices and each follow is an edge joining two of them. A follow goes from the follower to the account followed, and the other account needn't follow back, so the edges are arrows: directed. Two accounts that follow each other are two arrows, one each way.",
         "correct": "a",
         "feedback": {
           "b": "Not quite. The accounts and follows are right, but a follow can go one way: Thandi follows Sipho, and Sipho doesn't follow her. A connection that can go one way is an arrow. Check whether the connection always works both ways.",
@@ -1186,7 +1186,7 @@
         ]
       },
       "solution": {
-        "explanation": "Correct. The pages are the vertices, and each link is an edge from the page it sits on to the page it opens. The page it opens needn't link back, so each edge is an arrow: directed.",
+        "explanation": "The pages are the vertices, and each link is an edge from the page it sits on to the page it opens. The page it opens needn't link back, so each edge is an arrow: directed.",
         "correct": "e",
         "feedback": {
           "a": "Not quite. The pages and links are right, but a link goes one way: from the page it sits on to the page it opens, and that page needn't link back. Check whether a link on one page gives you a way back from the other.",
@@ -1247,7 +1247,7 @@
         ]
       },
       "solution": {
-        "explanation": "Correct. The classmates are the vertices and each handshake is an edge joining two of them. Could a handshake happen one way only? No: if Lerato shook hands with Ayo, Ayo shook hands with Lerato. So each handshake is one plain line: undirected. A follow can go one way, so even a mutual follow is two arrows that both happen to exist.",
+        "explanation": "The classmates are the vertices and each handshake is an edge joining two of them. Could a handshake happen one way only? No: if Lerato shook hands with Ayo, Ayo shook hands with Lerato. So each handshake is one plain line: undirected. A follow can go one way, so even a mutual follow is two arrows that both happen to exist.",
         "correct": "b",
         "feedback": {
           "a": "Not quite. That swaps them. A handshake connects two classmates, so the handshake is the edge and the classmates are the vertices. Ask which of the two kinds of thing connects two of the other kind: that is the edge.",

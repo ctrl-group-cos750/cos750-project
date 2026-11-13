@@ -16,10 +16,27 @@ const stateMarker: Record<VertexState, string> = {
   visited: '✓',
 }
 
-function graphLabel(input: { scenario: BfsScenario; frame: BfsFrame }): string {
-  const current = input.frame.current ?? 'none'
-  const queue = input.frame.queue.join(', ') || 'empty'
-  return `${input.scenario.title}. Current vertex: ${current}. Queue: ${queue}.`
+/** The graph in words for a screen reader (WCAG 1.1.1): its vertices and edges, so a student
+ * can work out neighbours, then where BFS is: current vertex, queue and visited set. */
+export function graphLabel(input: { scenario: BfsScenario; frame: BfsFrame }): string {
+  const { scenario, frame } = input
+  const label = new Map(scenario.vertices.map((v) => [v.id, v.label]))
+  const name = (id: string) => label.get(id) ?? id
+  const join = scenario.directed ? ' to ' : '–'
+  const edges =
+    scenario.edges
+      .filter((e) => label.has(e.from) && label.has(e.to))
+      .map((e) => `${name(e.from)}${join}${name(e.to)}`)
+      .join(', ') || 'none'
+  const list = (ids: readonly string[]) => ids.map(name).join(', ') || 'empty'
+  return [
+    `${scenario.title}, a ${scenario.directed ? 'directed' : 'undirected'} graph`,
+    `Vertices: ${list(scenario.vertices.map((v) => v.id))}`,
+    `Edges: ${edges}`,
+    `Current vertex: ${frame.current ? name(frame.current) : 'none'}`,
+    `Queue: ${list(frame.queue)}`,
+    `Visited: ${list(frame.visited)}.`,
+  ].join('. ')
 }
 
 function vertexById(input: {

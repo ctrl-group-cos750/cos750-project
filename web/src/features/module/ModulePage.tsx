@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router'
 import { Alert, Button, ProgressBar, Spinner } from '../../components'
 import { ActivityView } from '../activities/ActivityPage.tsx'
 import { useRefreshRewards } from '../rewards/hooks.ts'
-import { fetchModule, savePosition } from './module.api.ts'
+import { fetchModule, restartModule, savePosition } from './module.api.ts'
 import { SegmentView } from './SegmentView.tsx'
 import {
   nearestShown,

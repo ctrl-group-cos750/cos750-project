@@ -10,11 +10,12 @@ shows practice progress as one of three coarse levels, not a percentage of a han
 - **secure**: every one answered, and at least 80% of them right on your own (the same line as
   the ID document's typical criterion, "at least 4 of 5").
 
-**On your own** is the rule every reward shares (FR-9.6, and #221 for points): only a first
-attempt per round counts as evidence; an answer after hint 4 (here, after hint 3 or 4) never
-counts; right after wrong in the same round is not real work. A round is one time through the
-module: restarting it (app/services/restart.py) starts a new one, so a student who guessed the
-first time can show they know it by answering right first time after a restart.
+**On your own** follows the evidence rule every reward shares (FR-9.6, `counts_as_evidence` in
+#221): only a student's first attempt at a question counts, so a right answer after a wrong one
+is not real work; a restart starts a new round but not a new first attempt; and an answer after
+the worked answer never counts. The skill profile and medals go one step further, as module points
+do: the first attempt must also come before hint 3 or 4, in any round. Worked out here from the
+attempts and hint views, so this file needs nothing from rewards.py's helpers.
 
 The counts behind the level are sent too, for the profile to show on request. Practice items are
 the module activities tagged with the objective whose purpose is practice or retrieval, that every
@@ -29,12 +30,15 @@ review path) has given the objective a result, `result` carries it, and the prof
 never for effort or speed. Each activity the module asks every student to answer (as above;
 module 0's diagnostic finds gaps rather than marking, so it isn't one) is:
 
-- *first time* if the student's first answer to it was right without hint 3 or 4,
-- *on your own* if the first answer to it in some round was right without hint 3 or 4 (above).
+- *on your own* if the student's first answer to it was right, before hint 3 or 4 (above),
+- *first time* if it was also given before any hint at all.
+
+Under the evidence rule a retry never counts, so "first time" can no longer mean "not after a
+wrong answer" (that is now every activity on your own); it means without a hint.
 
 Then (`medal_for`, the one place the rule lives):
 
-- **gold**: every activity right first time,
+- **gold**: every activity right first time, without a hint,
 - **silver**: every activity right on your own,
 - **finished**: the module finished with at least one activity right on your own,
 - **none**: the module finished without one (every answer wrong, moved on after two tries): the
@@ -66,19 +70,18 @@ is in progress, `heading_for` is the medal the answers so far are on course for,
 activities already answered.
 """
 
-from bisect import bisect_left
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from typing import Literal, cast
 
-from sqlalchemy import select
+from sqlalchemy import Exists, exists, select
 from sqlalchemy.orm import Session
 
 from app.models import (
     Activity,
     Attempt,
     Checkpoint,
-    Event,
+    HintView,
     Module,
     ModuleProgress,
     Segment,
@@ -86,6 +89,7 @@ from app.models import (
 )
 from app.services import quick_check, rewards
 from app.services.mastery import MASTERY_MODULE, State, evaluate
+from app.services.rewards import SUPPORT_LEVEL
 
 # "finished", not "bronze": bronze is an objective badge's level (met with support), so the
 # module medal for finishing has its own name (#214).
@@ -120,7 +124,7 @@ class Skill:
     text: str
     answered: int  # practice items answered at all
     correct: int  # answered right at some point
-    on_your_own: int  # answered right on your own: first attempt in a round, no hint 3 or 4
+    on_your_own: int  # answered right on your own: the first attempt, before hint 3 or 4
     total: int
     level: Level
     result: State | None  # None until the mastery check (or a review path) decides it
@@ -135,8 +139,8 @@ class Skill:
 class ModuleMedal:
     module_id: int
     complete: bool
-    first_time: int  # activities whose first answer was right without hint 3 or 4
-    on_your_own: int  # activities answered right on your own (first attempt in some round)
+    first_time: int  # activities whose first answer was right before any hint
+    on_your_own: int  # activities whose first answer was right before hint 3 or 4
     answered: int  # activities answered at all
     total: int
     medal: Medal | None  # set once the module is complete
@@ -156,9 +160,9 @@ def level_for(answered: int, on_your_own: int, total: int) -> Level:
 def medal_for(
     total: int, first_time: int, on_your_own: int, *, tested_out: bool = False
 ) -> Medal | None:
-    """The medal for a finished module with `total` activities: gold if every one was right first
-    time without hint 3 or 4, silver if every one was right without them, finished if at least one
-    was, else none. A module passed by testing out (`tested_out`) earns silver, or better if its
+    """The medal for a finished module with `total` activities: gold if every one was right at the
+    first attempt before any hint, silver if every one was right at the first attempt before hint 3
+    or 4, finished if at least one was, else none. A module passed by testing out (`tested_out`) earns silver, or better if its
     activities earn it."""
     if total > 0 and first_time >= total:
         return "gold"
@@ -201,52 +205,46 @@ class _Answers:
     first_time: set[int]
 
 
-def _round_starts(session: Session, user_id: int) -> dict[int, list[int]]:
-    """Each module's restarts for this student, as the newest attempt id at each one, in order.
-    The progress row keeps only the latest; every one is in the event log (restart.py)."""
-    starts: dict[int, list[int]] = {}
-    for ref, payload in session.execute(
-        select(Event.ref, Event.payload).where(
-            Event.user_id == user_id, Event.type == "module_restarted"
-        )
-    ).all():
-        after = (payload or {}).get("after_attempt")
-        if ref.startswith("module:") and isinstance(after, int):
-            starts.setdefault(int(ref.removeprefix("module:")), []).append(after)
-    return {module: sorted(afters) for module, afters in starts.items()}
+def _hint_before(level: int) -> Exists:
+    """SQL: this student had been shown hint `level` or higher on the attempt's activity before
+    the attempt, in any round (a hint opened after an answer never counts against it)."""
+    return exists().where(
+        HintView.user_id == Attempt.user_id,
+        HintView.activity_id == Attempt.activity_id,
+        HintView.level >= level,
+        HintView.after_attempt < Attempt.id,
+    )
 
 
 def _answers(session: Session, user_id: int, items: Sequence[Activity]) -> _Answers:
     """Of these activities: those answered at all, right at some point, right on your own (the
-    first attempt in some round, without hint 3 or 4: the module docstring), and right without
-    them at the very first answer."""
-    if not items:
+    first attempt ever, right, before hint 3 or 4: the module docstring), and right first time
+    (that, before any hint)."""
+    ids = [a.id for a in items]
+    if not ids:
         return _Answers(set(), set(), set(), set())
-    module_of = {a.id: a.module_id for a in items}
-    starts = _round_starts(session, user_id)
-    # "Without hint 3 or 4" is the rewards' rule (rewards.real_work): a hint 3 or 4 seen before
-    # the answer in any round counts, so restarting a module after opening every hint doesn't
-    # turn the answers the hints gave into a silver or gold medal (13 Nov review).
     rows = session.execute(
-        select(Attempt.id, Attempt.activity_id, Attempt.correct, rewards.real_work().label("real"))
-        .where(Attempt.user_id == user_id, Attempt.activity_id.in_(list(module_of)))
+        select(
+            Attempt.activity_id,
+            Attempt.correct,
+            (Attempt.hint_level < SUPPORT_LEVEL) & ~_hint_before(SUPPORT_LEVEL),
+            (Attempt.hint_level == 0) & ~_hint_before(1),
+        )
+        .where(Attempt.user_id == user_id, Attempt.activity_id.in_(ids))
         .order_by(Attempt.id)
     ).all()
-    first: dict[int, bool] = {}
-    # The first attempt at each activity in each round: the only ones that are evidence, so
-    # wrong then right in the same round (guessing until right) is not on your own (#222, A1).
-    first_in_round: dict[tuple[int, int], bool] = {}
-    for attempt_id, activity, correct, real in rows:
-        ok = bool(correct) and bool(real)
-        first.setdefault(activity, ok)
-        module = module_of.get(activity)
-        round_ = bisect_left(starts.get(module, []), attempt_id) if module is not None else 0
-        first_in_round.setdefault((activity, round_), ok)
+    # The evidence rule (FR-9.6): only the first attempt at each activity is evidence, in any
+    # round, so wrong then right (guessing until right) is never on your own (#222 review, A1).
+    first: dict[int, tuple[bool, bool]] = {}
+    for activity, correct, unsupported, unhinted in rows:
+        if activity not in first:
+            ok = bool(correct) and bool(unsupported)
+            first[activity] = (ok, ok and bool(unhinted))
     return _Answers(
         answered=set(first),
-        right={a for _, a, correct, _ in rows if correct},
-        on_own={a for (a, _), ok in first_in_round.items() if ok},
-        first_time={a for a, ok in first.items() if ok},
+        right={a for a, correct, _, _ in rows if correct},
+        on_own={a for a, (own, _) in first.items() if own},
+        first_time={a for a, (_, unhinted) in first.items() if unhinted},
     )
 
 
@@ -392,8 +390,8 @@ def secure_objectives(
     """The objectives this student is secure in, in practice (`level_for`), of `only` if given,
     for the Practised badge: the skill profile's count, without the rest of it. "On your own" is
     real work (`_answers`), so an answer given away by hint 3 or 4 before a module's restart
-    doesn't count after it, and right after wrong in the same round doesn't count at all, as for
-    every other reward (13 Nov audit; #222 review, A1)."""
+    doesn't count after it, and only a first attempt counts at all (the evidence rule, FR-9.6), as
+    for every other reward (13 Nov audit; #222 review, A1)."""
     items = [a for a in _practice(session) if a.objective_id is not None]
     if only is not None:
         items = [a for a in items if a.objective_id in only]

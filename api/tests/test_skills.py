@@ -238,8 +238,8 @@ def test_a_medal_needs_the_module_finished(client: TestClient, db: Session, load
 def test_a_wrong_first_answer_is_not_on_your_own(
     client: TestClient, db: Session, loaded: None
 ) -> None:
-    """Right after wrong in the same round is not real work (#222 review, A1): only a first
-    attempt per round is evidence, so one guessed item costs silver."""
+    """Right after wrong is not real work (#222 review, A1): only the first attempt is evidence
+    (FR-9.6), so one guessed item costs silver."""
     user = log_in(client)
     answer(client, 101, WRONG)
     answer(client, 101)
@@ -273,12 +273,12 @@ def test_guessing_until_right_earns_no_silver_and_no_practised(
     assert objective_badges(client) == {}
 
 
-def test_right_first_time_after_a_restart_counts(
+def test_a_restart_is_not_a_new_first_attempt(
     client: TestClient, db: Session, loaded: None
 ) -> None:
-    """A round is one time through the module: after a restart, a right first attempt is
-    evidence again, so the student who guessed can show they know it. Gold stays for right at the
-    very first attempt."""
+    """A restart starts a new round but not a new first attempt (the evidence rule, FR-9.6):
+    guessing wrong then right, restarting and answering right first time in the new round still
+    earns no medal and no Practised, or a restart would win back what guessing lost."""
     user = log_in(client)
     for activity in (101, 102, 103, 104):
         answer(client, activity, WRONG)
@@ -287,9 +287,23 @@ def test_right_first_time_after_a_restart_counts(
     assert client.post("/api/modules/1/restart").status_code == 200
     for activity in (101, 102, 103, 104):
         answer(client, activity)
-        answer(client, activity, WRONG)  # a later wrong answer in the round changes nothing
     medal = next(m for m in profile(client)["modules"] if m["moduleId"] == 1)
-    assert (medal["medal"], medal["firstTime"], medal["onYourOwn"]) == ("silver", 0, 4)
+    assert (medal["medal"], medal["firstTime"], medal["onYourOwn"]) == (None, 0, 0)
+    assert objective_badges(client) == {}
+
+
+def test_gold_is_without_a_hint_and_silver_allows_hints_1_and_2(
+    client: TestClient, db: Session, loaded: None
+) -> None:
+    """Every answer right at the first attempt: gold without any hint; one after hint 2 makes it
+    silver, still on your own, so Practised still comes."""
+    user = log_in(client)
+    see_hints(db, user, 101, 2)
+    for activity in (101, 102, 103, 104):
+        answer(client, activity)
+    complete(db, user, 1)
+    medal = profile(client)["modules"][0]
+    assert (medal["medal"], medal["firstTime"], medal["onYourOwn"]) == ("silver", 3, 4)
     assert objective_badges(client) == {"lo1": "practised", "lo2": "practised"}
 
 

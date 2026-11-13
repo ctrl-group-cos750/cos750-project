@@ -46,8 +46,7 @@ function MedalLine({ medal }: { medal: ModuleMedal | undefined }) {
   if (!tier)
     return (
       <p className={styles.muted}>
-        Answer its activities to earn a medal: gold for every one right first time without hint 3 or
-        4.
+        Answer its activities to earn a medal: gold for every one right first time without a hint.
       </p>
     )
   return (
@@ -62,7 +61,7 @@ function MedalLine({ medal }: { medal: ModuleMedal | undefined }) {
         <span className={styles.muted}>
           {MEDAL_RULES[tier].charAt(0).toUpperCase() + MEDAL_RULES[tier].slice(1)}.
           {!medal.medal &&
-            ` ${medal.firstTime} of ${medal.answered} answered so far right first time.`}
+            ` ${medal.firstTime} of ${medal.answered} answered so far right first time without a hint.`}
         </span>
       </p>
     </div>

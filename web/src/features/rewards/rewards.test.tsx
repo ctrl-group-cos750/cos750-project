@@ -457,7 +457,7 @@ describe('module medal notes', () => {
     view.unmount()
     const again = renderApp('/')
     expect(await screen.findByText('Module 2: silver medal')).toBeVisible()
-    expect(screen.getByText('Silver: every activity right without hint 3 or 4.')).toBeVisible()
+    expect(screen.getByText('Silver: every activity right first time, without hint 3 or 4.')).toBeVisible()
     await userEvent.click(screen.getByRole('button', { name: 'Dismiss Module 2: silver medal' }))
     expect(screen.queryByText('Module 2: silver medal')).toBeNull()
     again.unmount()

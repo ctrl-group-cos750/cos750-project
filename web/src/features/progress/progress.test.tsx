@@ -442,7 +442,7 @@ describe('the module map', () => {
     expect(await screen.findByRole('heading', { name: 'Skill profile' })).toBeInTheDocument()
     expect(
       await screen.findByRole('img', {
-        name: 'Module 3: Gold medal: every activity right first time, without hint 3 or 4',
+        name: 'Module 3: Gold medal: every activity right first time, without a hint',
       }),
     ).toBeInTheDocument()
   })

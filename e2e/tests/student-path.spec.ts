@@ -1,4 +1,4 @@
-import { activity, demoAccounts } from './content'
+import { activities, activity, demoAccounts, wrongOption } from './content'
 import { answerActivity, segmentRegion, walkModule } from './drive'
 import { DEMO_PASSWORD } from './env'
 import { expect, newAccount, PASSWORD, test } from './fixtures'
@@ -107,6 +107,7 @@ test('module 0 on screen, from the map to "Finish module"; then module 1 opens',
 // problem and fill-in code; the student gets there through modules 0 to 3 (through the API),
 // then works through module 4 on screen. The first code activity is answered wrong first: the
 // feedback says so and Next stays blocked (FR-2.7), then right.
+// A second wrong answer lets the student move on without it (#214): the next test.
 const CODE_KINDS = new Set(['parsons', 'fill_in'])
 
 test('module 4: a code activity answered wrong, then right, then the rest of the module', async ({
@@ -135,9 +136,9 @@ test('module 4: a code activity answered wrong, then right, then the rest of the
   const blocked = page.locator('#segment-blocked')
   await expect(blocked).toHaveText(/^Answer the activity to continue/)
   await answerActivity(page, region, a, 'wrong')
-  // A practice activity is done only once it is right, or answered after its last hint (FR-2.7,
-  // #165). Not true before the answer: the module, fetched again, now knows it was attempted.
-  await expect(blocked).toHaveText(/^Get it right to continue/)
+  // A practice activity is done once it is right, answered after its last hint (FR-2.7, #165), or
+  // answered twice (#214). After one wrong answer the module, fetched again, says try again.
+  await expect(blocked).toHaveText(/^Not yet right\. Try again/)
   await expect(next).toHaveAttribute('aria-disabled', 'true')
 
   // Then right: for Parsons, with the arrow keys (NFR-A1).
@@ -149,4 +150,80 @@ test('module 4: a code activity answered wrong, then right, then the rest of the
   // The rest of module 4, on screen, to "Finish module".
   await walkModule(page, await course.module(4))
   expect((await course.modules()).find((m) => m.number === 4)?.status).toBe('complete')
+})
+
+// Moving on after two tries (FR-2.7, #214): a student isn't held on one question until it is
+// right or every hint is open. The activity is marked to look at again and earns nothing.
+test('module 1: two wrong answers and the student may move on, marked to look at again', async ({
+  page,
+  course,
+}) => {
+  await course.completeBefore(1)
+  const module = await course.module(1)
+  const index = module.segments.findIndex(
+    (s) =>
+      s.shown !== false &&
+      s.activityId !== null &&
+      activity(s.activityId).kind === 'multiple_choice' &&
+      activity(s.activityId).purpose === 'practice',
+  )
+  await course.walk(1, index)
+  await page.goto(`/modules/${module.id}`)
+  const segment = module.segments[index]
+  const a = activity(segment.activityId ?? 0)
+  const next = page.getByRole('navigation', { name: 'Segment navigation' }).getByRole('button', {
+    name: /^Next/,
+  })
+  const status = page.locator('#segment-blocked')
+  const points = async () =>
+    page.evaluate(async () => (await (await fetch('/api/rewards')).json()).points as number)
+  const before = await points()
+  await answerActivity(page, segmentRegion(page, segment.title), a, 'wrong')
+  await expect(status).toHaveText(/^Not yet right/)
+  await expect(next).toHaveAttribute('aria-disabled', 'true')
+  await page.reload()
+  await answerActivity(page, segmentRegion(page, segment.title), a, 'wrong')
+  await expect(status).toHaveText('You can move on: this one is marked to look at again.')
+  await expect(next).not.toHaveAttribute('aria-disabled', 'true')
+  await next.click()
+  await expect(page.getByText(`Segment ${index + 2} of`)).toBeVisible()
+  // Moving on earns nothing: the activity is still not right.
+  expect(await points()).toBe(before)
+})
+
+// Learner choice (#214): a new student starts where they choose. Module 3 is open from the
+// start, and its quick check lets a student who knows it test out of it.
+test('a new student tests out of module 3 with its quick check, from the map', async ({
+  page,
+  student,
+}) => {
+  void student
+  await page.goto('/')
+  await expect(page.getByText('recommended next')).toBeVisible()
+  await page.getByRole('link', { name: 'Already know module 3? Take the quick check' }).click()
+  await expect(page).toHaveURL(/\/modules\/3\/check$/)
+  const questions = [...activities.values()]
+    .filter((a) => a.purpose === 'test_out' && a.module_id === 3)
+    .sort((x, y) => x.id - y.id)
+  expect(questions).toHaveLength(4)
+  for (const [index, q] of questions.entries()) {
+    if (q.kind !== 'multiple_choice')
+      throw new Error(`quick check item ${q.id} isn't multiple choice`)
+    const fieldset = page.getByRole('group', {
+      name: new RegExp(`^Question ${index + 1} of 4`),
+    })
+    // The last one wrong: all but one right still passes.
+    const id = index === 3 ? wrongOption(q) : q.solution.correct
+    const label = q.config.options.find((o) => o.id === id)?.label ?? ''
+    await fieldset.getByRole('radio', { name: label, exact: true }).check()
+  }
+  await page.getByRole('button', { name: 'Check my answers' }).click()
+  await expect(page.getByRole('heading', { name: '3 of 4 right' })).toBeVisible()
+  await expect(page.getByText('You know this already')).toBeVisible()
+  await page.getByRole('link', { name: /^Go to module 4/ }).click()
+  await expect(page).toHaveURL(/\/modules\/4$/)
+  await page.goto('/')
+  const card = page.getByRole('link', { name: /Meet BFS/ })
+  await expect(card).toContainText('tested out')
+  await expect(page.getByText('Already know module 3?')).toHaveCount(0)
 })

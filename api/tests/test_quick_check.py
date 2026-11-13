@@ -321,7 +321,7 @@ def test_two_wrong_answers_let_the_student_move_on_without_a_reward(
 
     def detail() -> dict[str, Any]:
         found = client.get("/api/modules/1").json()["segments"]
-        return next(s for s in found if s["id"] == segment.id)  # type: ignore[no-any-return]
+        return next(s for s in found if s["id"] == segment.id)
 
     # Reach the segment: its place in the module, as the page counts it.
     index = next(

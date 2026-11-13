@@ -559,7 +559,7 @@
       "purpose": "mastery",
       "objective_id": 2,
       "config": {
-        "prompt": "Rooms on a floor, joined by doorways. The rooms are the kitchen (K), the lounge (L), the music room (M) and the nursery (N). Doorways join K–L, K–M, L–N and M–N, and you can walk through a doorway either way. Each marker below describes one part of this graph. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
+        "prompt": "Rooms on a floor, joined by doorways. The rooms are the kitchen (P), the lounge (Q), the music room (S) and the nursery (T). Doorways join P–Q, P–S, Q–T and S–T, and you can walk through a doorway either way. Each marker below describes one part of this graph. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
         "left": [
           {
             "id": "1",
@@ -576,44 +576,44 @@
         ],
         "right": [
           {
-            "id": "vK",
-            "label": "Vertex K"
+            "id": "vP",
+            "label": "Vertex P"
           },
           {
-            "id": "vL",
-            "label": "Vertex L"
+            "id": "vQ",
+            "label": "Vertex Q"
           },
           {
-            "id": "vM",
-            "label": "Vertex M"
+            "id": "vS",
+            "label": "Vertex S"
           },
           {
-            "id": "vN",
-            "label": "Vertex N"
+            "id": "vT",
+            "label": "Vertex T"
           },
           {
-            "id": "eKL",
-            "label": "Edge K–L"
+            "id": "ePQ",
+            "label": "Edge P–Q"
           },
           {
-            "id": "eKM",
-            "label": "Edge K–M"
+            "id": "ePS",
+            "label": "Edge P–S"
           },
           {
-            "id": "eLN",
-            "label": "Edge L–N"
+            "id": "eQT",
+            "label": "Edge Q–T"
           },
           {
-            "id": "eMN",
-            "label": "Edge M–N"
+            "id": "eST",
+            "label": "Edge S–T"
           }
         ]
       },
       "solution": {
         "pairs": {
-          "1": "eKM",
-          "2": "vN",
-          "3": "eLN"
+          "1": "ePS",
+          "2": "vT",
+          "3": "eQT"
         },
         "feedback": {
           "1": "Check marker 1. It describes a doorway between two things, so it is an edge, named by the letters of its two ends. Use the names and the list to find both ends.",
@@ -632,11 +632,11 @@
         },
         {
           "level": 3,
-          "body": "Look up each name's letter in the prompt: the kitchen is K and the music room is M."
+          "body": "Look up each name's letter in the prompt: the kitchen is P and the music room is S."
         },
         {
           "level": 4,
-          "body": "Answer: 1 = Edge K–M, 2 = Vertex N, 3 = Edge L–N."
+          "body": "Answer: 1 = Edge P–S, 2 = Vertex T, 3 = Edge Q–T."
         }
       ]
     },

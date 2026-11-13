@@ -689,3 +689,16 @@ def test_a_review_fill_in_is_as_hard_as_the_module_6_one() -> None:
     for a in (a for a in FRESH[6] + CHECK if a.kind == "fill_in"):
         for blank in a.config["blanks"]:
             assert len(a.solution["feedback"][str(blank)]) >= 2, (a.id, blank)
+
+
+@pytest.mark.parametrize("a", LABELLING, ids=lambda a: str(a.id))
+def test_the_places_letters_are_not_their_initials(a: ActivityFixture) -> None:
+    """The kitchen was K and the river corner R in 607 and 1204, so the letter lookup was a free
+    lexical link (#214 C15); 606 and 1203 already used other letters."""
+    named = NAMED.findall(a.config["prompt"])
+    initials = [
+        (name, letter)
+        for name, letter in named
+        if letter in {w[0].upper() for w in name.removeprefix("the ").split()}
+    ]
+    assert len(initials) <= 1, initials  # one by chance (606's shed tap is S), not a pattern

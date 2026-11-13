@@ -520,10 +520,6 @@
         ],
         "right": [
           {
-            "id": "AB",
-            "label": "Edge A–B"
-          },
-          {
             "id": "AC",
             "label": "Edge A–C"
           },
@@ -534,6 +530,10 @@
           {
             "id": "BC",
             "label": "Edge B–C"
+          },
+          {
+            "id": "BF",
+            "label": "Edge B–F"
           },
           {
             "id": "BG",
@@ -548,20 +548,16 @@
             "label": "Edge C–F"
           },
           {
+            "id": "CG",
+            "label": "Edge C–G"
+          },
+          {
             "id": "DE",
             "label": "Edge D–E"
           },
           {
-            "id": "DF",
-            "label": "Edge D–F"
-          },
-          {
             "id": "EF",
             "label": "Edge E–F"
-          },
-          {
-            "id": "FG",
-            "label": "Edge F–G"
           }
         ]
       },

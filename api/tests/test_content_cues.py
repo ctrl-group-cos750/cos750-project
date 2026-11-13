@@ -773,6 +773,7 @@ WORDING_ONLY = {
         (1106, "c"),
         (1401, "a"),
         (1401, "b"),
+        (1401, "c"),  # the fewest bus rides, not changes: still the BFS problem (#214 C15)
         (1402, "a"),
         (1403, "a"),
         (1403, "b"),
@@ -785,7 +786,7 @@ WORDING_ONLY = {
     # with the same answer, so an earlier pair means what it meant.
     "matching_left": {(a, m) for a in (606, 607, 608, 1202, 1203, 1204) for m in ("1", "2", "3")},
     # 102's definitions keep their meaning in new words, without the term's own word (#214 C6).
-    "matching_right": {(102, d) for d in ("d1", "d2", "d3", "d4")},
+    "matching_right": {(102, d) for d in ("d1", "d2", "d3", "d4")} | {(313, "r1")},
 }
 # Matching items that left an item: 609 and 1205 classify new situations by meaning (#214 C4), and
 # 603 matches three terms instead of "graph" (#214 C5).
@@ -801,7 +802,11 @@ GONE_LEFT = {
     (1205, i)
     for i in ("emails", "train-tracks-between-stations", "teammates-in-a-project", "a-tournament")
 }
-GONE_RIGHT = {(603, "e1"), (603, "e3")}  # 603's examples: a family tree, a stack of plates
+GONE_RIGHT = {(603, "e1"), (603, "e3")} | {  # 603's examples: a family tree, a stack of plates
+    (105, e) for e in ("AB", "DF", "FG")  # random non-edges, now near misses (#214 C15)
+} | {  # 607 and 1204 named the places by their initials, a free lexical link (#214 C15)
+    (607, e) for e in ("vK", "vL", "vM", "vN", "eKL", "eKM", "eLN", "eMN")
+} | {(1204, e) for e in ("vR", "vS", "vT", "vU", "eRS", "eST", "eTU", "eSR", "eTS", "eUT")}
 # Fix-the-bug corrections that left an item: 621 is a new bug (#214 C2), so all its corrections are.
 RETIRED_CORRECTIONS = {621: {20, 21, 22, 23}, 1703: {22}}
 # Ids that left an item; they must never come back (RETIRED, plus the retired corrections).

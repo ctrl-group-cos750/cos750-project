@@ -112,7 +112,7 @@
       "purpose": "retrieval",
       "objective_id": null,
       "config": {
-        "prompt": "Quick recall from module 0. A queue holds A, B (front first). You enqueue C, then dequeue once. What is in the queue now, front first?",
+        "prompt": "Quick recall from module 0. A queue holds A, B (front first). You add C to the back, then take one item from the front. What is in the queue now, front first?",
         "options": [
           {
             "id": "b",
@@ -133,26 +133,26 @@
         ]
       },
       "solution": {
-        "explanation": "C joins at the back, giving A, B, C. Dequeuing takes A from the front, which leaves B, C.",
+        "explanation": "C joins at the back, giving A, B, C. Taking one item from the front removes A, which leaves B, C.",
         "correct": "a",
         "feedback": {
           "b": "Not quite. That's how a stack works. A stack removes the newest item (C). A queue removes the oldest item from the front (A). Redo it: put C at the back, then take from the front.",
-          "c": "Not quite. You didn't dequeue. After enqueueing C the queue is A, B, C. Dequeuing removes A. Apply both steps in order.",
-          "d": "Not quite. Dequeue removes one item, not two. Only A leaves. B and C are still waiting. Take just one item from the front."
+          "c": "Not quite. You didn't take an item from the front. After adding C the queue is A, B, C, and taking one from the front removes A. Apply both steps in order.",
+          "d": "Not quite. You take one item from the front, not two. Only A leaves, and B and C are still waiting. Take just one item from the front."
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Enqueue adds to the back. Dequeue removes from the front."
+          "body": "Add to the back; take from the front."
         },
         {
           "level": 2,
-          "body": "After enqueueing C: A, B, C."
+          "body": "After adding C: A, B, C."
         },
         {
           "level": 3,
-          "body": "Dequeue once: the item at the front leaves."
+          "body": "Take one item from the front: the item at the front leaves."
         },
         {
           "level": 4,
@@ -351,8 +351,8 @@
             "label": "Each vertex needs at least one neighbour, so both lists get one."
           },
           {
-            "id": "c",
-            "label": "BFS must find every edge twice, so it is stored in two places."
+            "id": "d",
+            "label": "add_edge always stores an edge twice, even in a directed graph."
           },
           {
             "id": "b",
@@ -365,7 +365,7 @@
         "correct": "b",
         "feedback": {
           "a": "Not quite. A vertex can have no neighbours at all: add_vertex gives it an empty list. Both lists change because the edge works both ways. Compare the directed graph, where only A's list changes.",
-          "c": "Not quite. BFS reads each vertex's list when that vertex leaves the queue, so it needs C's list to hold A. Both lists change because the edge works both ways. Compare the directed graph, where only A's list changes."
+          "d": "Not quite. In a directed graph add_edge stores the edge once: h.add_edge(\"A\", \"D\") changes only A's list. Both lists change here because the campus edge works both ways. Compare the directed graph."
         }
       },
       "hints": [
@@ -451,7 +451,7 @@
       "purpose": "practice",
       "objective_id": 6,
       "config": {
-        "code": "class Graph:\n    def __init__(self):\n        self.adjacency = {}  # vertex -> list of neighbours\n\n    def add_vertex(self, v):\n        if v not in self.adjacency:\n            self.adjacency[v] = []\n\n    def add_edge(self, a, b):\n        # Connect a and b in both directions.\n        # If a or b isn't in the graph yet, add it first.\n        self.__1__(a)\n        self.__2__(b)\n        self.adjacency[a].__3__(b)\n        __4__",
+        "code": "class Graph:\n    def __init__(self):\n        self.adjacency = {}  # vertex -> list of neighbours\n\n    def add_vertex(self, v):\n        if v not in self.adjacency:\n            self.adjacency[v] = []\n\n    def add_edge(self, a, b):\n        # Store the edge.\n        self.__1__(a)\n        self.__2__(b)\n        self.adjacency[a].__3__(b)\n        __4__",
         "blanks": [
           1,
           2,
@@ -464,7 +464,9 @@
           "append",
           "self.adjacency[b].append(a)",
           "self.adjacency[b] = [a]",
-          "pass"
+          "pass",
+          "self.adjacency[a].append(b)",
+          "self.adjacency[b].append(b)"
         ]
       },
       "solution": {
@@ -483,8 +485,10 @@
             "add_edge": "Not quite. add_edge would call itself again and again and never finish. Before storing the edge, make sure both ends are in the graph: call add_vertex for each one."
           },
           "4": {
-            "pass": "The edge is only stored one way. In an undirected graph you can walk a–b in both directions, so each vertex must list the other. Append a to b's list as well.",
-            "self.adjacency[b] = [a]": "Adding an edge removes earlier neighbours. Assigning a new list replaces the old one. A vertex can have many neighbours. Use .append() instead of =."
+            "pass": "Not quite. The edge is only stored one way. In an undirected graph you can walk a–b in both directions, so each vertex must list the other. Append a to b's list as well.",
+            "self.adjacency[b] = [a]": "Not quite. Assigning a new list replaces b's old one, so adding an edge removes b's earlier neighbours. A vertex can have many neighbours. Use .append() instead of =.",
+            "self.adjacency[a].append(b)": "Not quite. That stores b in a's list a second time, and b's list still doesn't hold a. Append a to b's list.",
+            "self.adjacency[b].append(b)": "Not quite. That makes b its own neighbour, and b's list still doesn't hold a. Append a, the other end of the edge, to b's list."
           }
         }
       },
@@ -515,7 +519,7 @@
       "purpose": "practice",
       "objective_id": 6,
       "config": {
-        "code": "class Graph:\n    def __init__(self, directed=False):\n        self.directed = directed\n        self.adjacency = {}  # vertex -> list of neighbours\n\n    def add_vertex(self, v):\n        if v not in self.adjacency:\n            self.adjacency[v] = []\n\n    def add_edge(self, a, b):\n        self.add_vertex(a)\n        self.add_vertex(b)\n        # Always connect a to b.\n        self.adjacency[a].append(b)\n        # Connect b back to a only if the graph is undirected.\n        if __1__:\n            self.adjacency[__2__].append(__3__)",
+        "code": "class Graph:\n    def __init__(self, directed=False):\n        self.directed = directed\n        self.adjacency = {}  # vertex -> list of neighbours\n\n    def add_vertex(self, v):\n        if v not in self.adjacency:\n            self.adjacency[v] = []\n\n    def add_edge(self, a, b):\n        self.add_vertex(a)\n        self.add_vertex(b)\n        self.adjacency[a].append(b)\n        if __1__:\n            self.adjacency[__2__].append(__3__)",
         "blanks": [
           1,
           2,

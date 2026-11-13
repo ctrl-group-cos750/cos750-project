@@ -152,8 +152,8 @@
         "explanation": "A walkway can be used both ways, so its edge has no direction: the graph is undirected. Lengths don't change whether it is a graph.",
         "correct": "a",
         "feedback": {
-          "b": "A directed edge only goes one way, like a one-way street. These walkways go both ways.",
-          "c": "Edges can have lengths (weights) and still be a graph. Here we only care whether two buildings are connected."
+          "b": "Not quite. A directed edge only goes one way, like a one-way street. These walkways go both ways. Ask: can every walkway be used in both directions?",
+          "c": "Not quite. Edges can have lengths (weights) and still be a graph. Here we only care whether two buildings are connected. Ask: are there things joined by connections?"
         }
       },
       "hints": [
@@ -203,8 +203,8 @@
         "explanation": "In an undirected graph add_edge connects both ways, so A gets C as a neighbour and C gets A.",
         "correct": "a",
         "feedback": {
-          "b": "That is a directed edge from A to C. In an undirected graph C must also list A.",
-          "c": "Each vertex maps to a list of neighbours, and both A and C are in the dictionary."
+          "b": "Not quite. That is a directed edge from A to C. In an undirected graph C must also list A. Check C's list.",
+          "c": "Not quite. Each vertex maps to a list of neighbours, and both A and C are in the dictionary. Look for a list on both sides."
         }
       },
       "hints": [
@@ -222,7 +222,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: {\"A\": [\"C\"], \"C\": [\"A\"]} — the edge is stored once in each vertex's list."
+          "body": "Answer: {\"A\": [\"C\"], \"C\": [\"A\"]}: the edge is stored once in each vertex's list."
         }
       ]
     },
@@ -251,6 +251,10 @@
           {
             "id": "s4",
             "label": "Find the fewest links you must click to get from one web page to another."
+          },
+          {
+            "id": "s5",
+            "label": "Find the route between two Gautrain stations with the shortest travel time."
           }
         ],
         "right": [
@@ -263,12 +267,16 @@
             "label": "Good fit: BFS takes neighbours in alphabetical order, so it lists the items in order."
           },
           {
+            "id": "r6",
+            "label": "Not a fit: BFS counts edges, but here each edge has its own time."
+          },
+          {
             "id": "r3",
             "label": "Not a fit: there are no connections to follow, so this is not a graph problem."
           },
           {
             "id": "r1",
-            "label": "Good fit: BFS reaches vertices in order of the fewest edges from the start."
+            "label": "Good fit: BFS reaches vertices in rings, one edge further out each time, so the first time it reaches the goal it has used as few edges as possible."
           },
           {
             "id": "r5",
@@ -277,18 +285,20 @@
         ]
       },
       "solution": {
-        "explanation": "BFS fits when there are connections to follow and you want the fewest steps, or everyone within a few steps. Adding up prices has no connections, so it isn't a graph problem.",
+        "explanation": "BFS fits when there are connections to follow and you want the fewest edges, or everyone within a few edges. Adding up prices has no connections, and the quickest trip depends on each edge's time, not on how many edges there are.",
         "pairs": {
           "s1": "r1",
           "s2": "r2",
           "s3": "r3",
-          "s4": "r1"
+          "s4": "r1",
+          "s5": "r6"
         },
         "feedback": {
-          "s1": "Fewest stops means fewest edges. That is exactly the order in which BFS reaches vertices.",
-          "s2": "Friends are one edge away, friends of friends two edges. BFS finds them ring by ring, whatever the vertices stand for.",
-          "s3": "A list of prices has no vertices and edges to traverse. A simple loop is enough.",
-          "s4": "Pages are vertices and links are edges, so the fewest clicks is the fewest edges. Alphabetical order only decides which neighbour joins the queue first; it isn't why BFS finds the fewest."
+          "s1": "Not quite. Each stop-to-stop ride is an edge, so the fewest stops is the fewest edges. Look for the reason about how BFS reaches vertices ring by ring.",
+          "s2": "Not quite. Friends are one edge away and friends of friends two. BFS finds them ring by ring, whatever the vertices stand for. Look for the reason about rings of neighbours.",
+          "s3": "Not quite. A list of prices has no vertices and edges to traverse, so a simple loop is enough. Look for the reason that says there is nothing to follow.",
+          "s4": "Not quite. Pages are vertices and links are edges, so the fewest clicks is the fewest edges. Alphabetical order only decides which neighbour joins the queue first. Look for the reason about how BFS reaches vertices ring by ring.",
+          "s5": "Not quite. Each ride between stations takes its own time, so the route with the fewest stops isn't always the quickest. BFS counts edges, not minutes. Look for the reason about edges with their own time."
         }
       },
       "hints": [
@@ -302,11 +312,11 @@
         },
         {
           "level": 3,
-          "body": "'Fewest stops', 'fewest clicks' and 'friend of a friend' are all about counting edges from a start. Any connections can be edges, not only paths on a map."
+          "body": "'Fewest stops', 'fewest clicks' and 'friend of a friend' are all about counting edges from a start. Any connections can be edges, not only paths on a map. Travel time is not a count of edges."
         },
         {
           "level": 4,
-          "body": "Answer: s1 → r1 (fewest stops), s2 → r2 (ring by ring), s3 → r3 (not a graph), s4 → r1 (fewest clicks)."
+          "body": "Answer: s1 → r1 (fewest stops), s2 → r2 (ring by ring), s3 → r3 (not a graph), s4 → r1 (fewest clicks), s5 → r6 (each edge has its own time)."
         }
       ]
     },

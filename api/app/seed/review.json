@@ -826,7 +826,7 @@
       "purpose": "mastery",
       "objective_id": 2,
       "config": {
-        "prompt": "Lab computers, joined by cables. The computers are the server (E), the laptop (F) and the printer (G). Cables join E–F, F–G and E–G, and data goes both ways along a cable. Each marker below describes one part of this graph. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
+        "prompt": "Lab devices, joined by cables. The devices are the server (E), the laptop (F) and the printer (G). Cables join E–F, F–G and E–G, and data goes both ways along a cable. Each marker below describes one part of this graph. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
         "left": [
           {
             "id": "1",
@@ -883,7 +883,7 @@
       "hints": [
         {
           "level": 1,
-          "body": "Computers are vertices. Cables are edges."
+          "body": "Devices are vertices. Cables are edges."
         },
         {
           "level": 2,
@@ -907,7 +907,7 @@
       "purpose": "mastery",
       "objective_id": 2,
       "config": {
-        "prompt": "One-way streets between four corners: the river corner (R), the school corner (S), the tower corner (T) and the university corner (U). The streets go R → S, S → T and T → U: you can only drive them in that direction. Each marker below describes one part of this graph. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
+        "prompt": "One-way streets between four corners: the river corner (W), the school corner (X), the tower corner (Y) and the university corner (Z). The streets go W → X, X → Y and Y → Z: you can only drive them in that direction. Each marker below describes one part of this graph. Match each marker to its name in the graph: is it a vertex or an edge, and which one?",
         "left": [
           {
             "id": "1",
@@ -924,52 +924,52 @@
         ],
         "right": [
           {
-            "id": "vR",
-            "label": "Vertex R"
+            "id": "vW",
+            "label": "Vertex W"
           },
           {
-            "id": "vS",
-            "label": "Vertex S"
+            "id": "vX",
+            "label": "Vertex X"
           },
           {
-            "id": "vT",
-            "label": "Vertex T"
+            "id": "vY",
+            "label": "Vertex Y"
           },
           {
-            "id": "vU",
-            "label": "Vertex U"
+            "id": "vZ",
+            "label": "Vertex Z"
           },
           {
-            "id": "eRS",
-            "label": "Edge R → S"
+            "id": "eWX",
+            "label": "Edge W → X"
           },
           {
-            "id": "eST",
-            "label": "Edge S → T"
+            "id": "eXY",
+            "label": "Edge X → Y"
           },
           {
-            "id": "eTU",
-            "label": "Edge T → U"
+            "id": "eYZ",
+            "label": "Edge Y → Z"
           },
           {
-            "id": "eSR",
-            "label": "Edge S → R"
+            "id": "eXW",
+            "label": "Edge X → W"
           },
           {
-            "id": "eTS",
-            "label": "Edge T → S"
+            "id": "eYX",
+            "label": "Edge Y → X"
           },
           {
-            "id": "eUT",
-            "label": "Edge U → T"
+            "id": "eZY",
+            "label": "Edge Z → Y"
           }
         ]
       },
       "solution": {
         "pairs": {
-          "1": "eST",
-          "2": "vU",
-          "3": "eRS"
+          "1": "eXY",
+          "2": "vZ",
+          "3": "eWX"
         },
         "feedback": {
           "1": "Check marker 1. It describes a one-way street between two places, so it is an edge, named from where it starts to where it ends. Use the names and the list to find both ends and the way it goes.",
@@ -988,11 +988,11 @@
         },
         {
           "level": 3,
-          "body": "Look up each name's letter in the prompt: the school corner is S and the tower corner is T. A one-way edge is named from where it starts to where it ends."
+          "body": "Look up each name's letter in the prompt: the school corner is X and the tower corner is Y. A one-way edge is named from where it starts to where it ends."
         },
         {
           "level": 4,
-          "body": "Answer: 1 = Edge S → T, 2 = Vertex U, 3 = Edge R → S."
+          "body": "Answer: 1 = Edge X → Y, 2 = Vertex Z, 3 = Edge W → X."
         }
       ]
     },
@@ -1354,16 +1354,16 @@
           },
           {
             "id": "b",
-            "label": "Adding up the prices on a till slip at the shop"
+            "label": "Adding up all the prices on a till slip at the shop"
           },
           {
             "id": "c",
-            "label": "Finding the fewest bus changes between two stops"
+            "label": "Finding the fewest stop-to-stop rides between two stops"
           }
         ]
       },
       "solution": {
-        "explanation": "BFS finds the route with the fewest edges, so with stops as vertices and bus rides as edges it finds the fewest changes. It doesn't count road distance.",
+        "explanation": "BFS finds the route with the fewest edges, so with stops as vertices and each ride from one stop to the next as an edge, it finds the fewest rides. It doesn't count road distance.",
         "correct": "c",
         "feedback": {
           "a": "Not quite. BFS counts edges, not kilometres. Look for a problem about the fewest edges.",
@@ -1381,11 +1381,11 @@
         },
         {
           "level": 3,
-          "body": "Bus changes are edges between stops."
+          "body": "Each ride from one stop to the next is an edge."
         },
         {
           "level": 4,
-          "body": "Answer: the fewest bus changes."
+          "body": "Answer: the fewest stop-to-stop rides between two stops."
         }
       ]
     },

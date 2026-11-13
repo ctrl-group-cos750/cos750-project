@@ -203,8 +203,10 @@ Where you write it:
   token, faulty line or test case, depending on the kind). A wrong answer with no message gets a
   generic one, so write one for every wrong answer you can foresee, especially the ones built
   from a misconception (ID document §2.5).
-- `solution.explanation` (optional, every kind except trace): shown instead of the plain
-  "Correct." when the answer is right, saying why it is right (FR-4.2).
+- `solution.explanation`: shown instead of the plain "Correct." when the answer is right,
+  saying why it is right (FR-4.2). Every module practice item needs one (a test checks it); a
+  trace's solution holds only this, because the engine works out its answer. Mastery-check items
+  must not have one yet.
 - Parsons problems and trace tables have no `feedback` field: the checker marks each misplaced
   line or wrong row itself. Put the reasoning in the hints and the explanation.
 
@@ -367,11 +369,14 @@ the vertex, the queue after the step, the visited set and the order so far (FR-4
   ],
   "start_vertex": "A"
 },
-"solution": {}
+"solution": {
+  "explanation": "A finds B and C. When C leaves, D is already waiting, so it isn't added again."
+}
 ```
 
-- You give only the graph. The answer is worked out by the app's BFS engine, so `solution` is
-  always `{}` and you can't get it wrong. Neighbours are visited in alphabetical order.
+- You give only the graph. The answer is worked out by the app's BFS engine, so `solution`
+  holds no answer, only the `explanation` (or nothing: `{}`). Neighbours are visited in
+  alphabetical order.
 - Up to 50 vertices; the check refuses an edge to an unknown vertex or an unknown start.
 - Work the trace out yourself for hints 3 and 4.
 

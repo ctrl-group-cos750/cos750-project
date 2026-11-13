@@ -422,6 +422,7 @@
           ],
           113
         ],
+        "explanation": "Marking a vertex found when it joins the queue, not when it leaves, means a vertex that is still waiting can't be added again: on the diamond, B and C both find D, but only B adds it. Starting with visited = {start} does the same for the start vertex, which is in the queue from the beginning.",
         "feedback": {
           "103": "Not quite. The start vertex is in the queue but not in visited. A neighbour can find it again and add it to the queue a second time. Start with the start vertex already in visited.",
           "108": "Not quite. This marks a vertex found only when it leaves the queue. A vertex still waiting in the queue does not count as found, so another vertex can add it again. Mark a vertex found the moment it joins, by putting visited.add(n) inside the if block instead."
@@ -552,6 +553,7 @@
           ],
           166
         ],
+        "explanation": "BFS only visits the vertices it can reach by following edges from the start, so on the two islands it returns A, B, C. The extra loop added every vertex the search never reached, D and E, so without it the program is plain BFS.",
         "feedback": {
           "163": "Not quite. This loop runs through every vertex in the graph after BFS finishes. It finds vertices BFS never reached and adds them to the order. BFS should only visit vertices reachable from the start. Remove this loop entirely.",
           "164": "Not quite. This line checks whether a vertex was not visited, which is the condition for adding an unreachable vertex. It belongs to the faulty extra loop. Remove it along with the loop.",
@@ -762,6 +764,7 @@
         "exposing": [
           "cycle"
         ],
+        "explanation": "The bug only shows when a vertex can be found a second time while it is still waiting in the queue. In test 1, B and C both find D, so the faulty version visits D twice. On the other graphs no vertex has two ways to be found while it waits, so the faulty version gives the right order.",
         "feedback": {
           "cycle": "This graph has a cycle: two paths reach D before it leaves the queue. The faulty version adds D to the queue twice and fails this test.",
           "two-islands": "D and E are unreachable from A. BFS never tries to add them, so no vertex is found twice. The faulty version passes this test.",
@@ -971,6 +974,7 @@
         "exposing": [
           "two-islands"
         ],
+        "explanation": "The extra loop only adds vertices that BFS couldn't reach from the start, so it changes the result only on a graph that has some. Test 2 is the only one: D and E are cut off from A, so the faulty version returns A, B, C, D, E instead of A, B, C.",
         "feedback": {
           "cycle": "Every vertex in this graph can be reached from A, so the extra loop finds nothing to add. The faulty version passes this test.",
           "two-islands": "D and E cannot be reached from A. The extra loop finds them and adds them to the order, so the faulty version returns A, B, C, D, E instead of A, B, C, and it fails this test.",
@@ -1043,7 +1047,9 @@
         ],
         "start_vertex": "T"
       },
-      "solution": {},
+      "solution": {
+        "explanation": "Thandi (T) finds L and S, the two people she knows, and L then finds K. When S leaves, K is already waiting in the queue, so only N joins, and K then finds O. Each person joins the queue once, the first time someone who knows them is visited."
+      },
       "hints": [
         {
           "level": 1,

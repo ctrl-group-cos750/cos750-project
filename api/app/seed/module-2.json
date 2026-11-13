@@ -780,6 +780,7 @@
           "g2": "r1",
           "g3": "r2"
         },
+        "explanation": "An edge is stored in the list of the vertex it leaves, and every vertex gets a key, even with no neighbours. Graph 1's plain lines go both ways, so T and U list S too. Graph 2's arrows leave S, so only S has neighbours, and graph 3's arrows leave T and U, so S's list is empty.",
         "feedback": {
           "g1": "Not quite. Graph 1 has no arrows, so each edge is stored in both lists: T and U each list S as well. Find the dictionary where S lists two vertices and T and U each list S.",
           "g2": "Not quite. Both of graph 2's arrows leave S, so they are stored in S's list only, and T and U still get a key with an empty list. Find the dictionary where only S has neighbours and every vertex has a key.",
@@ -837,6 +838,7 @@
           "3": "b",
           "4": "not self.directed"
         },
+        "explanation": "A new vertex starts with an empty list, ready for append. An edge from a to b goes in a's list, and only an undirected graph (not self.directed) adds a to b's list as well, so the edge works both ways.",
         "feedback": {
           "1": {
             "{}": "Not quite. {} is an empty dictionary, not a list, so the new vertex has no append for its neighbours. Give a new vertex an empty list.",
@@ -898,6 +900,7 @@
       },
       "solution": {
         "correct": "b",
+        "explanation": "add_vertex(\"L\") leaves L's list alone because L is already in the graph, so L keeps K from the first edge. append adds M at the end, so the neighbours stay in the order their edges were added.",
         "feedback": {
           "a": "Not quite. add_vertex(\"L\") doesn't empty L's list, because L is already in the graph, so L keeps K. Check the if line in add_vertex, then follow both edges into L's list.",
           "c": "Not quite. append adds to the end of a list, so the neighbours stay in the order their edges were added. Find which edge with L was added first."

@@ -562,7 +562,9 @@
         ],
         "start_vertex": "B"
       },
-      "solution": {},
+      "solution": {
+        "explanation": "BFS takes the vertex at the front of the queue and adds its neighbours not found yet, in alphabetical order, at the back. B finds A and D, then A finds C. When D leaves, C is already waiting in the queue, so it isn't added again, and C then finds E."
+      },
       "hints": [
         {
           "level": 1,
@@ -678,7 +680,9 @@
         ],
         "start_vertex": "F"
       },
-      "solution": {},
+      "solution": {
+        "explanation": "BFS takes the vertex at the front of the queue and adds its neighbours not found yet, in alphabetical order, at the back. F finds D and H, then D finds E. When H leaves, E and F have both been found already, so nothing joins, and E then finds G."
+      },
       "hints": [
         {
           "level": 1,
@@ -755,6 +759,7 @@
           "s3": "r_len",
           "s4": "r_none"
         },
+        "explanation": "BFS reaches everything one edge away before anything two edges away, so the first route it finds uses the fewest edges: that fits the knight's moves and the rooms within two doors. It counts edges, not what each one costs, so it can't find the trip with the least petrol, and counting learners has no edges to follow at all.",
         "feedback": {
           "s1": "Not quite. The squares are vertices and each knight move is an edge, so the fewest moves is the fewest edges from the start. Look for the reason about the fewest edges.",
           "s2": "Not quite. The rooms are vertices and the doors are edges, and no more than two doors means everything within two edges. Look for the reason about finding everything one edge away first.",

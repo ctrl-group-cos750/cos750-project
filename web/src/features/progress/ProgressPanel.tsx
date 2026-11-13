@@ -163,9 +163,11 @@ function PanelBody({
           </div>
           <ul className={styles.recent}>
             {recent.map((item) => (
-              <li key={item.key}>
+              // One row of pictures, each named with its level (the badge's own label), so the
+              // panel still fits a 1366 × 900 screen with three (#214: practised badges come
+              // early, so most students have some).
+              <li key={item.key} title={item.title}>
                 <AchievementBadge achievement={item.achievement} state={item.state} size={36} />
-                <span>{item.title}</span>
               </li>
             ))}
           </ul>

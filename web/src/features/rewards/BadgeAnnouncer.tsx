@@ -95,6 +95,7 @@ export function BadgeAnnouncer() {
   const [notes, setNotes] = useState<ShelfItem[]>([])
   // Module medals as they are earned (#214), once each (medalNotes.ts).
   const skills = useSkills()
+  const skillsPending = skills.isPending && !skills.isError
   const [medals, setMedals] = useState<MedalNote[]>([])
   const [celebrate, setCelebrate] = useState<ShelfItem | null>(null)
   // Set once the student turns badges off from a note: says where to turn them back on.
@@ -111,7 +112,9 @@ export function BadgeAnnouncer() {
   const [focusInside, setFocusInside] = useState(false)
 
   useEffect(() => {
-    if (!data || data.hideRewards) return
+    // Badges wait for the skill profile too, so a burst of badges and module medals (#214) comes
+    // as one set of notes, not two a moment apart.
+    if (!data || data.hideRewards || skillsPending) return
     const fresh = unseen(data.badges).filter((i) => !announced.current.has(`${i.key}:${i.state}`))
     if (fresh.length === 0) return
     for (const item of fresh) announced.current.add(`${item.key}:${item.state}`)
@@ -122,7 +125,7 @@ export function BadgeAnnouncer() {
       ...fresh.filter((i) => i !== ready),
     ])
     mutate()
-  }, [data, mutate])
+  }, [data, mutate, skillsPending])
 
   useEffect(() => {
     if (!data || !skills.data) return
@@ -201,11 +204,19 @@ export function BadgeAnnouncer() {
     )
 
   const max = phone ? 1 : MAX_NOTES
-  const collapsed = notes.length > max
+  // Medal notes (#214) count with the badge notes: together at most `max` cards.
+  const total = notes.length + medals.length
+  const collapsed = total > max
   // A phone shows one card: the badge, or "N new badges" for a burst. A wider screen shows the
   // newest three under "N more new badges".
-  const cards = phone && collapsed ? [] : notes.slice(-max)
-  const more = phone ? notes.length : notes.length - max
+  const shownMedals = phone && collapsed ? [] : medals.slice(-max)
+  const room = max - shownMedals.length
+  const cards = (phone && collapsed) || room <= 0 ? [] : notes.slice(-room)
+  const more = total - shownMedals.length - cards.length
+  const clearAll = () => {
+    setNotes([])
+    setMedals([])
+  }
 
   return (
     <>
@@ -216,7 +227,7 @@ export function BadgeAnnouncer() {
               <strong>
                 {more} {phone ? '' : 'more '}new {more === 1 ? 'badge' : 'badges'}
               </strong>
-              <Link to="/badges" className={styles.link} onClick={() => setNotes([])}>
+              <Link to="/badges" className={styles.link} onClick={clearAll}>
                 See your badges
               </Link>
             </div>
@@ -226,13 +237,13 @@ export function BadgeAnnouncer() {
               className={styles.dismiss}
               data-dismiss
               aria-label="Dismiss all"
-              onClick={(event) => dismissing(event, () => setNotes([]))}
+              onClick={(event) => dismissing(event, clearAll)}
             >
               ×
             </Button>
           </div>
         )}
-        {(phone ? medals.slice(-1) : medals).map((note) => {
+        {shownMedals.map((note) => {
           const title = `Module ${note.moduleId}: ${note.tier} medal`
           return (
             <div key={note.key} className={styles.note}>

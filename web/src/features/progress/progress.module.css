@@ -272,7 +272,8 @@
 }
 
 .recent {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
   margin: 0;
   padding: 0;
@@ -370,6 +371,10 @@
 }
 
 .improve {
+  /* No transition: under reduced motion base.css shortens every transition to 0.01 ms, and in
+   * Firefox one started inside a closed <details> (the panel's rows) never finishes, which held
+   * the e2e accessibility checks waiting for animations to end. */
+  transition-property: none;
   padding-block: var(--space-2);
   color: var(--color-accent-text);
   font-size: var(--text-sm);

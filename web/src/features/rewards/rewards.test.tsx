@@ -412,6 +412,23 @@ describe('badge levels', () => {
 })
 
 describe('module medal notes', () => {
+  it('count with the badge notes: at most three cards, the rest summed up', async () => {
+    window.localStorage.clear()
+    window.localStorage.setItem('ctrl-academy.1.medals-announced', '{}')
+    withRewardsAndSkills(
+      {
+        hideRewards: false,
+        points: 0,
+        badges: [badge('lo1', { tier: 'practised', seen: false })],
+      },
+      { objectives: [], modules: [1, 2, 3, 4].map((n) => medal(n, 'gold')) },
+    )
+    renderApp('/')
+    expect(await screen.findByText('Module 4: gold medal')).toBeVisible()
+    expect(screen.getAllByRole('button', { name: /^Dismiss Module/ })).toHaveLength(3)
+    expect(screen.getByText('2 more new badges')).toBeVisible()
+  })
+
   it('announces a medal earned while the student is here, once', async () => {
     window.localStorage.clear()
     const { state } = withRewardsAndSkills(
@@ -431,6 +448,8 @@ describe('module medal notes', () => {
     const again = renderApp('/')
     expect(await screen.findByText('Module 2: silver medal')).toBeVisible()
     expect(screen.getByText('Silver: every activity right without hint 3 or 4.')).toBeVisible()
+    await userEvent.click(screen.getByRole('button', { name: 'Dismiss Module 2: silver medal' }))
+    expect(screen.queryByText('Module 2: silver medal')).toBeNull()
     again.unmount()
 
     renderApp('/')

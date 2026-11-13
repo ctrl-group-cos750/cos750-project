@@ -45,7 +45,7 @@ export function ChooseTests({
   const [checked, setChecked] = useState<ReadonlySet<string>>(() => new Set(previous))
   const [missing, setMissing] = useState(false)
   const baseId = useId()
-  const disabled = submitting || result?.correct === true
+  const disabled = submitting || result?.correct === true || !!readOnly
   const parts = new Map(result?.parts.map((part) => [part.ref, part]))
 
   function toggle(testId: string) {

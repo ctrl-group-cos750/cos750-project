@@ -9,6 +9,7 @@ import { ActivityRenderer } from './ActivityRenderer.tsx'
 import { FeedbackPanel } from './FeedbackPanel.tsx'
 import { FillInCode } from './FillInCode.tsx'
 import { HintLadder } from './HintLadder.tsx'
+import { Matching } from './Matching.tsx'
 import { CodeLine, ParsonsProblem } from './ParsonsProblem.tsx'
 import { indentLabel, lineName } from './codeLines.ts'
 import type {
@@ -16,6 +17,7 @@ import type {
   FillInActivity,
   Hint,
   MasteryCheckFlags,
+  MatchingActivity,
   ParsonsActivity,
   Submission,
 } from './activities.types.ts'
@@ -970,6 +972,139 @@ describe('coming back to an answered activity (#171)', () => {
     expect(option).toBeDisabled()
     expect(screen.queryByRole('button', { name: 'Check answer' })).not.toBeInTheDocument()
     expect(screen.queryByText('Correct')).not.toBeInTheDocument()
+    // Coming back, it still says why the answer can't be changed (#171 review).
+    expect(screen.getByText(/Only your first answer counts, so it can't be changed/)).toBeVisible()
+  })
+
+  it('keeps showing a mastery answer just given, read-only (#171 review)', async () => {
+    const withheld = { ...wrongResult, correct: null, score: null, parts: [], withheld: true }
+    let answered = false
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/activities/41': () =>
+          Response.json({ ...choice, masteryCheck: true, answered, lastAttempt: null }),
+        'GET /api/activities/41/hints': () => Response.json([]),
+        'POST /api/activities/41/attempts': () => {
+          answered = true
+          return Response.json(withheld)
+        },
+      },
+    })
+    const user = userEvent.setup()
+    renderApp('/activities/41')
+
+    await user.click(await screen.findByLabelText('The last to join'))
+    await user.click(screen.getByRole('button', { name: 'Check answer' }))
+
+    expect(await screen.findByText('Answer recorded')).toBeInTheDocument()
+    const option = screen.getByLabelText('The last to join')
+    expect(option).toBeChecked()
+    expect(option).toBeDisabled()
+    expect(screen.getByLabelText('The first to join')).not.toBeChecked()
+    expect(screen.getByText(/Only your first answer counts, so it can't be changed/)).toBeVisible()
+  })
+
+  it('an answered Parsons item can be neither dragged nor changed (#171 review)', () => {
+    render(
+      <ParsonsProblem
+        activity={parsons}
+        result={undefined}
+        submitting={false}
+        onSubmit={vi.fn<(order: number[]) => Promise<void>>()}
+        previous={[3, 1]}
+        readOnly
+      />,
+    )
+    const line = screen.getByRole('button', { name: 'third()' })
+    expect(line).toBeDisabled()
+    expect(line).toHaveAttribute('draggable', 'false')
+    expect(screen.getByRole('button', { name: /Add:\s*second\(\)/ })).toHaveAttribute(
+      'draggable',
+      'false',
+    )
+  })
+
+  it('a Parsons problem shows a line left out as available again', () => {
+    render(
+      <ParsonsProblem
+        activity={parsons}
+        result={undefined}
+        submitting={false}
+        onSubmit={vi.fn<(order: number[]) => Promise<void>>()}
+        previous={[3, 1]}
+      />,
+    )
+    const answer = screen.getByRole('list', { name: 'Your answer, in order' })
+    expect(answer.querySelectorAll('li')).toHaveLength(2)
+    const available = screen.getByRole('region', { name: 'Available lines' })
+    expect(available).toHaveTextContent('second()')
+    expect(available).not.toHaveTextContent('first()')
+  })
+
+  it('fill in the code starts from the options the student chose', async () => {
+    const onSubmit = vi
+      .fn<(answers: Record<number, string>) => Promise<void>>()
+      .mockResolvedValue(undefined)
+    render(
+      <FillInCode
+        activity={fillIn}
+        result={undefined}
+        submitting={false}
+        onSubmit={onSubmit}
+        previous={{ 1: 'visited' }}
+      />,
+    )
+    expect(screen.getByRole('combobox', { name: 'Blank 1' })).toHaveValue('visited')
+    await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(onSubmit).toHaveBeenCalledWith({ 1: 'visited' })
+  })
+
+  it('matching starts from the pairs the student made, with their marks', async () => {
+    const matching: MatchingActivity = {
+      id: 42,
+      kind: 'matching',
+      title: 'Match the terms',
+      visible: true,
+      config: {
+        prompt: 'Match each term to what it means.',
+        left: [
+          { id: 'queue', label: 'Queue' },
+          { id: 'visited', label: 'Visited' },
+        ],
+        right: [
+          { id: 'fifo', label: 'First in, first out' },
+          { id: 'left', label: 'Has left the queue' },
+        ],
+      },
+    }
+    const onSubmit = vi
+      .fn<(pairs: Record<string, string>) => Promise<void>>()
+      .mockResolvedValue(undefined)
+    render(
+      <Matching
+        activity={matching}
+        result={{
+          ...wrongResult,
+          activityId: 42,
+          parts: [
+            { ref: 0, correct: true, message: null },
+            { ref: 1, correct: false, message: 'Visited means it has left the queue.' },
+          ],
+        }}
+        submitting={false}
+        onSubmit={onSubmit}
+        previous={{ queue: 'fifo', visited: 'fifo' }}
+      />,
+    )
+    expect(screen.getByLabelText('Queue')).toHaveValue('fifo')
+    expect(screen.getByLabelText('Visited')).toHaveValue('fifo')
+    // The restored marks are about these pairs, so they show.
+    expect(screen.getByLabelText('Visited')).toHaveAccessibleDescription(
+      /Visited means it has left the queue/,
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(onSubmit).toHaveBeenCalledWith({ queue: 'fifo', visited: 'fifo' })
   })
 
   it('a Parsons problem keeps the student’s order instead of starting afresh', async () => {

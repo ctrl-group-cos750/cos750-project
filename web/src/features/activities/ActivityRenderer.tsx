@@ -63,7 +63,9 @@ export function ActivityRenderer(props: ActivityRendererProps) {
   const [submitted, setSubmitted] = useState<Submission | undefined>(
     () => props.previous as Submission | undefined,
   )
-  const previous = props.previous
+  // What each control starts from: the answer given on this screen, else the last one (#171).
+  // A control reads it only when it first mounts, so this only matters if it is mounted again.
+  const previous: LastAttempt['submitted'] | undefined = submitted ?? props.previous
   const [hintLevel, setHintLevel] = useState(0)
   const onLevel = useCallback((level: number) => setHintLevel(level), [])
   const onSubmit = (submission: Submission) => {
@@ -74,12 +76,23 @@ export function ActivityRenderer(props: ActivityRendererProps) {
   const compare =
     props.result?.correct === true || Math.max(hintLevel, props.result?.hintLevel ?? 0) >= 4
 
-  const checkNote = check && !answeredInCheck && (
-    <p className="mb-4 text-sm text-muted-foreground">
-      Only your first answer counts, so check it before you send it. You will see your results in
-      your mastery report when you finish the check.
-    </p>
-  )
+  // A mastery item always says why it takes one answer. Once answered with its result on screen,
+  // the feedback panel says it was recorded and where the results are; with no result yet, the
+  // "Answer recorded" alert above the answer says all of it (#144, #171).
+  const checkNote =
+    check &&
+    (!answeredInCheck ? (
+      <p className="mb-4 text-sm text-muted-foreground">
+        Only your first answer counts, so check it before you send it. You will see your results in
+        your mastery report when you finish the check.
+      </p>
+    ) : (
+      props.result && (
+        <p className="mb-4 text-sm text-muted-foreground">
+          You have answered this question. Only your first answer counts, so it can't be changed.
+        </p>
+      )
+    ))
   const screen =
     props.activity.kind === 'parsons' ? (
       <ParsonsProblem
@@ -149,21 +162,26 @@ export function ActivityRenderer(props: ActivityRendererProps) {
       <Alert tone="warning">This activity kind is not available yet.</Alert>
     )
   // An answered mastery item shows the answer, read-only: only the first answer counts (#144).
-  // Its result stays withheld; the feedback panel says it was recorded (#171).
-  const control = answeredInCheck ? (
+  // Its result stays withheld; the feedback panel says it was recorded (#171). The control is
+  // always inside the fieldset, answered or not, so answering doesn't remount it: a remounted
+  // control would start again from the answer the page loaded with, which on a first answer is
+  // none, and the answer just given would vanish.
+  const control = (
     <>
-      {!props.result && (
+      {answeredInCheck && !props.result && (
         <Alert tone="info" title="Answer recorded">
           You have answered this question. Only your first answer counts, so it can't be changed.
           Your results are in your mastery report when you finish the check.
         </Alert>
       )}
-      <fieldset disabled aria-label="Your answer" className="m-0 min-w-0 border-0 p-0">
+      <fieldset
+        disabled={answeredInCheck}
+        aria-label={answeredInCheck ? 'Your answer' : undefined}
+        className="m-0 min-w-0 border-0 p-0"
+      >
         {screen}
       </fieldset>
     </>
-  ) : (
-    screen
   )
   const feedback = isSupported && <FeedbackPanel result={props.result} />
   const hints = isSupported && (

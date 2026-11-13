@@ -31,7 +31,7 @@ export function Matching({
   // A restored answer is the one its restored result is about, so its marks show (#171).
   const [pairs, setPairs] = useState<Record<string, string>>(previous ?? {})
   const [checked, setChecked] = useState<Record<string, string>>(previous ?? {})
-  const disabled = submitting || result?.correct === true
+  const disabled = submitting || result?.correct === true || !!readOnly
   const parts = new Map(result?.parts.map((part) => [part.ref, part]))
 
   return (

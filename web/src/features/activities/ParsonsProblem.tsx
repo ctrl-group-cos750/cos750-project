@@ -96,7 +96,8 @@ export function ParsonsProblem({
   }
 
   const lines = new Map(activity.config.lines.map((line) => [line.id, line]))
-  const disabled = submitting || result?.correct === true
+  // Read-only too: a disabled fieldset around it doesn't stop dragging (#171).
+  const disabled = submitting || result?.correct === true || !!readOnly
   // How a line is announced after a move: its code, which is what the student sees (the id isn't).
   const said = (lineId: number) => {
     const line = lines.get(lineId)

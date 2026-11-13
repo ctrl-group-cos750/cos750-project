@@ -26,7 +26,7 @@ export function MultipleChoice({
   const [selected, setSelected] = useState(previous ?? '')
   const [missing, setMissing] = useState(false)
   const name = useId()
-  const disabled = submitting || result?.correct === true
+  const disabled = submitting || result?.correct === true || !!readOnly
 
   return (
     <form

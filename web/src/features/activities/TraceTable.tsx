@@ -97,7 +97,8 @@ export function TraceTable({
   const [showErrors, setShowErrors] = useState(false)
   // The control to focus once React has drawn the row it belongs to.
   const focusNext = useRef('')
-  const disabled = submitting || result?.correct === true
+  // Read-only too: a disabled fieldset around it doesn't stop dragging (#171).
+  const disabled = submitting || result?.correct === true || !!readOnly
   const parts = new Map(result?.parts.map((part) => [part.ref, part]))
   const missingSteps =
     result?.parts.filter((part) => part.ref >= rows.length && !part.correct) ?? []

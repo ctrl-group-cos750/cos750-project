@@ -21,17 +21,29 @@ type FixTheBugProps = {
 type Row = { key: number; original: number | null; current: number }
 
 /** A sent program as the screen's rows (#171). The answer is only ids, so which faulty line a
- * correction replaced isn't stored: each correction is paired with the earliest faulty line the
- * program leaves out, and the faulty lines left over are the removed ones, which can be put back. */
+ * correction replaced isn't stored, and is worked out by position: a correction is paired with
+ * the first faulty line left out after the last faulty line kept before it (if line 3 was removed
+ * and line 5 replaced, the correction after line 4 goes with line 5). The faulty lines left over
+ * are the removed ones, which can be put back. A correction inserted as a new line can still be
+ * paired with a removed line next to it; that only changes which line Remove puts back, never
+ * the program sent. */
 function restore(
   lines: readonly { id: number }[],
   order: readonly number[],
 ): { rows: Row[]; removed: number[] } {
-  const lineIds = new Set(lines.map((line) => line.id))
+  const position = new Map(lines.map((line, index) => [line.id, index]))
   const missing = lines.map((line) => line.id).filter((id) => !order.includes(id))
+  let after = -1 // the position of the last faulty line kept (or paired) so far
   const rows = order.map((id, index): Row => {
-    if (lineIds.has(id)) return { key: id, original: id, current: id }
-    return { key: 100_000 + index, original: missing.shift() ?? null, current: id }
+    const kept = position.get(id)
+    if (kept !== undefined) {
+      after = kept
+      return { key: id, original: id, current: id }
+    }
+    const next = missing.findIndex((line) => (position.get(line) ?? -1) > after)
+    const [original] = missing.splice(next < 0 ? 0 : next, 1)
+    if (original !== undefined) after = position.get(original) ?? after
+    return { key: 100_000 + index, original: original ?? null, current: id }
   })
   return { rows, removed: missing }
 }
@@ -94,7 +106,8 @@ export function FixTheBug({
   })
 
   const byId = new Map<number, CodeLine>([...lines, ...corrections].map((l) => [l.id, l]))
-  const disabled = submitting || result?.correct === true
+  // Read-only too: a disabled fieldset around it doesn't stop dragging (#171).
+  const disabled = submitting || result?.correct === true || !!readOnly
   const parts = cleared ? undefined : result?.parts
   const partAt = new Map(parts?.map((part) => [part.ref, part]))
   const missingParts = parts?.filter((part) => part.ref >= rows.length && !part.correct) ?? []

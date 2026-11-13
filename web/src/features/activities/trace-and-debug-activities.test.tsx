@@ -879,6 +879,90 @@ describe('coming back to an answered activity (#171)', () => {
     expect(onSubmit).toHaveBeenCalledWith([1, 2, 3, 20, 5])
   })
 
+  it('fix the bug pairs a correction with the line it replaced, by position (#171 review)', () => {
+    // Line 2 removed and line 4 replaced: the correction after line 3 goes with line 4, and
+    // line 2 is the removed one, offered to put back.
+    render(
+      <FixTheBug
+        activity={fix}
+        result={undefined}
+        submitting={false}
+        onSubmit={vi.fn<(order: number[]) => Promise<void>>()}
+        previous={[1, 3, 20, 5]}
+      />,
+    )
+    const corrected = screen.getByRole('combobox', { name: 'Line 3' })
+    expect(corrected).toHaveValue('20')
+    expect(within(corrected).getByRole('option', { name: 'Keep this line' })).toHaveValue('4')
+    const removed = screen.getByRole('region', { name: 'Removed lines' })
+    expect(within(removed).getByRole('button', { name: /Put back: .*deque/ })).toBeInTheDocument()
+    expect(within(removed).queryByText(/queue\.pop\(\)/)).not.toBeInTheDocument()
+  })
+
+  it('an answered fix the bug item can’t be changed (#171 review)', () => {
+    render(
+      <FixTheBug
+        activity={fix}
+        result={undefined}
+        submitting={false}
+        onSubmit={vi.fn<(order: number[]) => Promise<void>>()}
+        previous={[1, 3, 20, 5]}
+        readOnly
+      />,
+    )
+    expect(screen.getByRole('combobox', { name: 'Line 1' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Put back/ })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Check answer' })).not.toBeInTheDocument()
+  })
+
+  it('a trace table starts from the rows sent, each with its own mark (#171 review)', () => {
+    render(
+      <TraceTable
+        activity={trace}
+        result={attempt({
+          parts: [
+            { ref: 0, correct: true, message: null },
+            { ref: 1, correct: false, message: 'Queue: only new neighbours join.' },
+            { ref: 2, correct: false, message: 'The traversal has more steps than this.' },
+          ],
+        })}
+        submitting={false}
+        onSubmit={vi.fn<(rows: TraceRow[]) => Promise<void>>()}
+        previous={[
+          { visitedVertex: 'B', queue: ['A', 'D'], visited: ['B'], order: ['B'] },
+          { visitedVertex: 'A', queue: ['D', 'B'], visited: ['B', 'A'], order: ['B', 'A'] },
+        ]}
+      />,
+    )
+    expect(screen.getByRole('combobox', { name: 'Step 1, current vertex' })).toHaveValue('B')
+    expect(screen.getByRole('combobox', { name: 'Step 2, current vertex' })).toHaveValue('A')
+    const step2Queue = screen.getByRole('textbox', { name: 'Step 2, queue after the step' })
+    expect(step2Queue).toHaveValue('D, B')
+    // Row 1's mark is on row 1 and row 2's on row 2.
+    expect(screen.getByText('Step 1: correct')).toBeInTheDocument()
+    expect(step2Queue).toHaveAccessibleDescription(/Queue: only new neighbours join\./)
+    expect(
+      screen.getByRole('textbox', { name: 'Step 1, queue after the step' }),
+    ).not.toHaveAccessibleDescription(/only new neighbours/)
+    expect(screen.getByText(/The trace isn’t finished/)).toBeInTheDocument()
+  })
+
+  it('an answered trace item can’t be changed (#171 review)', () => {
+    render(
+      <TraceTable
+        activity={trace}
+        result={undefined}
+        submitting={false}
+        onSubmit={vi.fn<(rows: TraceRow[]) => Promise<void>>()}
+        previous={[{ visitedVertex: 'B', queue: [], visited: ['B'], order: ['B'] }]}
+        readOnly
+      />,
+    )
+    expect(screen.getByRole('combobox', { name: 'Step 1, current vertex' })).toBeDisabled()
+    expect(screen.getByRole('textbox', { name: 'Step 1, order so far' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Add a step' })).toBeDisabled()
+  })
+
   it('choose tests starts from the tests the student chose', async () => {
     const onSubmit = vi.fn<(selected: string[]) => Promise<void>>().mockResolvedValue(undefined)
     render(

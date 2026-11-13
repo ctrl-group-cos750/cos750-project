@@ -53,7 +53,7 @@ export function FillInCode({
   readOnly,
 }: FillInCodeProps) {
   const [answers, setAnswers] = useState<Record<number, string>>(previous ?? {})
-  const disabled = submitting || result?.correct === true
+  const disabled = submitting || result?.correct === true || !!readOnly
   const partsByBlank = new Map(result?.parts.map((part) => [part.ref, part]))
   const lineOccurrences = new Map<string, number>()
 

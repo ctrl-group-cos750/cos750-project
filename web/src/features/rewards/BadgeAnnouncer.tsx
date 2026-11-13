@@ -15,7 +15,7 @@ import { SETTINGS_LINK } from '../progress/HiddenNote.tsx'
 const READY = 'ready-for-lecture'
 // More than this at once (a burst after a mastery check) collapse into one line.
 const MAX_NOTES = 3
-// On a phone, how long a note stays before it goes by itself (the badges page keeps it).
+// How long a note stays before it goes by itself, at every width (the badges page keeps it).
 const NOTE_SECONDS = 8
 
 function announcement(item: ShelfItem) {
@@ -83,11 +83,11 @@ function Celebration({ item, onClose }: { item: ShelfItem; onClose: () => void }
  * moment for Ready for the Lecture. Each badge is announced once (the server is told it was
  * seen), and nothing is announced while the student has hidden rewards.
  *
- * The notes are a polite live region. On a phone they take one card at most (a burst becomes
- * "3 new badges"), shown as a compact banner at the top of the screen (the badge's name and its
- * links, not its description), so they never cover a module's Previous and Next at the bottom
- * (#215 review), and go by themselves after a few seconds unless focus is in them; the badges
- * page keeps them. Their links are 44 px tall on a touch screen. Dismissing one moves focus to the next note's ×, or back to where the student was.
+ * The notes are a polite live region at the top right, under the header, at every width, so
+ * they never cover a lesson's Previous and Next at the bottom (#215 review, 13 Nov review). On a
+ * phone they take one card at most (a burst becomes "3 new badges"), a compact banner with the
+ * badge's name and its links, not its description. They go by themselves after a few seconds
+ * unless focus or the pointer is in them; the badges page keeps them. Their links are 44 px tall on a touch screen. Dismissing one moves focus to the next note's ×, or back to where the student was.
  */
 export function BadgeAnnouncer() {
   const { data } = useRewards()
@@ -110,6 +110,7 @@ export function BadgeAnnouncer() {
   // After a dismiss: the position of the × to focus next, once the notes have re-rendered.
   const refocus = useRef<number | null>(null)
   const [focusInside, setFocusInside] = useState(false)
+  const [pointerInside, setPointerInside] = useState(false)
 
   useEffect(() => {
     // Badges wait for the skill profile too, so a burst of badges and module medals (#214) comes
@@ -169,15 +170,16 @@ export function BadgeAnnouncer() {
     }
   }, [])
 
-  // Phones: the note goes by itself after a while, unless the student is in it.
+  // The notes go by themselves after a while at every width, unless the student is in them
+  // (focus or the pointer); the badges page keeps them (13 Nov review).
   useEffect(() => {
-    if (!phone || focusInside || notes.length + medals.length === 0) return
+    if (focusInside || pointerInside || notes.length + medals.length === 0) return
     const timer = setTimeout(() => {
       setNotes([])
       setMedals([])
     }, NOTE_SECONDS * 1000)
     return () => clearTimeout(timer)
-  }, [phone, focusInside, notes, medals])
+  }, [focusInside, pointerInside, notes, medals])
 
   /** Runs a dismiss, then moves focus to the × now in the same place (or back to the page). */
   const dismissing = (event: MouseEvent<HTMLElement>, change: () => void) => {
@@ -220,7 +222,13 @@ export function BadgeAnnouncer() {
 
   return (
     <>
-      <output ref={region} className={styles.region} aria-live="polite">
+      <output
+        ref={region}
+        className={styles.region}
+        aria-live="polite"
+        onPointerEnter={() => setPointerInside(true)}
+        onPointerLeave={() => setPointerInside(false)}
+      >
         {collapsed && (
           <div className={styles.note}>
             <div className={styles.text}>

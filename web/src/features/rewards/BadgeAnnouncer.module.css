@@ -1,7 +1,10 @@
+/* Top right, just under the sticky header (4.25rem), at every width: at the bottom the notes
+ * covered a lesson's Next on a laptop (13 Nov review). They go by themselves after a few seconds
+ * unless focus or the pointer is in them (BadgeAnnouncer); the badges page keeps them. */
 .region {
   position: fixed;
+  top: calc(4.25rem + var(--space-2));
   right: var(--space-4);
-  bottom: var(--space-4);
   z-index: 40;
   display: flex;
   flex-direction: column;

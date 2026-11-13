@@ -472,3 +472,22 @@ describe('module medal notes', () => {
     expect(screen.queryByText('Module 3: finished medal')).toBeNull()
   })
 })
+
+describe('note placement and timing (13 Nov review)', () => {
+  it('goes by itself after a few seconds on a laptop too, unless focus is in it', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      withRewards({
+        hideRewards: false,
+        points: 0,
+        badges: [badge('lo1', { tier: 'practised', seen: false })],
+      })
+      renderApp('/')
+      expect(await screen.findByText('Word Smith: practised')).toBeVisible()
+      await vi.advanceTimersByTimeAsync(9_000)
+      await waitFor(() => expect(screen.queryByText('Word Smith: practised')).toBeNull())
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})

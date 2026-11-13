@@ -309,6 +309,8 @@ def test_module_0_promises_no_skip_the_app_does_not_make() -> None:
     module = next(m for m in CONTENT.modules if m.id == 0)
     for s in module.segments:
         assert "skip" not in (s.body or "").lower(), s.id
+        # Its answers are marked right or wrong and earn points: they just count for no result.
+        assert "nothing here is marked" not in (s.body or "").lower(), s.id
 
 
 # The segment that gains attention in each module (Gagné's event 1): the module's first text or

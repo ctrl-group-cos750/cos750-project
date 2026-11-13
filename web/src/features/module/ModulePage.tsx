@@ -295,13 +295,14 @@ export function ModulePage() {
         : 'Answer the activity to continue.'
   // Two answers, or one after the last hint, and the student may move on without getting it right
   // (FR-2.7, #214): say so, that it is marked to look at again, and plainly that moving on earns
-  // nothing for it (#215 review). The progress panel lists every one marked.
+  // nothing for it (#215 review): points go to a right first answer only (FR-9.1). The progress
+  // panel lists every one marked.
   const statusLine =
     blockedReason ||
     (segment?.lookAgain
       ? hideRewards
         ? 'You can move on: this one is marked to look at again. It doesn’t count as right until you answer it right.'
-        : 'You can move on: this one is marked to look at again. Moving on earns no points for it; answer it right later and it does.'
+        : 'You can move on: this one is marked to look at again. It earns no points now that the first answer was wrong, but answer it right later and it counts towards your medal.'
       : '')
   // The page opened here because the student moved past this activity before answering it: say
   // so, until it is done, so the jump back isn't a mystery.

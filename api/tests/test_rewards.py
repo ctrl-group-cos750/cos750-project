@@ -60,6 +60,8 @@ def attempt(
         detail={},
         hint_level=hint_level,
     )
+    db.add(row)
+    db.flush()
     return rewards.on_attempt(db, row).points
 
 
@@ -75,9 +77,20 @@ def test_hint_level_3_or_4_earns_fewer_points(
 
 
 def test_wrong_answers_never_cost_points(db: Session, user: User) -> None:
-    assert attempt(db, user, correct=False) == 0
     assert attempt(db, user, correct=True) == 10
     assert attempt(db, user, correct=False) == 0
+    assert rewards.total_points(db, user.id) == 10
+
+
+@pytest.mark.parametrize("hint_level", [0, 3])
+def test_a_right_answer_after_a_wrong_first_attempt_earns_nothing(
+    db: Session, user: User, hint_level: int
+) -> None:
+    """Review of 13 Nov, High 7: paying the later right answer paid guessing (module 1 all wrong
+    then right earned 165 points, all right first time 125). Only a right first attempt earns."""
+    assert attempt(db, user, correct=False) == 0
+    assert attempt(db, user, correct=True, hint_level=hint_level) == 0
+    assert attempt(db, user, correct=True, activity=2) == 10
     assert rewards.total_points(db, user.id) == 10
 
 
@@ -219,8 +232,8 @@ def test_a_correct_answer_shows_up_as_points(client: TestClient, db: Session) ->
     db.add(activity)
     db.commit()
     log_in(client)
-    client.post(f"/api/activities/{activity.id}/attempts", json=WRONG)
     client.post(f"/api/activities/{activity.id}/attempts", json=RIGHT)
+    client.post(f"/api/activities/{activity.id}/attempts", json=WRONG)
     client.post(f"/api/activities/{activity.id}/attempts", json=RIGHT)
     assert client.get("/api/rewards").json()["points"] == 10
 

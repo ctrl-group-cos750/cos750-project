@@ -157,9 +157,24 @@ def _award(
 
 
 def on_attempt(session: Session, attempt: Attempt) -> Earned:
-    """Points for an activity's first correct answer: fewer if it came after hint level 3 or 4
-    (FR-9.2). A wrong answer, or a correct one to an activity already rewarded, earns nothing."""
+    """Points for an activity answered right at the **first** attempt (FR-9.1): the full points,
+    or fewer if it came after hint level 3 or 4 (FR-9.2). A wrong answer earns nothing, and so
+    does a right one after a wrong first attempt, in any round: paying the later right answer
+    paid guessing, and wrong-then-right on every item earned more than right first time (review
+    of 13 Nov, High 7). A correct answer to an activity already rewarded earns nothing either.
+    `attempt` must be flushed, so it has its id."""
     if not attempt.correct:
+        return Earned()
+    earlier = session.scalar(
+        select(Attempt.id)
+        .where(
+            Attempt.user_id == attempt.user_id,
+            Attempt.activity_id == attempt.activity_id,
+            Attempt.id < attempt.id,
+        )
+        .limit(1)
+    )
+    if earlier is not None:
         return Earned()
     supported = attempt.hint_level >= SUPPORT_LEVEL or answer_given_away(
         session, attempt.user_id, attempt.activity_id, before=attempt.id

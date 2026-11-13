@@ -271,9 +271,10 @@ def test_an_answer_says_what_points_it_earned(
     client: TestClient, db: Session, loaded: None
 ) -> None:
     user = log_in(client)
-    assert answer(client, 101, WRONG)["points"] == 0
     assert answer(client, 101)["points"] == 10
     assert answer(client, 101)["points"] == 0  # rewarded once
+    assert answer(client, 103, WRONG)["points"] == 0
+    assert answer(client, 103)["points"] == 0  # right only after a wrong first attempt (FR-9.1)
     see_hints(db, user, 102, 3)
     assert answer(client, 102)["points"] == 4
 

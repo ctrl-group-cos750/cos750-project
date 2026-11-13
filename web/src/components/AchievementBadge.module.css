@@ -45,6 +45,12 @@
   stroke-linecap: round;
 }
 
+/* The first level (#214): an outline in the accent colour on the card, no fill. */
+.practised {
+  --fill: var(--color-surface);
+  --stroke: var(--color-accent-text);
+}
+
 .bronze {
   --fill: var(--badge-bronze-soft);
   --stroke: var(--badge-bronze);

@@ -3,7 +3,11 @@ import { Link } from 'react-router'
 import { AchievementBadge, Button } from '../../components'
 import { focusedElement, focusSafely } from '../../lib/focus.ts'
 import { PHONE, useMediaQuery } from '../activities/pictures/useMediaQuery.ts'
+import { useSkills } from '../progress/hooks.ts'
+import { Medal } from '../progress/Medal.tsx'
+import { MEDAL_NAMES, MEDAL_RULES } from '../progress/medals.ts'
 import { useMarkRewardsSeen, useRewards, useRewardsSettings } from './hooks.ts'
+import { newMedals, type MedalNote } from './medalNotes.ts'
 import { unseen, type ShelfItem } from './shelf.ts'
 import styles from './BadgeAnnouncer.module.css'
 import { SETTINGS_LINK } from '../progress/HiddenNote.tsx'
@@ -15,9 +19,13 @@ const MAX_NOTES = 3
 const NOTE_SECONDS = 8
 
 function announcement(item: ShelfItem) {
-  // "Now gold" only for a real upgrade from bronze; met on their own first time, it is just gold.
-  if (item.state === 'gold')
-    return item.earned?.upgradedAt ? `${item.title} is now gold` : `${item.title}: gold`
+  // "Now bronze" or "now gold" only for a real upgrade from a lower level (#214); a badge earned
+  // straight at its level just names it.
+  if (item.state === 'practised') return `${item.title}: practised`
+  if (item.state === 'gold' || (item.state === 'bronze' && item.earned?.upgradedAt))
+    return item.earned?.upgradedAt
+      ? `${item.title} is now ${item.state}`
+      : `${item.title}: ${item.state}`
   return item.title
 }
 
@@ -85,6 +93,9 @@ export function BadgeAnnouncer() {
   const { data } = useRewards()
   const markSeen = useMarkRewardsSeen()
   const [notes, setNotes] = useState<ShelfItem[]>([])
+  // Module medals as they are earned (#214), once each (medalNotes.ts).
+  const skills = useSkills()
+  const [medals, setMedals] = useState<MedalNote[]>([])
   const [celebrate, setCelebrate] = useState<ShelfItem | null>(null)
   // Set once the student turns badges off from a note: says where to turn them back on.
   const [turnedOff, setTurnedOff] = useState(false)
@@ -112,6 +123,19 @@ export function BadgeAnnouncer() {
     ])
     mutate()
   }, [data, mutate])
+
+  useEffect(() => {
+    if (!data || !skills.data) return
+    const fresh = newMedals(skills.data.modules, data.hideRewards)
+    if (fresh.length === 0) return
+    // The record of medals announced is in localStorage, outside React: reading it marks them
+    // announced, so the notes can only be set here, once.
+    // oxlint-disable-next-line react/set-state-in-effect
+    setMedals((shown) => [
+      ...shown.filter((n) => !fresh.some((f) => f.moduleId === n.moduleId)),
+      ...fresh,
+    ])
+  }, [data, skills.data])
 
   // After every render, so it runs once the dismissed note has gone.
   useEffect(() => {
@@ -144,10 +168,13 @@ export function BadgeAnnouncer() {
 
   // Phones: the note goes by itself after a while, unless the student is in it.
   useEffect(() => {
-    if (!phone || focusInside || notes.length === 0) return
-    const timer = setTimeout(() => setNotes([]), NOTE_SECONDS * 1000)
+    if (!phone || focusInside || notes.length + medals.length === 0) return
+    const timer = setTimeout(() => {
+      setNotes([])
+      setMedals([])
+    }, NOTE_SECONDS * 1000)
     return () => clearTimeout(timer)
-  }, [phone, focusInside, notes])
+  }, [phone, focusInside, notes, medals])
 
   /** Runs a dismiss, then moves focus to the × now in the same place (or back to the page). */
   const dismissing = (event: MouseEvent<HTMLElement>, change: () => void) => {
@@ -167,6 +194,7 @@ export function BadgeAnnouncer() {
       {
         onSuccess: () => {
           setNotes([])
+          setMedals([])
           setTurnedOff(true)
         },
       },
@@ -204,6 +232,44 @@ export function BadgeAnnouncer() {
             </Button>
           </div>
         )}
+        {(phone ? medals.slice(-1) : medals).map((note) => {
+          const title = `Module ${note.moduleId}: ${note.tier} medal`
+          return (
+            <div key={note.key} className={styles.note}>
+              <Medal tier={note.tier} size={48} label={`${MEDAL_NAMES[note.tier]} medal`} />
+              <div className={styles.text}>
+                <strong>{title}</strong>
+                <span className={styles.description}>
+                  {MEDAL_NAMES[note.tier]}: {MEDAL_RULES[note.tier]}.
+                </span>
+                <span className={styles.links}>
+                  <button
+                    type="button"
+                    className={styles.off}
+                    disabled={settings.isPending}
+                    onClick={turnOff}
+                  >
+                    Turn off badges
+                  </button>
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={styles.dismiss}
+                data-dismiss
+                aria-label={`Dismiss ${title}`}
+                onClick={(event) =>
+                  dismissing(event, () =>
+                    setMedals((shown) => shown.filter((n) => n.key !== note.key)),
+                  )
+                }
+              >
+                ×
+              </Button>
+            </div>
+          )
+        })}
         {cards.map((item) => (
           <div key={item.key} className={styles.note}>
             <AchievementBadge achievement={item.achievement} state={item.state} size={48} />

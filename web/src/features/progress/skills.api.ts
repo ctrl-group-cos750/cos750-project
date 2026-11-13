@@ -30,6 +30,9 @@ export type Skill = {
   result: ObjectiveState | null
   /** Where to work on it next; null once met on your own (or nowhere to go). */
   improve?: Improve | null
+  /** The modules, in course order, whose practice questions it has: where its badge's first
+   * level, Practised, is earned. */
+  modules?: number[]
 }
 
 /** A module's medal (FR-9.8): `medal` once complete, `headingFor` while in progress. */

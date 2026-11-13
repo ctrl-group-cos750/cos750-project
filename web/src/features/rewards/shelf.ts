@@ -1,4 +1,5 @@
 import { ACHIEVEMENTS, type Achievement, type AchievementState } from '../../components'
+import type { Skill } from '../progress/skills.api.ts'
 import type { EarnedBadge } from './rewards.api.ts'
 
 /** One badge on the shelf or in an announcement: the catalogue entry and where the student is. */
@@ -8,9 +9,18 @@ export type ShelfItem = {
   state: AchievementState
   /** What it is called on screen; a quest badge names its quest. */
   title: string
-  /** How to earn it while it is locked, or how to raise bronze to gold. Never a reproach. */
+  /** How to earn it while it is locked, or what the next level needs. Never a reproach. */
   next?: string
+  /** A practised objective badge whose objective the mastery check said "not yet" for (#214):
+   * its review path, once open. */
+  review?: number
   earned?: EarnedBadge
+}
+
+/** "module 3", "modules 2 and 4", "modules 1, 2 and 5". */
+export function modulesText(modules: readonly number[]): string {
+  if (modules.length === 1) return `module ${modules[0]}`
+  return `modules ${modules.slice(0, -1).join(', ')} and ${modules[modules.length - 1]}`
 }
 
 const howToEarn: Record<string, string> = {
@@ -24,7 +34,10 @@ const howToEarn: Record<string, string> = {
 
 function stateOf(achievement: Achievement, earned?: EarnedBadge): AchievementState {
   if (!earned) return 'locked'
-  if (achievement.kind === 'objective') return earned.tier === 'gold' ? 'gold' : 'bronze'
+  if (achievement.kind === 'objective') {
+    if (earned.tier === 'gold') return 'gold'
+    return earned.tier === 'practised' ? 'practised' : 'bronze'
+  }
   return 'earned'
 }
 
@@ -40,18 +53,35 @@ function questNumbers(earned: EarnedBadge[]): Map<string, number> {
   return new Map(quests.map((e, index) => [e.ref, e.questNumber ?? index + 1]))
 }
 
-function item(achievement: Achievement, earned?: EarnedBadge, number?: number): ShelfItem {
+function item(
+  achievement: Achievement,
+  earned?: EarnedBadge,
+  number?: number,
+  skill?: Skill,
+): ShelfItem {
   const state = stateOf(achievement, earned)
   const title =
     achievement.id === 'quest' && earned && number !== undefined
       ? `Quest ${number}`
       : achievement.name
   let next: string | undefined
+  let review: number | undefined
   if (state === 'locked') {
+    // Objective badges: practised first, in the modules that practise the objective (#214).
     next =
       achievement.kind === 'objective'
-        ? `Meet learning objective ${achievement.objective}.`
+        ? skill?.modules?.length
+          ? `Practise it in ${modulesText(skill.modules)} until it is secure.`
+          : `Practise learning objective ${achievement.objective} in the modules until it is secure.`
         : howToEarn[achievement.id]
+  } else if (state === 'practised') {
+    if (skill?.result === 'not_yet') {
+      next = 'Practised; not yet met in the check.'
+      if (skill.improve?.kind === 'review') review = skill.id
+    } else {
+      next =
+        'Next: bronze when you meet it in the mastery check, gold when you meet it there without hint 3 or 4.'
+    }
   } else if (state === 'bronze') {
     next = 'Met with support. Gold is for meeting it without hint 3 or 4.'
   }
@@ -61,6 +91,7 @@ function item(achievement: Achievement, earned?: EarnedBadge, number?: number): 
     state,
     title,
     next,
+    review,
     earned,
   }
 }
@@ -70,8 +101,10 @@ function item(achievement: Achievement, earned?: EarnedBadge, number?: number): 
  * to earn them, so the shelf doubles as a map of the objectives; the hidden one stays a "?".
  * Quests get one badge each, so there is one card per quest finished, or a single locked one.
  * A badge the course can't award yet (`offered: false`) is left off unless the student has it.
+ * With the skill profile (`skills`), an objective badge says which modules practise it and, once
+ * the mastery check said "not yet", links its review path (#214).
  */
-export function buildShelf(earned: EarnedBadge[]) {
+export function buildShelf(earned: EarnedBadge[], skills: readonly Skill[] = []) {
   const held = (id: string) => earned.filter((e) => e.badge === id)
   const groups: Record<'objective' | 'milestone' | 'quest' | 'hidden', ShelfItem[]> = {
     objective: [],
@@ -85,16 +118,17 @@ export function buildShelf(earned: EarnedBadge[]) {
     if (achievement.offered === false && mine.length === 0) continue
     const order = (e: EarnedBadge) => numbers.get(e.ref) ?? 0
     mine.sort((a, b) => order(a) - order(b))
+    const skill = skills.find((x) => x.id === achievement.objective)
     const items =
       mine.length > 0
-        ? mine.map((e) => item(achievement, e, numbers.get(e.ref)))
-        : [item(achievement)]
+        ? mine.map((e) => item(achievement, e, numbers.get(e.ref), skill))
+        : [item(achievement, undefined, undefined, skill)]
     groups[achievement.kind].push(...items)
   }
   return groups
 }
 
-/** Badges earned (or raised to gold) that the student has not been shown yet. */
+/** Badges earned (or raised a level) that the student has not been shown yet. */
 export function unseen(earned: EarnedBadge[]): ShelfItem[] {
   const numbers = questNumbers(earned)
   return earned

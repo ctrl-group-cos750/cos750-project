@@ -165,3 +165,26 @@ export function useBackground(): [Background, (background: Background) => void] 
   const background = useSyncExternalStore(subscribe, storedBackground, () => 'glow' as Background)
   return [background, setStoredBackground]
 }
+
+/** A value kept for the signed-in student on this device (null if none, or storage is blocked):
+ * for small records such as which module medals have been announced (#214). */
+export function deviceValue(name: string): string | null {
+  try {
+    return localStorage.getItem(owner === null ? `${PREFIX}${name}` : `${PREFIX}${owner}.${name}`)
+  } catch {
+    return null
+  }
+}
+
+export function setDeviceValue(name: string, value: string): void {
+  try {
+    localStorage.setItem(owner === null ? `${PREFIX}${name}` : `${PREFIX}${owner}.${name}`, value)
+  } catch {
+    // storage blocked: it lasts as long as the page
+  }
+}
+
+/** The signed-in student this device's switches belong to, or null before sign-in. */
+export function preferenceOwner(): number | null {
+  return owner
+}

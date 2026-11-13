@@ -10,16 +10,18 @@ end-to-end tests' Playwright). Upload `slides.pdf` to ClickUP before the slot.
 | Slide | Presenter (proposed) | Time | Cumulative |
 |---|---|---|---|
 | 1. Title | Matthew Els | 0:30 | 0:30 |
-| 2. The learners | Joshua Wereley | 1:00 | 1:30 |
-| 3. Eight objectives | Mohtashim Hussain | 1:00 | 2:30 |
-| 4. ADDIE | Jacobus Hoogenboezem | 1:00 | 3:30 |
-| 5. Theories on screen | Ayanda Juqu | 1:00 | 4:30 |
-| 6. Scaffolding and mastery | Mohtashim Hussain | 1:15 | 5:45 |
-| 7. Motivation | Joshua Wereley | 1:00 | 6:45 |
-| 8. Scrum and architecture | Matthew Els | 1:00 | 7:45 |
-| 9. Quality | Simphiwe Nhlapo | 1:00 | 8:45 |
-| 10. Gaps and evaluation | Reece Schmidt | 1:00 | 9:45 |
-| 11. Demo | Matthew Els (hand over) | 0:15 | 10:00 |
+| 2. The learners | Joshua Wereley | 0:50 | 1:20 |
+| 3. Eight objectives | Mohtashim Hussain | 1:00 | 2:20 |
+| 4. ADDIE | Jacobus Hoogenboezem | 0:50 | 3:10 |
+| 5. Theories on screen | Ayanda Juqu | 0:55 | 4:05 |
+| 6. Learning styles | Simphiwe Nhlapo | 0:55 | 5:00 |
+| 7. Scaffolding and mastery | Mohtashim Hussain | 1:10 | 6:10 |
+| 8. Motivation | Joshua Wereley | 0:55 | 7:05 |
+| 9. Scrum, architecture, quality | Matthew Els | 0:50 | 7:55 |
+| 10. Gaps and evaluation | Reece Schmidt | 1:00 | 8:55 |
+| 11. Demo | Matthew Els (hand over) | 0:15 | 9:10 |
+
+The 50 seconds left over are slack for nerves and transitions: don't fill them.
 
 ## 1. Title (0:30)
 
@@ -28,7 +30,7 @@ data structure, graphs, and one algorithm on it, breadth-first search, to studen
 met either. Over the next ten minutes we show how we designed it as instructional designers and how
 we built it as software engineers; then we show it working.
 
-## 2. The learners (1:00)
+## 2. The learners (0:50)
 
 Our learners are second-year COS212 students. From COS110 they know queues; they can read a Python
 list and a loop. They have not seen a graph. A BFS lecture asks for three things at once: the
@@ -45,7 +47,7 @@ of four, at most one error in a trace. This is constructive alignment: the activ
 the item in the mastery check exercise the same skill. Objective 8, the shortest route and why BFS
 guarantees it, asks for the reason as well as the answer.
 
-## 4. ADDIE (1:00)
+## 4. ADDIE (0:50)
 
 We used ADDIE, because every phase leaves something you can check: the learner profile, Table 1,
 the content files, the evaluation plan. We did not run it as a waterfall. Inside Develop we
@@ -53,7 +55,7 @@ prototyped: content went onto staging within days of being written, and what did
 back to Design. Every module follows Gagné's nine events: a problem to gain attention, the goals,
 recall, a worked example, practice with feedback, assessment, and a transfer task at the end.
 
-## 5. Theories on screen (1:00)
+## 5. Theories on screen (0:55)
 
 Cognitive load theory is the backbone: a novice learns more from a worked example than from
 solving alone, so each new skill starts as one, and the help fades. Module 4 is the clearest case:
@@ -61,7 +63,19 @@ put BFS in order, then fill in three blanks, then nine. Module 1 starts the othe
 a problem before the definitions, which productive-failure research supports when the problem is
 followed by teaching. And feedback always says why an answer is wrong.
 
-## 6. Scaffolding and mastery (1:15)
+## 6. Learning styles (0:55)
+
+The specification asks which learning styles we cater for. Our answer is: all of them, without
+sorting anyone. A major review, Pashler and colleagues, found no evidence that matching teaching to
+a student's style improves learning. So we follow Universal Design for Learning instead: every
+student gets every representation. Each idea comes as text, a worked example, code, and the
+visualiser; students answer by choosing, ordering, completing, tracing and predicting. Checked
+against VARK, every channel is there; the aural one arrives with the narrated videos. The lecture's
+models fit too: Honey and Mumford's four styles and Kolb's cycle each find their step in every
+module. And everyone can use it: keyboard only, screen readers, a phone or a 4K screen, light or
+dark.
+
+## 7. Scaffolding and mastery (1:10)
 
 The specification's hard requirement is an assessment that gives extra help to students who
 struggle. Help comes at every level. In practice there is a four-level hint ladder, from a nudge to
@@ -71,7 +85,7 @@ report gives each objective one of three results: met independently, met with su
 yet. A "not yet" opens a review path that teaches the objective again, with practice of the same
 kind and fresh items. A student is ready for the lecture when nothing is "not yet".
 
-## 7. Motivation (1:00)
+## 8. Motivation (0:55)
 
 We designed with Keller's ARCS model: attention with a real problem and videos that stop to ask;
 relevance with graphs students know; confidence with clear goals, honest times and hints that
@@ -80,22 +94,15 @@ the research: no leaderboard, because comparison discourages the weakest student
 app is for; and badges can be turned off where they appear, because extrinsic rewards can crowd
 out interest.
 
-## 8. Scrum and architecture (1:00)
+## 9. Scrum, architecture and quality (0:50)
 
-We ran Scrum in one-week sprints: Sprint 0 for the foundation, Sprint 1 for a complete path with
-placeholder content, Sprint 2 for the real content. One board for engineers and designers, daily
-stand-ups on Discord, a weekly call. Every change goes through a reviewed pull request into
-staging, then to production. The content is data, so designers add questions without code, and
-tests run every answer through the BFS engine. When we found a student could fake the hidden tests
-in our code sandbox, we dropped running student code: the code activities are Parsons and
-fill-in, checked on the server.
-
-## 9. Quality (1:00)
-
-Over two thousand API tests, nearly five hundred web tests, and end-to-end tests that walk the
-whole student path in three browsers, with an accessibility scan of every page in light and dark
-mode. The app works with a keyboard alone, on a phone and on a 4K screen. Login was
-penetration-tested, and we keep only a name, an email address and progress.
+We ran Scrum in one-week sprints: a complete path with placeholder content first, then the real
+content, with daily stand-ups on Discord and one board for engineers and designers. The content is
+data, so designers add questions without code, and tests run every answer through the BFS engine.
+We dropped running student code when we found a student could fake the hidden tests; code
+activities are Parsons and fill-in, checked on the server. Over two thousand API tests, nearly five
+hundred web tests, every end-to-end test in three browsers, and no accessibility violations in
+light or dark.
 
 ## 10. Gaps and evaluation (1:00)
 

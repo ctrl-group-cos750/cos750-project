@@ -2,8 +2,8 @@
  * Which module 1 question or text segment shows which picture (#155). Keyed by the fixture ids
  * in api/app/seed/module-1.json, which never change. Only practice items are listed: a mastery
  * item never gets the correct graph (#144), and a test checks that every activity here is a
- * practice item. The closing task (activity 107) has no picture on purpose: one would hint that
- * stations are vertices.
+ * practice item. The closing task (activities 108 to 111, the segments titled "Closing task") has
+ * no picture on purpose: one would show which things are the vertices.
  */
 import { mapDrawing, type Drawing } from './drawing.ts'
 import {

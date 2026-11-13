@@ -458,44 +458,6 @@
             ],
             8,
             13
-          ],
-          [
-            2,
-            [
-              3,
-              4,
-              5
-            ],
-            6,
-            7,
-            8,
-            9,
-            10,
-            [
-              11,
-              12
-            ],
-            13,
-            1
-          ],
-          [
-            2,
-            [
-              3,
-              4,
-              5
-            ],
-            6,
-            7,
-            9,
-            10,
-            [
-              11,
-              12
-            ],
-            8,
-            13,
-            1
           ]
         ]
       },
@@ -1003,44 +965,6 @@
             ],
             8,
             13
-          ],
-          [
-            2,
-            [
-              3,
-              4,
-              5
-            ],
-            6,
-            7,
-            8,
-            9,
-            10,
-            [
-              11,
-              12
-            ],
-            13,
-            1
-          ],
-          [
-            2,
-            [
-              3,
-              4,
-              5
-            ],
-            6,
-            7,
-            9,
-            10,
-            [
-              11,
-              12
-            ],
-            8,
-            13,
-            1
           ]
         ],
         "explanation": "seen and queue both start with the start vertex, before the loop. Each round takes the vertex at the front with popleft, adds it to order, and adds each neighbour not seen yet, marking it seen as it joins so it never joins twice. The new names don't change the algorithm: seen does the job of visited, and current the job of v."

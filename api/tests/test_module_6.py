@@ -511,8 +511,9 @@ def test_order_append_after_the_neighbour_loop_is_a_correct_bfs_and_accepted() -
 @pytest.mark.parametrize("a", ORDERED, ids=lambda a: str(a.id))
 def test_an_ordered_item_accepts_exactly_the_working_orders(a: ActivityFixture) -> None:
     """Every order of the answer's lines Python can run is tried on the hidden tests: each the
-    checker accepts passes, and each that passes is accepted, order.append after the neighbour loop
-    and the import last included (FR-5.4, FR-5.5, #145; review of 13 Nov, High 5). Objectives 6 and 7 need every part right, so a working order marked
+    checker accepts passes, and each that passes with its import first is accepted, order.append
+    after the neighbour loop included (FR-5.4, FR-5.5, #145; review of 13 Nov, High 5). The import
+    last runs too, but is odd Python to teach, so it is not accepted (review of 13 Nov on #221). Objectives 6 and 7 need every part right, so a working order marked
     wrong would decide the result. Distractors and corrections are covered by the tests below."""
     every = {x["id"]: x["text"] for x in a.config["lines"] + a.config.get("corrections", [])}
     text = {i: every[i] for i in first_order(a)}
@@ -522,9 +523,10 @@ def test_an_ordered_item_accepts_exactly_the_working_orders(a: ActivityFixture) 
             working.append(order)
         if check_activity(a.kind, a.config, a.solution, {"order": order}).correct:
             accepted.append(order)
-    assert accepted == working
+    assert accepted == [o for o in working if text[o[0]].startswith("from ")]
     assert len(working) == 48
-    assert sum(not conventional(order, text) for order in accepted) == 36
+    assert len(accepted) == 24
+    assert sum(not conventional(order, text) for order in accepted) == 12
     shown = [x["id"] for x in a.config["lines"]]
     assert not check_activity(a.kind, a.config, a.solution, {"order": shown}).correct
 

@@ -207,7 +207,7 @@ describe('staff content editor', () => {
         'GET /api/staff/content/activities/311': () => Response.json(activity),
       },
     })
-    const confirm = vi.fn(() => false)
+    const confirm = vi.fn<(message?: string) => boolean>(() => false)
     vi.stubGlobal('confirm', confirm)
     renderApp('/staff/content/activities/311')
     const config = await screen.findByLabelText(/Config/)

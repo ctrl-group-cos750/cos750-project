@@ -18,7 +18,7 @@ const stateMarker: Record<VertexState, string> = {
 
 /** The graph in words for a screen reader (WCAG 1.1.1): its vertices and edges, so a student
  * can work out neighbours, then where BFS is: current vertex, queue and visited set. */
-export function graphLabel(input: { scenario: BfsScenario; frame: BfsFrame }): string {
+function graphLabel(input: { scenario: BfsScenario; frame: BfsFrame }): string {
   const { scenario, frame } = input
   const label = new Map(scenario.vertices.map((v) => [v.id, v.label]))
   const name = (id: string) => label.get(id) ?? id

@@ -20,8 +20,7 @@
           "id": 204,
           "kind": "worked_example",
           "title": "Worked example: building a graph in code",
-          "body": "You can see at a glance that the Admin block is joined to Computer Science and Engineering. A program can't see the map: it needs to answer one question in a single step, **which buildings are next to this one?** How would you store the campus so it can?\n\n**The Python you need here.** This code uses four Python building blocks. If you learnt to code in another language, here is what each one does.\n\n- A **list** keeps values in order, like `[\"C\", \"E\"]`. `append` adds a value at the end.\n- A **dictionary** (`dict`) finds a value by its key in one step. `{\"A\": [\"C\", \"E\"]}` stores the list `[\"C\", \"E\"]` under the key `\"A\"`, and `adjacency[\"A\"]` gives that list back.\n- A **set** holds values with no order and no repeats, like `{\"A\"}`. `\"A\" in s` asks whether `\"A\"` is in the set `s`. You'll use one in module 4.\n- A **class** bundles data with the functions that work on it. `Graph()` makes a new graph. Inside the class, `self` is that graph, so `self.adjacency` is its own dictionary.\n\nWe'll build the corner of campus with the `Graph` class, one call at a time, and watch `adjacency` change.\n\n```python\nclass Graph:\n    def __init__(self, directed=False):\n        self.directed = directed\n        self.adjacency = {}  # vertex -> list of neighbours\n```\n\n| Call | `adjacency` afterwards | Why |\n|---|---|---|\n| `g = Graph()` | `{}` | A new graph has no vertices. |\n| `g.add_vertex(\"A\")` | `{\"A\": []}` | A is new, so it gets an empty list. |\n| `g.add_vertex(\"A\")` | `{\"A\": []}` | A is already there, so nothing changes. |\n| `g.add_edge(\"A\", \"C\")` | `{\"A\": [\"C\"], \"C\": [\"A\"]}` | C is added first. The edge goes in both lists. |\n| `g.add_edge(\"A\", \"E\")` | `{\"A\": [\"C\", \"E\"], \"C\": [\"A\"], \"E\": [\"A\"]}` | E is appended to A's list; A keeps C. |\n\n**With arrows.** For `h = Graph(directed=True)`, `h.add_edge(\"A\", \"D\")` gives `{\"A\": [\"D\"], \"D\": []}`. D is added, but the edge is only stored in A's list.\n\n**Three rules:** a new vertex gets its own empty list; never replace a list that already exists; an undirected edge goes in both lists.",
-          "skip_check_activity_id": 203
+          "body": "You can see at a glance that the Admin block is joined to Computer Science and Engineering. A program can't see the map: it needs to answer one question in a single step, **which buildings are next to this one?** How would you store the campus so it can?\n\n**The Python you need here.** This code uses four Python building blocks. If you learnt to code in another language, here is what each one does.\n\n- A **list** keeps values in order, like `[\"C\", \"E\"]`. `append` adds a value at the end.\n- A **dictionary** (`dict`) finds a value by its key in one step. `{\"A\": [\"C\", \"E\"]}` stores the list `[\"C\", \"E\"]` under the key `\"A\"`, and `adjacency[\"A\"]` gives that list back.\n- A **set** holds values with no order and no repeats, like `{\"A\"}`. `\"A\" in s` asks whether `\"A\"` is in the set `s`. You'll use one in module 4.\n- A **class** bundles data with the functions that work on it. `Graph()` makes a new graph. Inside the class, `self` is that graph, so `self.adjacency` is its own dictionary.\n\nWe'll build the corner of campus with the `Graph` class, one call at a time, and watch `adjacency` change.\n\n```python\nclass Graph:\n    def __init__(self, directed=False):\n        self.directed = directed\n        self.adjacency = {}  # vertex -> list of neighbours\n```\n\n| Call | `adjacency` afterwards | Why |\n|---|---|---|\n| `g = Graph()` | `{}` | A new graph has no vertices. |\n| `g.add_vertex(\"A\")` | `{\"A\": []}` | A is new, so it gets an empty list. |\n| `g.add_vertex(\"A\")` | `{\"A\": []}` | A is already there, so nothing changes. |\n| `g.add_edge(\"A\", \"C\")` | `{\"A\": [\"C\"], \"C\": [\"A\"]}` | C is added first. The edge goes in both lists. |\n| `g.add_edge(\"A\", \"E\")` | `{\"A\": [\"C\", \"E\"], \"C\": [\"A\"], \"E\": [\"A\"]}` | E is appended to A's list; A keeps C. |\n\n**With arrows.** For `h = Graph(directed=True)`, `h.add_edge(\"A\", \"D\")` gives `{\"A\": [\"D\"], \"D\": []}`. D is added, but the edge is only stored in A's list.\n\n**Three rules:** a new vertex gets its own empty list; never replace a list that already exists; an undirected edge goes in both lists."
         },
         {
           "id": 270,
@@ -214,12 +213,12 @@
     {
       "id": 203,
       "kind": "multiple_choice",
-      "title": "Check: building a graph in code",
+      "title": "add_edge in an undirected graph",
       "module_id": 2,
-      "purpose": "practice",
+      "purpose": "test_out",
       "objective_id": 2,
       "config": {
-        "prompt": "Already confident? What is g.adjacency after this code? g = Graph(), then g.add_edge(\"P\", \"Q\"), then g.add_edge(\"Q\", \"R\").",
+        "prompt": "What is g.adjacency after this code? g = Graph(), then g.add_edge(\"P\", \"Q\"), then g.add_edge(\"Q\", \"R\").",
         "options": [
           {
             "id": "a",
@@ -232,6 +231,10 @@
           {
             "id": "c",
             "label": "{\"P\": [\"Q\"], \"Q\": [\"R\"]}"
+          },
+          {
+            "id": "d",
+            "label": "{\"P\": [\"Q\", \"R\"], \"Q\": [\"R\"], \"R\": []}"
           }
         ]
       },
@@ -239,28 +242,125 @@
         "explanation": "In an undirected graph add_edge connects both ways, so Q gets P and R as neighbours, and P and R each get Q.",
         "correct": "a",
         "feedback": {
-          "b": "Not quite. Undirected edges go both ways. Q must also list P, and R must list Q. Read the worked example to see both directions being stored.",
-          "c": "Not quite. Two things are missing. R needs its own key, and each edge goes in both lists. Read the worked example."
+          "b": "Not quite. Undirected edges go both ways. Q must also list P, and R must list Q.",
+          "c": "Not quite. Two things are missing. R needs its own key, and each edge goes in both lists.",
+          "d": "Not quite. add_edge(u, v) adds v to u's list and u to v's list. P is joined only to Q."
         }
+      }
+    },
+    {
+      "id": 250,
+      "kind": "multiple_choice",
+      "title": "A directed graph in code",
+      "module_id": 2,
+      "purpose": "test_out",
+      "objective_id": 2,
+      "config": {
+        "prompt": "g = Graph(directed=True), then g.add_vertex(\"A\"), g.add_vertex(\"B\") and g.add_vertex(\"C\"), then g.add_edge(\"A\", \"B\") and g.add_edge(\"C\", \"A\"). What is g.adjacency?",
+        "options": [
+          {
+            "id": "a",
+            "label": "{\"A\": [\"B\", \"C\"], \"B\": [\"A\"], \"C\": [\"A\"]}"
+          },
+          {
+            "id": "b",
+            "label": "{\"A\": [\"B\"], \"B\": [], \"C\": [\"A\"]}"
+          },
+          {
+            "id": "c",
+            "label": "{\"A\": [\"B\"], \"C\": [\"A\"]}"
+          },
+          {
+            "id": "d",
+            "label": "{\"A\": [\"B\"], \"B\": [], \"C\": []}"
+          }
+        ]
       },
-      "hints": [
-        {
-          "level": 1,
-          "body": "Graph() is undirected unless you say otherwise."
-        },
-        {
-          "level": 2,
-          "body": "Each add_edge call puts each vertex in the other's list."
-        },
-        {
-          "level": 3,
-          "body": "add_edge adds a vertex first if it's not there yet."
-        },
-        {
-          "level": 4,
-          "body": "Answer: {\"P\": [\"Q\"], \"Q\": [\"P\", \"R\"], \"R\": [\"Q\"]}."
+      "solution": {
+        "explanation": "In a directed graph add_edge(u, v) adds v to u's list only. So A lists B, C lists A, and B, which no edge leaves, has an empty list.",
+        "correct": "b",
+        "feedback": {
+          "a": "That is the undirected graph. With directed=True each edge goes one way only.",
+          "c": "add_vertex(\"B\") gave B its own key, with an empty list.",
+          "d": "add_edge(\"C\", \"A\") adds A to C's list."
         }
-      ]
+      }
+    },
+    {
+      "id": 251,
+      "kind": "multiple_choice",
+      "title": "Reading a dictionary",
+      "module_id": 2,
+      "purpose": "test_out",
+      "objective_id": 2,
+      "config": {
+        "prompt": "In an undirected graph, g.adjacency is {\"A\": [\"B\", \"C\"], \"B\": [\"A\"], \"C\": [\"A\"]}. Which edges does the graph have?",
+        "options": [
+          {
+            "id": "a",
+            "label": "A–B, A–C and B–C"
+          },
+          {
+            "id": "b",
+            "label": "A–B and A–C"
+          },
+          {
+            "id": "c",
+            "label": "A–B, A–C, B–A and C–A: four edges"
+          },
+          {
+            "id": "d",
+            "label": "B–C only"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "Each undirected edge is stored twice, once in each vertex's list. A–B is in A's and B's lists, A–C in A's and C's. B and C don't list each other, so there is no B–C.",
+        "correct": "b",
+        "feedback": {
+          "a": "B's list doesn't hold C, so B and C aren't joined.",
+          "c": "An undirected edge is stored in both lists, but it is still one edge: B–A is A–B.",
+          "d": "B's list holds only A, and C's list holds only A."
+        }
+      }
+    },
+    {
+      "id": 252,
+      "kind": "multiple_choice",
+      "title": "add_vertex",
+      "module_id": 2,
+      "purpose": "test_out",
+      "objective_id": 6,
+      "config": {
+        "prompt": "g.adjacency is {\"P\": [\"Q\"], \"Q\": [\"P\"]}. What is it after g.add_vertex(\"R\")?",
+        "options": [
+          {
+            "id": "a",
+            "label": "{\"P\": [\"Q\"], \"Q\": [\"P\"], \"R\": []}"
+          },
+          {
+            "id": "b",
+            "label": "{\"P\": [\"Q\", \"R\"], \"Q\": [\"P\", \"R\"], \"R\": [\"P\", \"Q\"]}"
+          },
+          {
+            "id": "c",
+            "label": "{\"P\": [\"Q\"], \"Q\": [\"P\"], \"R\": [\"R\"]}"
+          },
+          {
+            "id": "d",
+            "label": "{\"P\": [\"Q\"], \"Q\": [\"P\"]}"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "add_vertex adds the vertex with an empty list of neighbours. It joins it to nothing: only add_edge does that.",
+        "correct": "a",
+        "feedback": {
+          "b": "add_vertex joins the new vertex to nothing. Only add_edge adds neighbours.",
+          "c": "R isn't its own neighbour. A new vertex starts with an empty list.",
+          "d": "add_vertex gives R its own key in the dictionary."
+        }
+      }
     },
     {
       "id": 204,

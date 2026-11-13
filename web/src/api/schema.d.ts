@@ -495,7 +495,7 @@ export interface paths {
      * @description One module with its full ordered segment list and the student's status.
      *
      *     Returns 404 if the module does not exist; 403 if it is locked for this
-     *     student (the previous module has not been completed yet).
+     *     student (only the mastery check is: until modules 1 to 5 are complete or tested out).
      */
     get: operations['get_module_api_modules__module_id__get']
     put?: never
@@ -534,6 +534,36 @@ export interface paths {
      *     done yet.
      */
     post: operations['save_module_position_api_modules__module_id__position_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/modules/{module_id}/quick-check': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get Quick Check
+     * @description The module's quick check, "Already know this?" (FR-8.2, #214): its questions while this
+     *     student may take it (no answers or hints are in them), or its result once taken. 404 for a
+     *     module with no quick check (modules 0 and 6).
+     */
+    get: operations['get_quick_check_api_modules__module_id__quick_check_get']
+    put?: never
+    /**
+     * Take Quick Check
+     * @description Mark the quick check: one answer for every question, sent together, marked at once
+     *     (FR-8.2, #214). At most one wrong passes, and marks the module tested out; the result says
+     *     what was missed and where to go next either way. One try per module: 409 once taken, or once
+     *     the module is complete. 422 unless there is exactly one answer per question, each one of its
+     *     options; nothing is recorded then. 404 for a module with no quick check.
+     */
+    post: operations['take_quick_check_api_modules__module_id__quick_check_post']
     delete?: never
     options?: never
     head?: never
@@ -1443,7 +1473,7 @@ export interface components {
        * @default practice
        * @enum {string}
        */
-      purpose: 'practice' | 'diagnostic' | 'retrieval' | 'mastery' | 'review' | 'bonus'
+      purpose: 'practice' | 'diagnostic' | 'retrieval' | 'mastery' | 'review' | 'bonus' | 'test_out'
       /** Config */
       config: {
         [key: string]: unknown
@@ -1489,7 +1519,7 @@ export interface components {
        * @default practice
        * @enum {string}
        */
-      purpose: 'practice' | 'diagnostic' | 'retrieval' | 'mastery' | 'review' | 'bonus'
+      purpose: 'practice' | 'diagnostic' | 'retrieval' | 'mastery' | 'review' | 'bonus' | 'test_out'
       /** Config */
       config: {
         [key: string]: unknown
@@ -1537,7 +1567,7 @@ export interface components {
        * Purpose
        * @enum {string}
        */
-      purpose: 'practice' | 'diagnostic' | 'retrieval' | 'mastery' | 'review' | 'bonus'
+      purpose: 'practice' | 'diagnostic' | 'retrieval' | 'mastery' | 'review' | 'bonus' | 'test_out'
     }
     /** EditorContentOverview */
     EditorContentOverview: {
@@ -1957,7 +1987,7 @@ export interface components {
        * Status
        * @enum {string}
        */
-      status: 'locked' | 'open' | 'in_progress' | 'complete'
+      status: 'locked' | 'open' | 'in_progress' | 'complete' | 'tested_out'
       /** Segmentcount */
       segmentCount: number
       /** Currentsegmentposition */
@@ -1966,6 +1996,13 @@ export interface components {
       shownSegmentCount: number
       /** Shownsegmentspassed */
       shownSegmentsPassed: number
+      /**
+       * Recommended
+       * @default false
+       */
+      recommended: boolean
+      /** Quickcheck */
+      quickCheck?: ('available' | 'passed' | 'not_passed') | null
       /** Segments */
       segments: components['schemas']['SegmentOut'][]
       /** Retrieval */
@@ -1997,7 +2034,7 @@ export interface components {
        * Status
        * @enum {string}
        */
-      status: 'locked' | 'open' | 'in_progress' | 'complete'
+      status: 'locked' | 'open' | 'in_progress' | 'complete' | 'tested_out'
       /** Segmentcount */
       segmentCount: number
       /** Currentsegmentposition */
@@ -2006,6 +2043,13 @@ export interface components {
       shownSegmentCount: number
       /** Shownsegmentspassed */
       shownSegmentsPassed: number
+      /**
+       * Recommended
+       * @default false
+       */
+      recommended: boolean
+      /** Quickcheck */
+      quickCheck?: ('available' | 'passed' | 'not_passed') | null
     }
     /**
      * ObjectiveReadiness
@@ -2091,6 +2135,105 @@ export interface components {
     PositionIn: {
       /** Segmentposition */
       segmentPosition: number
+    }
+    /** QuickCheckAnswerIn */
+    QuickCheckAnswerIn: {
+      /** Activityid */
+      activityId: number
+      /** Selected */
+      selected: string
+    }
+    /**
+     * QuickCheckIn
+     * @description `POST /api/modules/{moduleId}/quick-check`: one answer for every question, sent together.
+     */
+    QuickCheckIn: {
+      /** Answers */
+      answers: components['schemas']['QuickCheckAnswerIn'][]
+    }
+    /**
+     * QuickCheckItemResultOut
+     * @description How one question went, shown once every question is answered.
+     */
+    QuickCheckItemResultOut: {
+      /** Activityid */
+      activityId: number
+      /** Title */
+      title: string
+      /** Prompt */
+      prompt: string
+      /** Correct */
+      correct: boolean
+      /** Chosen */
+      chosen: string
+      /** Answer */
+      answer: string
+      /** Explanation */
+      explanation: string
+    }
+    /** QuickCheckOptionOut */
+    QuickCheckOptionOut: {
+      /** Id */
+      id: string
+      /** Label */
+      label: string
+    }
+    /**
+     * QuickCheckOut
+     * @description `GET /api/modules/{moduleId}/quick-check`. `available` while the student may take it;
+     *     `questions` then holds its questions. Once taken, `result` holds how it went.
+     */
+    QuickCheckOut: {
+      /** Moduleid */
+      moduleId: number
+      /** Available */
+      available: boolean
+      /** Passmark */
+      passMark: number
+      /** Questions */
+      questions: components['schemas']['QuickCheckQuestionOut'][]
+      result?: components['schemas']['QuickCheckResultOut'] | null
+    }
+    /**
+     * QuickCheckQuestionOut
+     * @description One quick check question: multiple choice, no hints, no feedback until the end.
+     */
+    QuickCheckQuestionOut: {
+      /** Id */
+      id: number
+      /** Title */
+      title: string
+      /** Prompt */
+      prompt: string
+      /** Options */
+      options: components['schemas']['QuickCheckOptionOut'][]
+    }
+    /**
+     * QuickCheckResultOut
+     * @description The quick check's result (FR-8.2, #214). `passed` with at most one wrong. `suggestion`:
+     *     `move_on` after a pass, `start_with` an earlier module after a fail that points there (see
+     *     app/services/quick_check.py), else `work_through` this module. `suggested_module` is the
+     *     module named: the next one to do after a pass (None if there is none), the earlier one, or
+     *     this one. `look_at` names what was missed: the titles of the questions answered wrongly.
+     */
+    QuickCheckResultOut: {
+      /** Passed */
+      passed: boolean
+      /** Correct */
+      correct: number
+      /** Total */
+      total: number
+      /**
+       * Suggestion
+       * @enum {string}
+       */
+      suggestion: 'move_on' | 'start_with' | 'work_through'
+      /** Suggestedmodule */
+      suggestedModule: number | null
+      /** Lookat */
+      lookAt: string[]
+      /** Items */
+      items: components['schemas']['QuickCheckItemResultOut'][]
     }
     /**
      * Readiness
@@ -2256,6 +2399,11 @@ export interface components {
        * @default false
        */
       attempted: boolean
+      /**
+       * Lookagain
+       * @default false
+       */
+      lookAgain: boolean
       /**
        * Optional
        * @default false
@@ -3302,6 +3450,76 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['ModuleDetailOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  get_quick_check_api_modules__module_id__quick_check_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        module_id: number
+      }
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['QuickCheckOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  take_quick_check_api_modules__module_id__quick_check_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        module_id: number
+      }
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['QuickCheckIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['QuickCheckResultOut']
         }
       }
       /** @description Validation Error */

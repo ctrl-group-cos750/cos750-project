@@ -53,8 +53,7 @@
           "id": 317,
           "kind": "worked_example",
           "title": "Worked example: filling in a trace table",
-          "body": "We trace BFS on the campus graph from **A**, one row for each vertex that leaves the queue. A vertex is **found** when it joins the queue, and BFS never adds a vertex it has already found. It is **visited** when it leaves the queue, which is when it joins the order.\n\nEvery row follows the same four subgoals. First, **initialise**: the start is found and waits in the queue (the start row). Then, for each row: **take the next vertex** from the front of the queue. Then, **for each neighbour** of that vertex, in alphabetical order, ask whether it has been found. If it hasn't, **mark and enqueue** it: it is found and joins the back.\n\n| Step | Current vertex | Queue after the step | Visited | Order so far |\n|---|---|---|---|---|\n| start | – | A | – | – |\n| 1 | A | C, E | A | A |\n| 2 | C | E, B, F | A, C | A, C |\n| 3 | E | B, F, D | A, C, E | A, C, E |\n\n**Step 1.** *Take the next vertex:* A leaves the queue, so it is visited and joins the order. *For each neighbour:* A's neighbours in alphabetical order are C and E. *Mark and enqueue:* neither has been found yet, so both join the back of the queue.\n\n**Step 2.** *Take the next vertex:* C is at the front, so C leaves. *For each neighbour:* its neighbours are A, B and F. *Mark and enqueue:* A has been found already, so only B and F join.\n\n**Step 3.** *Take the next vertex:* E leaves. *For each neighbour:* its neighbours are A, D and F. *Mark and enqueue:* A is visited, and F is already waiting in the queue, so only D joins.\n\nThe remaining steps work the same way. The full order is **A, C, E, B, F, D, G**.",
-          "skip_check_activity_id": 314
+          "body": "We trace BFS on the campus graph from **A**, one row for each vertex that leaves the queue. A vertex is **found** when it joins the queue, and BFS never adds a vertex it has already found. It is **visited** when it leaves the queue, which is when it joins the order.\n\nEvery row follows the same four subgoals. First, **initialise**: the start is found and waits in the queue (the start row). Then, for each row: **take the next vertex** from the front of the queue. Then, **for each neighbour** of that vertex, in alphabetical order, ask whether it has been found. If it hasn't, **mark and enqueue** it: it is found and joins the back.\n\n| Step | Current vertex | Queue after the step | Visited | Order so far |\n|---|---|---|---|---|\n| start | – | A | – | – |\n| 1 | A | C, E | A | A |\n| 2 | C | E, B, F | A, C | A, C |\n| 3 | E | B, F, D | A, C, E | A, C, E |\n\n**Step 1.** *Take the next vertex:* A leaves the queue, so it is visited and joins the order. *For each neighbour:* A's neighbours in alphabetical order are C and E. *Mark and enqueue:* neither has been found yet, so both join the back of the queue.\n\n**Step 2.** *Take the next vertex:* C is at the front, so C leaves. *For each neighbour:* its neighbours are A, B and F. *Mark and enqueue:* A has been found already, so only B and F join.\n\n**Step 3.** *Take the next vertex:* E leaves. *For each neighbour:* its neighbours are A, D and F. *Mark and enqueue:* A is visited, and F is already waiting in the queue, so only D joins.\n\nThe remaining steps work the same way. The full order is **A, C, E, B, F, D, G**."
         },
         {
           "id": 370,
@@ -313,12 +312,12 @@
     {
       "id": 314,
       "kind": "multiple_choice",
-      "title": "Already confident? The queue after C",
+      "title": "The queue after a step",
       "module_id": 3,
-      "purpose": "practice",
+      "purpose": "test_out",
       "objective_id": 5,
       "config": {
-        "prompt": "Already confident? On the campus graph from A, after C is processed, what is in the queue (front first)?",
+        "prompt": "On the campus graph from A, after C is processed, what is in the queue (front first)?",
         "options": [
           {
             "id": "b",
@@ -331,6 +330,10 @@
           {
             "id": "a",
             "label": "E, B, F"
+          },
+          {
+            "id": "d",
+            "label": "C, E, B, F"
           }
         ]
       },
@@ -339,27 +342,124 @@
         "correct": "a",
         "feedback": {
           "b": "E was already waiting. New vertices join at the back, so E stays in front.",
-          "c": "B and F join together at the back, after E."
+          "c": "B and F join together at the back, after E.",
+          "d": "C left the front of the queue when it was processed, so it isn't in the queue any more."
         }
+      }
+    },
+    {
+      "id": 350,
+      "kind": "multiple_choice",
+      "title": "When BFS fits",
+      "module_id": 3,
+      "purpose": "test_out",
+      "objective_id": 4,
+      "config": {
+        "prompt": "Which of these is not a job for BFS?",
+        "options": [
+          {
+            "id": "a",
+            "label": "Find the route between two stations on the Gautrain map with the fewest stops."
+          },
+          {
+            "id": "b",
+            "label": "List everyone who is a friend, or a friend of a friend, of Thandi on a social network."
+          },
+          {
+            "id": "c",
+            "label": "Add up the prices of all items in a shopping list."
+          },
+          {
+            "id": "d",
+            "label": "Find the fewest links you must click to get from one web page to another."
+          }
+        ]
       },
-      "hints": [
-        {
-          "level": 1,
-          "body": "What was in the queue before C was processed?"
-        },
-        {
-          "level": 2,
-          "body": "C leaves from the front, and C's new neighbours join at the back."
-        },
-        {
-          "level": 3,
-          "body": "Before: C, E. C leaves. B and F join behind E."
-        },
-        {
-          "level": 4,
-          "body": "Answer: E, B, F."
+      "solution": {
+        "explanation": "BFS follows connections, ring by ring from the start. A list of prices has no connections to follow, so a simple loop adds them up. The other three are graphs where you want the fewest steps, or everyone within a few steps.",
+        "correct": "c",
+        "feedback": {
+          "a": "Fewest stops means fewest edges, the order in which BFS reaches vertices.",
+          "b": "Friends are one edge away and friends of friends two. BFS finds them ring by ring.",
+          "d": "Pages are vertices and links are edges, so the fewest clicks is the fewest edges."
         }
-      ]
+      }
+    },
+    {
+      "id": 351,
+      "kind": "multiple_choice",
+      "title": "The BFS order",
+      "module_id": 3,
+      "purpose": "test_out",
+      "objective_id": 5,
+      "config": {
+        "prompt": "BFS starts at A on the undirected graph with edges A–B, A–D, B–C, C–E and D–E, taking neighbours in alphabetical order. In what order does it visit the vertices?",
+        "options": [
+          {
+            "id": "a",
+            "label": "A, B, C, E, D"
+          },
+          {
+            "id": "b",
+            "label": "A, B, C, D, E"
+          },
+          {
+            "id": "c",
+            "label": "A, B, D, C, E"
+          },
+          {
+            "id": "d",
+            "label": "A, D, B, E, C"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "A's neighbours B and D join the queue first. Then B adds C, and D adds E. So the order is A, B, D, C, E: everything one edge from A before anything two edges away.",
+        "correct": "c",
+        "feedback": {
+          "a": "That goes deep first. BFS visits both of A's neighbours, B and D, before C.",
+          "b": "That is alphabetical order. BFS visits by distance from A: D is one edge away, C two.",
+          "d": "Neighbours are taken in alphabetical order, so B joins the queue before D."
+        }
+      }
+    },
+    {
+      "id": 352,
+      "kind": "multiple_choice",
+      "title": "The fewest edges",
+      "module_id": 3,
+      "purpose": "test_out",
+      "objective_id": 8,
+      "config": {
+        "prompt": "An undirected graph has the edges P–Q, P–R, Q–S, R–T, S–U and T–U. What is the fewest number of edges from P to U?",
+        "options": [
+          {
+            "id": "a",
+            "label": "2"
+          },
+          {
+            "id": "b",
+            "label": "3"
+          },
+          {
+            "id": "c",
+            "label": "4"
+          },
+          {
+            "id": "d",
+            "label": "6"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "BFS from P finds Q and R at one edge, S and T at two, and U at three. BFS reaches each vertex by a route with the fewest edges, so three is the fewest.",
+        "correct": "b",
+        "feedback": {
+          "a": "No neighbour of P is joined to U. Count the rings BFS finds from P.",
+          "c": "There is a shorter route: P–Q–S–U takes three edges.",
+          "d": "6 is the number of edges in the whole graph. Count only the edges on one route."
+        }
+      }
     },
     {
       "id": 360,

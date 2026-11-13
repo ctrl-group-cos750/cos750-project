@@ -53,8 +53,7 @@
           "id": 105,
           "kind": "worked_example",
           "title": "Worked example: reading a graph",
-          "body": "Here is how to read any graph. We'll use the campus graph.\n\n**Step 1. List the vertices.** Every circle is a vertex. The campus has 7: A, B, C, D, E, F, G.\n\n**Step 2. List the edges.** Every line is one edge, named by the letters of the two vertices it joins. Count each line once, even though it touches two vertices. For example, the walkway between the Admin block (A) and Computer Science (C) is the edge A–C. The campus has 7 edges.\n\n**Step 3. Find neighbours.** Two vertices are neighbours if an edge joins them. E's neighbours are A, D and F. D has only one neighbour: E.\n\n**Step 4. Check the direction.** These edges are plain lines, so you can walk them both ways. The graph is **undirected**. If the edges had arrows, it would be **directed**.\n\n**Result:** 7 vertices, 7 edges, undirected. Next, you name every walkway's edge yourself.",
-          "skip_check_activity_id": 103
+          "body": "Here is how to read any graph. We'll use the campus graph.\n\n**Step 1. List the vertices.** Every circle is a vertex. The campus has 7: A, B, C, D, E, F, G.\n\n**Step 2. List the edges.** Every line is one edge, named by the letters of the two vertices it joins. Count each line once, even though it touches two vertices. For example, the walkway between the Admin block (A) and Computer Science (C) is the edge A–C. The campus has 7 edges.\n\n**Step 3. Find neighbours.** Two vertices are neighbours if an edge joins them. E's neighbours are A, D and F. D has only one neighbour: E.\n\n**Step 4. Check the direction.** These edges are plain lines, so you can walk them both ways. The graph is **undirected**. If the edges had arrows, it would be **directed**.\n\n**Result:** 7 vertices, 7 edges, undirected. Next, you name every walkway's edge yourself."
         },
         {
           "id": 170,
@@ -270,12 +269,12 @@
     {
       "id": 103,
       "kind": "multiple_choice",
-      "title": "Check: reading a graph",
+      "title": "Counting edges and neighbours",
       "module_id": 1,
-      "purpose": "practice",
+      "purpose": "test_out",
       "objective_id": 2,
       "config": {
-        "prompt": "Already confident? This graph has vertices P, Q, R, S and edges P–Q, Q–R and Q–S. How many edges does it have, and which vertex has the most neighbours?",
+        "prompt": "This graph has vertices P, Q, R, S and edges P–Q, Q–R and Q–S. How many edges does it have, and which vertex has the most neighbours?",
         "options": [
           {
             "id": "b",
@@ -288,6 +287,10 @@
           {
             "id": "a",
             "label": "3 edges; Q has the most neighbours"
+          },
+          {
+            "id": "d",
+            "label": "4 edges; S has the most neighbours"
           }
         ]
       },
@@ -295,28 +298,125 @@
         "explanation": "There are three edges, and Q is in all of them, so Q has three neighbours: P, R and S. Every other vertex has only one.",
         "correct": "a",
         "feedback": {
-          "b": "Not quite. Each edge counts once. P–Q is one edge, not two, even though it touches P and Q. Read the worked example. It shows how to count edges.",
-          "c": "Not quite. P is joined only to Q. Q is joined to P, R and S. Read the worked example. It shows how to find neighbours."
+          "b": "Not quite. Each edge counts once. P–Q is one edge, not two, even though it touches P and Q.",
+          "c": "Not quite. P is joined only to Q. Q is joined to P, R and S.",
+          "d": "Not quite. There are three edges in the list, and S is joined only to Q."
         }
+      }
+    },
+    {
+      "id": 150,
+      "kind": "multiple_choice",
+      "title": "The four key terms",
+      "module_id": 1,
+      "purpose": "test_out",
+      "objective_id": 1,
+      "config": {
+        "prompt": "Which of these is an example of a graph traversal?",
+        "options": [
+          {
+            "id": "a",
+            "label": "A queue."
+          },
+          {
+            "id": "b",
+            "label": "The steps for finding the largest number in a list."
+          },
+          {
+            "id": "c",
+            "label": "Buildings joined by walkways."
+          },
+          {
+            "id": "d",
+            "label": "Walking to every building along walkways."
+          }
+        ]
       },
-      "hints": [
-        {
-          "level": 1,
-          "body": "Count the edges in the list."
-        },
-        {
-          "level": 2,
-          "body": "Neighbours of a vertex are the vertices joined to it by an edge."
-        },
-        {
-          "level": 3,
-          "body": "Q appears in all three edges."
-        },
-        {
-          "level": 4,
-          "body": "Answer: 3 edges, and Q has the most neighbours (P, R and S)."
+      "solution": {
+        "explanation": "A traversal visits the vertices of a graph by following its edges, like walking to every building along the walkways. A queue is a data structure, the steps are an algorithm, and the buildings joined by walkways are the graph itself.",
+        "correct": "d",
+        "feedback": {
+          "a": "A queue is a data structure: it stores data. A traversal is something you do on a graph.",
+          "b": "Those steps are an algorithm, but they don't follow the edges of a graph.",
+          "c": "That is the graph itself. A traversal is the visiting of its vertices along its edges."
         }
-      ]
+      }
+    },
+    {
+      "id": 151,
+      "kind": "multiple_choice",
+      "title": "Directed or undirected",
+      "module_id": 1,
+      "purpose": "test_out",
+      "objective_id": 2,
+      "config": {
+        "prompt": "A graph has the edges J → K, K → L and L → J. Is it directed or undirected, and how many edges does it have?",
+        "options": [
+          {
+            "id": "a",
+            "label": "Directed, with 3 edges"
+          },
+          {
+            "id": "b",
+            "label": "Undirected, with 3 edges"
+          },
+          {
+            "id": "c",
+            "label": "Directed, with 6 edges"
+          },
+          {
+            "id": "d",
+            "label": "Undirected, with 6 edges"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "Each edge is an arrow, so the graph is directed, and there are three arrows, so three edges.",
+        "correct": "a",
+        "feedback": {
+          "b": "The edges are arrows, which go one way only. That makes the graph directed.",
+          "c": "Each arrow is one edge. There are three arrows.",
+          "d": "The edges are arrows, so the graph is directed, and each arrow is one edge."
+        }
+      }
+    },
+    {
+      "id": 152,
+      "kind": "multiple_choice",
+      "title": "From a situation to a graph",
+      "module_id": 1,
+      "purpose": "test_out",
+      "objective_id": 3,
+      "config": {
+        "prompt": "A town has four bus stops: the Mall (M), the Park (P), the Station (S) and the Zoo (Z). Buses run both ways between M and P, P and S, and S and Z. Drawn as a graph, which is right?",
+        "options": [
+          {
+            "id": "a",
+            "label": "4 vertices, the stops, and 3 undirected edges: M–P, P–S and S–Z"
+          },
+          {
+            "id": "b",
+            "label": "3 vertices, the bus routes, and 4 edges, the stops"
+          },
+          {
+            "id": "c",
+            "label": "4 vertices, the stops, and 3 directed edges: M → P, P → S and S → Z"
+          },
+          {
+            "id": "d",
+            "label": "4 vertices, the stops, and 4 undirected edges: M–P, P–S, S–Z and Z–M"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "The places are the vertices and the connections between them are the edges. The buses run both ways, so the edges are undirected: M–P, P–S and S–Z.",
+        "correct": "a",
+        "feedback": {
+          "b": "The places you travel between are the vertices. The connections between them are the edges.",
+          "c": "The buses run both ways, so each edge works in both directions: it is undirected.",
+          "d": "There is no bus between the Zoo and the Mall, so there is no Z–M edge."
+        }
+      }
     },
     {
       "id": 160,

@@ -20,8 +20,7 @@
           "id": 501,
           "kind": "worked_example",
           "title": "Worked example: finding and fixing the visited-too-late bug",
-          "body": "A classmate wrote this BFS and tested it on a simple path. It gave the right answer. But on a graph with a cycle it visits some vertices twice. Here is the faulty code, step by step.\n\n**The graph we use.** Vertices: A, B, C, D. Edges: A–B, A–C, B–D, C–D (undirected). This forms a diamond shape: A is at the top and connects to both B and C; B and C both connect to D at the bottom, creating the cycle A–B–D–C–A.\n\n**The faulty BFS.**\n\n```python\nfrom collections import deque\n\ndef bfs(graph, start):\n    visited = set()\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        visited.add(v)        # marks v found only after dequeue\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                queue.append(n)\n    return order\n```\n\n**Step 1. Spot what is different from the correct BFS.**\n\nIn the correct BFS, `visited` starts as `{start}` and each neighbour is added to `visited` at the moment it joins the queue, so it can never be queued a second time. Here, `visited = set()` (empty) and `visited.add(v)` runs only when `v` leaves the queue.\n\n**Step 2. Trace it on the cycle graph.**\n\n| Queue | Action | visited |\n|---|---|---|\n| [A] | A leaves; B and C join (neither visited yet) | {A} |\n| [B, C] | B leaves; A is visited, D joins | {A, B} |\n| [C, D] | C leaves; A is visited, but D is not in visited yet (it joined at step 2 but visited.add(D) hasn't run), so **D joins again** | {A, B, C} |\n| [D, D] | D leaves; B and C are visited, nothing new added | {A, B, C, D} |\n| [D] | **D leaves a second time** — duplicate visit | {A, B, C, D} |\n\nThe output is `['A', 'B', 'C', 'D', 'D']`, not `['A', 'B', 'C', 'D']`.\n\n**Step 3. Understand why.**\n\nWhen C was processed, D was already in the queue (added by B). But `visited.add(D)` runs only when D leaves the queue. So when C checked `if D not in visited`, D was not in visited yet, and D was enqueued a second time.\n\n**Step 4. Apply the fix.**\n\nTwo changes together fix it:\n\n1. Change `visited = set()` to `visited = {start}` — the start is found from the beginning.\n2. Remove `visited.add(v)` after popleft, and add `visited.add(n)` inside the `if n not in visited` block — mark a vertex found the moment it joins the queue.\n\nThe fixed BFS:\n\n```python\nfrom collections import deque\n\ndef bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                visited.add(n)\n                queue.append(n)\n    return order\n```\n\nNow when C processes D's neighbours, D is already in `visited` from when B added it, so it is never enqueued twice.",
-          "skip_check_activity_id": 503
+          "body": "A classmate wrote this BFS and tested it on a simple path. It gave the right answer. But on a graph with a cycle it visits some vertices twice. Here is the faulty code, step by step.\n\n**The graph we use.** Vertices: A, B, C, D. Edges: A–B, A–C, B–D, C–D (undirected). This forms a diamond shape: A is at the top and connects to both B and C; B and C both connect to D at the bottom, creating the cycle A–B–D–C–A.\n\n**The faulty BFS.**\n\n```python\nfrom collections import deque\n\ndef bfs(graph, start):\n    visited = set()\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        visited.add(v)        # marks v found only after dequeue\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                queue.append(n)\n    return order\n```\n\n**Step 1. Spot what is different from the correct BFS.**\n\nIn the correct BFS, `visited` starts as `{start}` and each neighbour is added to `visited` at the moment it joins the queue, so it can never be queued a second time. Here, `visited = set()` (empty) and `visited.add(v)` runs only when `v` leaves the queue.\n\n**Step 2. Trace it on the cycle graph.**\n\n| Queue | Action | visited |\n|---|---|---|\n| [A] | A leaves; B and C join (neither visited yet) | {A} |\n| [B, C] | B leaves; A is visited, D joins | {A, B} |\n| [C, D] | C leaves; A is visited, but D is not in visited yet (it joined at step 2 but visited.add(D) hasn't run), so **D joins again** | {A, B, C} |\n| [D, D] | D leaves; B and C are visited, nothing new added | {A, B, C, D} |\n| [D] | **D leaves a second time** — duplicate visit | {A, B, C, D} |\n\nThe output is `['A', 'B', 'C', 'D', 'D']`, not `['A', 'B', 'C', 'D']`.\n\n**Step 3. Understand why.**\n\nWhen C was processed, D was already in the queue (added by B). But `visited.add(D)` runs only when D leaves the queue. So when C checked `if D not in visited`, D was not in visited yet, and D was enqueued a second time.\n\n**Step 4. Apply the fix.**\n\nTwo changes together fix it:\n\n1. Change `visited = set()` to `visited = {start}` — the start is found from the beginning.\n2. Remove `visited.add(v)` after popleft, and add `visited.add(n)` inside the `if n not in visited` block — mark a vertex found the moment it joins the queue.\n\nThe fixed BFS:\n\n```python\nfrom collections import deque\n\ndef bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                visited.add(n)\n                queue.append(n)\n    return order\n```\n\nNow when C processes D's neighbours, D is already in `visited` from when B added it, so it is never enqueued twice."
         },
         {
           "id": 503,
@@ -172,12 +171,12 @@
     {
       "id": 503,
       "kind": "multiple_choice",
-      "title": "Check: spotting a BFS bug",
+      "title": "Spotting a BFS bug",
       "module_id": 5,
-      "purpose": "practice",
+      "purpose": "test_out",
       "objective_id": 7,
       "config": {
-        "prompt": "Already confident? This BFS starts with visited = set() and adds v to visited just after popleft, before the neighbour loop. On a graph with a cycle, what goes wrong?",
+        "prompt": "This BFS starts with visited = set() and adds v to visited just after popleft, before the neighbour loop. On a graph with a cycle, what goes wrong?",
         "options": [
           {
             "id": "a",
@@ -190,6 +189,10 @@
           {
             "id": "c",
             "label": "The BFS misses some vertices entirely and never visits them."
+          },
+          {
+            "id": "d",
+            "label": "The BFS stops after the start vertex and visits nothing else."
           }
         ]
       },
@@ -198,27 +201,124 @@
         "correct": "a",
         "feedback": {
           "b": "Not quite. The order of dequeuing is still first-in first-out, so the traversal goes wide before deep. The bug is not about order. Think about what happens when two different vertices both try to add the same neighbour.",
-          "c": "Not quite. The bug does the opposite: it visits too many vertices, not too few. A vertex with two paths to it can be found twice. Think about what happens when the same vertex is added to the queue more than once."
+          "c": "Not quite. The bug does the opposite: it visits too many vertices, not too few. A vertex with two paths to it can be found twice. Think about what happens when the same vertex is added to the queue more than once.",
+          "d": "Not quite. The neighbour loop still runs for every vertex taken from the queue, so BFS carries on past the start."
         }
+      }
+    },
+    {
+      "id": 550,
+      "kind": "multiple_choice",
+      "title": "A test for the visited bug",
+      "module_id": 5,
+      "purpose": "test_out",
+      "objective_id": 7,
+      "config": {
+        "prompt": "A faulty BFS adds a vertex to visited only when it leaves the queue, not when it joins. Which test graph, starting at A, shows the bug?",
+        "options": [
+          {
+            "id": "a",
+            "label": "A path: A–B and B–C"
+          },
+          {
+            "id": "b",
+            "label": "A single vertex A with no edges"
+          },
+          {
+            "id": "c",
+            "label": "A triangle: A–B, A–C and B–C"
+          },
+          {
+            "id": "d",
+            "label": "Two islands: A–B and C–D"
+          }
+        ]
       },
-      "hints": [
-        {
-          "level": 1,
-          "body": "When does this code mark a vertex as visited? When does the correct BFS mark it?"
-        },
-        {
-          "level": 2,
-          "body": "In the correct BFS, visited.add(n) is inside the neighbour loop, so a vertex is found the moment it joins the queue."
-        },
-        {
-          "level": 3,
-          "body": "If two neighbours both find the same vertex before it has left the queue, both add it. A cycle gives two paths to the same vertex."
-        },
-        {
-          "level": 4,
-          "body": "Answer: a vertex already in the queue can be added again, so it is visited twice."
+      "solution": {
+        "explanation": "In the triangle, B and C are both waiting in the queue when B is taken out. C isn't in visited yet, so B adds it again and it is visited twice. The other graphs have no second way to a waiting vertex, so the faulty BFS gets them right.",
+        "correct": "c",
+        "feedback": {
+          "a": "A path has only one way to each vertex, so nothing is added twice: the faulty BFS passes.",
+          "b": "With no edges nothing is ever added, so the faulty BFS passes.",
+          "d": "Each island is a path, with one way to each vertex, so the faulty BFS passes."
         }
-      ]
+      }
+    },
+    {
+      "id": 551,
+      "kind": "multiple_choice",
+      "title": "A test for unreachable vertices",
+      "module_id": 5,
+      "purpose": "test_out",
+      "objective_id": 7,
+      "config": {
+        "prompt": "A faulty BFS adds every vertex it didn't reach to the end of its order. Which test graph, starting at A, shows the bug?",
+        "options": [
+          {
+            "id": "a",
+            "label": "A triangle: A–B, A–C and B–C"
+          },
+          {
+            "id": "b",
+            "label": "Two islands: A–B and C–D"
+          },
+          {
+            "id": "c",
+            "label": "A path: A–B and B–C"
+          },
+          {
+            "id": "d",
+            "label": "A single vertex A with no edges"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "Only a disconnected graph has vertices BFS can't reach. From A, C and D are on the other island, so the faulty BFS adds them and returns A, B, C, D instead of A, B.",
+        "correct": "b",
+        "feedback": {
+          "a": "BFS reaches every vertex of the triangle, so there is nothing extra to add.",
+          "c": "BFS reaches every vertex of the path, so there is nothing extra to add.",
+          "d": "A is the only vertex, and BFS reaches it, so there is nothing extra to add."
+        }
+      }
+    },
+    {
+      "id": 552,
+      "kind": "multiple_choice",
+      "title": "What the test should expect",
+      "module_id": 5,
+      "purpose": "test_out",
+      "objective_id": 7,
+      "config": {
+        "prompt": "You test a correct bfs on the undirected graph with edges A–B and C–D, starting at A. What should the test expect bfs(g, \"A\") to return?",
+        "options": [
+          {
+            "id": "a",
+            "label": "[\"A\", \"B\"]"
+          },
+          {
+            "id": "b",
+            "label": "[\"A\", \"B\", \"C\", \"D\"]"
+          },
+          {
+            "id": "c",
+            "label": "[\"A\"]"
+          },
+          {
+            "id": "d",
+            "label": "[\"A\", \"B\", \"C\"]"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "BFS only visits what it can reach from the start. From A it reaches B, and nothing joins A's island to C and D.",
+        "correct": "a",
+        "feedback": {
+          "b": "C and D are on another island, with no edge to A's, so BFS can't reach them.",
+          "c": "A–B is an edge, so BFS reaches B.",
+          "d": "No edge joins B to C, so BFS can't reach C."
+        }
+      }
     },
     {
       "id": 504,
@@ -306,13 +406,20 @@
         "order": [
           101,
           102,
-          [120, 104, 105],
+          [
+            120,
+            104,
+            105
+          ],
           106,
           107,
           109,
           110,
           111,
-          [121, 112],
+          [
+            121,
+            112
+          ],
           113
         ],
         "feedback": {
@@ -429,13 +536,20 @@
         "order": [
           151,
           152,
-          [153, 154, 155],
+          [
+            153,
+            154,
+            155
+          ],
           156,
           157,
           158,
           159,
           160,
-          [161, 162],
+          [
+            161,
+            162
+          ],
           166
         ],
         "feedback": {
@@ -477,70 +591,177 @@
           {
             "id": "cycle",
             "directed": false,
-            "vertices": ["A", "B", "C", "D"],
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
             "edges": [
-              {"source": "A", "target": "B"},
-              {"source": "A", "target": "C"},
-              {"source": "B", "target": "D"},
-              {"source": "C", "target": "D"}
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "A",
+                "target": "C"
+              },
+              {
+                "source": "B",
+                "target": "D"
+              },
+              {
+                "source": "C",
+                "target": "D"
+              }
             ],
             "start_vertex": "A",
-            "expected": ["A", "B", "C", "D"]
+            "expected": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
           },
           {
             "id": "two-islands",
             "directed": false,
-            "vertices": ["A", "B", "C", "D", "E"],
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "E"
+            ],
             "edges": [
-              {"source": "A", "target": "B"},
-              {"source": "B", "target": "C"},
-              {"source": "D", "target": "E"}
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "B",
+                "target": "C"
+              },
+              {
+                "source": "D",
+                "target": "E"
+              }
             ],
             "start_vertex": "A",
-            "expected": ["A", "B", "C"]
+            "expected": [
+              "A",
+              "B",
+              "C"
+            ]
           },
           {
             "id": "line",
             "directed": false,
-            "vertices": ["V", "W", "X", "Y", "Z"],
+            "vertices": [
+              "V",
+              "W",
+              "X",
+              "Y",
+              "Z"
+            ],
             "edges": [
-              {"source": "Z", "target": "Y"},
-              {"source": "Y", "target": "X"},
-              {"source": "X", "target": "W"},
-              {"source": "W", "target": "V"}
+              {
+                "source": "Z",
+                "target": "Y"
+              },
+              {
+                "source": "Y",
+                "target": "X"
+              },
+              {
+                "source": "X",
+                "target": "W"
+              },
+              {
+                "source": "W",
+                "target": "V"
+              }
             ],
             "start_vertex": "X",
-            "expected": ["X", "W", "Y", "V", "Z"]
+            "expected": [
+              "X",
+              "W",
+              "Y",
+              "V",
+              "Z"
+            ]
           },
           {
             "id": "tree",
             "directed": false,
-            "vertices": ["A", "B", "C", "D"],
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
             "edges": [
-              {"source": "A", "target": "B"},
-              {"source": "A", "target": "C"},
-              {"source": "B", "target": "D"}
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "A",
+                "target": "C"
+              },
+              {
+                "source": "B",
+                "target": "D"
+              }
             ],
             "start_vertex": "A",
-            "expected": ["A", "B", "C", "D"]
+            "expected": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
           },
           {
             "id": "one-way",
             "directed": true,
-            "vertices": ["A", "B", "C", "D"],
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
             "edges": [
-              {"source": "A", "target": "B"},
-              {"source": "B", "target": "C"},
-              {"source": "C", "target": "A"},
-              {"source": "D", "target": "A"}
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "B",
+                "target": "C"
+              },
+              {
+                "source": "C",
+                "target": "A"
+              },
+              {
+                "source": "D",
+                "target": "A"
+              }
             ],
             "start_vertex": "A",
-            "expected": ["A", "B", "C"]
+            "expected": [
+              "A",
+              "B",
+              "C"
+            ]
           }
         ]
       },
       "solution": {
-        "exposing": ["cycle"],
+        "exposing": [
+          "cycle"
+        ],
         "feedback": {
           "cycle": "This graph has a cycle: two paths reach D before it leaves the queue. The faulty version adds D to the queue twice and fails this test.",
           "two-islands": "D and E are unreachable from A. BFS never tries to add them, so no vertex is found twice. The faulty version passes this test.",
@@ -582,69 +803,174 @@
           {
             "id": "cycle",
             "directed": false,
-            "vertices": ["A", "B", "C", "D"],
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
             "edges": [
-              {"source": "A", "target": "B"},
-              {"source": "A", "target": "C"},
-              {"source": "B", "target": "D"},
-              {"source": "C", "target": "D"}
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "A",
+                "target": "C"
+              },
+              {
+                "source": "B",
+                "target": "D"
+              },
+              {
+                "source": "C",
+                "target": "D"
+              }
             ],
             "start_vertex": "A",
-            "expected": ["A", "B", "C", "D"]
+            "expected": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
           },
           {
             "id": "two-islands",
             "directed": false,
-            "vertices": ["A", "B", "C", "D", "E"],
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "E"
+            ],
             "edges": [
-              {"source": "A", "target": "B"},
-              {"source": "B", "target": "C"},
-              {"source": "D", "target": "E"}
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "B",
+                "target": "C"
+              },
+              {
+                "source": "D",
+                "target": "E"
+              }
             ],
             "start_vertex": "A",
-            "expected": ["A", "B", "C"]
+            "expected": [
+              "A",
+              "B",
+              "C"
+            ]
           },
           {
             "id": "line",
             "directed": false,
-            "vertices": ["V", "W", "X", "Y", "Z"],
+            "vertices": [
+              "V",
+              "W",
+              "X",
+              "Y",
+              "Z"
+            ],
             "edges": [
-              {"source": "Z", "target": "Y"},
-              {"source": "Y", "target": "X"},
-              {"source": "X", "target": "W"},
-              {"source": "W", "target": "V"}
+              {
+                "source": "Z",
+                "target": "Y"
+              },
+              {
+                "source": "Y",
+                "target": "X"
+              },
+              {
+                "source": "X",
+                "target": "W"
+              },
+              {
+                "source": "W",
+                "target": "V"
+              }
             ],
             "start_vertex": "X",
-            "expected": ["X", "W", "Y", "V", "Z"]
+            "expected": [
+              "X",
+              "W",
+              "Y",
+              "V",
+              "Z"
+            ]
           },
           {
             "id": "tree",
             "directed": false,
-            "vertices": ["A", "B", "C", "D"],
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
             "edges": [
-              {"source": "A", "target": "B"},
-              {"source": "A", "target": "C"},
-              {"source": "B", "target": "D"}
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "A",
+                "target": "C"
+              },
+              {
+                "source": "B",
+                "target": "D"
+              }
             ],
             "start_vertex": "A",
-            "expected": ["A", "B", "C", "D"]
+            "expected": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
           },
           {
             "id": "directed-tree",
             "directed": true,
-            "vertices": ["A", "B", "C", "D"],
+            "vertices": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
             "edges": [
-              {"source": "A", "target": "B"},
-              {"source": "A", "target": "C"},
-              {"source": "B", "target": "D"}
+              {
+                "source": "A",
+                "target": "B"
+              },
+              {
+                "source": "A",
+                "target": "C"
+              },
+              {
+                "source": "B",
+                "target": "D"
+              }
             ],
             "start_vertex": "A",
-            "expected": ["A", "B", "C", "D"]
+            "expected": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
           }
         ]
       },
       "solution": {
-        "exposing": ["two-islands"],
+        "exposing": [
+          "two-islands"
+        ],
         "feedback": {
           "cycle": "Every vertex in this graph can be reached from A, so the extra loop finds nothing to add. The faulty version passes this test.",
           "two-islands": "D and E cannot be reached from A. The extra loop finds them and adds them to the order, so the faulty version returns A, B, C, D, E instead of A, B, C, and it fails this test.",

@@ -18,14 +18,13 @@ from app.models import (
     Attempt,
     Checkpoint,
     HintView,
-    ModuleProgress,
     ObjectiveResult,
     PointsEntry,
     Segment,
     User,
     Video,
 )
-from app.routers.activities import MODULE_LOCKED, RETIRED, REVIEW_CLOSED
+from app.routers.activities import MODULE_LOCKED, QUICK_CHECK, RETIRED, REVIEW_CLOSED
 from app.routers.videos import LOCKED as VIDEO_LOCKED
 from app.routers.videos import MODULE_LOCKED as VIDEO_MODULE_LOCKED
 from app.seed import load
@@ -124,11 +123,12 @@ def test_module_6_items_open_with_module_6(client: TestClient, committed: Sessio
 def test_each_modules_activities_open_exactly_when_the_module_does(
     client: TestClient, committed: Session
 ) -> None:
-    """For every module: its practice, retrieval and skip-check activities are 403 while it is
-    locked and usable once it opens. Module 0 (the diagnostic) is open from the start. An activity
-    the module shows only as support (#172) stays shut to this student, who isn't struggling."""
+    """The student chooses where to start (#214): every activity of modules 0 to 5 is usable from
+    the start, but an activity the module shows only as support (#172), which stays shut to this
+    student who isn't struggling, and the quick check questions (FR-8.2), which are only asked in
+    the quick check. Module 6's are 403 until module 6 opens."""
     db = committed
-    user_id = register(client)
+    register(client)
     on_base = set(
         db.scalars(
             select(Segment.activity_id).where(
@@ -144,39 +144,40 @@ def test_each_modules_activities_open_exactly_when_the_module_does(
         )
     )
     support_only = on_support - on_base
-    # A practice item that is only a worked example's skip check is never shown while skipping
-    # (FR-8.2) isn't built, so it is never open (13 Nov audit).
-    unused_checks = (
-        set(
-            db.scalars(
-                select(Segment.skip_check_activity_id).where(
-                    Segment.skip_check_activity_id.is_not(None)
-                )
+    statuses = {m["id"]: m["status"] for m in client.get("/api/modules").json()}
+    assert [s for _, s in sorted(statuses.items())] == ["open"] * 6 + ["locked"]
+    quick_check = set(db.scalars(select(Activity.id).where(Activity.purpose == "test_out")))
+    assert len(quick_check) == 20
+    for activity in db.scalars(select(Activity).where(Activity.module_id.in_(range(6)))):
+        response = client.get(f"/api/activities/{activity.id}")
+        if activity.id in quick_check:
+            assert (response.status_code, response.json()["detail"]) == (403, QUICK_CHECK)
+        else:
+            assert response.status_code == (403 if activity.id in support_only else 200), (
+                activity.id
             )
-        )
-        - on_base
-    )
-    unused_checks = {a for a in unused_checks if db.get_one(Activity, a).purpose == "practice"}
-    assert unused_checks  # the course has some: 103, 203, 314, 403, 503
-    modules = db.scalars(select(Activity.module_id).distinct()).all()
-    for module_id in sorted(m for m in modules if m is not None):
-        activities = db.scalars(select(Activity.id).where(Activity.module_id == module_id)).all()
-        statuses = {m["id"]: m["status"] for m in client.get("/api/modules").json()}
-        if statuses[module_id] == "locked":
-            for activity in activities:
-                response = client.get(f"/api/activities/{activity}")
-                if activity in unused_checks:
-                    assert response.status_code == 404, activity
-                    continue
-                assert (response.status_code, response.json()["detail"]) == (403, MODULE_LOCKED)
-        db.query(ModuleProgress).filter(ModuleProgress.user_id == user_id).delete()
-        db.commit()
-        complete_modules_before(db, STUDENT["email"], module_id)
-        for activity in activities:
-            expected = (
-                403 if activity in support_only else 404 if activity in unused_checks else 200
-            )
-            assert client.get(f"/api/activities/{activity}").status_code == expected, activity
+    module_6 = db.scalars(select(Activity.id).where(Activity.module_id == 6)).all()
+    for activity_id in module_6:
+        response = client.get(f"/api/activities/{activity_id}")
+        assert (response.status_code, response.json()["detail"]) == (403, MODULE_LOCKED)
+    complete_modules_before(db, STUDENT["email"], 6)
+    for activity_id in module_6:
+        assert client.get(f"/api/activities/{activity_id}").status_code == 200
+
+
+def test_quick_check_items_are_refused_on_every_activity_route(
+    client: TestClient, committed: Session
+) -> None:
+    """They are answered only in the quick check, all at once: never one by one, with hints, or
+    with their result shown early (FR-8.2, #214). Staff may still preview them."""
+    db = committed
+    user_id = register(client)
+    for activity_id in (103, 150, 314, 552):
+        all_refused(client, db, activity_id, 403, QUICK_CHECK)
+    assert count(db, Attempt, user_id) == 0
+    assert count(db, HintView, user_id) == 0
+    make_staff(db, user_id)
+    assert client.get("/api/activities/103").status_code == 200
 
 
 def test_module_0s_diagnostic_is_open_to_a_new_student(
@@ -191,16 +192,18 @@ def test_module_0s_diagnostic_is_open_to_a_new_student(
 
 
 def test_a_retrieval_item_belongs_to_its_module(client: TestClient, committed: Session) -> None:
-    """Module 2's recall questions are asked before module 2 starts, so they open with it."""
+    """A module's recall questions are asked before it starts, so they open with it: module 2's
+    from the start (#214), module 6's once module 6 opens."""
     db = committed
     register(client)
     retrieval = db.scalars(
         select(Activity.id).where(Activity.module_id == 2, Activity.purpose == "retrieval")
     ).all()
     assert retrieval
-    all_refused(client, db, retrieval[0], 403, MODULE_LOCKED)
-    complete_modules_before(db, STUDENT["email"], 2)
     assert [s for _, s, _ in every_route(client, db, retrieval[0])][:3] == [200, 201, 200]
+    all_refused(client, db, 625, 403, MODULE_LOCKED)  # module 6's
+    complete_modules_before(db, STUDENT["email"], 6)
+    assert [s for _, s, _ in every_route(client, db, 625)][:3] == [200, 201, 200]
 
 
 def test_an_activity_a_module_segment_shows_follows_that_module(
@@ -217,11 +220,11 @@ def test_an_activity_a_module_segment_shows_follows_that_module(
     )
     db.add(activity)
     db.flush()
-    db.add(Segment(module_id=3, position=99, kind="activity", title="New", activity_id=activity.id))
+    db.add(Segment(module_id=6, position=99, kind="activity", title="New", activity_id=activity.id))
     db.commit()
     register(client)
     all_refused(client, db, activity.id, 403, MODULE_LOCKED)
-    complete_modules_before(db, STUDENT["email"], 3)
+    complete_modules_before(db, STUDENT["email"], 6)
     assert client.get(f"/api/activities/{activity.id}").status_code == 200
 
 
@@ -251,9 +254,9 @@ def test_a_skip_check_never_opens_another_modules_item(
     client: TestClient, committed: Session
 ) -> None:
     db = committed
-    skip_check(db, 0, 401)  # a module 4 practice item, named by open module 0
+    skip_check(db, 0, 625)  # a module 6 recall item, named by open module 0
     register(client)
-    all_refused(client, db, 401, 403, MODULE_LOCKED)
+    all_refused(client, db, 625, 403, MODULE_LOCKED)
 
 
 def test_a_skip_check_never_opens_a_review_path_item(
@@ -273,7 +276,7 @@ def test_a_skip_check_of_no_module_opens_with_the_module_that_names_it(
     client: TestClient, committed: Session
 ) -> None:
     """A diagnostic skip check opens with its module. (A practice item used only as a skip check
-    stays shut while skipping isn't built: the test above.)"""
+    stays shut, and a quick check item is only asked in the quick check: the tests above.)"""
     db = committed
     activity = Activity(
         kind="multiple_choice",
@@ -284,10 +287,10 @@ def test_a_skip_check_of_no_module_opens_with_the_module_that_names_it(
     )
     db.add(activity)
     db.commit()
-    skip_check(db, 1, activity.id)
+    skip_check(db, 6, activity.id)
     register(client)
     all_refused(client, db, activity.id, 403, MODULE_LOCKED)
-    complete_modules_before(db, STUDENT["email"], 1)
+    complete_modules_before(db, STUDENT["email"], 6)
     assert client.get(f"/api/activities/{activity.id}").status_code == 200
 
 
@@ -404,14 +407,14 @@ def test_a_checkpoint_question_opens_with_its_videos_module(
     client: TestClient, committed: Session
 ) -> None:
     db = committed
-    segment = db.scalars(select(Segment).where(Segment.module_id == 2, Segment.kind == "video"))
+    segment = db.scalars(select(Segment).where(Segment.module_id == 6))  # the one locked module
     video_id, question = video_with_checkpoint(db, segment.first().id)  # type: ignore[union-attr]
     register(client)
     response = client.get(f"/api/videos/{video_id}")
     assert (response.status_code, response.json()["detail"]) == (403, VIDEO_MODULE_LOCKED)
     all_refused(client, db, question, 403, MODULE_LOCKED)
 
-    complete_modules_before(db, STUDENT["email"], 2)
+    complete_modules_before(db, STUDENT["email"], 6)
     assert client.get(f"/api/videos/{video_id}").status_code == 200
     assert client.post(f"/api/activities/{question}/attempts", json=MC_RIGHT).status_code == 201
     checkpoints = client.get(f"/api/videos/{video_id}").json()["checkpoints"]

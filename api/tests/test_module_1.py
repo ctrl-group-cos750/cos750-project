@@ -18,13 +18,15 @@ from app.services.bfs import run_bfs
 CONTENT: FixtureFile = read_fixtures()
 CAMPUS = GraphScenarioOut(**next(g for g in CONTENT.graphs if g.id == 4).model_dump())
 MODULE = next(m for m in CONTENT.modules if m.id == 1)
-ACTIVITIES = [a for a in CONTENT.activities if a.module_id == 1]
+# The module's quick check (FR-8.2, #214) is checked in test_quick_check_content.py.
+QUICK_CHECK = [a for a in CONTENT.activities if a.module_id == 1 and a.purpose == "test_out"]
+ACTIVITIES = [a for a in CONTENT.activities if a.module_id == 1 and a.purpose != "test_out"]
 DASH = "\N{EN DASH}"  # the content joins an undirected edge's ends with it
 EDGE = re.compile(rf"\b([A-Z]) ?({DASH}|→) ?([A-Z])\b")
 
 
 def activity(activity_id: int) -> ActivityFixture:
-    return next(a for a in ACTIVITIES if a.id == activity_id)
+    return next(a for a in ACTIVITIES + QUICK_CHECK if a.id == activity_id)
 
 
 def chosen_label(activity_id: int) -> str:
@@ -49,8 +51,8 @@ def campus_edges() -> set[frozenset[str] | tuple[str, str]]:
 
 def test_every_activity_is_shown_once_and_every_objective_has_one() -> None:
     shown = [s.activity_id for s in MODULE.segments if s.activity_id is not None]
-    skip_checks = [s.skip_check_activity_id for s in MODULE.segments if s.skip_check_activity_id]
-    assert sorted(shown + skip_checks) == sorted(a.id for a in ACTIVITIES)
+    skip_checks = [a.id for a in QUICK_CHECK]  # asked in the quick check, in no segment
+    assert sorted(shown + skip_checks) == sorted(a.id for a in ACTIVITIES + QUICK_CHECK)
     assert {a.objective_id for a in ACTIVITIES} == {1, 2, 3}
 
 
@@ -92,7 +94,7 @@ def test_the_puzzle_answer_is_the_fewest_walkways_from_a_to_g() -> None:
 
 def test_the_worked_example_reads_the_campus() -> None:
     worked = next(s for s in MODULE.segments if s.kind == "worked_example")
-    assert worked.skip_check_activity_id == 103
+    assert worked.skip_check_activity_id is None  # its check is the quick check now (FR-8.2, #214)
     # It shows the method on one walkway, which is a campus edge, and leaves the rest to activity
     # 105: a list of every walkway beside its edge would make 105 a copying task (#147).
     shown = edges_in(worked.body)

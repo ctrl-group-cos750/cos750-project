@@ -6,11 +6,23 @@ from app.schemas.mastery import ObjectiveState
 Medal = Literal["gold", "silver", "bronze"]
 
 
+class ImproveOut(ApiModel):
+    """Where the student can work on an objective (#214): `practise` in a module (at `segment`,
+    0-based, when they can open it there), `revisit` a module (secure in practice, or met with
+    support), or its `review` path once module 6 has said "not yet" (FR-7.5). Never module 6."""
+
+    kind: Literal["practise", "revisit", "review"]
+    module_id: int | None
+    segment: int | None
+    objective_id: int | None
+
+
 class SkillOut(ApiModel):
     """One objective on the skill profile (FR-9.7). `level` is practice progress in three coarse
     steps (not started, practising, secure: every practice item answered and at least 80% right
     without hint 3 or 4); the counts are the evidence behind it, of `total` practice items.
-    `result` is the mastery result once the mastery check (or a review path) has decided it."""
+    `result` is the mastery result once the mastery check (or a review path) has decided it;
+    `improve`, where to work on it next (none once met on your own)."""
 
     id: int
     text: str
@@ -20,6 +32,7 @@ class SkillOut(ApiModel):
     total: int
     level: Literal["not_started", "practising", "secure"]
     result: ObjectiveState | None
+    improve: ImproveOut | None
 
 
 class ModuleMedalOut(ApiModel):

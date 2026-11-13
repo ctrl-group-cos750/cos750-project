@@ -2,7 +2,7 @@ from fastapi import APIRouter
 
 from app.auth import CurrentUser
 from app.db import DbSession
-from app.schemas.skills import ModuleMedalOut, SkillOut, SkillsOut
+from app.schemas.skills import ImproveOut, ModuleMedalOut, SkillOut, SkillsOut
 from app.services.skills import module_medals, skills
 
 router = APIRouter(prefix="/api/me", tags=["skills"])
@@ -13,7 +13,7 @@ def get_skills(user: CurrentUser, session: DbSession) -> SkillsOut:
     """The logged-in student's skill profile and module medals (FR-9.7, FR-9.8; #214).
 
     For each learning objective: how many of its practice items they have answered correctly, of
-    how many, and its mastery result once the mastery check (or a review path) has decided it.
+    how many, where to work on it next (`improve`), and its mastery result once the mastery check (or a review path) has decided it.
     For each module with activities to mark: its medal once complete, and the medal the answers so
     far are heading for. Worked out from attempts on each request (app/services/skills.py), so it
     follows the current content and rules. Only ever the student's own."""
@@ -28,6 +28,14 @@ def get_skills(user: CurrentUser, session: DbSession) -> SkillsOut:
                 total=s.total,
                 level=s.level,
                 result=s.result,
+                improve=None
+                if s.improve is None
+                else ImproveOut(
+                    kind=s.improve.kind,
+                    module_id=s.improve.module_id,
+                    segment=s.improve.segment,
+                    objective_id=s.improve.objective_id,
+                ),
             )
             for s in skills(session, user.id)
         ],

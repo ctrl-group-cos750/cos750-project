@@ -35,6 +35,21 @@ Then (`medal_for`, the one place the rule lives):
   same line as the module's points and First Module badge (app/services/modules.py
   `reward_module`), so walking through a module earns nothing (#215 review).
 
+**Where to improve it** (#214). Each objective says where the student can work on it, worked
+out here from the content so the web doesn't guess (`improve`):
+
+- *not started* or *practising*: **practise** in the first module, in course order, with a practice
+  item on it the student hasn't answered yet (or, all answered, hasn't got right without hint 3
+  or 4), at that item's segment when the student has already reached it (a segment further on
+  can't be opened yet, FR-2.7, so the module opens where it resumes);
+- *secure*, or bronze from the mastery check: **revisit** the first module that practises it
+  (the result stands; going over it again is the student's choice);
+- *not yet* from the mastery check: its **review** path, the designed route after module 6, once
+  open (FR-7.5);
+- gold: nothing.
+
+Never into module 6 (the mastery check): its items aren't practice.
+
 A module whose quick check the student passed earns silver: the check showed the student can do
 it on their own, but not every activity was answered. That stays when the student works through
 the module afterwards: more work never lowers a medal, so they get the better of the two
@@ -47,12 +62,12 @@ activities already answered.
 
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, cast
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, Checkpoint, Module, ModuleProgress, Segment
+from app.models import Activity, Attempt, Checkpoint, Module, ModuleProgress, Segment, Video
 from app.services import quick_check
 from app.services.mastery import MASTERY_MODULE, State, evaluate
 from app.services.rewards import SUPPORT_LEVEL
@@ -69,6 +84,19 @@ Level = Literal["not_started", "practising", "secure"]
 SECURE_SHARE = 0.8
 
 
+ImproveKind = Literal["practise", "revisit", "review"]
+
+
+@dataclass(frozen=True)
+class Improve:
+    """Where the student can work on an objective (see the docstring)."""
+
+    kind: ImproveKind
+    module_id: int | None = None  # the module (its id is its number), for practise and revisit
+    segment: int | None = None  # the segment to open at, 0-based, when the student can open it
+    objective_id: int | None = None  # the review path's objective, for review
+
+
 @dataclass(frozen=True)
 class Skill:
     objective_id: int
@@ -79,6 +107,7 @@ class Skill:
     total: int
     level: Level
     result: State | None  # None until the mastery check (or a review path) decides it
+    improve: Improve | None = None
 
 
 @dataclass(frozen=True)
@@ -172,16 +201,107 @@ def _answers(session: Session, user_id: int, ids: Collection[int]) -> _Answers:
     )
 
 
+def _places(session: Session, items: Sequence[Activity]) -> dict[int, tuple[int, int, int | None]]:
+    """Where each practice item is met: (module position, module id, segment index or None). The
+    index counts every segment of the module in order, as the module page does; a module's
+    retrieval question comes before its segments (None); a video checkpoint's question is at the
+    video's segment."""
+    modules = {m.id: m.position for m in session.scalars(select(Module))}
+    index: dict[int, int] = {}  # activity id -> segment index
+    at_segment: dict[int, tuple[int, int]] = {}  # segment id -> (module id, segment index)
+    rows = session.execute(
+        select(Segment.id, Segment.module_id, Segment.activity_id, Segment.support_for)
+        .where(Segment.module_id.is_not(None))
+        .order_by(Segment.module_id, Segment.position)
+    ).all()
+    counter: dict[int, int] = {}
+    for segment_id, module_id, activity_id, support_for in rows:
+        module_id = cast(int, module_id)  # not None, by the query
+        i = counter.get(module_id, 0)
+        counter[module_id] = i + 1
+        at_segment[segment_id] = (module_id, i)
+        if activity_id is not None and support_for is None:
+            index.setdefault(activity_id, i)
+    # A checkpoint's question is met at its video's segment.
+    videos = {
+        activity_id: at_segment[segment_id]
+        for activity_id, segment_id in session.execute(
+            select(Checkpoint.activity_id, Video.segment_id).join(
+                Video, Video.id == Checkpoint.video_id
+            )
+        ).all()
+        if segment_id in at_segment
+    }
+    places: dict[int, tuple[int, int, int | None]] = {}
+    for a in items:
+        module_id = cast(int, a.module_id)  # practice items all have a module
+        if a.purpose == "retrieval":
+            places[a.id] = (modules.get(module_id, 0), module_id, None)
+        elif a.id in index:
+            places[a.id] = (modules.get(module_id, 0), module_id, index[a.id])
+        elif a.id in videos:
+            at_module, at = videos[a.id]
+            places[a.id] = (modules.get(at_module, 0), at_module, at)
+    return places
+
+
+def _improve(
+    level: Level,
+    result: State | None,
+    review_open: bool,
+    objective_id: int,
+    mine: Sequence[int],
+    places: dict[int, tuple[int, int, int | None]],
+    got: _Answers,
+    reached: dict[int, int | None],
+) -> Improve | None:
+    """Where to work on one objective (see the docstring). `reached` is each module's furthest
+    segment for this student, or None where every segment can be opened (worked through)."""
+    if result == "met_independently":
+        return None
+    if result == "not_yet":
+        return Improve("review", objective_id=objective_id) if review_open else None
+    ordered = sorted(
+        (a for a in mine if a in places and places[a][1] != MASTERY_MODULE),
+        key=lambda a: (places[a][0], -1 if places[a][2] is None else places[a][2], a),
+    )
+    if not ordered:
+        return None
+    if result == "met_with_support" or level == "secure":
+        return Improve("revisit", module_id=places[ordered[0]][1])
+    todo = [a for a in ordered if a not in got.answered] or [
+        a for a in ordered if a not in got.on_own
+    ]
+    _, module_id, segment = places[(todo or ordered)[0]]
+    furthest = reached.get(module_id, 0)
+    if segment is not None and furthest is not None and segment > furthest:
+        segment = None  # not reached yet: the module opens where it resumes
+    return Improve("practise", module_id=module_id, segment=segment)
+
+
+def _reached(session: Session, user_id: int) -> dict[int, int | None]:
+    """Each module's furthest segment for this student; None for one worked through, where any
+    segment can be opened. A module never started has reached its first (0, the default)."""
+    return {
+        row.module_id: None if row.status == "complete" else row.current_segment_position
+        for row in session.scalars(select(ModuleProgress).where(ModuleProgress.user_id == user_id))
+    }
+
+
 def skills(session: Session, user_id: int) -> list[Skill]:
     """The student's skill profile, in objective order."""
     items = _practice(session)
     got = _answers(session, user_id, [a.id for a in items])
+    places = _places(session, items)
+    reached = _reached(session, user_id)
     out = []
     for outcome in evaluate(session, user_id):
         mine = [a.id for a in items if a.objective_id == outcome.objective.id]
         answered = sum(1 for a in mine if a in got.answered)
         own = sum(1 for a in mine if a in got.on_own)
         state = outcome.state
+        level = level_for(answered, own, len(mine))
+        result = None if state == "not_attempted" else state
         out.append(
             Skill(
                 objective_id=outcome.objective.id,
@@ -190,8 +310,18 @@ def skills(session: Session, user_id: int) -> list[Skill]:
                 correct=sum(1 for a in mine if a in got.right),
                 on_your_own=own,
                 total=len(mine),
-                level=level_for(answered, own, len(mine)),
-                result=None if state == "not_attempted" else state,
+                level=level,
+                result=result,
+                improve=_improve(
+                    level,
+                    result,
+                    outcome.review is not None,
+                    outcome.objective.id,
+                    mine,
+                    places,
+                    got,
+                    reached,
+                ),
             )
         )
     return out

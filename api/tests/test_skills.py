@@ -191,6 +191,8 @@ def test_practice_progress_counts_right_answers_per_objective(
         "total": 3,
         "level": "practising",
         "result": None,
+        # Module 1 not started, so it opens where it resumes, not at 103's segment (#214).
+        "improve": {"kind": "practise", "moduleId": 1, "segment": None, "objectiveId": None},
     }
     assert (skills[2]["level"], skills[2]["total"]) == ("not_started", 1)
     answer(client, 104)
@@ -297,3 +299,77 @@ def test_a_module_tested_out_through_its_quick_check_has_silver(
     db.commit()
     medal = profile(client)["modules"][0]
     assert (medal["moduleId"], medal["complete"], medal["medal"]) == (1, True, "silver")
+
+
+def improve(client: TestClient) -> dict[int, Any]:
+    return {s["id"]: s["improve"] for s in profile(client)["objectives"]}
+
+
+def reach(db: Session, user_id: int, module_id: int, position: int) -> None:
+    db.add(
+        ModuleProgress(
+            user_id=user_id,
+            module_id=module_id,
+            status="in_progress",
+            current_segment_position=position,
+        )
+    )
+    db.commit()
+
+
+def test_each_objective_says_where_to_practise_it(
+    client: TestClient, db: Session, loaded: None
+) -> None:
+    """Not started or practising: the first module with an item still to do, at its segment when
+    the student has reached it; never a segment further on, which can't be opened yet (#214)."""
+    user = log_in(client)
+    first = improve(client)
+    assert first[1] == {"kind": "practise", "moduleId": 1, "segment": 0, "objectiveId": None}
+    assert first[2] == {"kind": "practise", "moduleId": 1, "segment": None, "objectiveId": None}
+    reach(db, user, 1, 3)
+    answer(client, 101)
+    # 102 (segment 1) is next for objective 1; 104 (segment 3) is reached for objective 2.
+    assert improve(client)[1]["segment"] == 1
+    assert improve(client)[2]["segment"] == 3
+    # All of objective 1's items answered, one wrong: back to that one.
+    answer(client, 102, WRONG)
+    answer(client, 103)
+    assert improve(client)[1]["segment"] == 1
+
+
+def test_secure_offers_a_revisit_and_gold_nothing(
+    client: TestClient, db: Session, loaded: None
+) -> None:
+    user = log_in(client)
+    answer(client, 104)
+    assert improve(client)[2] == {
+        "kind": "revisit",
+        "moduleId": 1,
+        "segment": None,
+        "objectiveId": None,
+    }
+    complete(db, user, 1)
+    answer(client, 601)
+    answer(client, 602, WRONG)
+    after = improve(client)
+    assert after[1] is None  # gold: met on your own
+    # Not yet: its review path, the route after the mastery check (FR-7.5), never module 6.
+    assert after[2] == {"kind": "review", "moduleId": None, "segment": None, "objectiveId": 2}
+
+
+def test_met_with_support_offers_a_revisit_not_a_review(
+    client: TestClient, db: Session, loaded: None
+) -> None:
+    user = log_in(client)
+    complete(db, user, 1)
+    see_hints(db, user, 601, 3)
+    answer(client, 601)
+    answer(client, 602)
+    after = {s["id"]: s for s in profile(client)["objectives"]}
+    assert after[1]["result"] == "met_with_support"
+    assert after[1]["improve"] == {
+        "kind": "revisit",
+        "moduleId": 1,
+        "segment": None,
+        "objectiveId": None,
+    }

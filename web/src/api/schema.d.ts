@@ -372,7 +372,7 @@ export interface paths {
      * @description The logged-in student's skill profile and module medals (FR-9.7, FR-9.8; #214).
      *
      *     For each learning objective: how many of its practice items they have answered correctly, of
-     *     how many, and its mastery result once the mastery check (or a review path) has decided it.
+     *     how many, where to work on it next (`improve`), and its mastery result once the mastery check (or a review path) has decided it.
      *     For each module with activities to mark: its medal once complete, and the medal the answers so
      *     far are heading for. Worked out from attempts on each request (app/services/skills.py), so it
      *     follows the current content and rules. Only ever the student's own.
@@ -1970,6 +1970,25 @@ export interface components {
        */
       limitReached: boolean
     }
+    /**
+     * ImproveOut
+     * @description Where the student can work on an objective (#214): `practise` in a module (at `segment`,
+     *     0-based, when they can open it there), `revisit` a module (secure in practice, or met with
+     *     support), or its `review` path once module 6 has said "not yet" (FR-7.5). Never module 6.
+     */
+    ImproveOut: {
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: 'practise' | 'revisit' | 'review'
+      /** Moduleid */
+      moduleId: number | null
+      /** Segment */
+      segment: number | null
+      /** Objectiveid */
+      objectiveId: number | null
+    }
     /** Insights */
     Insights: {
       /** Students */
@@ -2547,7 +2566,8 @@ export interface components {
      * @description One objective on the skill profile (FR-9.7). `level` is practice progress in three coarse
      *     steps (not started, practising, secure: every practice item answered and at least 80% right
      *     without hint 3 or 4); the counts are the evidence behind it, of `total` practice items.
-     *     `result` is the mastery result once the mastery check (or a review path) has decided it.
+     *     `result` is the mastery result once the mastery check (or a review path) has decided it;
+     *     `improve`, where to work on it next (none once met on your own).
      */
     SkillOut: {
       /** Id */
@@ -2569,6 +2589,7 @@ export interface components {
       level: 'not_started' | 'practising' | 'secure'
       /** Result */
       result: ('not_attempted' | 'met_independently' | 'met_with_support' | 'not_yet') | null
+      improve: components['schemas']['ImproveOut'] | null
     }
     /**
      * SkillsOut

@@ -888,7 +888,7 @@
           "skills"
         ],
         "summary": "Get Skills",
-        "description": "The logged-in student's skill profile and module medals (FR-9.7, FR-9.8; #214).\n\nFor each learning objective: how many of its practice items they have answered correctly, of\nhow many, and its mastery result once the mastery check (or a review path) has decided it.\nFor each module with activities to mark: its medal once complete, and the medal the answers so\nfar are heading for. Worked out from attempts on each request (app/services/skills.py), so it\nfollows the current content and rules. Only ever the student's own.",
+        "description": "The logged-in student's skill profile and module medals (FR-9.7, FR-9.8; #214).\n\nFor each learning objective: how many of its practice items they have answered correctly, of\nhow many, where to work on it next (`improve`), and its mastery result once the mastery check (or a review path) has decided it.\nFor each module with activities to mark: its medal once complete, and the medal the answers so\nfar are heading for. Worked out from attempts on each request (app/services/skills.py), so it\nfollows the current content and rules. Only ever the student's own.",
         "operationId": "get_skills_api_me_skills_get",
         "parameters": [
           {
@@ -5688,6 +5688,62 @@
         "title": "HintOut",
         "description": "The hint just revealed. `next_counts_as_support` is true when the *next* hint would be level\n3 or 4: show the \"this counts as met with support\" warning before asking for it (ID doc §7.4)."
       },
+      "ImproveOut": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "practise",
+              "revisit",
+              "review"
+            ],
+            "title": "Kind"
+          },
+          "moduleId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moduleid"
+          },
+          "segment": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segment"
+          },
+          "objectiveId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objectiveid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "moduleId",
+          "segment",
+          "objectiveId"
+        ],
+        "title": "ImproveOut",
+        "description": "Where the student can work on an objective (#214): `practise` in a module (at `segment`,\n0-based, when they can open it there), `revisit` a module (secure in practice, or met with\nsupport), or its `review` path once module 6 has said \"not yet\" (FR-7.5). Never module 6."
+      },
       "Insights": {
         "properties": {
           "students": {
@@ -7016,6 +7072,16 @@
               }
             ],
             "title": "Result"
+          },
+          "improve": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImproveOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -7028,10 +7094,11 @@
           "onYourOwn",
           "total",
           "level",
-          "result"
+          "result",
+          "improve"
         ],
         "title": "SkillOut",
-        "description": "One objective on the skill profile (FR-9.7). `level` is practice progress in three coarse\nsteps (not started, practising, secure: every practice item answered and at least 80% right\nwithout hint 3 or 4); the counts are the evidence behind it, of `total` practice items.\n`result` is the mastery result once the mastery check (or a review path) has decided it."
+        "description": "One objective on the skill profile (FR-9.7). `level` is practice progress in three coarse\nsteps (not started, practising, secure: every practice item answered and at least 80% right\nwithout hint 3 or 4); the counts are the evidence behind it, of `total` practice items.\n`result` is the mastery result once the mastery check (or a review path) has decided it;\n`improve`, where to work on it next (none once met on your own)."
       },
       "SkillsOut": {
         "properties": {

@@ -5,8 +5,9 @@ import type { Medal as MedalTier } from './skills.api.ts'
 export const MEDAL_RULES: Record<MedalTier, string> = {
   gold: 'every activity right first time, without a hint',
   silver: 'every activity right first time, without hint 3 or 4',
-  // "First time", not "on your own", which the mastery check uses for gold (#222 re-review).
-  finished: 'at least one right first time, without hint 3 or 4',
+  // "First time", not "on your own", which the mastery check uses for gold (#222 re-review);
+  // "before hint 3" is "without hint 3 or 4", short enough for the panel to fit 1366 x 900.
+  finished: 'at least one right first time, before hint 3',
 }
 
 export const MEDAL_NAMES: Record<MedalTier, string> = {

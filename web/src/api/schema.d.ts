@@ -92,7 +92,8 @@ export interface paths {
      *     browser (FR-5.3, NFR-S2). `solved` says whether this student has already answered it
      *     correctly, so the page stops offering hints after a refresh too (#158), and `lastAttempt`
      *     holds this student's latest answer and the result for it, as marked now, so coming back to an
-     *     activity shows it (#171; withheld on a mastery check item, as when answered). 403 while the
+     *     activity shows it (#171; withheld on a mastery check item, as when answered, until every
+     *     module 6 item is answered, then shown with its feedback: review of 13 Nov). 403 while the
      *     activity's module is locked or its review path is closed, 404 if it doesn't exist or is no
      *     longer part of the course.
      */
@@ -330,6 +331,10 @@ export interface paths {
      *     Worked out from their attempts on every request (app/services/mastery.py), so it always follows
      *     the current rules (FR-7.6). Nothing a client sends can set a result: they change only through
      *     attempts. Only ever the student's own.
+     *
+     *     Once every module 6 item is answered, each objective lists its items with the student's
+     *     answer marked and why (`answers`; review of 13 Nov, High 9). Before that it is empty, as the
+     *     results are withheld until the end of the check (#144).
      */
     get: operations['get_report_api_me_report_get']
     put?: never
@@ -2015,6 +2020,28 @@ export interface components {
       password: string
     }
     /**
+     * MasteryAnswerOut
+     * @description One mastery check item and the student's answer to it, on the report once the check is
+     *     finished (review of 13 Nov, High 9): whether it was right, and why. Before then the results
+     *     stay withheld (#144), so there are none.
+     */
+    MasteryAnswerOut: {
+      /** Activityid */
+      activityId: number
+      /** Title */
+      title: string
+      /** Correct */
+      correct: boolean
+      /** Score */
+      score: number
+      /** Feedback */
+      feedback: string
+      /** Notes */
+      notes: string[]
+      /** Hintlevel */
+      hintLevel: number
+    }
+    /**
      * MasteryReportOut
      * @description The student's own mastery report. `ready` (for the lecture) is true when every objective is
      *     met, with or without support (FR-7.4). Always shown, even when rewards are hidden (FR-9.5).
@@ -2202,7 +2229,9 @@ export interface components {
      * ObjectiveReportOut
      * @description One objective on the mastery report (FR-7.2, FR-7.3). `answered` of `total` is how many of
      *     its module 6 items the student has answered; the result stays `not_attempted` until all are.
-     *     `review` is there once module 6 marks it "not yet", which opens its review path.
+     *     `review` is there once module 6 marks it "not yet", which opens its review path. `answers`
+     *     are its module 6 items with the student's result on each, once the whole check is answered
+     *     (empty before).
      */
     ObjectiveReportOut: {
       /** Id */
@@ -2221,6 +2250,8 @@ export interface components {
       /** Total */
       total: number
       review: components['schemas']['ReviewProgressOut'] | null
+      /** Answers */
+      answers?: components['schemas']['MasteryAnswerOut'][]
     }
     /**
      * PartResult

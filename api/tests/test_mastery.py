@@ -24,7 +24,12 @@ from app.models import (
     Segment,
     User,
 )
-from app.routers.activities import REVIEW_HINT_LIMIT_REACHED, attempts_limiter, hints_limiter
+from app.routers.activities import (
+    RECORDED,
+    REVIEW_HINT_LIMIT_REACHED,
+    attempts_limiter,
+    hints_limiter,
+)
 from app.schemas.activities import FixTheBugSolution, ParsonsSolution
 from app.schemas.graphs import GraphScenarioOut
 from app.seed import FixtureFile, ObjectiveFixture, check_references, load, read_fixtures
@@ -261,6 +266,7 @@ def test_a_new_student_has_attempted_nothing_and_is_not_ready(
         "answered": 0,
         "total": 2,
         "review": None,
+        "answers": [],
     }
 
 
@@ -984,6 +990,38 @@ def test_coming_back_to_a_mastery_item_shows_the_answer_but_not_its_result(
         [],
         True,
     )
+
+
+def test_once_the_check_is_finished_each_item_shows_its_result_and_why(
+    client: TestClient, course: Path
+) -> None:
+    """Review of 13 Nov, High 9: the mastery check never gave item feedback. Until every module 6
+    item is answered the results stay withheld (#144); after that, each item opened again shows
+    its result and feedback, and the report lists every answer per objective with why."""
+    log_in(client)
+    answer(client, 601)
+    answer(client, 603, WRONG)
+    assert client.get("/api/activities/603").json()["lastAttempt"]["result"]["withheld"] is True
+    assert all(o["answers"] == [] for o in client.get("/api/me/report").json()["objectives"])
+    answer(client, 602)  # the last one: the check is finished
+
+    wrong = client.get("/api/activities/603").json()
+    assert wrong["masteryCheck"] is True  # still one answer only, and no hints
+    result = wrong["lastAttempt"]["result"]
+    assert (result["withheld"], result["correct"], result["score"]) == (False, False, 0.0)
+    assert result["feedback"]
+    assert result["feedback"] != RECORDED
+    assert client.get("/api/activities/601").json()["lastAttempt"]["result"]["correct"] is True
+    assert client.post("/api/activities/603/attempts", json=RIGHT).status_code == 409
+
+    report = {o["id"]: o for o in client.get("/api/me/report").json()["objectives"]}
+    assert [(a["activityId"], a["correct"]) for a in report[1]["answers"]] == [
+        (601, True),
+        (602, True),
+    ]
+    [mine] = report[2]["answers"]
+    assert (mine["activityId"], mine["title"], mine["correct"]) == (603, "Question 603", False)
+    assert mine["feedback"] == result["feedback"]
 
 
 def test_practice_and_review_items_are_not_in_the_check(client: TestClient, course: Path) -> None:

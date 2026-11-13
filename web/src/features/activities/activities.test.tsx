@@ -895,6 +895,33 @@ describe('the mastery check (#144)', () => {
     expect(api.callsTo('POST /api/activities/7/attempts')).toHaveLength(1)
   })
 
+  it('shows the result and why once the whole check is finished (review of 13 Nov)', () => {
+    render(
+      <ActivityRenderer
+        activity={{ ...checkItem, answered: true }}
+        result={{
+          id: 3,
+          activityId: 7,
+          correct: false,
+          score: 0.5,
+          parts: [],
+          feedback: '2 of 4 correct.',
+          hintLevel: 0,
+        }}
+        submitting={false}
+        onSubmit={vi.fn<(submitted: Submission) => Promise<void>>()}
+        requestHint={vi.fn<(activityId: number) => Promise<Hint>>()}
+        loadHints={() => Promise.resolve([])}
+      />,
+    )
+    expect(screen.getByText('Not quite')).toBeInTheDocument()
+    expect(screen.getByText('2 of 4 correct.')).toBeInTheDocument()
+    expect(screen.getByText(/You have finished the mastery check/)).toBeInTheDocument()
+    expect(screen.queryByText('Answer recorded')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Check answer' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Show next hint' })).toBeNull()
+  })
+
   it('says an item answered before is answered, without showing the form again', async () => {
     render(
       <ActivityRenderer

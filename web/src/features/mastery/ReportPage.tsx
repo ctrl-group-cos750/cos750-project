@@ -28,8 +28,8 @@ function nextStep(o: ObjectiveReport): string {
         : 'You met this on your own.'
     case 'met_with_support':
       return reviewDone(o)
-        ? 'You met this after the review path, using hint 3 or 4.'
-        : 'You met this after using hint 3 or 4.'
+        ? 'You met this after the review path, using hint 3.'
+        : 'You met this after using hint 3.'
     case 'not_yet':
       if (reviewDone(o))
         return 'Still not yet after the review path. Bring this one to the lecture.'
@@ -67,6 +67,49 @@ function ReviewLink({ o }: { o: ObjectiveReport }) {
       {label}
       <span className="sr-only">: objective {o.id}</span>
     </Link>
+  )
+}
+
+/** The objective's mastery check questions, each with how the student's answer was marked and
+ * why: shown once the check is finished (review of 13 Nov), closed by default so the list of
+ * objectives stays short. */
+function Answers({ o }: { o: ObjectiveReport }) {
+  const answers = o.answers ?? []
+  if (answers.length === 0) return null
+  const right = answers.filter((a) => a.correct).length
+  return (
+    <details className={styles.answers}>
+      <summary>
+        Your answers: {right} of {answers.length} right
+        <span className="sr-only">, objective {o.id}</span>
+      </summary>
+      <ul>
+        {answers.map((a) => (
+          <li key={a.activityId}>
+            <div className={styles.answerHead}>
+              <Link to={`/activities/${a.activityId}`}>{a.title}</Link>
+              {a.correct ? (
+                <Tag tone="success" icon="✓">
+                  Right
+                </Tag>
+              ) : (
+                <Tag tone="warning" icon="✗">
+                  {a.score > 0 ? `${Math.round(a.score * 100)}% right` : 'Not right'}
+                </Tag>
+              )}
+            </div>
+            <p className={styles.why}>{a.feedback}</p>
+            {a.notes.length > 0 && (
+              <ul className={styles.notes}>
+                {a.notes.map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+            )}
+          </li>
+        ))}
+      </ul>
+    </details>
   )
 }
 
@@ -234,6 +277,7 @@ export function ReportPage() {
                 <p className={styles.criterion}>To meet it: {o.criterion}</p>
                 <ReviewLink o={o} />
                 <MasteryCheckLink o={o} moduleId={checkId} />
+                <Answers o={o} />
               </div>
               <Result state={o.state} />
             </li>

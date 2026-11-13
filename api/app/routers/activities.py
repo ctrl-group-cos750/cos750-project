@@ -37,7 +37,7 @@ from app.services.attempts import (
     reveal_next_hint,
 )
 from app.services.locks import ActivityGone
-from app.services.mastery import in_check, on_review_path
+from app.services.mastery import check_finished, in_check, on_review_path
 from app.services.restart import activity_round
 from app.services.rewards import activity_refs, points_for_refs
 from app.services.submissions import clean, submission_problem
@@ -110,6 +110,13 @@ def _checked(activity: Activity, user: User) -> bool:
     return in_check(activity) and not user.is_staff
 
 
+def _withheld(session: DbSession, activity: Activity, user: User) -> bool:
+    """Whether this student's result on the activity is still withheld: a mastery check item
+    while the check is unfinished (#144). Once every module 6 item is answered, each item shows
+    its result and feedback when opened again, as the report does (review of 13 Nov, High 9)."""
+    return _checked(activity, user) and not check_finished(session, user.id)
+
+
 def _attempt_out(attempt: Attempt, checked: bool) -> AttemptOut:
     """An attempt's result as the student is shown it: in full, or `withheld` on a mastery check
     item (#144), where nothing says whether it was right."""
@@ -148,7 +155,8 @@ def _last_attempt(
     if attempt is None:
         return None
     return LastAttemptOut(
-        submitted=attempt.submitted, result=_attempt_out(attempt, _checked(activity, user))
+        submitted=attempt.submitted,
+        result=_attempt_out(attempt, _withheld(session, activity, user)),
     )
 
 
@@ -218,7 +226,8 @@ def get_activity(activity_id: RowId, session: DbSession, user: CurrentUser) -> A
     browser (FR-5.3, NFR-S2). `solved` says whether this student has already answered it
     correctly, so the page stops offering hints after a refresh too (#158), and `lastAttempt`
     holds this student's latest answer and the result for it, as marked now, so coming back to an
-    activity shows it (#171; withheld on a mastery check item, as when answered). 403 while the
+    activity shows it (#171; withheld on a mastery check item, as when answered, until every
+    module 6 item is answered, then shown with its feedback: review of 13 Nov). 403 while the
     activity's module is locked or its review path is closed, 404 if it doesn't exist or is no
     longer part of the course."""
     activity = _activity_or_404(session, activity_id, user)

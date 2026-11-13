@@ -9,6 +9,7 @@ from app.models import Activity, Attempt, Segment
 from app.schemas.content import SegmentKind
 from app.schemas.ids import RowId
 from app.schemas.mastery import (
+    MasteryAnswerOut,
     MasteryReportOut,
     ObjectiveReportOut,
     ReviewPathOut,
@@ -16,12 +17,57 @@ from app.schemas.mastery import (
     ReviewStepOut,
 )
 from app.services.access import review_practice_done
-from app.services.mastery import Tally, evaluate, is_ready, review_items
+from app.services.mastery import (
+    Outcome,
+    Tally,
+    check_finished,
+    evaluate,
+    is_ready,
+    review_items,
+)
 
 router = APIRouter(prefix="/api/me", tags=["mastery"])
 
 NO_PATH = "This objective has no review path."
 NOT_OPEN = "This review path opens when the mastery check marks the objective 'not yet'."
+
+
+def _answers(
+    session: DbSession, user_id: int, outcomes: list[Outcome]
+) -> dict[int, list[MasteryAnswerOut]]:
+    """Each objective's module 6 items with the student's first answer and its result, once the
+    check is finished (every module 6 item answered); none before, so nothing is given away
+    early (#144). The result is the one stored with the attempt, as marked (after a re-grade,
+    the new mark)."""
+    evidence = [i for o in outcomes for i in o.check.evidence]
+    if not evidence or not check_finished(session, user_id):
+        return {}
+    rows = session.execute(
+        select(Attempt, Activity)
+        .join(Activity, Activity.id == Attempt.activity_id)
+        .where(Attempt.id.in_(evidence))
+        .order_by(Activity.id)
+    ).all()
+    found: dict[int, list[MasteryAnswerOut]] = {}
+    for attempt, activity in rows:
+        detail = attempt.detail or {}
+        notes: list[str] = []
+        for part in detail.get("parts") or []:
+            message = part.get("message")
+            if not part.get("correct") and message and message not in notes:
+                notes.append(str(message))
+        found.setdefault(activity.objective_id or 0, []).append(
+            MasteryAnswerOut(
+                activity_id=activity.id,
+                title=activity.title,
+                correct=attempt.correct,
+                score=attempt.score,
+                feedback=str(detail.get("feedback", "")),
+                notes=[] if attempt.correct else notes,
+                hint_level=attempt.hint_level,
+            )
+        )
+    return found
 
 
 @router.get("/report")
@@ -32,8 +78,13 @@ def get_report(user: CurrentUser, session: DbSession) -> MasteryReportOut:
 
     Worked out from their attempts on every request (app/services/mastery.py), so it always follows
     the current rules (FR-7.6). Nothing a client sends can set a result: they change only through
-    attempts. Only ever the student's own."""
+    attempts. Only ever the student's own.
+
+    Once every module 6 item is answered, each objective lists its items with the student's
+    answer marked and why (`answers`; review of 13 Nov, High 9). Before that it is empty, as the
+    results are withheld until the end of the check (#144)."""
     outcomes = evaluate(session, user.id)
+    answers = _answers(session, user.id, outcomes)
     return MasteryReportOut(
         ready=is_ready(outcomes),
         objectives=[
@@ -49,6 +100,7 @@ def get_report(user: CurrentUser, session: DbSession) -> MasteryReportOut:
                     if o.review
                     else None
                 ),
+                answers=answers.get(o.objective.id, []),
             )
             for o in outcomes
         ],

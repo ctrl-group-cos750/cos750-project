@@ -89,11 +89,18 @@ export function ActivityRenderer(props: ActivityRendererProps) {
         mastery report once every question in the check is answered.
       </p>
     ) : (
-      props.result && (
+      props.result &&
+      (props.result.withheld ? (
         <p className="mb-4 text-sm text-muted-foreground">
           You have answered this question. Only your first answer counts, so it can't be changed.
         </p>
-      )
+      ) : (
+        // The check is finished, so the result is shown (review of 13 Nov).
+        <p className="mb-4 text-sm text-muted-foreground">
+          You have finished the mastery check, so your answer is marked below. Your mastery report
+          lists every answer with why.
+        </p>
+      ))
     ))
   const screen =
     props.activity.kind === 'parsons' ? (

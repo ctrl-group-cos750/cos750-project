@@ -186,7 +186,7 @@
           "activities"
         ],
         "summary": "Get Activity",
-        "description": "The activity to render. `ActivityOut` has no `solution`, so the answer never reaches the\nbrowser (FR-5.3, NFR-S2). `solved` says whether this student has already answered it\ncorrectly, so the page stops offering hints after a refresh too (#158), and `lastAttempt`\nholds this student's latest answer and the result for it, as marked now, so coming back to an\nactivity shows it (#171; withheld on a mastery check item, as when answered). 403 while the\nactivity's module is locked or its review path is closed, 404 if it doesn't exist or is no\nlonger part of the course.",
+        "description": "The activity to render. `ActivityOut` has no `solution`, so the answer never reaches the\nbrowser (FR-5.3, NFR-S2). `solved` says whether this student has already answered it\ncorrectly, so the page stops offering hints after a refresh too (#158), and `lastAttempt`\nholds this student's latest answer and the result for it, as marked now, so coming back to an\nactivity shows it (#171; withheld on a mastery check item, as when answered, until every\nmodule 6 item is answered, then shown with its feedback: review of 13 Nov). 403 while the\nactivity's module is locked or its review path is closed, 404 if it doesn't exist or is no\nlonger part of the course.",
         "operationId": "get_activity_api_activities__activity_id__get",
         "parameters": [
           {
@@ -777,7 +777,7 @@
           "mastery"
         ],
         "summary": "Get Report",
-        "description": "The logged-in student's mastery report: each objective's result, whether they are ready\nfor the lecture, and the review path's progress for each objective module 6 marked \"not yet\"\n(FR-7.3 to FR-7.5).\n\nWorked out from their attempts on every request (app/services/mastery.py), so it always follows\nthe current rules (FR-7.6). Nothing a client sends can set a result: they change only through\nattempts. Only ever the student's own.",
+        "description": "The logged-in student's mastery report: each objective's result, whether they are ready\nfor the lecture, and the review path's progress for each objective module 6 marked \"not yet\"\n(FR-7.3 to FR-7.5).\n\nWorked out from their attempts on every request (app/services/mastery.py), so it always follows\nthe current rules (FR-7.6). Nothing a client sends can set a result: they change only through\nattempts. Only ever the student's own.\n\nOnce every module 6 item is answered, each objective lists its items with the student's\nanswer marked and why (`answers`; review of 13 Nov, High 9). Before that it is empty, as the\nresults are withheld until the end of the check (#144).",
         "operationId": "get_report_api_me_report_get",
         "parameters": [
           {
@@ -5774,6 +5774,54 @@
         ],
         "title": "LoginIn"
       },
+      "MasteryAnswerOut": {
+        "properties": {
+          "activityId": {
+            "type": "integer",
+            "title": "Activityid"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "correct": {
+            "type": "boolean",
+            "title": "Correct"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "feedback": {
+            "type": "string",
+            "title": "Feedback"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          },
+          "hintLevel": {
+            "type": "integer",
+            "title": "Hintlevel"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "activityId",
+          "title",
+          "correct",
+          "score",
+          "feedback",
+          "notes",
+          "hintLevel"
+        ],
+        "title": "MasteryAnswerOut",
+        "description": "One mastery check item and the student's answer to it, on the report once the check is\nfinished (review of 13 Nov, High 9): whether it was right, and why. Before then the results\nstay withheld (#144), so there are none."
+      },
       "MasteryReportOut": {
         "properties": {
           "ready": {
@@ -6233,6 +6281,13 @@
                 "type": "null"
               }
             ]
+          },
+          "answers": {
+            "items": {
+              "$ref": "#/components/schemas/MasteryAnswerOut"
+            },
+            "type": "array",
+            "title": "Answers"
           }
         },
         "additionalProperties": false,
@@ -6247,7 +6302,7 @@
           "review"
         ],
         "title": "ObjectiveReportOut",
-        "description": "One objective on the mastery report (FR-7.2, FR-7.3). `answered` of `total` is how many of\nits module 6 items the student has answered; the result stays `not_attempted` until all are.\n`review` is there once module 6 marks it \"not yet\", which opens its review path."
+        "description": "One objective on the mastery report (FR-7.2, FR-7.3). `answered` of `total` is how many of\nits module 6 items the student has answered; the result stays `not_attempted` until all are.\n`review` is there once module 6 marks it \"not yet\", which opens its review path. `answers`\nare its module 6 items with the student's result on each, once the whole check is answered\n(empty before)."
       },
       "PartResult": {
         "properties": {

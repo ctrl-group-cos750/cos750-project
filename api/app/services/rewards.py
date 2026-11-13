@@ -37,33 +37,35 @@ OBJECTIVES: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7, 8)
 SUPPORT_LEVEL = 3
 
 
-def answer_given_away(session: Session, user_id: int, activity_id: int) -> bool:
-    """Whether this student has been shown hint 3 or 4 on this activity in any round. Restarting a
-    module (app/services/restart.py) starts its hint ladder again, but not its rewards: an answer
-    once given away stays given away (13 Nov audit)."""
-    return (
-        session.scalar(
-            select(HintView.id)
-            .where(
-                HintView.user_id == user_id,
-                HintView.activity_id == activity_id,
-                HintView.level >= SUPPORT_LEVEL,
-            )
-            .limit(1)
-        )
-        is not None
+def answer_given_away(
+    session: Session, user_id: int, activity_id: int, before: int | None = None
+) -> bool:
+    """Whether this student had been shown hint 3 or 4 on this activity, in any round, before
+    their attempt with id `before` (any time, if None). Restarting a module
+    (app/services/restart.py) starts its hint ladder again, but not its rewards: an answer once
+    given away stays given away (13 Nov audit). A hint opened after an answer never counts against
+    that answer, so hints on a restarted module's questions take nothing from what the first round
+    earned (#211 review)."""
+    query = select(HintView.id).where(
+        HintView.user_id == user_id,
+        HintView.activity_id == activity_id,
+        HintView.level >= SUPPORT_LEVEL,
     )
+    if before is not None:
+        query = query.where(HintView.after_attempt < before)
+    return session.scalar(query.limit(1)) is not None
 
 
 def real_work() -> ColumnElement[bool]:
     """The SQL condition for an attempt that counts as real work for a reward: answered without
-    hint 3 or 4, in this round or any earlier one (`answer_given_away`)."""
+    hint 3 or 4 shown before it, in its round or any earlier one (`answer_given_away`)."""
     return and_(
         Attempt.hint_level < SUPPORT_LEVEL,
         ~exists().where(
             HintView.user_id == Attempt.user_id,
             HintView.activity_id == Attempt.activity_id,
             HintView.level >= SUPPORT_LEVEL,
+            HintView.after_attempt < Attempt.id,
         ),
     )
 
@@ -160,7 +162,7 @@ def on_attempt(session: Session, attempt: Attempt) -> Earned:
     if not attempt.correct:
         return Earned()
     supported = attempt.hint_level >= SUPPORT_LEVEL or answer_given_away(
-        session, attempt.user_id, attempt.activity_id
+        session, attempt.user_id, attempt.activity_id, before=attempt.id
     )
     event = "activity_correct_supported" if supported else "activity_correct"
     return _add_points(session, attempt.user_id, event, f"activity:{attempt.activity_id}")

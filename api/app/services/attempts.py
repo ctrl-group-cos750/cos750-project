@@ -138,7 +138,7 @@ def record_attempt(
     session.flush()
     # Rewards go by every round: hint 3 or 4 before a restart still gave the answer away.
     real = attempt.hint_level < SUPPORT_LEVEL and not answer_given_away(
-        session, user_id, activity.id
+        session, user_id, activity.id, before=attempt.id
     )
     if activity.purpose == "bonus":
         # A bonus quest earns its own points and badge instead of an activity's (FR-8.3, #87),
@@ -204,7 +204,17 @@ def reveal_next_hint(
     hint = next((h for h in hints if h.level > seen), None)
     if hint is None or (limit is not None and hint.level > limit):
         return None
-    session.add(HintView(user_id=user_id, activity_id=activity.id, level=hint.level, round=round))
+    # The newest attempt now: under the student's lock, so their next attempt gets a higher id.
+    newest = session.scalar(select(func.max(Attempt.id))) or 0
+    session.add(
+        HintView(
+            user_id=user_id,
+            activity_id=activity.id,
+            level=hint.level,
+            round=round,
+            after_attempt=newest,
+        )
+    )
     log_event(
         session,
         user_id,

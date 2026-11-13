@@ -104,4 +104,9 @@ class HintView(Base):
     # Which time through the module (0, then one more for each restart): a restarted module shows
     # its hints again from level 1, so each level is once per round (app/services/restart.py).
     round: Mapped[int] = mapped_column(default=0, server_default="0")
+    # The newest attempt id (anyone's) when the hint was shown. Attempts are append-only and both
+    # are written under the student's lock, so this hint came before exactly this student's
+    # attempts with a higher id: hint 3 or 4 only makes those "with support" (rewards.py), never an
+    # answer already given, even after a restart (#211 review).
+    after_attempt: Mapped[int] = mapped_column(default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

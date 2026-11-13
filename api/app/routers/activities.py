@@ -297,7 +297,10 @@ def reveal_hint(activity_id: RowId, user: CurrentUser, session: DbSession) -> Hi
             raise HTTPException(status.HTTP_409_CONFLICT, detail=ANSWERED_NO_HINTS)
         limit = MASTERY_HINT_LIMIT
     # A hint after a right answer helps with nothing, and would count in the pilot's hint use as
-    # help the student needed (#158).
+    # help the student needed (#158). A right answer in this round: a restarted module's questions
+    # are redone with their hints, which are recorded with their round, count only against the
+    # answers after them (rewards.answer_given_away) and not as support needed in the pilot
+    # insights once the question was solved (#211 review).
     elif answered_correctly(
         session, user.id, activity.id, activity_round(session, user.id, activity).after
     ):

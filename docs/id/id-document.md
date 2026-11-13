@@ -841,7 +841,30 @@ To be added by Simphiwe Nhlapo (#74).
 
 ### Joshua Wereley
 
-To be added by Joshua Wereley (#74).
+**Tool:** Claude (Anthropic).
+
+**What it was used for:**
+
+- **Course content:** the slide presentations for modules 0 to 6, made to follow this document and the SE document. The narrated videos are recorded from them (#37).
+- **This document:** finding academic articles to support the instructional design, and formatting its LaTeX.
+- **His code:** making his files more readable (shallow nesting, mostly single-argument functions), writing their tests, and summarising his commit messages.
+- **Planning:** checking which files were already implemented for the demo and which still needed work.
+
+**How its output was checked:** he checks each presentation against this document and the SE document before he records its video. His code changes went through pull requests reviewed by a software engineer.
+
+**Main prompts**, as typed:
+
+| Prompt | Used for |
+|---|---|
+| "Can you please provide a list of academic articles that would assist in building the instructional design." | Articles for this document |
+| "Can you please assist in formatting the latex for the instructional design." | Formatting this document |
+| "Can you please update my files such that the code is readable, functions are not deeply nested and functions are mainly unary (unless otherwise stated)." | Refactoring his code |
+| "Can you please provide the test code." | Tests for his code |
+| "Can you please summarise the git commands `-m "" -m ""` for what I will be pushing to the branch." | Commit messages |
+| "Can you please generate the powerpoint presentation for module 0 such that it follows along with what is mentioned in the instructional design document and software engineering document." The same prompt was used for each of modules 1 to 6. | The slides behind each module's narrated video (#37) |
+| "Which files have already been implemented for demo 0." and "Which files still require work to be implemented for demo 0." | Planning the remaining work |
+
+Table: Generative AI prompts, Joshua Wereley.
 
 # References and supporting evidence
 

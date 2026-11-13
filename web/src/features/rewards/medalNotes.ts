@@ -1,7 +1,7 @@
 import { deviceValue, preferenceOwner, setDeviceValue } from '../progress/preferences.ts'
 import type { Medal, ModuleMedal } from '../progress/skills.api.ts'
 
-const RANK: Record<Medal, number> = { bronze: 1, silver: 2, gold: 3 }
+const RANK: Record<Medal, number> = { finished: 1, silver: 2, gold: 3 }
 const KEY = 'medals-announced'
 
 /** A module medal to announce: "Module 2: silver medal" (#214). */
@@ -29,7 +29,7 @@ export function newMedals(modules: readonly ModuleMedal[], quiet = false): Medal
   for (const m of modules) {
     if (!m.complete || m.medal === null) continue
     const before = known[String(m.moduleId)]
-    if (before !== undefined && RANK[before] >= RANK[m.medal]) continue
+    if (before !== undefined && (RANK[before] ?? 0) >= RANK[m.medal]) continue
     next[String(m.moduleId)] = m.medal
     if (stored !== null && !quiet)
       fresh.push({ key: `medal:${m.moduleId}:${m.medal}`, moduleId: m.moduleId, tier: m.medal })

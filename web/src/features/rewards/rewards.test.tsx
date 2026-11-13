@@ -462,13 +462,13 @@ describe('module medal notes', () => {
     window.localStorage.setItem('ctrl-academy.1.medals-announced', '{}')
     withRewardsAndSkills(
       { hideRewards: true, points: 0, badges: [] },
-      { objectives: [], modules: [medal(3, 'bronze')] },
+      { objectives: [], modules: [medal(3, 'finished')] },
     )
     renderApp('/')
     await screen.findByRole('heading', { name: 'Graphs and breadth-first search' })
     await waitFor(() =>
-      expect(localStorage.getItem('ctrl-academy.1.medals-announced')).toBe('{"3":"bronze"}'),
+      expect(localStorage.getItem('ctrl-academy.1.medals-announced')).toBe('{"3":"finished"}'),
     )
-    expect(screen.queryByText('Module 3: bronze medal')).toBeNull()
+    expect(screen.queryByText('Module 3: finished medal')).toBeNull()
   })
 })

@@ -3,7 +3,7 @@ from typing import Literal
 from app.schemas.base import ApiModel
 from app.schemas.mastery import ObjectiveState
 
-Medal = Literal["gold", "silver", "bronze"]
+Medal = Literal["gold", "silver", "finished"]
 
 
 class ImproveOut(ApiModel):
@@ -40,7 +40,8 @@ class SkillOut(ApiModel):
 
 class ModuleMedalOut(ApiModel):
     """A module's medal (FR-9.8): `medal` once the module is complete (gold, every activity right
-    first time without hint 3 or 4; silver, every activity right without them; bronze, finished),
+    first time without hint 3 or 4; silver, every activity right without them; finished, the module finished with at least one
+    right on your own: not "bronze", which is an objective badge's level),
     and `headingFor`, what the answers so far are on course for. Never counts time or speed.
     `objectives` are the learning objectives its activities practise."""
 

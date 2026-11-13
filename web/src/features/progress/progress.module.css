@@ -34,9 +34,17 @@
   stroke: var(--badge-silver);
 }
 
-.bronze .disc {
-  fill: var(--badge-bronze-soft);
-  stroke: var(--badge-bronze);
+.finished .disc {
+  fill: var(--color-accent-soft);
+  stroke: var(--color-accent-text);
+}
+
+.finished .mark {
+  fill: none;
+  stroke: var(--color-accent-text);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* --- Skill profile ----------------------------------------------------------------------- */

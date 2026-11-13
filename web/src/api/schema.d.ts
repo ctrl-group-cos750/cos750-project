@@ -2111,7 +2111,8 @@ export interface components {
     /**
      * ModuleMedalOut
      * @description A module's medal (FR-9.8): `medal` once the module is complete (gold, every activity right
-     *     first time without hint 3 or 4; silver, every activity right without them; bronze, finished),
+     *     first time without hint 3 or 4; silver, every activity right without them; finished, the module finished with at least one
+     *     right on your own: not "bronze", which is an objective badge's level),
      *     and `headingFor`, what the answers so far are on course for. Never counts time or speed.
      *     `objectives` are the learning objectives its activities practise.
      */
@@ -2129,9 +2130,9 @@ export interface components {
       /** Total */
       total: number
       /** Medal */
-      medal: ('gold' | 'silver' | 'bronze') | null
+      medal: ('gold' | 'silver' | 'finished') | null
       /** Headingfor */
-      headingFor: ('gold' | 'silver' | 'bronze') | null
+      headingFor: ('gold' | 'silver' | 'finished') | null
       /** Objectives */
       objectives: number[]
     }

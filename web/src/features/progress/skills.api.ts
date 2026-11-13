@@ -4,7 +4,8 @@ import type { ObjectiveState } from '../mastery/mastery.api.ts'
 /** Practice progress on one objective, in three coarse steps (api/app/services/skills.py). */
 export type SkillLevel = 'not_started' | 'practising' | 'secure'
 
-export type Medal = 'gold' | 'silver' | 'bronze'
+/** A module medal (FR-9.8). "finished", not bronze: bronze is an objective badge's level. */
+export type Medal = 'gold' | 'silver' | 'finished'
 
 /** Where to work on an objective (#214), worked out by the API from the content: `practise` in a
  * module (at `segment`, 0-based, when the student can open it there), `revisit` a module, or its

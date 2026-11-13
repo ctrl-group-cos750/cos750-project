@@ -30,7 +30,7 @@ Then (`medal_for`, the one place the rule lives):
 
 - **gold**: every activity right first time,
 - **silver**: every activity right on your own,
-- **bronze**: the module finished with at least one activity right on your own,
+- **finished**: the module finished with at least one activity right on your own,
 - **none**: the module finished without one (every answer wrong, moved on after two tries): the
   same line as the module's points and First Module badge (app/services/modules.py
   `reward_module`), so walking through a module earns nothing (#215 review).
@@ -71,7 +71,9 @@ from app.models import Activity, Attempt, Checkpoint, Module, ModuleProgress, Se
 from app.services import quick_check, rewards
 from app.services.mastery import MASTERY_MODULE, State, evaluate
 
-Medal = Literal["gold", "silver", "bronze"]
+# "finished", not "bronze": bronze is an objective badge's level (met with support), so the
+# module medal for finishing has its own name (#214).
+Medal = Literal["gold", "silver", "finished"]
 
 # The purposes that count as practice for the skill profile and for a module's medal.
 PRACTICE_PURPOSES: frozenset[str] = frozenset({"practice", "retrieval"})
@@ -138,7 +140,7 @@ def medal_for(
     total: int, first_time: int, on_your_own: int, *, tested_out: bool = False
 ) -> Medal | None:
     """The medal for a finished module with `total` activities: gold if every one was right first
-    time without hint 3 or 4, silver if every one was right without them, bronze if at least one
+    time without hint 3 or 4, silver if every one was right without them, finished if at least one
     was, else none. A module passed by testing out (`tested_out`) earns silver, or better if its
     activities earn it."""
     if total > 0 and first_time >= total:
@@ -146,7 +148,7 @@ def medal_for(
     if (total > 0 and on_your_own >= total) or tested_out:
         return "silver"
     if on_your_own > 0:
-        return "bronze"
+        return "finished"
     return None
 
 

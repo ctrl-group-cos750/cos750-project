@@ -159,8 +159,8 @@ def profile(client: TestClient) -> dict[str, Any]:
         (4, 4, False, "gold"),
         (3, 4, False, "silver"),
         (0, 4, False, "silver"),
-        (3, 3, False, "bronze"),
-        (0, 1, False, "bronze"),
+        (3, 3, False, "finished"),
+        (0, 1, False, "finished"),
         # Every answer wrong (moved on after two tries): no medal, as no module points (#215).
         (0, 0, False, None),
         (0, 0, True, "silver"),  # tested out through the quick check
@@ -253,7 +253,7 @@ def test_a_wrong_first_answer_makes_it_silver(
     assert profile(client)["modules"][0]["medal"] == "silver"
 
 
-def test_hint_3_before_the_only_right_answer_makes_it_bronze(
+def test_hint_3_before_the_only_right_answer_makes_it_finished(
     client: TestClient, db: Session, loaded: None
 ) -> None:
     user = log_in(client)
@@ -262,7 +262,7 @@ def test_hint_3_before_the_only_right_answer_makes_it_bronze(
         answer(client, activity)
     complete(db, user, 1)
     medal = profile(client)["modules"][0]
-    assert (medal["medal"], medal["onYourOwn"], medal["total"]) == ("bronze", 3, 4)
+    assert (medal["medal"], medal["onYourOwn"], medal["total"]) == ("finished", 3, 4)
 
 
 def test_a_module_with_nothing_to_mark_has_no_medal(client: TestClient, loaded: None) -> None:

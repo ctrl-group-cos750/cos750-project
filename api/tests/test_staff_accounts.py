@@ -141,8 +141,10 @@ def test_one_account_shows_totals_video_progress_and_recent_answers(
     # Whether it was right, never what they answered.
     assert "submitted" not in response.text
     assert body["lastActiveAt"] is not None
-    # The pilot files' name for her, to join the survey; never the account id (FR-10.3).
-    assert body["pilotName"] == pseudonym(ada) != str(ada)
+    # Not the pilot files' name for her: beside her email it would put a name to every row
+    # of the CSV files (FR-10.3, #215 review). app/pilot_name.py gives it to the team.
+    assert "pilotName" not in body
+    assert pseudonym(ada) not in response.text
 
 
 def test_an_account_with_no_activity_has_zeros(client: TestClient, db: Session) -> None:

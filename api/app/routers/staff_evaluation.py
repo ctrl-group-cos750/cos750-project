@@ -114,14 +114,17 @@ def export_csv(
         return _csv(
             "objective-results",
             ["student", "objective_id", "state", "evidence", "updated_at"],
-            [
-                [pseudonym(r.user_id), r.objective_id, r.state, r.evidence, r.updated_at]
-                for r in session.scalars(
-                    select(ObjectiveResult)
-                    .where(ObjectiveResult.user_id.in_(_students()))
-                    .order_by(ObjectiveResult.user_id, ObjectiveResult.objective_id)
-                )
-            ],
+            # By pseudonym, not by account id: rows in id order would give away who joined first
+            # (#215 review).
+            sorted(
+                (
+                    [pseudonym(r.user_id), r.objective_id, r.state, r.evidence, r.updated_at]
+                    for r in session.scalars(
+                        select(ObjectiveResult).where(ObjectiveResult.user_id.in_(_students()))
+                    )
+                ),
+                key=lambda row: (row[0], row[1]),
+            ),
         )
     if table == "attempts":
         rows = session.execute(

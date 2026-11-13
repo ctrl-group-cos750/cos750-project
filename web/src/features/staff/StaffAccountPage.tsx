@@ -334,11 +334,6 @@ export function StaffAccountPage() {
                 ? `last active ${formatDate(account.data.lastActiveAt, true)}`
                 : 'no activity yet'}
             </p>
-            {!account.data.isStaff && (
-              <p className="text-muted-foreground">
-                In the pilot&apos;s CSV files: <code>{account.data.pilotName}</code>
-              </p>
-            )}
           </div>
           <Stats account={account.data} />
           <Videos account={account.data} />

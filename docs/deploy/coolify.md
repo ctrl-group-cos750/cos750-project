@@ -40,6 +40,10 @@ app has to be installed where the repo lives.)
 4. Environment Variables: set `POSTGRES_PASSWORD` to a long random value (`openssl rand -hex 24`)
    and `SECRET_KEY`, which signs the session cookies, to another (`openssl rand -hex 32`).
    `POSTGRES_USER` and `POSTGRES_DB` default to `ctrl`. Changing `SECRET_KEY` logs everyone out.
+   Set `PILOT_PSEUDONYM_KEY` to a third (`openssl rand -hex 32`): it keys the pseudonyms in the
+   pilot's CSV files (SE document FR-10.3), and changing it renames every student there, so set
+   it once and keep it. Unset, the API uses `SECRET_KEY` and logs a warning, and then changing
+   `SECRET_KEY` renames them too.
    Optional: `DEMO_PASSWORD` makes the four seeded demo accounts, one per stage of the course:
    `new@`, `mid@`, `not-yet@` and `ready@demo.example.com` (`api/app/seed/demo/accounts.json`
    says what each shows). Every deploy rebuilds them, undoing whatever a rehearsal did. Unset,
@@ -55,7 +59,7 @@ app has to be installed where the repo lives.)
 ## 4. Create the staging resource
 
 The same steps, in a `staging` environment: branch `staging`, domain
-`https://staging.ctrlacademy.co.za`, and a **different** `POSTGRES_PASSWORD` and `SECRET_KEY`.
+`https://staging.ctrlacademy.co.za`, and a **different** `POSTGRES_PASSWORD`, `SECRET_KEY` and `PILOT_PSEUDONYM_KEY`.
 
 ## 5. Check it
 

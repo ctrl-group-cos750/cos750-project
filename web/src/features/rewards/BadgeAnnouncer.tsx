@@ -111,6 +111,7 @@ export function BadgeAnnouncer() {
     mutate()
   }, [data, mutate])
 
+  // After every render, so it runs once the dismissed note has gone.
   useEffect(() => {
     if (refocus.current === null) return
     const position = refocus.current
@@ -118,7 +119,26 @@ export function BadgeAnnouncer() {
     const buttons = region.current?.querySelectorAll<HTMLElement>('[data-dismiss]') ?? []
     if (buttons.length > 0) buttons[Math.min(position, buttons.length - 1)]!.focus()
     else focusSafely(cameFrom.current)
-  }, [notes, turnedOff])
+  })
+
+  useEffect(() => {
+    const element = region.current
+    if (!element) return
+    const onFocusIn = (event: FocusEvent) => {
+      setFocusInside(true)
+      const from = event.relatedTarget
+      if (from instanceof HTMLElement && !element.contains(from)) cameFrom.current = from
+    }
+    const onFocusOut = (event: FocusEvent) => {
+      if (!element.contains(event.relatedTarget as Node | null)) setFocusInside(false)
+    }
+    element.addEventListener('focusin', onFocusIn)
+    element.addEventListener('focusout', onFocusOut)
+    return () => {
+      element.removeEventListener('focusin', onFocusIn)
+      element.removeEventListener('focusout', onFocusOut)
+    }
+  }, [])
 
   // Phones: the note goes by itself after a while, unless the student is in it.
   useEffect(() => {
@@ -159,20 +179,7 @@ export function BadgeAnnouncer() {
 
   return (
     <>
-      <output
-        ref={region}
-        className={styles.region}
-        aria-live="polite"
-        onFocus={(event) => {
-          setFocusInside(true)
-          const from = event.relatedTarget
-          if (from instanceof HTMLElement && !region.current?.contains(from))
-            cameFrom.current = from
-        }}
-        onBlur={(event) => {
-          if (!region.current?.contains(event.relatedTarget as Node | null)) setFocusInside(false)
-        }}
-      >
+      <output ref={region} className={styles.region} aria-live="polite">
         {collapsed && (
           <div className={styles.note}>
             <div className={styles.text}>

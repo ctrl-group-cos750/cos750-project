@@ -42,7 +42,7 @@ SQLite (the tests' default database) has no row locks and ignores all this; the 
 run the races for real.
 """
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.models import Activity, User
@@ -74,3 +74,16 @@ def hold_activity(session: Session, activity_id: int) -> None:
     )
     if held is None:
         raise ActivityGone(activity_id)
+
+
+def claim_writes(session: Session) -> None:
+    """On SQLite only (the tests' and the local end-to-end runs' database): start this
+    transaction's write now, with a statement that changes nothing, so a second request that
+    would make the same decision waits for this one to commit and then reads what it wrote.
+    SQLite has no row locks for `lock_student` to take, and it starts a write transaction only at
+    the first write, so two requests could both read "not yet" and both write. One database write
+    at a time is how SQLite works anyway; this only moves the start earlier, so use it for a short
+    request that must not run twice (the quick check, app/services/quick_check.py). On Postgres it
+    does nothing: `lock_student` covers it."""
+    if session.get_bind().dialect.name == "sqlite":
+        session.execute(text("UPDATE users SET id = id WHERE 0"))

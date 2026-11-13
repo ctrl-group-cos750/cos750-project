@@ -352,3 +352,196 @@ def test_the_mastery_check_still_takes_one_answer(client: TestClient, committed:
     body = {"submitted": wrong_answer(item)}
     assert client.post("/api/activities/601/attempts", json=body).status_code == 201
     assert client.post("/api/activities/601/attempts", json=body).status_code == 409
+
+
+# --- #215 review: real work, "taken", medals, double sends ---------------------------------------
+
+
+def walk(client: TestClient, db: Session, module_id: int, how: str) -> None:
+    """Work through a module through the API as a student would: every recall question and every
+    activity shown answered `how` ("right", or "wrong" twice, which moves the student on), then
+    Next to the end and Finish."""
+    module = client.get(f"/api/modules/{module_id}").json()
+    for item in module["retrieval"]:
+        if not item["answered"]:
+            activity = db.get_one(Activity, item["id"])
+            client.post(
+                f"/api/activities/{activity.id}/attempts",
+                json={
+                    "submitted": answer_for(activity, "right" if how == "right" else "wrong", "t")
+                },
+            )
+    for _ in range(200):
+        module = client.get(f"/api/modules/{module_id}").json()
+        if module["status"] == "complete":
+            return
+        here = module["currentSegmentPosition"]
+        segment = module["segments"][here]
+        if segment["kind"] == "activity" and not segment["done"]:
+            activity = db.get_one(Activity, segment["activityId"])
+            body = {"submitted": answer_for(activity, "right" if how == "right" else "wrong", "t")}
+            assert (
+                client.post(f"/api/activities/{activity.id}/attempts", json=body).status_code == 201
+            )
+            continue
+        later = [s["position"] for s in module["segments"][here + 1 :] if s["shown"]]
+        target = later[0] if later else here
+        response = client.post(
+            f"/api/modules/{module_id}/position", json={"segmentPosition": target}
+        )
+        assert response.status_code == 200, response.text
+    raise AssertionError(f"module {module_id} never completed")
+
+
+def module_points(db: Session, user_id: int, module_id: int) -> int:
+    db.expire_all()
+    return sum(
+        db.scalars(
+            select(PointsEntry.points).where(
+                PointsEntry.user_id == user_id, PointsEntry.ref == f"module:{module_id}"
+            )
+        )
+    )
+
+
+def medal(client: TestClient, module_id: int) -> Any:
+    return next(
+        m for m in client.get("/api/me/skills").json()["modules"] if m["moduleId"] == module_id
+    )
+
+
+def test_quick_check_answers_are_not_real_work_in_the_module(
+    client: TestClient, committed: Session
+) -> None:
+    """Failing the quick check with some right, then walking the module all wrong, earns no module
+    points, no First Module badge and no medal (#215 review, API 1 and 3)."""
+    user_id = register(client)
+    assert take(client, committed, 1, 2).json()["passed"] is False
+    walk(client, committed, 1, "wrong")
+    assert statuses(client)[1] == "complete"
+    assert module_points(committed, user_id, 1) == 0
+    assert count(committed, UserBadge, user_id) == 0
+    assert (medal(client, 1)["complete"], medal(client, 1)["medal"]) == (True, None)
+    # Every activity moved past wrong is listed to look at again: on the page and on the map.
+    looks = [s for s in client.get("/api/modules/1").json()["segments"] if s["lookAgain"]]
+    assert looks
+    row = next(m for m in client.get("/api/modules").json() if m["id"] == 1)
+    assert row["lookAgainCount"] == len([s for s in looks if s["shown"]])
+
+
+def test_a_module_worked_through_right_earns_its_medal(
+    client: TestClient, committed: Session
+) -> None:
+    register(client)
+    walk(client, committed, 3, "right")
+    assert medal(client, 3)["medal"] == "gold"
+    assert next(m for m in client.get("/api/modules").json() if m["id"] == 3)["lookAgainCount"] == 0
+
+
+def test_working_through_a_tested_out_module_never_lowers_its_medal(
+    client: TestClient, committed: Session
+) -> None:
+    """Tested out (silver), then worked through all wrong: still silver (#215 review, API 4)."""
+    register(client)
+    assert take(client, committed, 2, QUICK_CHECK_SIZE).json()["passed"] is True
+    assert medal(client, 2)["medal"] == "silver"
+    walk(client, committed, 2, "wrong")
+    assert statuses(client)[2] == "complete"
+    assert medal(client, 2)["medal"] == "silver"
+    # The result is still there to read, and the map still links to it.
+    row = next(m for m in client.get("/api/modules").json() if m["id"] == 2)
+    assert (row["quickCheck"], row["quickCheckScore"]) == ("passed", {"correct": 4, "total": 4})
+
+
+def test_answers_given_by_address_before_the_quick_check_don_t_use_it_up(
+    client: TestClient, committed: Session
+) -> None:
+    """Items 103, 203, 314, 403 and 503 were ordinary questions before they became quick check
+    items: an answer a student gave one back then is not taking the check (#215 review, API 2)."""
+    user_id = register(client)
+    earlier = items(committed, 1)[0]
+    assert earlier.id == 103
+    wrong = next(
+        o["id"] for o in earlier.config["options"] if o["id"] != earlier.solution["correct"]
+    )
+    committed.add(
+        Attempt(
+            user_id=user_id,
+            activity_id=earlier.id,
+            submitted={"selected": wrong},
+            correct=False,
+            score=0,
+            detail={},
+            hint_level=0,
+        )
+    )
+    committed.commit()
+    row = next(m for m in client.get("/api/modules").json() if m["id"] == 1)
+    assert (row["quickCheck"], row["quickCheckScore"]) == ("available", None)
+    assert client.get("/api/modules/1/quick-check").json()["available"] is True
+    # Taken now, all right: the old wrong answer is not the quick check's.
+    body = take(client, committed, 1, QUICK_CHECK_SIZE).json()
+    assert (body["passed"], body["correct"]) == (True, 4)
+    row = next(m for m in client.get("/api/modules").json() if m["id"] == 1)
+    assert (row["quickCheck"], row["quickCheckScore"]) == ("passed", {"correct": 4, "total": 4})
+    assert client.get("/api/modules/1/quick-check").json()["result"]["correct"] == 4
+
+
+def test_a_failed_quick_check_keeps_its_score_for_the_map_and_the_module(
+    client: TestClient, committed: Session
+) -> None:
+    register(client)
+    take(client, committed, 4, 2)
+    row = next(m for m in client.get("/api/modules").json() if m["id"] == 4)
+    assert (row["quickCheck"], row["quickCheckScore"]) == ("not_passed", {"correct": 2, "total": 4})
+    detail = client.get("/api/modules/4").json()
+    assert detail["quickCheckScore"] == {"correct": 2, "total": 4}
+
+
+def test_two_sends_at_once_mark_the_quick_check_once(tmp_path: Any) -> None:
+    """A double click on "Check my answers": on SQLite too, the second waits for the first and is
+    refused as taken (#215 review, frontend 7). Two real connections to one database file."""
+    import threading
+
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from app.db import Base
+    from app.models import User
+    from app.services import quick_check as qc
+
+    engine = create_engine(f"sqlite:///{tmp_path / 'race.db'}", connect_args={"timeout": 10})
+    Base.metadata.create_all(engine)
+    sessions = sessionmaker(bind=engine, expire_on_commit=False)
+    with sessions() as session:
+        load(session)
+        user = User(email="ada@example.com", display_name="Ada", password_hash="x")  # noqa: S106
+        session.add(user)
+        session.commit()
+        chosen = [qc.Answer(a.id, a.solution["correct"]) for a in qc.items(session, 1)]
+    barrier = threading.Barrier(2)
+    outcomes: list[str] = []
+
+    def send() -> None:
+        with sessions() as session:
+            qc.taken(session, user.id)  # read first, as a request does before it decides
+            barrier.wait()
+            try:
+                qc.take(session, user.id, 1, chosen)
+                session.commit()
+                outcomes.append("marked")
+            except qc.QuickCheckTaken:
+                session.rollback()
+                outcomes.append("taken")
+
+    threads = [threading.Thread(target=send) for _ in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert sorted(outcomes) == ["marked", "taken"]
+    with sessions() as session:
+        assert session.scalar(select(func.count()).select_from(Attempt)) == QUICK_CHECK_SIZE
+        events = session.scalars(select(Event).where(Event.type == "quick_check_taken")).all()
+        assert len(events) == 1
+    engine.dispose()

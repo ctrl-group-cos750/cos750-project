@@ -18,7 +18,15 @@ what they know, so skipping goes through the check rather than a button (ID docu
   otherwise this module (`work_through`).
 - **One attempt per module.** A second try would be the same four questions, already marked; after
   a fail the module itself is the way on. Nor can a module completed by working through it be
-  tested out afterwards.
+  tested out afterwards. "Taken" means a `quick_check_taken` event exists for the module, logged
+  in the same transaction as the answers. Answers to its items alone don't count: items 103, 203,
+  314, 403 and 503 were ordinary questions before they became quick-check items, so a student may
+  have answered one by its address back then, and that must not use up the check (#215 review).
+  The result is read from each item's latest answer, which is the quick check's: the items can't
+  be answered anywhere else since.
+- **Two sends at once** (a double click) mark it once: the second waits for the first and is
+  refused as taken. On Postgres the student's row lock does that; SQLite, which has no row locks,
+  takes its database write lock at the start instead (`claim_writes`).
 - **It counts for nothing else.** Testing out earns no module points and no First Module badge (that
   is for working through a module), and the answers recorded earn no activity points, decide no
   objective result and mark no segment done: these items are in no segment and count towards no
@@ -33,7 +41,7 @@ from typing import Literal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, Module, ModuleProgress, Segment
+from app.models import Activity, Attempt, Event, Module, ModuleProgress, Segment
 from app.schemas.activities import MultipleChoiceConfig, MultipleChoiceSolution
 from app.schemas.modules import (
     QuickCheckItemResultOut,
@@ -41,11 +49,12 @@ from app.schemas.modules import (
     QuickCheckOut,
     QuickCheckQuestionOut,
     QuickCheckResultOut,
+    QuickCheckScoreOut,
     QuickCheckState,
 )
 from app.services.checking import check_activity
 from app.services.events import log_event
-from app.services.locks import lock_student
+from app.services.locks import claim_writes, lock_student
 
 QUICK_CHECK_SIZE = 4
 PASS_MARK = QUICK_CHECK_SIZE - 1  # all right, or all but one
@@ -84,36 +93,74 @@ def items(session: Session, module_id: int) -> Sequence[Activity]:
 
 
 def _attempts(session: Session, user_id: int, ids: Sequence[int]) -> dict[int, Attempt]:
-    """The student's first attempt at each of these items."""
-    first: dict[int, Attempt] = {}
+    """The student's latest attempt at each of these items: for a taken quick check, its answer
+    (see the module docstring)."""
+    latest: dict[int, Attempt] = {}
     for attempt in session.scalars(
         select(Attempt)
         .where(Attempt.user_id == user_id, Attempt.activity_id.in_(ids))
         .order_by(Attempt.id)
     ):
-        first.setdefault(attempt.activity_id, attempt)
-    return first
+        latest[attempt.activity_id] = attempt
+    return latest
+
+
+def taken(session: Session, user_id: int) -> set[int]:
+    """The modules whose quick check this student has taken: those with a `quick_check_taken`
+    event (see the module docstring)."""
+    refs = session.scalars(
+        select(Event.ref).where(Event.user_id == user_id, Event.type == "quick_check_taken")
+    )
+    return {int(ref.removeprefix("module:")) for ref in refs if ref.startswith("module:")}
+
+
+def _by_module(session: Session) -> dict[int, list[int]]:
+    """Each module's quick check items, in id order."""
+    out: dict[int, list[int]] = {}
+    for activity_id, module_id in session.execute(
+        select(Activity.id, Activity.module_id)
+        .where(Activity.purpose == "test_out")
+        .order_by(Activity.id)
+    ):
+        if module_id is not None:
+            out.setdefault(module_id, []).append(activity_id)
+    return out
+
+
+def scores(session: Session, user_id: int) -> dict[int, QuickCheckScoreOut]:
+    """How each quick check this student has taken went: right answers out of its items."""
+    done = taken(session, user_id)
+    if not done:
+        return {}
+    by_module = {m: ids for m, ids in _by_module(session).items() if m in done}
+    attempts = _attempts(session, user_id, [i for ids in by_module.values() for i in ids])
+    return {
+        module_id: QuickCheckScoreOut(
+            correct=sum(1 for i in ids if i in attempts and attempts[i].correct),
+            total=len(ids),
+        )
+        for module_id, ids in by_module.items()
+    }
+
+
+def passed(session: Session, user_id: int) -> set[int]:
+    """The modules whose quick check this student passed. Kept whatever happens to the module
+    later: working through it after testing out still counts the pass (skills.py's medals)."""
+    return {m for m, score in scores(session, user_id).items() if score.correct >= PASS_MARK}
 
 
 def states(
     session: Session, user_id: int, statuses: dict[int, str]
 ) -> dict[int, QuickCheckState | None]:
     """Each module's quick check state for the map, given the modules' statuses."""
-    by_module: dict[int, list[int]] = {}
-    for activity_id, module_id in session.execute(
-        select(Activity.id, Activity.module_id).where(Activity.purpose == "test_out")
-    ):
-        if module_id is not None:
-            by_module.setdefault(module_id, []).append(activity_id)
-    ids = [i for module in by_module.values() for i in module]
-    attempts = _attempts(session, user_id, ids)
+    by_module = _by_module(session)
+    results = scores(session, user_id)
     out: dict[int, QuickCheckState | None] = {}
     for module_id, status in statuses.items():
-        module_items = by_module.get(module_id, [])
-        if not module_items:
+        if not by_module.get(module_id):
             out[module_id] = None
-        elif all(i in attempts for i in module_items):
-            right = sum(attempts[i].correct for i in module_items)
+        elif module_id in results:
+            right = results[module_id].correct
             out[module_id] = "passed" if right >= PASS_MARK else "not_passed"
         elif status in DONE or status == "locked":
             out[module_id] = None
@@ -233,9 +280,10 @@ def quick_check(session: Session, user_id: int, module_id: int) -> QuickCheckOut
     questions = items(session, module_id)
     if not questions:
         raise QuickCheckMissing(module_id)
-    result = _result(session, user_id, module_id, questions)
+    was_taken = module_id in taken(session, user_id)
+    result = _result(session, user_id, module_id, questions) if was_taken else None
     row = _progress(session, user_id, module_id)
-    available = result is None and (row is None or row.status not in DONE)
+    available = not was_taken and (row is None or row.status not in DONE)
     return QuickCheckOut(
         module_id=module_id,
         available=available,
@@ -261,11 +309,13 @@ def take(
     """Mark the student's answers, one for each question, and record them (not committed). A pass
     marks the module tested out. Raises `QuickCheckMissing`, `QuickCheckTaken`,
     `ModuleAlreadyDone` or `AnswersDontFit`; nothing is recorded then."""
-    lock_student(session, user_id)  # two sends at once: the second sees the first's answers
+    # Two sends at once: the second waits for the first, then sees it taken (module docstring).
+    claim_writes(session)
+    lock_student(session, user_id)
     questions = items(session, module_id)
     if not questions:
         raise QuickCheckMissing(module_id)
-    if _attempts(session, user_id, [a.id for a in questions]):
+    if module_id in taken(session, user_id):
         raise QuickCheckTaken(module_id)
     row = _progress(session, user_id, module_id)
     if row is not None and row.status in DONE:
@@ -312,3 +362,23 @@ def take(
     if result_out is None:  # every question was answered just above
         raise AnswersDontFit(module_id)
     return result_out
+
+
+def refresh_tested_out(session: Session, user_id: int) -> list[int]:
+    """After a re-grade changed quick check answers (app/regrade.py): mark tested out each module
+    whose quick check now passes and that isn't complete or tested out yet, as `take` would have.
+    A re-grade never lowers an answer, so a pass can't become a fail, and nothing is taken away.
+    Not committed. Returns the modules it marked."""
+    marked = []
+    for module_id in sorted(passed(session, user_id)):
+        row = _progress(session, user_id, module_id)
+        if row is not None and row.status in DONE:
+            continue
+        if row is None:
+            row = ModuleProgress(user_id=user_id, module_id=module_id, current_segment_position=0)
+            session.add(row)
+        row.status = "tested_out"
+        row.completed_at = datetime.now(tz=UTC)
+        marked.append(module_id)
+    session.flush()
+    return marked

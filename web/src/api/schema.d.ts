@@ -1184,8 +1184,6 @@ export interface components {
       createdAt: string
       /** Lastactiveat */
       lastActiveAt: string | null
-      /** Pilotname */
-      pilotName: string
       stats: components['schemas']['AccountStats']
       /** Videos */
       videos: components['schemas']['AccountVideo'][]
@@ -2036,6 +2034,12 @@ export interface components {
       recommended: boolean
       /** Quickcheck */
       quickCheck?: ('available' | 'passed' | 'not_passed') | null
+      quickCheckScore?: components['schemas']['QuickCheckScoreOut'] | null
+      /**
+       * Lookagaincount
+       * @default 0
+       */
+      lookAgainCount: number
       /** Segments */
       segments: components['schemas']['SegmentOut'][]
       /** Retrieval */
@@ -2110,6 +2114,12 @@ export interface components {
       recommended: boolean
       /** Quickcheck */
       quickCheck?: ('available' | 'passed' | 'not_passed') | null
+      quickCheckScore?: components['schemas']['QuickCheckScoreOut'] | null
+      /**
+       * Lookagaincount
+       * @default 0
+       */
+      lookAgainCount: number
     }
     /**
      * ObjectiveReadiness
@@ -2294,6 +2304,16 @@ export interface components {
       lookAt: string[]
       /** Items */
       items: components['schemas']['QuickCheckItemResultOut'][]
+    }
+    /**
+     * QuickCheckScoreOut
+     * @description How a quick check went, for the map and the module page to link back to its result.
+     */
+    QuickCheckScoreOut: {
+      /** Correct */
+      correct: number
+      /** Total */
+      total: number
     }
     /**
      * Readiness

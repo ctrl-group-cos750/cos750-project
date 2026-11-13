@@ -16,6 +16,9 @@ import {
 import { Link } from 'react-router'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { ApiError } from '../../api/client.ts'
+import { confetti } from '../progress/confetti.ts'
+import { skillsKey } from '../progress/hooks.ts'
+import { ProgressPanel } from '../progress/ProgressPanel.tsx'
 
 /** The API refused the request (any 4xx: 403 locked, 404 no such module, 429 too many): asking
  * again gets the same answer, so it isn't retried and the page says so at once instead of spinning
@@ -258,118 +261,133 @@ export function ModulePage() {
   function handleFinish() {
     if (blocked) return
     const next = module.id === MASTERY_MODULE_ID ? '/report' : '/'
-    mutation.mutate(segments[currentIndex].position, { onSuccess: () => void navigate(next) })
+    mutation.mutate(segments[currentIndex].position, {
+      onSuccess: () => {
+        // Finishing a module is worth a full burst (#214); not the mastery check, whose results
+        // the report gives, with its own moment if the student is ready for the lecture.
+        if (module.id !== MASTERY_MODULE_ID) confetti('big')
+        void queryClient.invalidateQueries({ queryKey: skillsKey }) // the medal is now earned
+        void navigate(next)
+      },
+    })
   }
 
+  // On wide screens the progress panel sits beside the lesson (#214); the lesson column keeps
+  // its own width rules, so a two-column picture segment still fits beside the panel.
+  const panel = { moduleId: module.id, moduleNumber: module.number, place }
   return (
-    <section
-      ref={contentRef}
-      className="mx-auto grid w-full min-w-0 max-w-3xl gap-6 has-[[data-two-column]]:max-w-[70rem]"
-      aria-label={`Module ${module.number}: ${module.title}`}
-    >
-      {/* Header */}
-      <div className="grid gap-3">
-        <Link
-          to="/"
-          className="justify-self-start text-sm text-muted-foreground hover:text-foreground"
-        >
-          ← All modules
-        </Link>
-        <h1 className="text-2xl font-bold">
-          Module {module.number} · {module.title}
-        </h1>
-
-        {/* Goals (FR-2.3): open on the first segment, where they set the scene (Gagné's event
-            2), then one click away, so the question isn't pushed down the screen every time. */}
-        {module.goals.length > 0 && (
-          <details
-            key={place.number === 1 ? 'first' : 'later'}
-            open={place.number === 1}
-            className="rounded-lg border border-border bg-card px-4 py-3"
+    <div className="grid w-full items-start gap-6 lg:grid-cols-[minmax(0,1fr)_19rem] lg:gap-8">
+      <section
+        ref={contentRef}
+        className="mx-auto grid w-full min-w-0 max-w-3xl gap-6 has-[[data-two-column]]:max-w-[70rem]"
+        aria-label={`Module ${module.number}: ${module.title}`}
+      >
+        {/* Header */}
+        <div className="grid gap-3">
+          <Link
+            to="/"
+            className="justify-self-start text-sm text-muted-foreground hover:text-foreground"
           >
-            <summary className="cursor-pointer font-semibold">
-              By the end of this module you can:
-            </summary>
-            <ul className="mt-2 ml-5 list-disc">
-              {module.goals.map((goal) => (
-                <li key={goal}>{goal}</li>
-              ))}
-            </ul>
-          </details>
+            ← All modules
+          </Link>
+          <h1 className="text-2xl font-bold">
+            Module {module.number} · {module.title}
+          </h1>
+
+          {/* Goals (FR-2.3): open on the first segment, where they set the scene (Gagné's event
+            2), then one click away, so the question isn't pushed down the screen every time. */}
+          {module.goals.length > 0 && (
+            <details
+              key={place.number === 1 ? 'first' : 'later'}
+              open={place.number === 1}
+              className="rounded-lg border border-border bg-card px-4 py-3"
+            >
+              <summary className="cursor-pointer font-semibold">
+                By the end of this module you can:
+              </summary>
+              <ul className="mt-2 ml-5 list-disc">
+                {module.goals.map((goal) => (
+                  <li key={goal}>{goal}</li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </div>
+
+        {/* Progress indicator (FR-2.5, AC5) */}
+        <div className="grid gap-2">
+          <ProgressBar
+            label={`Module ${module.number} progress`}
+            value={place.number}
+            max={place.total}
+          />
+          <p className="text-sm text-muted-foreground" aria-live="polite">
+            Segment {place.number} of {place.total}
+          </p>
+        </div>
+
+        {showSkippedNote && (
+          <Alert tone="info">
+            You moved past this activity earlier without answering it. Answer it now, then carry on
+            where you left off.
+          </Alert>
         )}
-      </div>
 
-      {/* Progress indicator (FR-2.5, AC5) */}
-      <div className="grid gap-2">
-        <ProgressBar
-          label={`Module ${module.number} progress`}
-          value={place.number}
-          max={place.total}
-        />
-        <p className="text-sm text-muted-foreground" aria-live="polite">
-          Segment {place.number} of {place.total}
-        </p>
-      </div>
+        {/* Current segment */}
+        {segment && (
+          <SegmentView
+            key={segment.id}
+            segment={segment}
+            intro={supportIntro(segments, currentIndex)}
+            onAnswered={() => void queryClient.invalidateQueries({ queryKey: ['module', id] })}
+          />
+        )}
 
-      {showSkippedNote && (
-        <Alert tone="info">
-          You moved past this activity earlier without answering it. Answer it now, then carry on
-          where you left off.
-        </Alert>
-      )}
+        {/* Save error */}
+        {mutation.isError && (
+          // Danger, so it is announced at once (role="alert") while focus stays on Next.
+          <Alert tone="danger" title="Could not save progress">
+            {mutation.error.message}
+          </Alert>
+        )}
 
-      {/* Current segment */}
-      {segment && (
-        <SegmentView
-          key={segment.id}
-          segment={segment}
-          intro={supportIntro(segments, currentIndex)}
-          onAnswered={() => void queryClient.invalidateQueries({ queryKey: ['module', id] })}
-        />
-      )}
-
-      {/* Save error */}
-      {mutation.isError && (
-        // Danger, so it is announced at once (role="alert") while focus stays on Next.
-        <Alert tone="danger" title="Could not save progress">
-          {mutation.error.message}
-        </Alert>
-      )}
-
-      {/* Navigation. The reason Next is blocked is always rendered, as a polite status
+        {/* Navigation. The reason Next is blocked is always rendered, as a polite status
           (<output>), so a screen reader announces it when it appears and when it clears; only
           its text changes. It sits with the buttons so an empty one costs only a small gap. */}
-      <div className="grid gap-2">
-        <output id="segment-blocked" className="block text-sm text-muted-foreground">
-          {blockedReason}
-        </output>
-        <nav className="flex justify-between" aria-label="Segment navigation">
-          <Button
-            variant="secondary"
-            onClick={handlePrevious}
-            // Not disabled while Next saves, so focus is never dropped on the page (2.4.3).
-            disabled={isFirst}
-            aria-disabled={mutation.isPending || undefined}
-          >
-            ← Previous
-          </Button>
-          <Button
-            variant={isLast ? 'primary' : 'secondary'}
-            onClick={isLast ? handleFinish : handleNext}
-            // aria-disabled rather than disabled while blocked: a disabled button can't be
-            // focused, so its reason would never be read. The handlers ignore the click. While
-            // the position saves it stays focusable too (keepFocusWhileLoading), so a failed save
-            // leaves focus here with the error announced.
-            aria-disabled={blocked || undefined}
-            aria-describedby={blocked ? 'segment-blocked' : undefined}
-            loading={mutation.isPending}
-            keepFocusWhileLoading
-          >
-            {isLast ? 'Finish module' : 'Next →'}
-          </Button>
-        </nav>
-      </div>
-    </section>
+        <div className="grid gap-2">
+          <output id="segment-blocked" className="block text-sm text-muted-foreground">
+            {blockedReason}
+          </output>
+          <nav className="flex justify-between" aria-label="Segment navigation">
+            <Button
+              variant="secondary"
+              onClick={handlePrevious}
+              // Not disabled while Next saves, so focus is never dropped on the page (2.4.3).
+              disabled={isFirst}
+              aria-disabled={mutation.isPending || undefined}
+            >
+              ← Previous
+            </Button>
+            <Button
+              variant={isLast ? 'primary' : 'secondary'}
+              onClick={isLast ? handleFinish : handleNext}
+              // aria-disabled rather than disabled while blocked: a disabled button can't be
+              // focused, so its reason would never be read. The handlers ignore the click. While
+              // the position saves it stays focusable too (keepFocusWhileLoading), so a failed save
+              // leaves focus here with the error announced.
+              aria-disabled={blocked || undefined}
+              aria-describedby={blocked ? 'segment-blocked' : undefined}
+              loading={mutation.isPending}
+              keepFocusWhileLoading
+            >
+              {isLast ? 'Finish module' : 'Next →'}
+            </Button>
+          </nav>
+        </div>
+        <ProgressPanel placement="below" {...panel} />
+      </section>
+      <ProgressPanel placement="beside" {...panel} />
+    </div>
   )
 }
 

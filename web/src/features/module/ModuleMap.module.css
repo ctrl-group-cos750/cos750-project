@@ -5,6 +5,12 @@
   margin-inline: auto;
 }
 
+.side {
+  display: grid;
+  gap: var(--space-5);
+  align-content: start;
+}
+
 .top {
   display: grid;
   gap: var(--space-4);

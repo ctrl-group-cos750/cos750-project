@@ -17,6 +17,8 @@ import {
   type AvatarId,
 } from '../../components'
 import { useReport } from '../mastery/hooks.ts'
+import { prefersReducedMotion, useConfettiSetting } from '../progress/confetti.ts'
+import { usePreference } from '../progress/preferences.ts'
 import { useRewards, useRewardsSettings } from '../rewards/hooks.ts'
 import { useChangePassword, useDeletePicture, useSetAvatar, useUploadPicture } from './hooks.ts'
 import { squarePicture } from './squarePicture.ts'
@@ -187,6 +189,47 @@ function RewardsSetting() {
   )
 }
 
+/** The feedback switches (#214), together under "Feedback": confetti and encouraging comments.
+ * Both on by default and kept on this device (features/progress/preferences.ts). */
+function FeedbackSettings() {
+  const [confettiOn, setConfetti] = useConfettiSetting()
+  const [comments, setComments] = usePreference('comments')
+  const confettiId = useId()
+  const commentsId = useId()
+  return (
+    <section aria-labelledby="feedback-heading" className={styles.section}>
+      <h2 id="feedback-heading">Feedback</h2>
+      <div className={styles.toggle}>
+        <input
+          id={confettiId}
+          type="checkbox"
+          checked={confettiOn}
+          onChange={(e) => setConfetti(e.target.checked)}
+        />
+        <label htmlFor={confettiId}>Confetti when you get something right</label>
+      </div>
+      <p className={styles.muted}>
+        A short burst for a right answer, and a bigger one when you finish a module or are ready for
+        the lecture. Never during the mastery check.
+        {prefersReducedMotion() && ' Your device asks for reduced motion, so it stays off anyway.'}
+      </p>
+      <div className={`${styles.toggle} ${styles.nextToggle}`}>
+        <input
+          id={commentsId}
+          type="checkbox"
+          checked={comments}
+          onChange={(e) => setComments(e.target.checked)}
+        />
+        <label htmlFor={commentsId}>Encouraging comments</label>
+      </div>
+      <p className={styles.muted}>
+        A short line under a right answer, and a word on how far you have come. Off, you see only
+        the explanation of why the answer is right. Both are saved on this device only.
+      </p>
+    </section>
+  )
+}
+
 type Field = 'current' | 'next' | 'confirm'
 const order: Field[] = ['current', 'next', 'confirm']
 const ids: Record<Field, string> = {
@@ -313,6 +356,7 @@ export function ProfilePage() {
       <Stats />
       <Picture user={user} />
       <RewardsSetting />
+      <FeedbackSettings />
       <Password user={user} />
     </>
   )

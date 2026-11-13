@@ -1,8 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { Link } from 'react-router'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { Alert, Card, MasteryStatus, Spinner, Tag, type Mastery } from '../../components'
 import { fetchModules } from '../module/module.api.ts'
+import { celebrateOnce } from '../progress/confetti.ts'
+import { SkillProfileCard } from '../progress/SkillProfileCard.tsx'
 import { useReport } from './hooks.ts'
 import type { ObjectiveReport, ObjectiveState } from './mastery.api.ts'
 import styles from './ReportPage.module.css'
@@ -197,11 +200,17 @@ export function ReportPage() {
   const modules = useQuery({ queryKey: ['modules'], queryFn: fetchModules })
   const check = modules.data?.find((m) => m.number === MASTERY_MODULE)
   const checkId = check && check.status !== 'locked' ? check.id : null
+  const ready = report.data?.ready === true
+  // Ready for the lecture is the course's big moment: a full burst, the first time it is seen on
+  // this device (#214).
+  useEffect(() => {
+    if (ready) celebrateOnce('ready-for-the-lecture')
+  }, [ready])
 
   if (report.isPending) return <Spinner label="Loading your report" />
   if (report.isError) return <Alert tone="danger">{report.error.message}</Alert>
 
-  const { ready, objectives } = report.data
+  const { objectives } = report.data
   return (
     <>
       <div className={styles.heading}>
@@ -231,6 +240,8 @@ export function ReportPage() {
           ))}
         </ol>
       </Card>
+
+      <SkillProfileCard className={styles.profile} />
 
       <p className={styles.note}>
         Each question in the mastery check counts once: your first answer is the one used here.

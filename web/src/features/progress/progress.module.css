@@ -1,0 +1,304 @@
+/* The skill profile, module medals and the progress panel (#214). Tokens only (tokens.css). */
+
+/* --- Medal ------------------------------------------------------------------------------- */
+
+.medal {
+  flex: none;
+  stroke-width: 1.5;
+}
+
+.medal .ribbon {
+  fill: var(--color-surface-sunken);
+  stroke: var(--color-control-border);
+}
+
+.medal .disc {
+  stroke-width: 2;
+}
+
+.gold .disc {
+  fill: var(--badge-gold-soft);
+  stroke: var(--badge-gold);
+}
+
+.gold .star {
+  fill: var(--badge-gold);
+}
+
+.silver .disc {
+  fill: var(--badge-silver-soft);
+  stroke: var(--badge-silver);
+}
+
+.silver .mark {
+  stroke: var(--badge-silver);
+}
+
+.bronze .disc {
+  fill: var(--badge-bronze-soft);
+  stroke: var(--badge-bronze);
+}
+
+/* --- Skill profile ----------------------------------------------------------------------- */
+
+.profile {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.skill {
+  border-radius: var(--radius-sm);
+}
+
+.here .skill {
+  background: var(--color-accent-soft);
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: minmax(9rem, 1.3fr) minmax(4.5rem, 1fr) minmax(8rem, 1.2fr);
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  list-style: none;
+}
+
+.summary::-webkit-details-marker {
+  display: none;
+}
+
+.summary:hover {
+  background: var(--color-surface-sunken);
+}
+
+.label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-weight: 600;
+}
+
+.number {
+  min-width: 1.25rem;
+  color: var(--color-text-muted);
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+}
+
+.status {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* Three steps: practising, secure, met in the check. Filled steps take the tone. */
+.track {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+}
+
+.track span {
+  height: 0.5rem;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background: var(--color-surface-sunken);
+}
+
+.practice span[data-on],
+.notYet span[data-on] {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+}
+
+.gold span[data-on] {
+  border-color: var(--badge-gold);
+  background: var(--badge-gold);
+}
+
+.bronze span[data-on] {
+  border-color: var(--badge-bronze);
+  background: var(--badge-bronze);
+}
+
+.notYet span:last-child {
+  border-color: var(--color-warning);
+  border-style: dashed;
+}
+
+.evidence {
+  display: grid;
+  gap: var(--space-1);
+  padding: 0 var(--space-2) var(--space-2) calc(1.25rem + var(--space-4));
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.evidence p {
+  margin: 0;
+}
+
+/* In the narrow panel: the name and the words on one line, the bar under them. */
+.compact .summary {
+  grid-template-columns: 1fr auto;
+  gap: var(--space-1) var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.compact .track {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+
+.compact .status {
+  font-size: var(--text-xs);
+  text-align: end;
+}
+
+.compact .evidence {
+  padding-inline-start: var(--space-2);
+  font-size: var(--text-xs);
+}
+
+@media (max-width: 30rem) {
+  .summary {
+    grid-template-columns: 1fr auto;
+    gap: var(--space-1) var(--space-2);
+  }
+
+  .track {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
+/* --- Progress panel ---------------------------------------------------------------------- */
+
+.panel {
+  position: sticky;
+  top: 6rem;
+  display: grid;
+  gap: var(--space-4);
+  max-height: calc(100dvh - 7rem);
+  overflow-y: auto;
+  padding: var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.panelTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.panelBody {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.block {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.blockTitle {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.medalLine {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.medalLine p {
+  display: grid;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.points {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.pointsValue {
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.recent {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recent li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.link {
+  font-size: var(--text-sm);
+}
+
+/* Below the lesson on narrow screens: one line until opened. */
+.strip {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.strip > summary {
+  padding: var(--space-3) var(--space-4);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.strip > .panelBody {
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+/* --- Profile card on the map and the report --------------------------------------------- */
+
+.profileCard {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.profileHeading {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.profileNote {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}

@@ -31,10 +31,18 @@ WRONG = {"submitted": {"selected": "b"}}
 
 @pytest.fixture
 def user(db: Session) -> User:
+    """A student, and two real activities for their attempts: SQLite doesn't enforce an attempt's
+    foreign key to its activity, Postgres does (review of 13 Nov on #221: CI failed there)."""
     student = User(email="s@example.com", display_name="S", password_hash="x")  # noqa: S106
     db.add(student)
+    db.add_all([Activity(**MCQ), Activity(**MCQ)])
     db.flush()
     return student
+
+
+def activity_id(db: Session, n: int) -> int:
+    """The id of the fixture's `n`th activity (1 or 2)."""
+    return list(db.scalars(select(Activity.id).order_by(Activity.id)))[n - 1]
 
 
 def badges(db: Session, user_id: int) -> dict[tuple[str, str], str | None]:
@@ -53,7 +61,7 @@ def attempt(
 ) -> int:
     row = Attempt(
         user_id=user.id,
-        activity_id=activity,
+        activity_id=activity_id(db, activity),
         submitted={},
         correct=correct,
         score=1.0 if correct else 0.0,

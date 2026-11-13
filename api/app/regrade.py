@@ -158,8 +158,10 @@ def _regrade_student(session: Session, user_id: int, report: Report) -> None:
         # A quick check answer earns nothing (FR-8.2, #214), so a re-grade gives it nothing either.
         if activity.purpose == QUICK_CHECK:
             quick_check_changed = True
-        elif became_correct:
-            rewards.on_attempt(session, attempt)  # once per activity: points are keyed by ref
+        elif became_correct and not mastery.in_check(activity):
+            # Once per activity: points are keyed by ref. A module 6 item's points wait for the
+            # end of the check, as when answered (#144): `mastery.recompute` below pays them then.
+            rewards.on_attempt(session, attempt)
         report.changed.append((attempt.id, user_id, activity.id, result.correct))
     if quick_check_changed:
         report.tested_out += [

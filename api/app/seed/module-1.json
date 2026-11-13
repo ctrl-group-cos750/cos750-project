@@ -1039,11 +1039,11 @@
       "purpose": "practice",
       "objective_id": 3,
       "config": {
-        "prompt": "Stretches of line join the Gautrain's stations: one runs from Rosebank to Sandton, another from Sandton to Marlboro. Trains run in both directions between neighbouring stations. Which graph models the Gautrain?",
+        "prompt": "On the Gautrain, one stretch of line runs from Rosebank to Sandton, another from Sandton to Marlboro, and so on along the route. Trains run in both directions between neighbouring stations. Which graph models it?",
         "options": [
           {
             "id": "a",
-            "label": "Vertices: stretches of line. Edges: stations. Undirected."
+            "label": "Vertices: stretches of line. Edges: stations. Undirected, because trains run both ways along each one."
           },
           {
             "id": "b",
@@ -1051,7 +1051,7 @@
           },
           {
             "id": "c",
-            "label": "Vertices: stations. Edges: stretches of line. Undirected."
+            "label": "Vertices: stations. Edges: stretches of line. Undirected, because trains run both ways along each one."
           },
           {
             "id": "d",
@@ -1067,10 +1067,10 @@
         "explanation": "Correct. The stations are the vertices, and each stretch of line, which joins two neighbouring stations, is an edge. Trains run along it in both directions, so the connection works both ways: undirected. A train moving from one station to the next doesn't make the edge one-way.",
         "correct": "c",
         "feedback": {
-          "a": "Not quite. That swaps them. A stretch of line joins two stations, so the stretch of line is the edge and the stations are the vertices. Find the thing that joins two of the others: that is the edge.",
+          "a": "Not quite. Trains do run both ways, but that swaps them. A stretch of line connects two stations, so the stretch of line is the edge and the stations are the vertices. Ask which of the two kinds of thing connects two of the other kind: that is the edge.",
           "b": "Not quite. A train moves along the line, but it isn't what joins two stations, and a train moving one way doesn't make the connection one-way: trains run both ways. Look for what stays in place between two stations.",
           "d": "Not quite. Each train does travel from one station to the next, but moving along an edge doesn't make the edge one-way. Trains run both ways between neighbouring stations, so each connection works in both directions. Ask whether you can travel the connection the other way, not whether something moves along it.",
-          "e": "Not quite. That swaps them, and a train moving one way doesn't make the line one-way: trains run along it both ways. A stretch of line joins two stations, so it is the edge. Find the thing that joins two of the others, then check whether you can travel it the other way."
+          "e": "Not quite. That swaps them, and a train moving one way doesn't make the line one-way: trains run along it both ways. A stretch of line connects two stations, so it is the edge. Ask which of the two kinds of thing connects two of the other kind, then check whether you can travel it the other way."
         }
       },
       "hints": [
@@ -1100,7 +1100,7 @@
       "purpose": "practice",
       "objective_id": 3,
       "config": {
-        "prompt": "Instagram accounts can follow other accounts. Thandi follows Sipho, but Sipho hasn't followed Thandi. Which graph models who follows whom?",
+        "prompt": "Instagram accounts can follow other accounts. Thandi follows Sipho, but Sipho hasn't followed Thandi. Which graph models it?",
         "options": [
           {
             "id": "a",
@@ -1116,7 +1116,7 @@
           },
           {
             "id": "d",
-            "label": "Vertices: accounts. Edges: the posts each account has shared. Undirected."
+            "label": "Vertices: accounts. Edges: posts. Directed."
           },
           {
             "id": "e",
@@ -1129,9 +1129,9 @@
         "correct": "a",
         "feedback": {
           "b": "Not quite. The accounts and follows are right, but a follow can go one way: Thandi follows Sipho, and Sipho doesn't follow her. A connection that can go one way is an arrow. Check whether the connection always works both ways.",
-          "c": "Not quite. That swaps them, and a follow has a direction too. A follow joins two accounts, so it is the edge, and it can go one way only. Find the thing that joins two of the others, then check whether it works both ways.",
-          "d": "Not quite. A post belongs to one account: it doesn't join two accounts, so it can't be an edge, and the connection here can go one way. What joins Thandi's account to Sipho's is her follow. Look for what connects one account to another, then check whether it works both ways.",
-          "e": "Not quite. That swaps them. A follow joins two accounts, so the follow is the edge and the accounts are the vertices. Find the thing that joins two of the others: that is the edge."
+          "c": "Not quite. That swaps them, and a follow has a direction too. A follow connects two accounts, so it is the edge, and it can go one way only. Ask which of the two kinds of thing connects two of the other kind, then check whether it works both ways.",
+          "d": "Not quite. A post belongs to one account: it doesn't connect two accounts, so it can't be an edge. What connects Thandi's account to Sipho's is her follow. Look for what connects one account to another, then check whether it works both ways.",
+          "e": "Not quite. That swaps them. A follow connects two accounts, so the follow is the edge and the accounts are the vertices. Ask which of the two kinds of thing connects two of the other kind: that is the edge."
         }
       },
       "hints": [
@@ -1161,7 +1161,7 @@
       "purpose": "practice",
       "objective_id": 3,
       "config": {
-        "prompt": "Links join web pages: each link sits on one page, and clicking it opens another page. Which graph models the web?",
+        "prompt": "Web pages have links on them: clicking a link on one page opens another page. Which graph models the web?",
         "options": [
           {
             "id": "a",
@@ -1190,9 +1190,9 @@
         "correct": "e",
         "feedback": {
           "a": "Not quite. The pages and links are right, but a link goes one way: from the page it sits on to the page it opens, and that page needn't link back. Check whether a link on one page gives you a way back from the other.",
-          "b": "Not quite. That swaps them, and a link has a direction too. A link joins two pages, so it is the edge, and it goes from the page it sits on to the page it opens. Find the thing that joins two of the others, then check whether it works both ways.",
+          "b": "Not quite. That swaps them, and a link has a direction too. A link connects two pages, so it is the edge, and it goes from the page it sits on to the page it opens. Ask which of the two kinds of thing connects two of the other kind, then check whether it works both ways.",
           "c": "Not quite. A website is made of many pages, and a link often joins two pages on the same website, like a homepage and its contact page. With websites as vertices, that link would join a website to itself. A link opens a page, so take the pages as the vertices, then check whether a link works both ways.",
-          "d": "Not quite. That swaps them. A link joins two pages, so the link is the edge and the pages are the vertices. Find the thing that joins two of the others: that is the edge."
+          "d": "Not quite. That swaps them. A link connects two pages, so the link is the edge and the pages are the vertices. Ask which of the two kinds of thing connects two of the other kind: that is the edge."
         }
       },
       "hints": [
@@ -1222,7 +1222,7 @@
       "purpose": "practice",
       "objective_id": 3,
       "config": {
-        "prompt": "Before the lecture, Lerato and Ayo shook hands: one handshake, which they did together. Think of every classmate and every handshake in the class. Which graph models it?",
+        "prompt": "Before the lecture, Lerato shook hands with Ayo. Think of every classmate and every handshake in the class. Which graph models it?",
         "options": [
           {
             "id": "a",
@@ -1230,7 +1230,7 @@
           },
           {
             "id": "b",
-            "label": "Vertices: classmates. Edges: handshakes. Undirected, because the two share one handshake."
+            "label": "Vertices: classmates. Edges: handshakes. Undirected, because a handshake can't happen one way only."
           },
           {
             "id": "c",
@@ -1247,31 +1247,31 @@
         ]
       },
       "solution": {
-        "explanation": "Correct. The classmates are the vertices and each handshake is an edge joining two of them. A handshake is one act that both people do together, so it is one plain line: undirected. A mutual follow is different: each follow is a separate act, so it is two arrows, and directed.",
+        "explanation": "Correct. The classmates are the vertices and each handshake is an edge joining two of them. Could a handshake happen one way only? No: if Lerato shook hands with Ayo, Ayo shook hands with Lerato. So each handshake is one plain line: undirected. A follow can go one way, so even a mutual follow is two arrows that both happen to exist.",
         "correct": "b",
         "feedback": {
-          "a": "Not quite. That swaps them. A handshake joins two classmates, so the handshake is the edge and the classmates are the vertices. Find the thing that joins two of the others: that is the edge.",
-          "c": "Not quite. Lerato and Ayo didn't each do something separate: they did one thing together, one handshake. One shared act is one plain line. Two arrows are for two separate acts, like two people who each follow the other. Count the acts: one shared act is one line, two separate acts are two arrows.",
-          "d": "Not quite. Someone may reach out first, but the handshake is one act that both people do together, and it belongs to both of them once it happens. Who started doesn't give it a direction. Decide the direction from the connection itself: one shared act is one plain line.",
-          "e": "Not quite. That swaps them, and who reaches out first doesn't give a handshake a direction: it is one act the two share. A handshake joins two classmates, so it is the edge. Find the thing that joins two of the others, then count the acts."
+          "a": "Not quite. That swaps them. A handshake connects two classmates, so the handshake is the edge and the classmates are the vertices. Ask which of the two kinds of thing connects two of the other kind: that is the edge.",
+          "c": "Not quite. If Lerato shook hands with Ayo, Ayo shook hands with Lerato: the reverse always exists, so there is no direction for an arrow to show. That is one plain line. A follow can go one way, so even a mutual follow is two arrows that both happen to exist. Ask: if this edge exists, must the reverse one exist too?",
+          "d": "Not quite. Someone may reach out first, but who started doesn't give the connection a direction. If Lerato shook hands with Ayo, Ayo shook hands with Lerato, whoever reached out. Ask: if this edge exists, must the reverse one exist too?",
+          "e": "Not quite. That swaps them, and who reaches out first doesn't give a handshake a direction. A handshake connects two classmates, so it is the edge. Ask which of the two kinds of thing connects two of the other kind, then ask whether the reverse must exist too."
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "When Lerato and Ayo shook hands, how many acts were there: one they did together, or one each?"
+          "body": "If Lerato shook hands with Ayo, what do you know about Ayo and Lerato?"
         },
         {
           "level": 2,
-          "body": "One act that two people share is one plain line, with no direction. Two separate acts, like two people who each follow the other, are two arrows: directed."
+          "body": "Ask one question of each connection: if it exists, must the reverse exist too? If it must, the edge is a plain line with no direction. If it can go one way only, it is an arrow."
         },
         {
           "level": 3,
-          "body": "The classmates are the vertices and the handshakes are the edges. Now decide: is a handshake one shared act, or two separate acts like a mutual follow?"
+          "body": "The classmates are the vertices and the handshakes are the edges. Now ask: could Lerato shake hands with Ayo without Ayo shaking hands with Lerato?"
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: classmates. Edges: handshakes. Undirected. A handshake joins two classmates, so it is the edge. It is one act the two share, so it is one plain line, not two arrows, and who reached out first doesn't change that."
+          "body": "Answer: Vertices: classmates. Edges: handshakes. Undirected. A handshake connects two classmates, so it is the edge. It can't happen one way only: if Lerato shook hands with Ayo, Ayo shook hands with Lerato. So each handshake is one plain line, and who reached out first doesn't change that. A follow can go one way, so even a mutual follow is two arrows that both happen to exist."
         }
       ]
     }

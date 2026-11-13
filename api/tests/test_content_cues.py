@@ -868,7 +868,11 @@ def _by_noun_order(a: ActivityFixture, vertex_first: bool) -> str | None:
 
 
 def _shortest(a: ActivityFixture) -> str:
-    return str(min(a.config["options"], key=lambda o: len(o["label"]))["id"])
+    """The shortest option. A tie that includes the key counts as the key: a reader choosing among
+    the shortest options can land on it."""
+    least = min(len(o["label"]) for o in a.config["options"])
+    tied = [str(o["id"]) for o in a.config["options"] if len(o["label"]) == least]
+    return a.solution["correct"] if a.solution["correct"] in tied else tied[0]
 
 
 CLOSING_RULES: dict[str, Callable[[ActivityFixture], str | None]] = {
@@ -928,17 +932,21 @@ def test_the_closing_hints_climb_from_a_question_to_the_explained_answer() -> No
 
 
 def test_the_handshake_item_agrees_with_the_video_on_mutual_connections() -> None:
-    """Segment 108 teaches that a mutual follow is two arrows, so still directed. The handshake
-    is undirected because it is one shared act, not because each person shook the other's hand
-    (which, read like the video, would be two arrows)."""
+    """Segment 108 teaches that a mutual follow is two arrows, so still directed. The handshake is
+    undirected because it can't happen one way only: the reverse always exists. That is the one
+    question module 1 teaches for direction ("must the reverse exist too?", 193). The second version
+    counted "acts", which taught nowhere else and sounded like 193's trap, "two people are involved
+    in each act" (round 2 review of #213)."""
     video = next(s for s in SEGMENTS if s.id == 108)
     assert "two arrows" in (video.body or "")
     a = ACTIVITIES[111]
     assert _key(a)[2] == "Undirected"
     assert "each has shaken the other" not in a.config["prompt"]
     two_arrows = next(o["id"] for o in a.config["options"] if "arrow each way" in o["label"])
-    for text in (a.solution["feedback"][two_arrows], {h.level: h.body for h in a.hints}[3]):
-        assert "shared act" in text, text
-        assert "separate acts" in text, text
+    for text in (a.solution["feedback"][two_arrows], a.solution["explanation"]):
+        assert "two arrows that both happen to exist" in text, text
+    assert "reverse" in a.solution["feedback"][two_arrows]
+    for where, text in shown_text(a):
+        assert not {"act", "acts", "shared", "together"} & set(_words(text)), (where, text)
     # Not having shaken hands is not the same as not having met.
     assert not any("met" in _words(t) for _, t in shown_text(a))

@@ -7,6 +7,7 @@ Plus the content rules from issue #83: four hint levels on every activity, and f
 every wrong answer.
 """
 
+import itertools
 import re
 
 import pytest
@@ -183,3 +184,61 @@ def test_the_modelling_support_item_does_not_name_each_situations_nouns() -> Non
     for r in a.config["right"]:
         assert not any(n in r["label"].lower() for n in nouns), r["label"]
     assert len(a.config["right"]) > len(a.config["left"])
+
+
+def _campus_edges() -> set[frozenset[str]]:
+    return {frozenset((e.source, e.target)) for e in CAMPUS.edges}
+
+
+def _pieces(edges: set[frozenset[str]]) -> list[set[str]]:
+    pieces: list[set[str]] = []
+    for v in CAMPUS.vertices:
+        if any(v in p for p in pieces):
+            continue
+        piece, todo = {v}, [v]
+        while todo:
+            x = todo.pop()
+            for e in edges:
+                if x in e:
+                    (y,) = e - {x}
+                    if y not in piece:
+                        piece.add(y)
+                        todo.append(y)
+        pieces.append(piece)
+    return pieces
+
+
+def test_the_graph_words_are_taught_on_the_campus_and_are_true_of_it() -> None:
+    """Path, cycle, connected, tree and weighted were used (module 5, objective 7) but never taught
+    (CS2023 AL-Foundational; review 13 Nov, High 11). Segment 197 teaches them on the campus,
+    before the bus-stop graph, and each claim it makes is checked here."""
+    ids = [s.id for s in MODULE.segments]
+    assert ids.index(170) < ids.index(197) < ids.index(198) < ids.index(106)
+    body = next(s.body for s in MODULE.segments if s.id == 197)
+    for word in ("path", "cycle", "connected", "disconnected", "tree", "weighted"):
+        assert f"**{word}**" in body, word
+    edges = _campus_edges()
+    for stops in ("ACBG", "ACFEA"):  # the path and the cycle
+        assert DASH.join(stops) in body
+        assert all(frozenset(p) in edges for p in itertools.pairwise(stops))
+    assert len(_pieces(edges)) == 1  # connected
+    assert len(_pieces(edges - {frozenset("BC")})) == 2  # closing B-C splits it
+    tree = edges - {frozenset("CF")}
+    assert len(_pieces(tree)) == 1  # a tree: connected,
+    assert len(tree) == len(CAMPUS.vertices) - 1  # and with no cycle
+    item = activity(194)
+    assert item.kind == "matching"
+    assert item.objective_id == 2
+    assert len(item.config["right"]) == len(item.config["left"]) + 2  # two spares
+
+
+def test_enqueue_and_dequeue_are_defined_before_they_are_used() -> None:
+    """ "Dequeued" was used in module 5 but never defined (review 13 Nov, High 11)."""
+    refresher = next(s for m in CONTENT.modules if m.id == 0 for s in m.segments if s.id == 3)
+    assert "**enqueue**" in refresher.body
+    assert "**dequeue**" in refresher.body
+    trace = next(
+        s for m in CONTENT.modules if m.id == 3 for s in m.segments if "Two words" in s.body
+    )
+    assert "**enqueued**" in trace.body
+    assert "**dequeued**" in trace.body

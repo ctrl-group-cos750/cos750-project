@@ -62,6 +62,18 @@
           "activity_id": 160
         },
         {
+          "id": 197,
+          "kind": "text",
+          "title": "Paths, cycles and other graph words",
+          "body": "Five more words describe a graph as a whole. Each one is about routes along the edges. We'll use the campus graph again: its walkways join A–C, A–E, B–C, B–G, C–F, D–E and E–F.\n\n- A **path** is a route from vertex to vertex along edges. A–C–B–G is a path of three edges from the Admin block to the Green: the route you found in the puzzle.\n- A **cycle** is a path that comes back to the vertex it started from without using any edge twice. A–C–F–E–A is a cycle: Admin block, Computer Science, Fountain, Engineering and back to the Admin block.\n- A graph is **connected** when there is a path between every two of its vertices. The campus is connected: you can walk from any building to any other. If the B–C walkway closed, the Bookshop and the Green would be cut off from the rest, and the graph would be **disconnected**: two separate pieces.\n- A **tree** is a connected graph with no cycle, so there is exactly one path between any two vertices. The campus isn't a tree, because of the cycle A–C–F–E–A. Close the C–F walkway and it becomes one: every building can still be reached, and no route loops back.\n- A graph is **weighted** when each edge carries a number, such as a walkway's length in metres. The campus graph is **unweighted**: every walkway counts as one step. BFS counts edges, not lengths, so the graphs in this course are unweighted.\n\nYou'll meet these words again: a cycle, and a graph that is not connected, are where BFS bugs show up in module 5."
+        },
+        {
+          "id": 198,
+          "kind": "activity",
+          "title": "Graph words on the campus",
+          "activity_id": 194
+        },
+        {
           "id": 106,
           "kind": "activity",
           "title": "Label the bus-stop graph",
@@ -492,6 +504,104 @@
         {
           "level": 4,
           "body": "Answer: an edge is one line, named by the two vertices it joins, so A–C counts once."
+        }
+      ]
+    },
+    {
+      "id": 194,
+      "kind": "matching",
+      "title": "Graph words on the campus",
+      "module_id": 1,
+      "objective_id": 2,
+      "purpose": "practice",
+      "config": {
+        "prompt": "Match each word to its example on the campus graph (walkways A–C, A–E, B–C, B–G, C–F, D–E and E–F). Two of the examples match no word.",
+        "left": [
+          {
+            "id": "w1",
+            "label": "Path"
+          },
+          {
+            "id": "w2",
+            "label": "Cycle"
+          },
+          {
+            "id": "w3",
+            "label": "Connected"
+          },
+          {
+            "id": "w4",
+            "label": "Tree"
+          },
+          {
+            "id": "w5",
+            "label": "Weighted"
+          }
+        ],
+        "right": [
+          {
+            "id": "x1",
+            "label": "A–C and C–A: one walkway, named from either end"
+          },
+          {
+            "id": "e3",
+            "label": "Every building can be reached from every other building along walkways."
+          },
+          {
+            "id": "e1",
+            "label": "A–C–B–G: a route from the Admin block to the Green"
+          },
+          {
+            "id": "e5",
+            "label": "The campus with each walkway's length in metres written on it"
+          },
+          {
+            "id": "x2",
+            "label": "The Admin block on its own"
+          },
+          {
+            "id": "e2",
+            "label": "A–C–F–E–A: a route back to the Admin block that uses no walkway twice"
+          },
+          {
+            "id": "e4",
+            "label": "The campus with the C–F walkway closed: every building still reachable, and no route loops back"
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "w1": "e1",
+          "w2": "e2",
+          "w3": "e3",
+          "w4": "e4",
+          "w5": "e5"
+        },
+        "explanation": "Correct. A path is a route along edges; a cycle is a path back to its start with no edge used twice; connected means every vertex can reach every other; a tree is connected with no cycle; weighted means each edge carries a number, such as a length.",
+        "feedback": {
+          "w1": "Not quite. A path is a route from vertex to vertex along edges, like A–C–B–G. Find the example that is one route between two buildings.",
+          "w2": "Not quite. A cycle comes back to the vertex it started from without using any edge twice. Find the route that starts and ends at the Admin block.",
+          "w3": "Not quite. Connected is about the whole graph: a path between every two vertices. Find the example about every building reaching every other.",
+          "w4": "Not quite. A tree is connected and has no cycle. With C–F closed, A–C–F–E–A is broken and every building is still reachable. Find the example with no route that loops back.",
+          "w5": "Not quite. Weighted means each edge carries a number, such as a length. Find the example with numbers on the walkways."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Two of the words describe one route; two describe the whole graph; one is about numbers on the edges."
+        },
+        {
+          "level": 2,
+          "body": "A cycle is a path that ends where it started. A tree is a connected graph with no cycle."
+        },
+        {
+          "level": 3,
+          "body": "Path → A–C–B–G. Cycle → A–C–F–E–A. Now decide which example is about every building, which has no route that loops back, and which has numbers on the walkways."
+        },
+        {
+          "level": 4,
+          "body": "Answer: path → A–C–B–G; cycle → A–C–F–E–A, which ends where it started; connected → every building can be reached from every other; tree → the campus with C–F closed, connected with no cycle; weighted → lengths in metres on the walkways. A–C and C–A is one edge, and the Admin block on its own is one vertex: neither matches a word."
         }
       ]
     },

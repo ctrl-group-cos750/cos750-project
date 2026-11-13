@@ -61,7 +61,7 @@ export function AccountMenu({ user, onLogout, loggingOut }: AccountMenuProps) {
         aria-controls={listId}
         onClick={() => setOpen((o) => !o)}
       >
-        <Avatar avatar={user.avatar} name={user.displayName} size={32} />
+        <Avatar avatar={user.avatar} picture={user.pictureUrl} name={user.displayName} size={32} />
         <span className={styles.name}>{user.displayName}</span>
         <span className="visually-hidden">: your account</span>
         <span aria-hidden="true" className={styles.chevron}>

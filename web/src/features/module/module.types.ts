@@ -33,6 +33,10 @@ export type ModuleSummary = {
   quickCheckScore?: { correct: number; total: number } | null
   /** How many activities the student moved past without a right answer (FR-2.7, #215 review). */
   lookAgainCount?: number
+  /** The student restarted it to redo its questions: it opens at its start. */
+  restarted?: boolean
+  /** Whether "Restart module" is offered: worked through to the end (not only tested out), not module 6. */
+  canRestart?: boolean
 }
 
 /** Matches `SegmentOut` nested inside `ModuleDetailOut`. */

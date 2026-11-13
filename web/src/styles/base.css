@@ -11,11 +11,27 @@
   box-sizing: border-box;
 }
 
-/* Everything is sized in rem, so the whole app grows with this: 16 px on a laptop, up to 20 px on
- * a large desktop screen, so a 4K monitor isn't a page of thumbnails with empty margins. */
+/* Everything is sized in rem, so the whole app grows with this: 16 px (or the reader's own
+ * browser setting) below 1600 px, 17 px from 1600 px and 18 px from 3200 px, so a 4K monitor isn't
+ * a page of thumbnails. In steps, each at least twice as wide as the one before, and never in vw:
+ * browser zoom narrows the viewport, so a size that grows with the viewport would shrink as the
+ * reader zooms in. With these steps, 200% zoom still makes text at least 1.88 times as big at any
+ * width (WCAG 1.4.4; #211 review). */
 html {
   -webkit-text-size-adjust: 100%;
-  font-size: clamp(100%, 80% + 0.25vw, 125%);
+  font-size: 100%;
+}
+
+@media (min-width: 1600px) {
+  html {
+    font-size: 106.25%;
+  }
+}
+
+@media (min-width: 3200px) {
+  html {
+    font-size: 112.5%;
+  }
 }
 
 /* Outside any layer so these document defaults apply to the legacy component CSS too. */

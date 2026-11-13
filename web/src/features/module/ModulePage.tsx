@@ -5,7 +5,7 @@ import { Alert, Button, ProgressBar, Spinner } from '../../components'
 import { ActivityView } from '../activities/ActivityPage.tsx'
 import { CelebrationAllowed } from '../activities/celebration.ts'
 import { useRewards } from '../rewards/hooks.ts'
-import { fetchModule, savePosition } from './module.api.ts'
+import { fetchModule, restartModule, savePosition } from './module.api.ts'
 import type { ModuleDetail, ModuleSummary } from './module.types.ts'
 import { SegmentView } from './SegmentView.tsx'
 import {
@@ -105,6 +105,25 @@ export function ModulePage() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['modules'] })
       void queryClient.invalidateQueries({ queryKey: ['module', id] })
+    },
+  })
+  // Restart the module to redo its questions: it reopens at its start (or its recall questions),
+  // and every activity on screen is fetched afresh, so no earlier answer is restored.
+  const [restarts, setRestarts] = useState(0)
+  const restart = useMutation({
+    mutationFn: () => restartModule(id),
+    onSuccess: (detail) => {
+      queryClient.removeQueries({ queryKey: ['activities'] })
+      queryClient.removeQueries({ queryKey: ['video'] })
+      queryClient.setQueryData(['module', id], detail)
+      void queryClient.invalidateQueries({ queryKey: ['modules'] })
+      moveFocus.current = true
+      setSegmentIndex(null)
+      setRetrievalIndex(null)
+      setRetrievalChecked(false)
+      setRestarts((n) => n + 1)
+      // Opened from a look-again link (`?segment=`): a restart opens at the start, not there.
+      if (segmentParam) void navigate(`/modules/${id}`, { replace: true })
     },
   })
   // Another module opened in place (a link, or Back and Forward): start it afresh, so a segment
@@ -223,9 +242,11 @@ export function ModulePage() {
   const firstSkipped = segments.findIndex(
     (s) => !s.done && !(s.kind === 'activity' && s.attempted === true),
   )
+  // A restarted module opens at its start, not at its first question (they are all undone).
   const skipped =
     firstSkipped >= 0 &&
-    (module.status === 'complete' || firstSkipped < module.currentSegmentPosition)
+    ((module.status === 'complete' && !module.restarted) ||
+      firstSkipped < module.currentSegmentPosition)
   // A link to one segment (`?segment=`, the look-again list) opens there if the student has
   // reached it; a segment further on can't be opened by its address.
   const reachable =
@@ -323,8 +344,11 @@ export function ModulePage() {
     })
   }
 
-  // On wide screens the progress panel sits beside the lesson (#214); the lesson column keeps
-  // its own width rules, so a two-column picture segment still fits beside the panel.
+  // On wide screens the progress panel sits beside the lesson (#214). The lesson column is a
+  // container (`@container`): a segment's picture goes beside its text only when the column itself
+  // is wide enough (72rem, `@6xl`), measured after the panel, so the picture always gets at least
+  // about 28rem (450 px); a viewport breakpoint would squeeze it to 200 px beside the panel.
+  // A segment with two columns lets the lesson widen to 100rem, so wide screens are used.
   // The activities marked to look at again, each a link to its segment (#215 review).
   const lookAgain = segments.flatMap((s, index) =>
     s.lookAgain && s.shown !== false ? [{ position: index, title: s.title }] : [],
@@ -334,120 +358,136 @@ export function ModulePage() {
     // Nothing in the mastery check celebrates a right answer (#215 review).
     <CelebrationAllowed.Provider value={module.id !== MASTERY_MODULE_ID}>
       <div className="grid w-full items-start gap-6 lg:grid-cols-[minmax(0,1fr)_19rem] lg:gap-8">
-        <section
-          ref={contentRef}
-          className="mx-auto grid w-full min-w-0 max-w-3xl gap-4 sm:gap-6 has-[[data-two-column]]:max-w-[70rem]"
-          aria-label={`Module ${module.number}: ${module.title}`}
-        >
-          {/* Header. Compact on a phone, so the lesson starts on the first screen of a 320 × 568 one. */}
-          <div className="grid gap-2 sm:gap-3">
-            <Link
-              to="/"
-              className="inline-flex min-h-11 items-center justify-self-start text-sm text-muted-foreground hover:text-foreground sm:min-h-0"
-            >
-              ← All modules
-            </Link>
-            <h1 className="text-xl font-bold sm:text-2xl">
-              Module {module.number} · {module.title}
-            </h1>
-            <ChoiceNote module={module} />
+        <div className="@container min-w-0">
+          <section
+            ref={contentRef}
+            className="mx-auto grid w-full min-w-0 max-w-3xl gap-4 sm:gap-6 has-[[data-two-column]]:max-w-[100rem] @6xl:has-[[data-picture-beside]]:max-w-[100rem]"
+            aria-label={`Module ${module.number}: ${module.title}`}
+          >
+            {/* Header. Compact on a phone, so the lesson starts on the first screen of a 320 × 568 one. */}
+            <div className="grid gap-2 sm:gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Link
+                  to="/"
+                  className="inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground sm:min-h-0"
+                >
+                  ← All modules
+                </Link>
+                {module.canRestart && (
+                  <RestartModule
+                    // Remounted after each restart, so its "Restart this module?" question closes.
+                    key={restarts}
+                    pending={restart.isPending}
+                    error={restart.error?.message ?? null}
+                    onRestart={() => restart.mutate()}
+                    // A failed restart's message belongs to that try: cancelling or asking again
+                    // starts without it.
+                    onReset={() => restart.reset()}
+                  />
+                )}
+              </div>
+              <h1 className="text-xl font-bold sm:text-2xl">
+                Module {module.number} · {module.title}
+              </h1>
+              <ChoiceNote module={module} />
 
-            {/* Goals (FR-2.3): open on the first segment, where they set the scene (Gagné's event
+              {/* Goals (FR-2.3): open on the first segment, where they set the scene (Gagné's event
             2), then one click away, so the question isn't pushed down the screen every time. On
             a phone they start closed: open, they fill the first screen. */}
-            {module.goals.length > 0 && (
-              <details
-                key={place.number === 1 && !phone ? 'first' : 'later'}
-                open={place.number === 1 && !phone}
-                className="rounded-lg border border-border bg-card px-4 py-3"
-              >
-                <summary className="cursor-pointer font-semibold">
-                  By the end of this module you can:
-                </summary>
-                <ul className="mt-2 ml-5 list-disc">
-                  {module.goals.map((goal) => (
-                    <li key={goal}>{goal}</li>
-                  ))}
-                </ul>
-              </details>
-            )}
-          </div>
-
-          {/* Progress indicator (FR-2.5, AC5): the count beside the bar on a phone, under it on a
-            wider screen. */}
-          <div className="flex items-center gap-3 sm:grid sm:gap-2">
-            <div className="min-w-0 flex-1">
-              <ProgressBar
-                label={`Module ${module.number} progress`}
-                value={place.number}
-                max={place.total}
-              />
+              {module.goals.length > 0 && (
+                <details
+                  key={place.number === 1 && !phone ? 'first' : 'later'}
+                  open={place.number === 1 && !phone}
+                  className="rounded-lg border border-border bg-card px-4 py-3"
+                >
+                  <summary className="cursor-pointer font-semibold">
+                    By the end of this module you can:
+                  </summary>
+                  <ul className="mt-2 ml-5 list-disc">
+                    {module.goals.map((goal) => (
+                      <li key={goal}>{goal}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
             </div>
-            <p className="m-0 shrink-0 text-sm text-muted-foreground" aria-live="polite">
-              Segment {place.number} of {place.total}
-            </p>
-          </div>
 
-          {showSkippedNote && (
-            <Alert tone="info">
-              You moved past this activity earlier without answering it. Answer it now, then carry
-              on where you left off.
-            </Alert>
-          )}
+            {/* Progress indicator (FR-2.5, AC5): the count beside the bar on a phone, under it on a
+            wider screen. */}
+            <div className="flex items-center gap-3 sm:grid sm:gap-2">
+              <div className="min-w-0 flex-1">
+                <ProgressBar
+                  label={`Module ${module.number} progress`}
+                  value={place.number}
+                  max={place.total}
+                />
+              </div>
+              <p className="m-0 shrink-0 text-sm text-muted-foreground" aria-live="polite">
+                Segment {place.number} of {place.total}
+              </p>
+            </div>
 
-          {/* Current segment */}
-          {segment && (
-            <SegmentView
-              key={segment.id}
-              segment={segment}
-              intro={supportIntro(segments, currentIndex)}
-              onAnswered={() => void queryClient.invalidateQueries({ queryKey: ['module', id] })}
-            />
-          )}
+            {showSkippedNote && (
+              <Alert tone="info">
+                You moved past this activity earlier without answering it. Answer it now, then carry
+                on where you left off.
+              </Alert>
+            )}
 
-          {/* Save error */}
-          {mutation.isError && (
-            // Danger, so it is announced at once (role="alert") while focus stays on Next.
-            <Alert tone="danger" title="Could not save progress">
-              {mutation.error.message}
-            </Alert>
-          )}
+            {/* Current segment */}
+            {segment && (
+              <SegmentView
+                key={`${segment.id}:${restarts}`}
+                segment={segment}
+                intro={supportIntro(segments, currentIndex)}
+                onAnswered={() => void queryClient.invalidateQueries({ queryKey: ['module', id] })}
+              />
+            )}
 
-          {/* Navigation. The reason Next is blocked is always rendered, as a polite status
+            {/* Save error */}
+            {mutation.isError && (
+              // Danger, so it is announced at once (role="alert") while focus stays on Next.
+              <Alert tone="danger" title="Could not save progress">
+                {mutation.error.message}
+              </Alert>
+            )}
+
+            {/* Navigation. The reason Next is blocked is always rendered, as a polite status
           (<output>), so a screen reader announces it when it appears and when it clears; only
           its text changes. It sits with the buttons so an empty one costs only a small gap. */}
-          <div className="grid gap-2">
-            <output id="segment-blocked" className="block text-sm text-muted-foreground">
-              {statusLine}
-            </output>
-            <nav className="flex justify-between" aria-label="Segment navigation">
-              <Button
-                variant="secondary"
-                onClick={handlePrevious}
-                // Not disabled while Next saves, so focus is never dropped on the page (2.4.3).
-                disabled={isFirst}
-                aria-disabled={mutation.isPending || undefined}
-              >
-                ← Previous
-              </Button>
-              <Button
-                variant={isLast ? 'primary' : 'secondary'}
-                onClick={isLast ? handleFinish : handleNext}
-                // aria-disabled rather than disabled while blocked: a disabled button can't be
-                // focused, so its reason would never be read. The handlers ignore the click. While
-                // the position saves it stays focusable too (keepFocusWhileLoading), so a failed save
-                // leaves focus here with the error announced.
-                aria-disabled={blocked || undefined}
-                aria-describedby={blocked ? 'segment-blocked' : undefined}
-                loading={mutation.isPending}
-                keepFocusWhileLoading
-              >
-                {isLast ? 'Finish module' : 'Next →'}
-              </Button>
-            </nav>
-          </div>
-          <ProgressPanel placement="below" {...panel} />
-        </section>
+            <div className="grid gap-2">
+              <output id="segment-blocked" className="block text-sm text-muted-foreground">
+                {statusLine}
+              </output>
+              <nav className="flex justify-between" aria-label="Segment navigation">
+                <Button
+                  variant="secondary"
+                  onClick={handlePrevious}
+                  // Not disabled while Next saves, so focus is never dropped on the page (2.4.3).
+                  disabled={isFirst}
+                  aria-disabled={mutation.isPending || undefined}
+                >
+                  ← Previous
+                </Button>
+                <Button
+                  variant={isLast ? 'primary' : 'secondary'}
+                  onClick={isLast ? handleFinish : handleNext}
+                  // aria-disabled rather than disabled while blocked: a disabled button can't be
+                  // focused, so its reason would never be read. The handlers ignore the click. While
+                  // the position saves it stays focusable too (keepFocusWhileLoading), so a failed save
+                  // leaves focus here with the error announced.
+                  aria-disabled={blocked || undefined}
+                  aria-describedby={blocked ? 'segment-blocked' : undefined}
+                  loading={mutation.isPending}
+                  keepFocusWhileLoading
+                >
+                  {isLast ? 'Finish module' : 'Next →'}
+                </Button>
+              </nav>
+            </div>
+            <ProgressPanel placement="below" {...panel} />
+          </section>
+        </div>
         <ProgressPanel placement="beside" {...panel} />
       </div>
     </CelebrationAllowed.Provider>
@@ -512,5 +552,82 @@ export function QuickCheckScore({ module }: { module: ModuleSummary }) {
         see results
       </Link>
     </>
+  )
+}
+
+/** "Restart module": asks first, in place (no dialog to trap focus in), then starts the module
+ * again. Says what stays (points, badges, the module being complete) and what changes (the
+ * questions show unanswered, with hints from the first again), so nobody fears losing progress. */
+function RestartModule({
+  pending,
+  error,
+  onRestart,
+  onReset,
+}: {
+  pending: boolean
+  error: string | null
+  onRestart: () => void
+  onReset: () => void
+}) {
+  const [asking, setAsking] = useState(false)
+  const box = useRef<HTMLDivElement>(null)
+  // Keyboard focus follows the question (WCAG 2.4.3): into it when it opens, onto Cancel (the
+  // safe choice), and back to the button that opened it when it closes.
+  const reopened = useRef(false)
+  useEffect(() => {
+    const buttons = box.current?.querySelectorAll('button')
+    if (asking) buttons?.[1]?.focus()
+    else if (reopened.current) buttons?.[0]?.focus()
+  }, [asking])
+  const open = () => {
+    onReset()
+    setAsking(true)
+  }
+  const close = () => {
+    reopened.current = true
+    onReset()
+    setAsking(false)
+  }
+  // Escape closes the question, as it would a dialog, unless the restart is already on its way.
+  // Only while focus is in it: Escape elsewhere on the page (a video, a hint) is not for it.
+  useEffect(() => {
+    if (!asking || pending) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      if (!(event.target instanceof Node) || !box.current?.contains(event.target)) return
+      reopened.current = true
+      onReset()
+      setAsking(false)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [asking, pending, onReset])
+  if (!asking)
+    return (
+      <div ref={box}>
+        <Button variant="ghost" size="sm" onClick={open}>
+          Restart module
+        </Button>
+      </div>
+    )
+  return (
+    <div ref={box} className="w-full">
+      <fieldset className="grid w-full gap-2 rounded-lg border border-border bg-card p-4 m-0 min-w-0">
+        <legend className="float-left mb-1 w-full p-0 font-semibold">Restart this module?</legend>
+        <p className="m-0 text-sm text-muted-foreground">
+          Its questions will show unanswered, with their hints from the first again, so you can try
+          them afresh. You keep your points and badges, and the module stays complete.
+        </p>
+        {error && <Alert tone="danger">{error}</Alert>}
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" loading={pending} onClick={onRestart}>
+            Restart module
+          </Button>
+          <Button variant="ghost" size="sm" disabled={pending} onClick={close}>
+            Cancel
+          </Button>
+        </div>
+      </fieldset>
+    </div>
   )
 }

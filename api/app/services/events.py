@@ -18,7 +18,9 @@ from sqlalchemy.orm import Session
 
 from app.models import Checkpoint, Event, GraphScenario, Segment, Video
 
-ServerEvent = Literal["hint_shown", "result_changed", "module_completed", "quick_check_taken"]
+ServerEvent = Literal[
+    "hint_shown", "result_changed", "module_completed", "module_restarted", "quick_check_taken"
+]
 ClientEvent = Literal[
     "video_started", "video_completed", "checkpoint_reached", "segment_viewed", "prediction_made"
 ]

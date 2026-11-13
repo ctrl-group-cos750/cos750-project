@@ -46,6 +46,7 @@ from app.schemas.modules import (
 from app.services import rewards
 from app.services.events import log_event
 from app.services.locks import lock_student
+from app.services.mastery import MASTERY_MODULE
 from app.services.quick_check import DONE
 from app.services.quick_check import scores as quick_check_scores
 from app.services.quick_check import states as quick_check_states
@@ -213,6 +214,8 @@ def _summary(
         current_segment_position=position,
         shown_segment_count=segment_count - len(hidden_positions),
         shown_segments_passed=position - sum(1 for p in hidden_positions if p < position),
+        restarted=row is not None and row.restarted_after_attempt is not None,
+        can_restart=row is not None and row.status == "complete" and module.id != MASTERY_MODULE,
     )
 
 
@@ -261,7 +264,7 @@ def get_modules_for_user(session: Session, user_id: int) -> list[ModuleOut]:
         )
         for module in modules
     ]
-    looks = _look_again_counts(session, user_id, hidden)
+    looks = _look_again_counts(session, user_id, hidden, progress)
     scores = quick_check_scores(session, user_id)
     for summary in out:
         summary.recommended = summary.id == recommended
@@ -272,18 +275,33 @@ def get_modules_for_user(session: Session, user_id: int) -> list[ModuleOut]:
 
 
 def _look_again_counts(
-    session: Session, user_id: int, hidden: dict[int, frozenset[int]]
+    session: Session,
+    user_id: int,
+    hidden: dict[int, frozenset[int]],
+    progress: dict[int, ModuleProgress],
 ) -> dict[int, int]:
     """How many activity segments in each module are marked to look at again (FR-2.7, #214), for
-    the map. Support segments hidden from this student are left out, as on the module page."""
+    the map. Support segments hidden from this student are left out, as on the module page. A
+    restarted module (app/services/restart.py) counts only answers since its restart, as its page
+    does."""
     rows = session.execute(
         select(Segment.module_id, Segment.kind, Segment.activity_id)
         .where(Segment.module_id.is_not(None))
         .order_by(Segment.module_id, Segment.position)
     ).all()
-    look_again = answer_states(
-        session, user_id, {a for _, kind, a in rows if kind == "activity" and a}
-    ).look_again
+    by_module: dict[int, set[int]] = {}
+    for module_id, kind, activity_id in rows:
+        if module_id is not None and kind == "activity" and activity_id:
+            by_module.setdefault(module_id, set()).add(activity_id)
+    # One query per restart watermark: modules never restarted share the first.
+    by_after: dict[int | None, set[int]] = {}
+    for module_id, ids in by_module.items():
+        row = progress.get(module_id)
+        by_after.setdefault(row.restarted_after_attempt if row else None, set()).update(ids)
+    marked: dict[int | None, set[int]] = {
+        after: answer_states(session, user_id, ids, after).look_again
+        for after, ids in by_after.items()
+    }
     index: dict[int, int] = {}  # each segment's place in its module, as `_hidden_positions` counts
     counts: dict[int, int] = {}
     for module_id, kind, activity_id in rows:
@@ -291,9 +309,10 @@ def _look_again_counts(
             continue
         place = index.get(module_id, 0)
         index[module_id] = place + 1
+        row = progress.get(module_id)
         if (
             kind == "activity"
-            and activity_id in look_again
+            and activity_id in marked.get(row.restarted_after_attempt if row else None, set())
             and place not in hidden.get(module_id, frozenset())
         ):
             counts[module_id] = counts.get(module_id, 0) + 1
@@ -444,9 +463,11 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
         .where(Activity.module_id == module_id, Activity.purpose == "retrieval")
         .order_by(Activity.id)
     ).all()
-    answered = _answered(session, user_id, [activity.id for activity in retrieval])
+    # A restarted module shows every question afresh: only answers since then count here.
+    after = row.restarted_after_attempt if row is not None else None
+    answered = _answered(session, user_id, [activity.id for activity in retrieval], after)
     videos = _videos(session, segments)
-    done = done_segments(session, user_id, segments)
+    done = done_segments(session, user_id, segments, after)
     optional = set(
         session.scalars(
             select(Activity.id).where(
@@ -455,10 +476,14 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
             )
         )
     )
-    attempted = _answered(session, user_id, [s.activity_id for s in segments if s.activity_id])
-    # Moved on without a right answer (FR-2.7, #214): one rule, shared with `done_segments`.
+    attempted = _answered(
+        session, user_id, [s.activity_id for s in segments if s.activity_id], after
+    )
+    # Moved on without a right answer (FR-2.7, #214): one rule, shared with `done_segments`, and
+    # since the restart like it, so a question answered right before a restart and wrong twice
+    # after it is marked again.
     look_again = answer_states(
-        session, user_id, {s.activity_id for s in segments if s.activity_id}
+        session, user_id, {s.activity_id for s in segments if s.activity_id}, after
     ).look_again
     # TODO (FR-8.1): leave out the refreshers module 0's diagnostic has ruled out, once the
     # diagnostic records its result. Until then every refresher is shown.
@@ -540,15 +565,17 @@ def keep_places(session: Session, module_id: int, before: Sequence[int]) -> int:
     return moved
 
 
-def _answered(session: Session, user_id: int, activity_ids: Sequence[int]) -> set[int]:
-    """Which of these activities the student has made at least one attempt at."""
-    return set(
-        session.scalars(
-            select(Attempt.activity_id).where(
-                Attempt.user_id == user_id, Attempt.activity_id.in_(activity_ids)
-            )
-        )
+def _answered(
+    session: Session, user_id: int, activity_ids: Sequence[int], after: int | None = None
+) -> set[int]:
+    """Which of these activities the student has made at least one attempt at (only attempts with
+    an id above `after`, if given: since the module's restart)."""
+    query = select(Attempt.activity_id).where(
+        Attempt.user_id == user_id, Attempt.activity_id.in_(activity_ids)
     )
+    if after is not None:
+        query = query.where(Attempt.id > after)
+    return set(session.scalars(query))
 
 
 def save_position(
@@ -615,7 +642,10 @@ def save_position(
         segment_position > reached and segments[segment_position].id in hidden
     ):
         raise PositionTooFar(module_id)  # too far, or onto support this student isn't shown
-    done = done_segments(session, user_id, segments) | hidden
+    done = (
+        done_segments(session, user_id, segments, row.restarted_after_attempt if row else None)
+        | hidden
+    )
     # Only moving on leaves a segment behind. Saving a position already reached (stepping back
     # then forward again, or "Finish module" on a last segment that isn't done) moves past
     # nothing, so it isn't refused: it just doesn't complete the module (below).
@@ -679,7 +709,7 @@ def reward_module(session: Session, user_id: int, module_id: int) -> bool:
                 Attempt.user_id == user_id,
                 Attempt.activity_id.in_(activities),
                 Attempt.correct.is_(True),
-                Attempt.hint_level < rewards.SUPPORT_LEVEL,
+                rewards.real_work(),
             )
             .limit(1)
         )

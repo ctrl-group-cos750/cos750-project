@@ -74,6 +74,13 @@ class ModuleOut(ApiModel):
     # How many of its activities the student moved past without a right answer, marked to look
     # at again (FR-2.7, #214).
     look_again_count: int = 0
+    # The student restarted it to redo its questions (app/services/restart.py), so it opens at
+    # its start rather than at the first question left undone.
+    restarted: bool = False
+    # Whether "Restart module" is offered: a module they have worked through to the end
+    # (`complete`; one only tested out of is not), other than the mastery check, where only the
+    # first answer counts (FR-7.1).
+    can_restart: bool = False
 
 
 class CourseLengthOut(ApiModel):

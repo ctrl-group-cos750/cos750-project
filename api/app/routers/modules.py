@@ -53,6 +53,7 @@ from app.services.quick_check import (
     quick_check,
     take,
 )
+from app.services.restart import CannotRestart, restart_module
 
 router = APIRouter(prefix="/api/modules", tags=["modules"])
 
@@ -72,6 +73,11 @@ _ANSWERS_DONT_FIT = "Answer every question in the quick check, with one of its o
 _TOO_FAR = "Work through the module one segment at a time."
 _RETRIEVAL_INCOMPLETE = "Answer the retrieval questions before starting this module."
 _NOT_DONE = "Answer this segment's activity, or the video's checkpoints, before moving on."
+_CANNOT_RESTART = (
+    "This module can't be restarted until you have worked through it to the end: testing out with "
+    "the quick check doesn't count. The mastery check can't be restarted either, because only your first answer counts there; your report's review paths "
+    "are the way to practise again."
+)
 
 
 @router.get("")
@@ -179,3 +185,33 @@ def take_quick_check(
         raise HTTPException(422, detail=_ANSWERS_DONT_FIT) from None
     session.commit()
     return result
+
+
+@router.post(
+    "/{module_id}/restart",
+    responses={
+        409: {
+            "description": "The mastery check, or a module not worked through to the end yet "
+            "(one only tested out of is not)."
+        }
+    },
+)
+def restart(module_id: RowId, user: CurrentUser, session: DbSession) -> ModuleDetailOut:
+    """Start the module again to redo its questions (app/services/restart.py): it opens at its
+    start, and every question, retrieval question and video checkpoint in it shows unanswered,
+    with hints from level 1 again. The module stays complete and earned points and badges stay;
+    earlier answers stay recorded for the evaluation but aren't shown. 404 if there is no such
+    module, 403 while it is locked, 409 for the mastery check or a module not finished. A module the
+    student only tested out of (FR-8.2) isn't finished: `can_restart` is true exactly when this
+    succeeds. A restart doesn't reopen the quick check: it is one try per module."""
+    try:
+        get_module_detail(session, user.id, module_id)  # 404 or 403 first
+        restart_module(session, user.id, module_id)
+        session.commit()
+        return get_module_detail(session, user.id, module_id)
+    except ModuleNotFound:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND) from None
+    except ModuleLocked:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=_LOCKED) from None
+    except CannotRestart:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=_CANNOT_RESTART) from None

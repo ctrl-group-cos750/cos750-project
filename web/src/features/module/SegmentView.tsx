@@ -55,12 +55,31 @@ export function SegmentView({ segment, onAnswered, intro }: SegmentViewProps) {
             {segment.title}
           </h2>
           {introLine}
-          {picture && (
-            <div className="max-w-[520px]">
-              <PicturePanel tabs={[{ name: pictureName(picture), picture }]} />
+          {picture ? (
+            // The picture beside the text it explains, so neither is scrolled away from the other
+            // (Mayer's spatial contiguity), the picture first and staying in view. Side by side
+            // only once the lesson column (the module page's container) is 72rem wide: after the
+            // text's 42rem and the gap, the picture still gets about 28rem (450 px), with the
+            // progress panel beside the lesson or not. Narrower, stacked, so the picture shows at
+            // the lesson's full width rather than squeezed (#211 review). data-picture-beside lets
+            // the module page widen then.
+            <div
+              data-picture-beside
+              className="grid items-start gap-6 @6xl:grid-cols-[minmax(0,1fr)_minmax(0,var(--reading-width))]"
+            >
+              <div className="@6xl:sticky @6xl:top-24">
+                <PicturePanel tabs={[{ name: pictureName(picture), picture }]} />
+              </div>
+              {/* The text keeps a readable line length (--reading-width); the picture takes the rest. */}
+              <div className="min-w-0 max-w-[var(--reading-width)]">
+                {segment.body ? (
+                  <Markdown>{segment.body}</Markdown>
+                ) : (
+                  <Alert tone="info">This segment has no content yet.</Alert>
+                )}
+              </div>
             </div>
-          )}
-          {segment.body ? (
+          ) : segment.body ? (
             <Markdown>{segment.body}</Markdown>
           ) : (
             <Alert tone="info">This segment has no content yet.</Alert>
@@ -77,6 +96,8 @@ export function SegmentView({ segment, onAnswered, intro }: SegmentViewProps) {
           </h2>
           {introLine}
           {segment.videoId !== null ? (
+            // The text version below the video at every width: closed, it is one line, so beside
+            // the video it would leave a mostly empty column (#211 review).
             <>
               <VideoView videoId={segment.videoId} heading="h3" onResult={onAnswered} />
               {segment.body && <TextVersion body={segment.body} />}

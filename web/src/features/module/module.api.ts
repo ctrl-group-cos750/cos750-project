@@ -37,3 +37,11 @@ export function takeQuickCheck(
     body: { answers },
   })
 }
+
+/**
+ * `POST /api/modules/{moduleId}/restart` — start the module again to redo its questions: they show
+ * unanswered, with hints from level 1. Points, badges and the module's completion stay.
+ */
+export function restartModule(moduleId: number): Promise<ModuleDetail> {
+  return api<ModuleDetail>(`/api/modules/${moduleId}/restart`, { method: 'POST' })
+}

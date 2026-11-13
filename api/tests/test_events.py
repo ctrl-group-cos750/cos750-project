@@ -82,6 +82,7 @@ def test_the_types_are_split_between_server_and_browser() -> None:
         "hint_shown",
         "result_changed",
         "module_completed",
+        "module_restarted",
         "quick_check_taken",
     } == SERVER_EVENTS
     assert {

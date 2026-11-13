@@ -596,6 +596,32 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/modules/{module_id}/restart': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Restart
+     * @description Start the module again to redo its questions (app/services/restart.py): it opens at its
+     *     start, and every question, retrieval question and video checkpoint in it shows unanswered,
+     *     with hints from level 1 again. The module stays complete and earned points and badges stay;
+     *     earlier answers stay recorded for the evaluation but aren't shown. 404 if there is no such
+     *     module, 403 while it is locked, 409 for the mastery check or a module not finished. A module the
+     *     student only tested out of (FR-8.2) isn't finished: `can_restart` is true exactly when this
+     *     succeeds. A restart doesn't reopen the quick check: it is one try per module.
+     */
+    post: operations['restart_api_modules__module_id__restart_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/videos/{video_id}': {
     parameters: {
       query?: never
@@ -607,7 +633,8 @@ export interface paths {
      * Get Video
      * @description Everything the player needs in one call (FR-3): media and captions paths, the transcript,
      *     and each checkpoint with its activity (without the answer) and whether this student has
-     *     passed it. Answer a checkpoint with `POST /api/activities/{activityId}/attempts`.
+     *     passed it (since the module's restart, if they restarted it). Answer a checkpoint with
+     *     `POST /api/activities/{activityId}/attempts`.
      *
      *     403 while the segment that plays the video is in a locked module or a closed review path
      *     (#137); a video on no segment yet is open. Its checkpoint questions follow the video.
@@ -808,10 +835,15 @@ export interface paths {
      *
      *     - `attempts`: each answer; `submitted` and `detail` are what was answered and the per-part
      *       result, as JSON.
-     *     - `hints`: each hint shown.
+     *     - `hints`: each hint shown. `round` is which time through its module (0, then one more for
+     *       each restart, app/services/restart.py); `after_attempt` is the newest attempt id when it
+     *       was shown, so it came before exactly that student's attempts with a higher `attempt_id`.
      *     - `events`: the timeline (app/services/events.py): videos started and finished, checkpoints
-     *       reached, segments viewed, hints shown, results changing, modules completed; `payload` as JSON.
-     *       Segment views and module completions give time per segment and per module.
+     *       reached, segments viewed, hints shown, results changing, modules completed and restarted,
+     *       quick checks taken; `payload` as JSON. Segment views and module completions give time per segment and per
+     *       module. Each `module_restarted` carries its `round` and `after_attempt`: a student's
+     *       attempts at that module's activities with an id above one restart's `after_attempt`, and
+     *       not above the next one's, are that round's.
      *     - `objective_results`: each student's current result per objective, with the attempts it was
      *       decided from (`evidence`).
      */
@@ -2040,6 +2072,16 @@ export interface components {
        * @default 0
        */
       lookAgainCount: number
+      /**
+       * Restarted
+       * @default false
+       */
+      restarted: boolean
+      /**
+       * Canrestart
+       * @default false
+       */
+      canRestart: boolean
       /** Segments */
       segments: components['schemas']['SegmentOut'][]
       /** Retrieval */
@@ -2120,6 +2162,16 @@ export interface components {
        * @default 0
        */
       lookAgainCount: number
+      /**
+       * Restarted
+       * @default false
+       */
+      restarted: boolean
+      /**
+       * Canrestart
+       * @default false
+       */
+      canRestart: boolean
     }
     /**
      * ObjectiveReadiness
@@ -3670,6 +3722,46 @@ export interface operations {
         content: {
           'application/json': components['schemas']['QuickCheckResultOut']
         }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  restart_api_modules__module_id__restart_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        module_id: number
+      }
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ModuleDetailOut']
+        }
+      }
+      /** @description The mastery check, or a module not worked through to the end yet (one only tested out of is not). */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
       /** @description Validation Error */
       422: {

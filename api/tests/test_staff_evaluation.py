@@ -197,7 +197,23 @@ def test_hints_csv(client: TestClient, db: Session) -> None:
     ids = pilot(client, db)
     hints_rows = rows(client.get("/api/staff/export/hints.csv").text)
     ada = pseudonym(ids["ada"])
-    assert [(h["student"], h["level"]) for h in hints_rows] == [(ada, "1"), (ada, "2"), (ada, "3")]
+    # A pseudonym, never the account id (FR-10.3), and each view's round and attempt boundary
+    # (FR-2.8): the columns the evaluation joins on.
+    assert list(hints_rows[0]) == [
+        "hint_view_id",
+        "student",
+        "activity_id",
+        "activity_title",
+        "level",
+        "round",
+        "after_attempt",
+        "created_at",
+    ]
+    assert [(h["student"], h["level"], h["round"]) for h in hints_rows] == [
+        (ada, "1", "0"),
+        (ada, "2", "0"),
+        (ada, "3", "0"),
+    ]
 
 
 def test_unknown_tables_are_refused(client: TestClient, db: Session) -> None:

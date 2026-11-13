@@ -63,7 +63,7 @@
   padding: var(--space-3);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  background: var(--color-surface-solid);
   box-shadow: var(--shadow-card);
 }
 
@@ -110,7 +110,7 @@
   padding: var(--space-6) var(--space-5);
   border: 0;
   border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  background: var(--color-surface-solid);
   box-shadow: var(--shadow-card);
   color: inherit;
   text-align: center;

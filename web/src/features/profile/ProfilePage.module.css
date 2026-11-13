@@ -149,3 +149,55 @@
     font-size: var(--text-xl);
   }
 }
+
+/* The page background (#214): three choices, each a radio, a small picture and a line. */
+.backgrounds {
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.backgrounds legend {
+  padding: 0;
+  font-weight: 600;
+}
+
+.backgroundChoices {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.backgroundChoice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 44px; /* a comfortable touch target (WCAG 2.5.8) */
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.backgroundChoice:has(input:checked) {
+  border-color: var(--color-primary);
+  background: var(--color-accent-soft);
+}
+
+.backgroundChoice input {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--color-primary);
+}
+
+.backgroundChoice > span:last-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.backgroundName {
+  font-weight: 600;
+}

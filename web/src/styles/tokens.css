@@ -31,6 +31,9 @@
    */
   --color-bg: var(--background, var(--brand-paper));
   --color-surface: var(--card, #ffffff);
+  /* Always opaque, also where the page background shows through the cards (backgrounds.css):
+   * popups, menus and notes that float over the page. */
+  --color-surface-solid: var(--card, #ffffff);
   --color-surface-sunken: var(--muted, #e9e6de);
   --color-text: var(--foreground, var(--brand-ink));
   --color-text-muted: var(--muted-foreground, #595959);

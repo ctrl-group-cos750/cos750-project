@@ -26,10 +26,17 @@ import {
 } from '../../components'
 import { useReport } from '../mastery/hooks.ts'
 import { prefersReducedMotion, useConfettiSetting } from '../progress/confetti.ts'
-import { usePreference } from '../progress/preferences.ts'
+import {
+  BACKGROUNDS,
+  usePreference,
+  useBackground,
+  type Background,
+} from '../progress/preferences.ts'
 import { useRewards, useRewardsSettings } from '../rewards/hooks.ts'
 import { useChangePassword, useDeletePicture, useSetAvatar, useUploadPicture } from './hooks.ts'
 import { squarePicture } from './squarePicture.ts'
+import { BACKGROUND_LABELS } from '../../theme/background.ts'
+import { BackgroundSwatch } from '../../theme/BackgroundSwatch.tsx'
 import styles from './ProfilePage.module.css'
 
 /** Points, badges and objectives met (FR-1.7): the student's own, never anyone else's. Points and
@@ -250,14 +257,61 @@ function Setting({
   )
 }
 
+const BACKGROUND_ABOUT: Record<Background, string> = {
+  glow: 'Soft blue and honey light in the corners of the page.',
+  doodles: 'Small line drawings from the course, with gentler light behind them.',
+  plain: 'A flat page with no decoration.',
+}
+
+/** The page background (#214): three radios, each with a small picture of it. Lessons, activities
+ * and the quick check keep solid cards whichever is chosen; high contrast and print are always
+ * plain. Also in the header's theme menu. */
+function BackgroundSetting({ note }: { note: string }) {
+  const [background, setBackground] = useBackground()
+  const name = useId()
+  return (
+    <fieldset className={styles.backgrounds} aria-describedby={`${name}-about ${note}`}>
+      <legend>Background</legend>
+      <p id={`${name}-about`} className={styles.muted}>
+        Behind the module map, your badges and your report. Lessons and activities keep a solid
+        background behind the text.
+      </p>
+      <div className={styles.backgroundChoices}>
+        {BACKGROUNDS.map((value) => (
+          <label key={value} className={styles.backgroundChoice}>
+            <input
+              type="radio"
+              name={`${name}-background`}
+              value={value}
+              checked={background === value}
+              aria-labelledby={`${name}-${value}-name`}
+              aria-describedby={`${name}-${value}`}
+              onChange={() => setBackground(value)}
+            />
+            <BackgroundSwatch background={value} />
+            <span>
+              <span id={`${name}-${value}-name`} className={styles.backgroundName}>
+                {BACKGROUND_LABELS[value]}
+              </span>
+              <span id={`${name}-${value}`} className={styles.muted}>
+                {BACKGROUND_ABOUT[value]}
+              </span>
+            </span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  )
+}
+
 /**
  * What you see while you learn (#214): one switch for each motivational element, all on by
  * default, because some students find them demotivating (Self-Determination Theory: autonomy).
  *
  * - Points and badges (FR-9.5): kept on the account, the same setting as on the badges page. The
  *   module medals follow it, so they have no switch of their own.
- * - Skill profile, progress panel, confetti and encouraging comments: kept on this device, per
- *   student (features/progress/preferences.ts).
+ * - Skill profile, progress panel, confetti, encouraging comments and the page background: kept
+ *   on this device, per student (features/progress/preferences.ts).
  *
  * The mastery report and quick check results are never hidden.
  */
@@ -333,10 +387,11 @@ function LearningSettings() {
         onChange={setComments}
         note={deviceNote}
       />
+      <BackgroundSetting note={deviceNote} />
       <p id={deviceNote} className={styles.muted}>
-        Points and badges are kept with your account. The other four are kept on this device, for
-        you only: on a shared computer they don&apos;t change anyone else&apos;s, and on another
-        device they start on again.
+        Points and badges are kept with your account. The rest are kept on this device, for you
+        only: on a shared computer they don&apos;t change anyone else&apos;s, and on another device
+        they start on again, with the glow background.
       </p>
     </section>
   )

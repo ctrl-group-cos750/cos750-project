@@ -128,3 +128,40 @@ export function usePanelMinimised(name: Panel): [boolean, (minimised: boolean) =
   )
   return [minimised, (next: boolean) => setPanelMinimised(name, next)]
 }
+
+/**
+ * The page background (#214): soft corner glows (the default), the doodle wallpaper with gentler
+ * glows behind it, or the plain page. Kept per student on this device like the switches above,
+ * and applied as <html data-bg> by theme/background.ts (styles/backgrounds.css paints it).
+ */
+export type Background = 'glow' | 'doodles' | 'plain'
+
+export const BACKGROUNDS: readonly Background[] = ['glow', 'doodles', 'plain']
+
+function backgroundKey(): string {
+  return owner === null ? `${PREFIX}background` : `${PREFIX}${owner}.background`
+}
+
+export function storedBackground(): Background {
+  try {
+    const value = localStorage.getItem(backgroundKey())
+    return BACKGROUNDS.includes(value as Background) ? (value as Background) : 'glow'
+  } catch {
+    return 'glow'
+  }
+}
+
+export function setStoredBackground(background: Background): void {
+  try {
+    localStorage.setItem(backgroundKey(), background)
+  } catch {
+    // storage blocked: it lasts as long as the page
+  }
+  window.dispatchEvent(new Event(CHANGED))
+}
+
+/** The student's background, kept in step across the page (the profile and the header menu). */
+export function useBackground(): [Background, (background: Background) => void] {
+  const background = useSyncExternalStore(subscribe, storedBackground, () => 'glow' as Background)
+  return [background, setStoredBackground]
+}

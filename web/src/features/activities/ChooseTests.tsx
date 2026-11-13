@@ -8,6 +8,10 @@ type ChooseTestsProps = {
   result: AttemptResult | undefined
   submitting: boolean
   onSubmit: (selected: string[]) => Promise<void>
+  /** The student's last answer, to start from when they come back to the activity (#171). */
+  previous?: string[]
+  /** Show the answer only, with no Check answer: an answered mastery item (#144, #171). */
+  readOnly?: boolean
 }
 
 const EN_DASH = '–'
@@ -28,12 +32,20 @@ function describeEdges(test: TestCase): string {
  *
  * The server marks every test case (selected or not) right or wrong, with a reason for a wrong
  * one; that mark shows beside the test case until the student changes that choice. */
-export function ChooseTests({ activity, result, submitting, onSubmit }: ChooseTestsProps) {
-  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
-  const [checked, setChecked] = useState<ReadonlySet<string>>(new Set())
+export function ChooseTests({
+  activity,
+  result,
+  submitting,
+  onSubmit,
+  previous,
+  readOnly,
+}: ChooseTestsProps) {
+  // A restored answer is the one its restored result is about, so its marks show (#171).
+  const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set(previous))
+  const [checked, setChecked] = useState<ReadonlySet<string>>(() => new Set(previous))
   const [missing, setMissing] = useState(false)
   const baseId = useId()
-  const disabled = submitting || result?.correct === true
+  const disabled = submitting || result?.correct === true || !!readOnly
   const parts = new Map(result?.parts.map((part) => [part.ref, part]))
 
   function toggle(testId: string) {
@@ -129,18 +141,20 @@ export function ChooseTests({ activity, result, submitting, onSubmit }: ChooseTe
           Choose at least one test case before checking.
         </p>
       )}
-      <div>
-        {/* Focusable while the answer is checked, so a failed check leaves focus here and a
-            result can take it from here (WCAG 2.4.3). */}
-        <Button
-          type="submit"
-          loading={submitting}
-          keepFocusWhileLoading
-          disabled={result?.correct === true}
-        >
-          Check answer
-        </Button>
-      </div>
+      {!readOnly && (
+        <div>
+          {/* Focusable while the answer is checked, so a failed check leaves focus here and a
+              result can take it from here (WCAG 2.4.3). */}
+          <Button
+            type="submit"
+            loading={submitting}
+            keepFocusWhileLoading
+            disabled={result?.correct === true}
+          >
+            Check answer
+          </Button>
+        </div>
+      )}
     </form>
   )
 }

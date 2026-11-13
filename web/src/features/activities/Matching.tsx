@@ -9,6 +9,10 @@ type MatchingProps = {
   onSubmit: (pairs: Record<string, string>) => Promise<void>
   /** False when the prompt is shown beside the question's picture instead (#155). */
   showPrompt?: boolean
+  /** The student's last answer, to start from when they come back to the activity (#171). */
+  previous?: Record<string, string>
+  /** Show the answer only, with no Check answer: an answered mastery item (#144, #171). */
+  readOnly?: boolean
 }
 
 /** Pair each item on the left with one on the right, using a plain select per item so it works
@@ -21,10 +25,13 @@ export function Matching({
   submitting,
   onSubmit,
   showPrompt = true,
+  previous,
+  readOnly,
 }: MatchingProps) {
-  const [pairs, setPairs] = useState<Record<string, string>>({})
-  const [checked, setChecked] = useState<Record<string, string>>({})
-  const disabled = submitting || result?.correct === true
+  // A restored answer is the one its restored result is about, so its marks show (#171).
+  const [pairs, setPairs] = useState<Record<string, string>>(previous ?? {})
+  const [checked, setChecked] = useState<Record<string, string>>(previous ?? {})
+  const disabled = submitting || result?.correct === true || !!readOnly
   const parts = new Map(result?.parts.map((part) => [part.ref, part]))
 
   return (
@@ -81,18 +88,20 @@ export function Matching({
           )
         })}
       </ul>
-      <div>
-        {/* Focusable while the answer is checked, so a failed check leaves focus here and a
-            result can take it from here (WCAG 2.4.3). */}
-        <Button
-          type="submit"
-          loading={submitting}
-          keepFocusWhileLoading
-          disabled={result?.correct === true}
-        >
-          Check answer
-        </Button>
-      </div>
+      {!readOnly && (
+        <div>
+          {/* Focusable while the answer is checked, so a failed check leaves focus here and a
+              result can take it from here (WCAG 2.4.3). */}
+          <Button
+            type="submit"
+            loading={submitting}
+            keepFocusWhileLoading
+            disabled={result?.correct === true}
+          >
+            Check answer
+          </Button>
+        </div>
+      )}
     </form>
   )
 }

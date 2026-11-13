@@ -7,15 +7,26 @@ type MultipleChoiceProps = {
   result: AttemptResult | undefined
   submitting: boolean
   onSubmit: (selected: string) => Promise<void>
+  /** The student's last answer, to start from when they come back to the activity (#171). */
+  previous?: string
+  /** Show the answer only, with no Check answer: an answered mastery item (#144, #171). */
+  readOnly?: boolean
 }
 
 /** One question, one answer from a list of options. The server says why a wrong option is wrong
  * (FR-4.2); the page's feedback panel shows it. */
-export function MultipleChoice({ activity, result, submitting, onSubmit }: MultipleChoiceProps) {
-  const [selected, setSelected] = useState('')
+export function MultipleChoice({
+  activity,
+  result,
+  submitting,
+  onSubmit,
+  previous,
+  readOnly,
+}: MultipleChoiceProps) {
+  const [selected, setSelected] = useState(previous ?? '')
   const [missing, setMissing] = useState(false)
   const name = useId()
-  const disabled = submitting || result?.correct === true
+  const disabled = submitting || result?.correct === true || !!readOnly
 
   return (
     <form
@@ -56,18 +67,20 @@ export function MultipleChoice({ activity, result, submitting, onSubmit }: Multi
           Choose an answer before checking it.
         </p>
       )}
-      <div>
-        {/* Focusable while the answer is checked, so a failed check leaves focus here and a
-            result can take it from here (WCAG 2.4.3). */}
-        <Button
-          type="submit"
-          loading={submitting}
-          keepFocusWhileLoading
-          disabled={result?.correct === true}
-        >
-          Check answer
-        </Button>
-      </div>
+      {!readOnly && (
+        <div>
+          {/* Focusable while the answer is checked, so a failed check leaves focus here and a
+              result can take it from here (WCAG 2.4.3). */}
+          <Button
+            type="submit"
+            loading={submitting}
+            keepFocusWhileLoading
+            disabled={result?.correct === true}
+          >
+            Check answer
+          </Button>
+        </div>
+      )}
     </form>
   )
 }

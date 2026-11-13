@@ -224,6 +224,34 @@ def test_no_more_hints_once_the_answer_is_right(client: TestClient, db: Session)
     assert [h["level"] for h in client.get(f"{url}/hints").json()] == [1, 2]
 
 
+def test_coming_back_shows_the_latest_answer_and_its_result(
+    client: TestClient, db: Session
+) -> None:
+    """An activity remembers the student's latest answer and the result they were shown, so
+    coming back (Previous, a refresh, the module again) doesn't show a blank form (#171)."""
+    activity_id = make_activity(db, **CHOICE)
+    log_in(client)
+    url = f"/api/activities/{activity_id}"
+    assert client.get(url).json()["lastAttempt"] is None
+
+    wrong = client.post(f"{url}/attempts", json={"submitted": {"selected": "c"}}).json()
+    right = client.post(f"{url}/attempts", json={"submitted": {"selected": "a"}}).json()
+    last = client.get(url).json()["lastAttempt"]
+    assert last["submitted"] == {"selected": "a"}
+    assert last["result"] == right  # exactly what the student was shown for it
+    assert last["result"] != wrong
+
+
+def test_another_student_never_sees_my_last_answer(client: TestClient, db: Session) -> None:
+    activity_id = make_activity(db, **CHOICE)
+    log_in(client)
+    client.post(f"/api/activities/{activity_id}/attempts", json={"submitted": {"selected": "c"}})
+    client.post("/api/auth/logout")
+    other = {"email": "bob@example.com", "password": "Correct horse 2", "displayName": "Bob"}
+    assert client.post("/api/auth/register", json=other).status_code == 201
+    assert client.get(f"/api/activities/{activity_id}").json()["lastAttempt"] is None
+
+
 def test_hint_progress_is_per_student(client: TestClient, db: Session) -> None:
     activity_id = make_choice_with_hints(db)
     log_in(client)

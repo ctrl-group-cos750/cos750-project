@@ -886,6 +886,24 @@ def test_a_mastery_item_takes_one_answer(client: TestClient, course: Path) -> No
     assert "first answer counts" in again.json()["detail"]
 
 
+def test_coming_back_to_a_mastery_item_shows_the_answer_but_not_its_result(
+    client: TestClient, course: Path
+) -> None:
+    """The student sees what they chose (#171), but the result stays withheld until the report,
+    as when they answered (#144)."""
+    log_in(client)
+    answer(client, 603, WRONG)
+    last = client.get("/api/activities/603").json()["lastAttempt"]
+    assert last["submitted"] == WRONG["submitted"]
+    result = last["result"]
+    assert (result["correct"], result["score"], result["parts"], result["withheld"]) == (
+        None,
+        None,
+        [],
+        True,
+    )
+
+
 def test_practice_and_review_items_are_not_in_the_check(client: TestClient, course: Path) -> None:
     log_in(client)
     practice = client.post("/api/activities/301/attempts", json=RIGHT).json()

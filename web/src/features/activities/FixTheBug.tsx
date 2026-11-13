@@ -9,12 +9,44 @@ type FixTheBugProps = {
   result: AttemptResult | undefined
   submitting: boolean
   onSubmit: (order: number[]) => Promise<void>
+  /** The student's last answer, to start from when they come back to the activity (#171). */
+  previous?: number[]
+  /** Show the answer only, with no Check answer: an answered mastery item (#144, #171). */
+  readOnly?: boolean
 }
 
 /** One line of the student's program. `original` is the faulty program's line this row started
  * as (null for a correction inserted as a new line); `current` is the line or correction it
  * holds now. */
 type Row = { key: number; original: number | null; current: number }
+
+/** A sent program as the screen's rows (#171). The answer is only ids, so which faulty line a
+ * correction replaced isn't stored, and is worked out by position: a correction is paired with
+ * the first faulty line left out after the last faulty line kept before it (if line 3 was removed
+ * and line 5 replaced, the correction after line 4 goes with line 5). The faulty lines left over
+ * are the removed ones, which can be put back. A correction inserted as a new line can still be
+ * paired with a removed line next to it; that only changes which line Remove puts back, never
+ * the program sent. */
+function restore(
+  lines: readonly { id: number }[],
+  order: readonly number[],
+): { rows: Row[]; removed: number[] } {
+  const position = new Map(lines.map((line, index) => [line.id, index]))
+  const missing = lines.map((line) => line.id).filter((id) => !order.includes(id))
+  let after = -1 // the position of the last faulty line kept (or paired) so far
+  const rows = order.map((id, index): Row => {
+    const kept = position.get(id)
+    if (kept !== undefined) {
+      after = kept
+      return { key: id, original: id, current: id }
+    }
+    const next = missing.findIndex((line) => (position.get(line) ?? -1) > after)
+    const [original] = missing.splice(next < 0 ? 0 : next, 1)
+    if (original !== undefined) after = position.get(original) ?? after
+    return { key: 100_000 + index, original: original ?? null, current: id }
+  })
+  return { rows, removed: missing }
+}
 
 /** Fix a faulty BFS (FR-5.5; objective 7, ID document §4.4 and Table 1 row 7). The program starts
  * as the faulty version. For each line the student can keep it, replace it with one of the given
@@ -34,12 +66,22 @@ type Row = { key: number; original: number | null; current: number }
  * telling place), and the ids it carries can be read in the browser's developer tools. A line's
  * indentation is drawn and also given in words ("indent level 2"),
  * in the code, the option labels and the button names, as for the Parsons lines (#142). */
-export function FixTheBug({ activity, result, submitting, onSubmit }: FixTheBugProps) {
+export function FixTheBug({
+  activity,
+  result,
+  submitting,
+  onSubmit,
+  previous,
+  readOnly,
+}: FixTheBugProps) {
   const { lines, corrections } = activity.config
-  const [rows, setRows] = useState<Row[]>(() =>
-    lines.map((line) => ({ key: line.id, original: line.id, current: line.id })),
+  const [restored] = useState(() => (previous ? restore(lines, previous) : undefined))
+  const [rows, setRows] = useState<Row[]>(
+    () =>
+      restored?.rows ??
+      lines.map((line) => ({ key: line.id, original: line.id, current: line.id })),
   )
-  const [removed, setRemoved] = useState<number[]>([])
+  const [removed, setRemoved] = useState<number[]>(restored?.removed ?? [])
   const [nextKey, setNextKey] = useState(() => Math.max(0, ...lines.map((l) => l.id)) + 1000)
   const [insertId, setInsertId] = useState('')
   const [insertAfter, setInsertAfter] = useState('end')
@@ -64,7 +106,8 @@ export function FixTheBug({ activity, result, submitting, onSubmit }: FixTheBugP
   })
 
   const byId = new Map<number, CodeLine>([...lines, ...corrections].map((l) => [l.id, l]))
-  const disabled = submitting || result?.correct === true
+  // Read-only too: a disabled fieldset around it doesn't stop dragging (#171).
+  const disabled = submitting || result?.correct === true || !!readOnly
   const parts = cleared ? undefined : result?.parts
   const partAt = new Map(parts?.map((part) => [part.ref, part]))
   const missingParts = parts?.filter((part) => part.ref >= rows.length && !part.correct) ?? []
@@ -324,18 +367,20 @@ export function FixTheBug({ activity, result, submitting, onSubmit }: FixTheBugP
           </ul>
         </section>
       )}
-      <div>
-        {/* Focusable while the answer is checked, so a failed check leaves focus here and a
-            result can take it from here (WCAG 2.4.3). */}
-        <Button
-          type="submit"
-          loading={submitting}
-          keepFocusWhileLoading
-          disabled={result?.correct === true}
-        >
-          Check answer
-        </Button>
-      </div>
+      {!readOnly && (
+        <div>
+          {/* Focusable while the answer is checked, so a failed check leaves focus here and a
+              result can take it from here (WCAG 2.4.3). */}
+          <Button
+            type="submit"
+            loading={submitting}
+            keepFocusWhileLoading
+            disabled={result?.correct === true}
+          >
+            Check answer
+          </Button>
+        </div>
+      )}
     </form>
   )
 }

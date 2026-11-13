@@ -9,7 +9,7 @@ import { Matching } from './Matching.tsx'
 import { MultipleChoice } from './MultipleChoice.tsx'
 import { ParsonsProblem } from './ParsonsProblem.tsx'
 import { TraceTable } from './TraceTable.tsx'
-import type { Activity, AttemptResult, Hint, Submission } from './activities.types.ts'
+import type { Activity, AttemptResult, Hint, LastAttempt, Submission } from './activities.types.ts'
 import { answerView } from './pictures/answerTabs.ts'
 import { PicturePanel } from './pictures/PicturePanel.tsx'
 import { useMediaQuery, WIDE } from './pictures/useMediaQuery.ts'
@@ -25,6 +25,8 @@ type ActivityRendererProps = {
   heading?: 'h1' | 'h2' | 'h3'
   /** False inside a module segment, whose own heading already names the question. */
   showTitle?: boolean
+  /** The student's last answer, which each control starts from when they come back (#171). */
+  previous?: LastAttempt['submitted']
 }
 
 // The kinds a student can answer: today every kind the API has (FR-4.1, FR-5.5). The API's
@@ -58,7 +60,12 @@ export function ActivityRenderer(props: ActivityRendererProps) {
   // Pictures are for practice items only: a mastery item never shows a correct graph (#155).
   const pictures = check ? undefined : picturesForActivity(props.activity.id)
   const wide = useMediaQuery(WIDE)
-  const [submitted, setSubmitted] = useState<Submission>()
+  const [submitted, setSubmitted] = useState<Submission | undefined>(
+    () => props.previous as Submission | undefined,
+  )
+  // What each control starts from: the answer given on this screen, else the last one (#171).
+  // A control reads it only when it first mounts, so this only matters if it is mounted again.
+  const previous: LastAttempt['submitted'] | undefined = submitted ?? props.previous
   const [hintLevel, setHintLevel] = useState(0)
   const onLevel = useCallback((level: number) => setHintLevel(level), [])
   const onSubmit = (submission: Submission) => {
@@ -69,72 +76,112 @@ export function ActivityRenderer(props: ActivityRendererProps) {
   const compare =
     props.result?.correct === true || Math.max(hintLevel, props.result?.hintLevel ?? 0) >= 4
 
-  const checkNote = check && !answeredInCheck && (
-    <p className="mb-4 text-sm text-muted-foreground">
-      Only your first answer counts, so check it before you send it. You will see your results in
-      your mastery report when you finish the check.
-    </p>
-  )
-  const control = answeredInCheck ? (
-    // Just answered: the feedback panel below says so. Answered before: say it here.
-    !props.result && (
-      <Alert tone="info" title="Answer recorded">
-        You have answered this question. Only your first answer counts, so it can't be changed. Your
-        results are in your mastery report when you finish the check.
-      </Alert>
+  // A mastery item always says why it takes one answer. Once answered with its result on screen,
+  // the feedback panel says it was recorded and where the results are; with no result yet, the
+  // "Answer recorded" alert above the answer says all of it (#144, #171).
+  const checkNote =
+    check &&
+    (!answeredInCheck ? (
+      <p className="mb-4 text-sm text-muted-foreground">
+        Only your first answer counts, so check it before you send it. You will see your results in
+        your mastery report when you finish the check.
+      </p>
+    ) : (
+      props.result && (
+        <p className="mb-4 text-sm text-muted-foreground">
+          You have answered this question. Only your first answer counts, so it can't be changed.
+        </p>
+      )
+    ))
+  const screen =
+    props.activity.kind === 'parsons' ? (
+      <ParsonsProblem
+        activity={props.activity}
+        result={props.result}
+        submitting={props.submitting}
+        onSubmit={(order) => onSubmit({ order })}
+        previous={previous?.order}
+        readOnly={answeredInCheck}
+      />
+    ) : props.activity.kind === 'fill_in' ? (
+      <FillInCode
+        activity={props.activity}
+        result={props.result}
+        submitting={props.submitting}
+        onSubmit={(answers) => onSubmit({ answers })}
+        previous={previous?.answers}
+        readOnly={answeredInCheck}
+      />
+    ) : props.activity.kind === 'multiple_choice' ? (
+      <MultipleChoice
+        activity={props.activity}
+        result={props.result}
+        submitting={props.submitting}
+        onSubmit={(selected) => onSubmit({ selected })}
+        previous={typeof previous?.selected === 'string' ? previous.selected : undefined}
+        readOnly={answeredInCheck}
+      />
+    ) : props.activity.kind === 'matching' ? (
+      <Matching
+        activity={props.activity}
+        result={props.result}
+        submitting={props.submitting}
+        onSubmit={(pairs) => onSubmit({ pairs })}
+        showPrompt={!pictures}
+        previous={previous?.pairs}
+        readOnly={answeredInCheck}
+      />
+    ) : props.activity.kind === 'trace' ? (
+      <TraceTable
+        activity={props.activity}
+        result={props.result}
+        submitting={props.submitting}
+        onSubmit={(rows) => onSubmit({ rows })}
+        previous={previous?.rows}
+        readOnly={answeredInCheck}
+      />
+    ) : props.activity.kind === 'fix_the_bug' ? (
+      <FixTheBug
+        activity={props.activity}
+        result={props.result}
+        submitting={props.submitting}
+        onSubmit={(order) => onSubmit({ order })}
+        previous={previous?.order}
+        readOnly={answeredInCheck}
+      />
+    ) : props.activity.kind === 'choose_tests' ? (
+      <ChooseTests
+        activity={props.activity}
+        result={props.result}
+        submitting={props.submitting}
+        onSubmit={(selected) => onSubmit({ selected })}
+        previous={Array.isArray(previous?.selected) ? previous.selected : undefined}
+        readOnly={answeredInCheck}
+      />
+    ) : (
+      <Alert tone="warning">This activity kind is not available yet.</Alert>
     )
-  ) : props.activity.kind === 'parsons' ? (
-    <ParsonsProblem
-      activity={props.activity}
-      result={props.result}
-      submitting={props.submitting}
-      onSubmit={(order) => onSubmit({ order })}
-    />
-  ) : props.activity.kind === 'fill_in' ? (
-    <FillInCode
-      activity={props.activity}
-      result={props.result}
-      submitting={props.submitting}
-      onSubmit={(answers) => onSubmit({ answers })}
-    />
-  ) : props.activity.kind === 'multiple_choice' ? (
-    <MultipleChoice
-      activity={props.activity}
-      result={props.result}
-      submitting={props.submitting}
-      onSubmit={(selected) => onSubmit({ selected })}
-    />
-  ) : props.activity.kind === 'matching' ? (
-    <Matching
-      activity={props.activity}
-      result={props.result}
-      submitting={props.submitting}
-      onSubmit={(pairs) => onSubmit({ pairs })}
-      showPrompt={!pictures}
-    />
-  ) : props.activity.kind === 'trace' ? (
-    <TraceTable
-      activity={props.activity}
-      result={props.result}
-      submitting={props.submitting}
-      onSubmit={(rows) => onSubmit({ rows })}
-    />
-  ) : props.activity.kind === 'fix_the_bug' ? (
-    <FixTheBug
-      activity={props.activity}
-      result={props.result}
-      submitting={props.submitting}
-      onSubmit={(order) => onSubmit({ order })}
-    />
-  ) : props.activity.kind === 'choose_tests' ? (
-    <ChooseTests
-      activity={props.activity}
-      result={props.result}
-      submitting={props.submitting}
-      onSubmit={(selected) => onSubmit({ selected })}
-    />
-  ) : (
-    <Alert tone="warning">This activity kind is not available yet.</Alert>
+  // An answered mastery item shows the answer, read-only: only the first answer counts (#144).
+  // Its result stays withheld; the feedback panel says it was recorded (#171). The control is
+  // always inside the fieldset, answered or not, so answering doesn't remount it: a remounted
+  // control would start again from the answer the page loaded with, which on a first answer is
+  // none, and the answer just given would vanish.
+  const control = (
+    <>
+      {answeredInCheck && !props.result && (
+        <Alert tone="info" title="Answer recorded">
+          You have answered this question. Only your first answer counts, so it can't be changed.
+          Your results are in your mastery report when you finish the check.
+        </Alert>
+      )}
+      <fieldset
+        disabled={answeredInCheck}
+        aria-label={answeredInCheck ? 'Your answer' : undefined}
+        className="m-0 min-w-0 border-0 p-0"
+      >
+        {screen}
+      </fieldset>
+    </>
   )
   const feedback = isSupported && <FeedbackPanel result={props.result} />
   const hints = isSupported && (

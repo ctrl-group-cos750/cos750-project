@@ -34,7 +34,8 @@ export function FeedbackPanel({ result }: FeedbackPanelProps) {
   if (!result) return null
   return (
     // The section (a "Submission results" region, as before) is not what takes focus; the result is.
-    <section aria-label="Submission results" className="grid gap-3">
+    // `data-result-id` tells a new result from one restored on load (#171), for the e2e tests.
+    <section aria-label="Submission results" data-result-id={result.id} className="grid gap-3">
       <Alert
         ref={alert}
         announce="focus"

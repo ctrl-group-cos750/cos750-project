@@ -90,7 +90,9 @@ export interface paths {
      * Get Activity
      * @description The activity to render. `ActivityOut` has no `solution`, so the answer never reaches the
      *     browser (FR-5.3, NFR-S2). `solved` says whether this student has already answered it
-     *     correctly, so the page stops offering hints after a refresh too (#158). 403 while the
+     *     correctly, so the page stops offering hints after a refresh too (#158), and `lastAttempt`
+     *     holds this student's latest answer and the result for it, as marked now, so coming back to an
+     *     activity shows it (#171; withheld on a mastery check item, as when answered). 403 while the
      *     activity's module is locked or its review path is closed, 404 if it doesn't exist or is no
      *     longer part of the course.
      */
@@ -1235,6 +1237,7 @@ export interface components {
        * @default false
        */
       answered: boolean
+      lastAttempt?: components['schemas']['LastAttemptOut'] | null
     }
     /**
      * AttemptIn
@@ -1884,6 +1887,18 @@ export interface components {
       activities: components['schemas']['ActivityInsight'][]
       /** Videos */
       videos: components['schemas']['VideoInsight'][]
+    }
+    /**
+     * LastAttemptOut
+     * @description A student's latest answer to an activity (#171): what they chose, in the kind's shape (as
+     *     sent in `AttemptIn.submitted`), and the result for it, as marked now.
+     */
+    LastAttemptOut: {
+      /** Submitted */
+      submitted: {
+        [key: string]: unknown
+      }
+      result: components['schemas']['AttemptOut']
     }
     /** LoginIn */
     LoginIn: {

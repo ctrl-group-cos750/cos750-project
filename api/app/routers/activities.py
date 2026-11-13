@@ -14,7 +14,7 @@ from sqlalchemy import select
 
 from app.auth import CurrentUser
 from app.db import DbSession
-from app.models import Activity, Hint, User
+from app.models import Activity, Attempt, Hint, User
 from app.rate_limit import RateLimiter
 from app.schemas.activities import (
     MAX_SUBMISSION_BYTES,
@@ -22,6 +22,8 @@ from app.schemas.activities import (
     AttemptIn,
     AttemptOut,
     HintOut,
+    LastAttemptOut,
+    PartResult,
 )
 from app.schemas.ids import RowId
 from app.services.access import activity_refusal
@@ -75,6 +77,46 @@ def _checked(activity: Activity, user: User) -> bool:
     """Whether the mastery check's rules apply: a module 6 item, answered by a student (#144).
     Staff are let through, so the content editor's "Open as a student" still shows each result."""
     return in_check(activity) and not user.is_staff
+
+
+def _attempt_out(attempt: Attempt, checked: bool) -> AttemptOut:
+    """An attempt's result as the student is shown it: in full, or `withheld` on a mastery check
+    item (#144), where nothing says whether it was right."""
+    if checked:
+        return AttemptOut(
+            id=attempt.id,
+            activity_id=attempt.activity_id,
+            correct=None,
+            score=None,
+            parts=[],
+            feedback=RECORDED,
+            hint_level=attempt.hint_level,
+            withheld=True,
+        )
+    return AttemptOut(
+        id=attempt.id,
+        activity_id=attempt.activity_id,
+        correct=attempt.correct,
+        score=attempt.score,
+        parts=[PartResult.model_validate(p) for p in (attempt.detail or {}).get("parts", [])],
+        feedback=str((attempt.detail or {}).get("feedback", "")),
+        hint_level=attempt.hint_level,
+    )
+
+
+def _last_attempt(session: DbSession, user: User, activity: Activity) -> LastAttemptOut | None:
+    """This student's latest answer to the activity and its result (#171), or None."""
+    attempt = session.scalar(
+        select(Attempt)
+        .where(Attempt.user_id == user.id, Attempt.activity_id == activity.id)
+        .order_by(Attempt.id.desc())
+        .limit(1)
+    )
+    if attempt is None:
+        return None
+    return LastAttemptOut(
+        submitted=attempt.submitted, result=_attempt_out(attempt, _checked(activity, user))
+    )
 
 
 def _hint_out(hint: Hint, following: Hint | None, limit: int | None) -> HintOut:
@@ -137,7 +179,9 @@ def _activity_or_404(session: DbSession, activity_id: int, user: User) -> Activi
 def get_activity(activity_id: RowId, session: DbSession, user: CurrentUser) -> ActivityOut:
     """The activity to render. `ActivityOut` has no `solution`, so the answer never reaches the
     browser (FR-5.3, NFR-S2). `solved` says whether this student has already answered it
-    correctly, so the page stops offering hints after a refresh too (#158). 403 while the
+    correctly, so the page stops offering hints after a refresh too (#158), and `lastAttempt`
+    holds this student's latest answer and the result for it, as marked now, so coming back to an
+    activity shows it (#171; withheld on a mastery check item, as when answered). 403 while the
     activity's module is locked or its review path is closed, 404 if it doesn't exist or is no
     longer part of the course."""
     activity = _activity_or_404(session, activity_id, user)
@@ -147,6 +191,7 @@ def get_activity(activity_id: RowId, session: DbSession, user: CurrentUser) -> A
         out.answered = answered(session, user.id, activity.id)
     else:
         out.solved = answered_correctly(session, user.id, activity.id)
+    out.last_attempt = _last_attempt(session, user, activity)  # coming back shows it (#171)
     return out
 
 
@@ -191,7 +236,7 @@ def submit_attempt(
         submitted = clean(activity.kind, body.submitted)
         if submission_problem(activity.kind, activity.config, submitted) is not None:
             raise HTTPException(422, detail=FOREIGN)
-        attempt, result = record_attempt(session, user.id, activity, submitted, one_answer=checked)
+        attempt, _ = record_attempt(session, user.id, activity, submitted, one_answer=checked)
     except AlreadyAnswered:  # the mastery check takes one answer (#144)
         raise HTTPException(status.HTTP_409_CONFLICT, detail=ALREADY_ANSWERED) from None
     except ValidationError as exc:  # the submission didn't match the kind's shape
@@ -201,26 +246,7 @@ def submit_attempt(
     except ActivityGone:  # the seed deleted it while this answer waited
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NOT_FOUND) from None
     session.commit()
-    if checked:
-        return AttemptOut(
-            id=attempt.id,
-            activity_id=activity.id,
-            correct=None,
-            score=None,
-            parts=[],
-            feedback=RECORDED,
-            hint_level=attempt.hint_level,
-            withheld=True,
-        )
-    return AttemptOut(
-        id=attempt.id,
-        activity_id=activity.id,
-        correct=result.correct,
-        score=result.score,
-        parts=result.parts,
-        feedback=result.feedback,
-        hint_level=attempt.hint_level,
-    )
+    return _attempt_out(attempt, checked)
 
 
 @router.get("/{activity_id}/hints")

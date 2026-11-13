@@ -5710,7 +5710,8 @@
             "enum": [
               "practise",
               "revisit",
-              "review"
+              "review",
+              "check"
             ],
             "title": "Kind"
           },
@@ -5757,7 +5758,7 @@
           "objectiveId"
         ],
         "title": "ImproveOut",
-        "description": "Where the student can work on an objective (#214): `practise` in a module (at `segment`,\n0-based, when they can open it there), `revisit` a module (secure in practice, or met with\nsupport), or its `review` path once module 6 has said \"not yet\" (FR-7.5). Never module 6."
+        "description": "Where the student can work on an objective (#214): `practise` in a module (at `segment`,\n0-based, when they can open it there), `revisit` a module (secure in practice, or met with\nsupport), its `review` path once module 6 has said \"not yet\" (FR-7.5), or the mastery `check`\n(module 6) once practice can no longer make it secure: too many first answers weren't on your\nown, and only a first attempt counts (FR-9.6). Never module 6 to practise."
       },
       "Insights": {
         "properties": {
@@ -6100,7 +6101,7 @@
           "objectives"
         ],
         "title": "ModuleMedalOut",
-        "description": "A module's medal (FR-9.8): `medal` once the module is complete (gold, every activity right\nat the first attempt without a hint; silver, right at the first attempt without hint 3 or 4;\nfinished, the module finished with at least one right on your own: not \"bronze\", which is an\nobjective badge's level),\nand `headingFor`, what the answers so far are on course for. Never counts time or speed.\n`objectives` are the learning objectives its activities practise."
+        "description": "A module's medal (FR-9.8): `medal` once the module is complete (gold, every activity right\nat the first attempt without a hint; silver, right at the first attempt without hint 3 or 4;\nfinished, the module finished with at least one right at the first attempt without hint 3 or\n4: not \"bronze\", which is an objective badge's level),\nand `headingFor`, what the answers so far are on course for. Never counts time or speed.\n`objectives` are the learning objectives its activities practise."
       },
       "ModuleOut": {
         "properties": {

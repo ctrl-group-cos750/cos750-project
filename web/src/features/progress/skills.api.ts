@@ -8,10 +8,11 @@ export type SkillLevel = 'not_started' | 'practising' | 'secure'
 export type Medal = 'gold' | 'silver' | 'finished'
 
 /** Where to work on an objective (#214), worked out by the API from the content: `practise` in a
- * module (at `segment`, 0-based, when the student can open it there), `revisit` a module, or its
- * `review` path once module 6 has said "not yet". Never module 6 itself. */
+ * module (at `segment`, 0-based, when the student can open it there), `revisit` a module, its
+ * `review` path once module 6 has said "not yet", or the mastery `check` (module 6) once practice
+ * can no longer make it secure (only a first attempt counts, FR-9.6). Never module 6 to practise. */
 export type Improve = {
-  kind: 'practise' | 'revisit' | 'review'
+  kind: 'practise' | 'revisit' | 'review' | 'check'
   moduleId: number | null
   segment: number | null
   objectiveId: number | null
@@ -21,7 +22,8 @@ export type Improve = {
 export type Skill = {
   id: number
   text: string
-  /** Of `total` practice items: answered at all, right at some point, right without hint 3 or 4. */
+  /** Of `total` practice items: answered at all, right at some point, right at the first attempt
+   * before hint 3 or 4. */
   answered: number
   correct: number
   onYourOwn: number

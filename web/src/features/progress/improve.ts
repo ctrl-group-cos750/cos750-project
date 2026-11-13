@@ -14,8 +14,9 @@ export type ImproveLink = {
 /**
  * The link from an objective on the skill profile to where it can be improved (#214): practise
  * in a module (at the segment, when the student can open it there), revisit a module (secure, or
- * met with support: the result stands), or the review path after a "not yet" in the mastery
- * check. Nothing for gold. The API decides where (`improve`); this only words it.
+ * met with support: the result stands), the review path after a "not yet" in the mastery check,
+ * or the mastery check itself once practice can no longer make it secure (#222 re-review, N1).
+ * Nothing for gold. The API decides where (`improve`); this only words it.
  */
 export function improveLink(skill: Skill): ImproveLink | null {
   const improve = skill.improve
@@ -29,6 +30,13 @@ export function improveLink(skill: Skill): ImproveLink | null {
       quiet: false,
     }
   if (improve.moduleId === null) return null
+  if (improve.kind === 'check')
+    return {
+      to: `/modules/${improve.moduleId}`,
+      text: 'Show it in the mastery check',
+      label: `Improve ${name}: show it in the mastery check`,
+      quiet: false,
+    }
   if (improve.kind === 'revisit')
     return {
       to: `/modules/${improve.moduleId}`,

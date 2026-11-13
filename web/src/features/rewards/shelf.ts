@@ -67,12 +67,16 @@ function item(
   let next: string | undefined
   let review: number | undefined
   if (state === 'locked') {
-    // Objective badges: practised first, in the modules that practise the objective (#214).
+    // Objective badges: practised first, in the modules that practise the objective (#214);
+    // once practice can no longer make it secure (only a first answer counts, FR-9.6), the
+    // mastery check is where it is earned, so it never sends the student to practise in vain.
     next =
       achievement.kind === 'objective'
-        ? skill?.modules?.length
-          ? `Practise it in ${modulesText(skill.modules)} until it is secure.`
-          : `Practise learning objective ${achievement.objective} in the modules until it is secure.`
+        ? skill?.improve?.kind === 'check'
+          ? 'Only a first answer counts, so practice can no longer make it secure. Meet it in the mastery check in module 6.'
+          : skill?.modules?.length
+            ? `Practise it in ${modulesText(skill.modules)} until it is secure.`
+            : `Practise learning objective ${achievement.objective} in the modules until it is secure.`
         : howToEarn[achievement.id]
   } else if (state === 'practised') {
     if (skill?.result === 'not_yet') {

@@ -327,6 +327,11 @@ describe('badge levels', () => {
         skill(1, { level: 'secure', modules: [1] }),
         skill(3, { modules: [1] }),
         skill(6, { modules: [2, 4] }),
+        skill(7, {
+          level: 'practising',
+          modules: [4, 5],
+          improve: { kind: 'check', moduleId: 6, segment: null, objectiveId: null },
+        }),
       ],
     )
     const byId = Object.fromEntries(shelf.objective.map((i) => [i.achievement.id, i]))
@@ -336,6 +341,10 @@ describe('badge levels', () => {
     )
     expect(byId.lo3.next).toBe('Practise it in module 1 until it is secure.')
     expect(byId.lo6.next).toBe('Practise it in modules 2 and 4 until it is secure.')
+    // Practice can no longer make it secure: never "practise it" in vain (#222 re-review, N1).
+    expect(byId.lo7.next).toBe(
+      'Only a first answer counts, so practice can no longer make it secure. Meet it in the mastery check in module 6.',
+    )
     expect(modulesText([1, 2, 5])).toBe('modules 1, 2 and 5')
   })
 

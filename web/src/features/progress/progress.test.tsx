@@ -384,7 +384,7 @@ describe('the skill profile', () => {
     expect(row.querySelector('details')).toHaveAttribute('open')
     expect(row).toHaveTextContent('Objective 5 in full.')
     expect(row).toHaveTextContent(
-      '3 of 4 practice questions answered, 2 right without hint 3 or 4.',
+      '3 of 4 practice questions answered, 2 right at the first try, without hint 3 or 4.',
     )
     expect(row).not.toHaveTextContent('%')
   })

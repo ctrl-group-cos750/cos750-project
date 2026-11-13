@@ -200,8 +200,8 @@ def test_practice_progress_counts_right_answers_per_objective(
         "total": 3,
         "level": "practising",
         "result": None,
-        # Module 1 not started, so it opens where it resumes, not at 103's segment (#214).
-        "improve": {"kind": "practise", "moduleId": 1, "segment": None, "objectiveId": None},
+        # 102's wrong first attempt leaves at most 2 of 3 on your own: the mastery check (N1).
+        "improve": {"kind": "check", "moduleId": 6, "segment": None, "objectiveId": None},
         "modules": [1],
     }
     assert (skills[2]["level"], skills[2]["total"]) == ("not_started", 1)
@@ -395,10 +395,46 @@ def test_each_objective_says_where_to_practise_it(
     # 102 (segment 1) is next for objective 1; 104 (segment 3) is reached for objective 2.
     assert improve(client)[1]["segment"] == 1
     assert improve(client)[2]["segment"] == 3
-    # All of objective 1's items answered, one wrong: back to that one.
+    # 102 wrong at the first attempt: it never counts again (FR-9.6), and 2 of 3 can't be 80%, so
+    # practice can't make objective 1 secure. Not "practise in module 1" (it never could help),
+    # but the mastery check, where it is still decided in full (#222 re-review, N1).
     answer(client, 102, WRONG)
+    check = {"kind": "check", "moduleId": 6, "segment": None, "objectiveId": None}
+    assert improve(client)[1] == check
+    answer(client, 102)  # right after wrong, and 103 still to do: still the check
+    assert improve(client)[1] == check
     answer(client, 103)
-    assert improve(client)[1]["segment"] == 1
+    assert improve(client)[1] == check
+    level = {s["id"]: s["level"] for s in profile(client)["objectives"]}
+    assert level[1] == "practising"
+
+
+def test_practise_is_offered_while_secure_is_still_in_reach(
+    client: TestClient, db: Session, tmp_path: Path
+) -> None:
+    """Five practice items allow one wrong first attempt (4 of 5 is 80%): with one missed and some
+    still to do, practice can still make it secure, so it still says where to practise."""
+    data = course()
+    module = data["modules"][0]
+    module["segments"] = [segment(1000 + n, 100 + n) for n in range(1, 6)] + [segment(1009, 109)]
+    data["activities"] = [a for a in data["activities"] if a["id"] not in (104, 105)] + [
+        mcq(104, 1, 1),
+        mcq(105, 1, 1),
+        mcq(109, 2, 1),
+    ]
+    (tmp_path / "course.json").write_text(json.dumps(data), encoding="utf-8")
+    load(db, tmp_path)
+    user = log_in(client)
+    reach(db, user, 1, 5)
+    answer(client, 101, WRONG)
+    assert improve(client)[1] == {
+        "kind": "practise",
+        "moduleId": 1,
+        "segment": 1,
+        "objectiveId": None,
+    }
+    answer(client, 102, WRONG)  # two of five missed: 3 of 5 can't be 80%
+    assert improve(client)[1]["kind"] == "check"
 
 
 def test_secure_offers_a_revisit_and_gold_nothing(

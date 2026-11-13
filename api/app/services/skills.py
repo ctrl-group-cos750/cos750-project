@@ -49,16 +49,22 @@ Then (`medal_for`, the one place the rule lives):
 out here from the content so the web doesn't guess (`improve`):
 
 - *not started* or *practising*: **practise** in the first module, in course order, with a practice
-  item on it the student hasn't answered yet (or, all answered, hasn't got right without hint 3
-  or 4), at that item's segment when the student has already reached it (a segment further on
-  can't be opened yet, FR-2.7, so the module opens where it resumes);
+  item on it the student hasn't answered yet, at that item's segment when the student has already
+  reached it (a segment further on can't be opened yet, FR-2.7, so the module opens where it
+  resumes);
+- *practising*, but secure is out of reach: only a first attempt counts, so once more than a fifth
+  of an objective's practice items had a first answer that wasn't on your own, no amount of
+  practice makes it secure (an objective with fewer than five allows none). Sending the student
+  back to practise would send them somewhere that can never help (#222 re-review, N1), so it
+  points to the mastery **check** (module 6) instead, where the objective is still met in full;
 - *secure*, or bronze (met with support, which only a review path gives): **revisit** the first module that practises it
   (the result stands; going over it again is the student's choice);
 - *not yet* from the mastery check: its **review** path, the designed route after module 6, once
   open (FR-7.5);
 - gold: nothing.
 
-Never into module 6 (the mastery check): its items aren't practice.
+Never into module 6 to practise: its items aren't practice. The check kind only says that the
+mastery check is where the objective is decided now.
 
 A module whose quick check the student passed earns silver: the check showed the student can do
 it on their own, but not every activity was answered. That stays when the student works through
@@ -105,7 +111,7 @@ Level = Literal["not_started", "practising", "secure"]
 SECURE_SHARE = 0.8
 
 
-ImproveKind = Literal["practise", "revisit", "review"]
+ImproveKind = Literal["practise", "revisit", "review", "check"]
 
 
 @dataclass(frozen=True)
@@ -113,7 +119,7 @@ class Improve:
     """Where the student can work on an objective (see the docstring)."""
 
     kind: ImproveKind
-    module_id: int | None = None  # the module (its id is its number), for practise and revisit
+    module_id: int | None = None  # the module (its id is its number): practise, revisit, check
     segment: int | None = None  # the segment to open at, 0-based, when the student can open it
     objective_id: int | None = None  # the review path's objective, for review
 
@@ -162,8 +168,8 @@ def medal_for(
 ) -> Medal | None:
     """The medal for a finished module with `total` activities: gold if every one was right at the
     first attempt before any hint, silver if every one was right at the first attempt before hint 3
-    or 4, finished if at least one was, else none. A module passed by testing out (`tested_out`) earns silver, or better if its
-    activities earn it."""
+    or 4, finished if at least one was, else none. A module passed by testing out (`tested_out`)
+    earns silver, or better if its activities earn it."""
     if total > 0 and first_time >= total:
         return "gold"
     if (total > 0 and on_your_own >= total) or tested_out:
@@ -316,9 +322,12 @@ def _improve(
         return None
     if result == "met_with_support" or level == "secure":
         return Improve("revisit", module_id=places[ordered[0]][1])
-    todo = [a for a in ordered if a not in got.answered] or [
-        a for a in ordered if a not in got.on_own
-    ]
+    # A first answer that wasn't on your own never counts again (the evidence rule, FR-9.6):
+    # with too many of those, practice can't make it secure, so the check is where it is decided.
+    missed = sum(1 for a in mine if a in got.answered and a not in got.on_own)
+    if len(mine) - missed < SECURE_SHARE * len(mine):
+        return Improve("check", module_id=MASTERY_MODULE)
+    todo = [a for a in ordered if a not in got.answered]
     _, module_id, segment = places[(todo or ordered)[0]]
     furthest = reached.get(module_id, 0)
     if segment is not None and furthest is not None and segment > furthest:

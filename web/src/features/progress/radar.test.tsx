@@ -283,6 +283,10 @@ describe('the way to improve each objective (#214)', () => {
       improve: { kind: 'revisit', moduleId: 3, segment: null, objectiveId: null },
     }),
     skill(6, { result: 'met_independently', improve: null }),
+    skill(7, {
+      level: 'practising',
+      improve: { kind: 'check', moduleId: 6, segment: null, objectiveId: null },
+    }),
   ]
 
   it('links each level to the right place, as a real link named from the objective', async () => {
@@ -305,6 +309,11 @@ describe('the way to improve each objective (#214)', () => {
     expect(link('Tracing BFS: revisit module 3')).toHaveAttribute('href', '/modules/3')
     // Not yet: the review path.
     expect(link('Improve Why BFS: follow its review path')).toHaveAttribute('href', '/review/4')
+    // Practice can no longer make it secure: the mastery check (#222 re-review, N1).
+    expect(link('Improve Testing BFS: show it in the mastery check')).toHaveAttribute(
+      'href',
+      '/modules/6',
+    )
     // Gold: nothing to improve.
     const gold = region.querySelector('li[data-objective="6"]')!
     expect(within(gold as HTMLElement).queryByRole('link')).toBeNull()

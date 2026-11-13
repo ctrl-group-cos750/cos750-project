@@ -1982,14 +1982,16 @@ export interface components {
      * ImproveOut
      * @description Where the student can work on an objective (#214): `practise` in a module (at `segment`,
      *     0-based, when they can open it there), `revisit` a module (secure in practice, or met with
-     *     support), or its `review` path once module 6 has said "not yet" (FR-7.5). Never module 6.
+     *     support), its `review` path once module 6 has said "not yet" (FR-7.5), or the mastery `check`
+     *     (module 6) once practice can no longer make it secure: too many first answers weren't on your
+     *     own, and only a first attempt counts (FR-9.6). Never module 6 to practise.
      */
     ImproveOut: {
       /**
        * Kind
        * @enum {string}
        */
-      kind: 'practise' | 'revisit' | 'review'
+      kind: 'practise' | 'revisit' | 'review' | 'check'
       /** Moduleid */
       moduleId: number | null
       /** Segment */
@@ -2118,8 +2120,8 @@ export interface components {
      * ModuleMedalOut
      * @description A module's medal (FR-9.8): `medal` once the module is complete (gold, every activity right
      *     at the first attempt without a hint; silver, right at the first attempt without hint 3 or 4;
-     *     finished, the module finished with at least one right on your own: not "bronze", which is an
-     *     objective badge's level),
+     *     finished, the module finished with at least one right at the first attempt without hint 3 or
+     *     4: not "bronze", which is an objective badge's level),
      *     and `headingFor`, what the answers so far are on course for. Never counts time or speed.
      *     `objectives` are the learning objectives its activities practise.
      */

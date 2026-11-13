@@ -190,12 +190,24 @@ test('module 1: two wrong answers and the student may move on, marked to look at
   await expect(next).toHaveAttribute('aria-disabled', 'true')
   await page.reload()
   await answerActivity(page, segmentRegion(page, segment.title), a, 'wrong')
-  await expect(status).toHaveText('You can move on: this one is marked to look at again.')
+  await expect(status).toHaveText(
+    'You can move on: this one is marked to look at again. Moving on earns no points for it; answer it right later and it does.',
+  )
   await expect(next).not.toHaveAttribute('aria-disabled', 'true')
   await next.click()
   await expect(page.getByText(`Segment ${index + 2} of`)).toBeVisible()
   // Moving on earns nothing: the activity is still not right.
   expect(await points()).toBe(before)
+  // It is listed to look at again, and the link opens it (#215 review).
+  const progress = page.locator('details', { hasText: '1 to look at again' })
+  const beside = page.getByRole('complementary', { name: 'Your progress' })
+  const panel = (await beside.isVisible()) ? beside : progress
+  if (panel === progress) await progress.locator('summary').click()
+  await panel.getByRole('link', { name: segment.title }).click()
+  await expect(page).toHaveURL(new RegExp(`/modules/${module.id}\\?segment=${index}$`))
+  await expect(page.getByRole('heading', { level: 2, name: segment.title })).toBeFocused()
+  await page.goto('/')
+  await expect(page.getByText('1 marked to look at again')).toBeVisible()
 })
 
 // Learner choice (#214): a new student starts where they choose. Module 3 is open from the
@@ -225,7 +237,7 @@ test('a new student tests out of module 3 with its quick check, from the map', a
     await fieldset.getByRole('radio', { name: label, exact: true }).check()
   }
   await page.getByRole('button', { name: 'Check my answers' }).click()
-  await expect(page.getByRole('heading', { name: '3 of 4 right' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /quick check, 3 of 4 right$/ })).toBeVisible()
   await expect(page.getByText('You know this already')).toBeVisible()
   await page.getByRole('link', { name: /^Go to module 4/ }).click()
   await expect(page).toHaveURL(/\/modules\/4$/)
@@ -233,4 +245,31 @@ test('a new student tests out of module 3 with its quick check, from the map', a
   const card = page.getByRole('link', { name: /Meet BFS/ })
   await expect(card).toContainText('tested out')
   await expect(page.getByText('Already know module 3?')).toHaveCount(0)
+  // The result stays one link away (#215 review).
+  await expect(
+    page.getByRole('link', {
+      name: /Quick check: 3 of 4, see the results for module 3/,
+    }),
+  ).toHaveAttribute('href', '/modules/3/check')
+})
+
+// The progress panel beside a lesson fits a 1366 × 900 laptop screen: "See your badges" isn't cut
+// off at its foot (#215 review).
+test.describe('the progress panel on a laptop', () => {
+  test.use({ viewport: { width: 1366, height: 900 } })
+
+  test('fits a 1366 × 900 screen with its badges link in view', async ({ page }) => {
+    await logIn(page, 'mid@demo.example.com', DEMO_PASSWORD)
+    await page.goto('/modules/3')
+    const panel = page.getByRole('complementary', { name: 'Your progress' })
+    const link = panel.getByRole('link', { name: 'See your badges' })
+    await expect(link).toBeVisible()
+    const fit = await panel.evaluate((el) => ({ overflow: el.scrollHeight - el.clientHeight }))
+    expect(fit.overflow, 'the panel scrolls inside itself').toBeLessThanOrEqual(1)
+    const box = await link.boundingBox()
+    const area = await panel.boundingBox()
+    expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(
+      (area?.y ?? 0) + (area?.height ?? 0),
+    )
+  })
 })

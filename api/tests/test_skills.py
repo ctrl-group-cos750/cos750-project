@@ -151,12 +151,14 @@ def profile(client: TestClient) -> dict[str, Any]:
         (3, 4, False, "silver"),
         (0, 4, False, "silver"),
         (3, 3, False, "bronze"),
-        (0, 0, False, "bronze"),
+        (0, 1, False, "bronze"),
+        # Every answer wrong (moved on after two tries): no medal, as no module points (#215).
+        (0, 0, False, None),
         (0, 0, True, "silver"),  # tested out through the quick check
         (4, 4, True, "gold"),
     ],
 )
-def test_the_medal_rule(first: int, own: int, tested_out: bool, medal: str) -> None:
+def test_the_medal_rule(first: int, own: int, tested_out: bool, medal: str | None) -> None:
     assert medal_for(4, first, own, tested_out=tested_out) == medal
 
 

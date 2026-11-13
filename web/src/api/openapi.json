@@ -3730,10 +3730,6 @@
             ],
             "title": "Lastactiveat"
           },
-          "pilotName": {
-            "type": "string",
-            "title": "Pilotname"
-          },
           "stats": {
             "$ref": "#/components/schemas/AccountStats"
           },
@@ -3761,7 +3757,6 @@
           "isStaff",
           "createdAt",
           "lastActiveAt",
-          "pilotName",
           "stats",
           "videos",
           "recentAttempts"
@@ -5830,6 +5825,21 @@
             ],
             "title": "Quickcheck"
           },
+          "quickCheckScore": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuickCheckScoreOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lookAgainCount": {
+            "type": "integer",
+            "title": "Lookagaincount",
+            "default": 0
+          },
           "segments": {
             "items": {
               "$ref": "#/components/schemas/SegmentOut"
@@ -6023,6 +6033,21 @@
               }
             ],
             "title": "Quickcheck"
+          },
+          "quickCheckScore": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuickCheckScoreOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lookAgainCount": {
+            "type": "integer",
+            "title": "Lookagaincount",
+            "default": 0
           }
         },
         "additionalProperties": false,
@@ -6460,6 +6485,26 @@
         ],
         "title": "QuickCheckResultOut",
         "description": "The quick check's result (FR-8.2, #214). `passed` with at most one wrong. `suggestion`:\n`move_on` after a pass, `start_with` an earlier module after a fail that points there (see\napp/services/quick_check.py), else `work_through` this module. `suggested_module` is the\nmodule named: the next one to do after a pass (None if there is none), the earlier one, or\nthis one. `look_at` names what was missed: the titles of the questions answered wrongly."
+      },
+      "QuickCheckScoreOut": {
+        "properties": {
+          "correct": {
+            "type": "integer",
+            "title": "Correct"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "correct",
+          "total"
+        ],
+        "title": "QuickCheckScoreOut",
+        "description": "How a quick check went, for the map and the module page to link back to its result."
       },
       "Readiness": {
         "properties": {

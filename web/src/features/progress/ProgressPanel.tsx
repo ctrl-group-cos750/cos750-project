@@ -19,6 +19,9 @@ export type ProgressPanelProps = {
   moduleNumber?: number
   /** Where the student is in the module, as the module page counts it. */
   place?: { number: number; total: number }
+  /** The module's activities the student moved past without a right answer (FR-2.7), each a
+   * link to its segment (#215 review). */
+  lookAgain?: { position: number; title: string }[]
 }
 
 /** The badges most recently earned or raised to gold, newest first. */
@@ -61,7 +64,7 @@ function MedalLine({ medal }: { medal: ModuleMedal | undefined }) {
 }
 
 /** The panel's contents, the same beside the lesson and in the strip under it. */
-function PanelBody({ moduleId, moduleNumber, place }: ProgressPanelProps) {
+function PanelBody({ moduleId, moduleNumber, place, lookAgain }: ProgressPanelProps) {
   const rewards = useRewards()
   const skills = useSkills()
   const hidden = rewards.data?.hideRewards !== false // hidden until known, never flashed
@@ -84,6 +87,26 @@ function PanelBody({ moduleId, moduleNumber, place }: ProgressPanelProps) {
           {!hidden && <MedalLine medal={medal} />}
         </section>
       )}
+      {moduleId !== undefined && lookAgain && lookAgain.length > 0 && (
+        <section className={styles.block} aria-labelledby="look-again-heading">
+          <h3 id="look-again-heading" className={styles.blockTitle}>
+            To look at again
+          </h3>
+          <p className={styles.muted}>
+            You moved on from {lookAgain.length === 1 ? 'this one' : 'these'} without a right
+            answer, so {lookAgain.length === 1 ? 'it earns' : 'they earn'} nothing yet.
+          </p>
+          <ul className={styles.lookAgain}>
+            {lookAgain.map((item) => (
+              <li key={item.position}>
+                <Link to={`/modules/${moduleId}?segment=${item.position}`} className={styles.link}>
+                  {item.title}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {!hidden && (
         <p className={styles.points}>
           <span className={styles.pointsValue}>{rewards.data?.points ?? 0}</span> points
@@ -97,7 +120,14 @@ function PanelBody({ moduleId, moduleNumber, place }: ProgressPanelProps) {
       )}
       {!hidden && recent.length > 0 && (
         <section className={styles.block} aria-label="Recent badges">
-          <h3 className={styles.blockTitle}>Recent badges</h3>
+          {/* The link beside the heading, not under the list: at the foot of the panel it was cut
+              off on a 1366 × 900 screen (#215 review). */}
+          <div className={styles.blockHead}>
+            <h3 className={styles.blockTitle}>Recent badges</h3>
+            <Link to="/badges" className={styles.link}>
+              See your badges
+            </Link>
+          </div>
           <ul className={styles.recent}>
             {recent.map((item) => (
               <li key={item.key}>
@@ -106,9 +136,6 @@ function PanelBody({ moduleId, moduleNumber, place }: ProgressPanelProps) {
               </li>
             ))}
           </ul>
-          <Link to="/badges" className={styles.link}>
-            See your badges
-          </Link>
         </section>
       )}
     </div>
@@ -146,6 +173,9 @@ export function ProgressPanel({
       <summary>
         Your progress
         {!hidden && <span className={styles.muted}> · {rewards.data?.points ?? 0} points</span>}
+        {props.lookAgain && props.lookAgain.length > 0 && (
+          <span className={styles.muted}> · {props.lookAgain.length} to look at again</span>
+        )}
       </summary>
       <PanelBody {...props} />
     </details>

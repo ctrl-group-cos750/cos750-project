@@ -48,9 +48,6 @@ class AccountAttempt(ApiModel):
 
 
 class AccountDetail(AccountSummary):
-    # How the pilot's CSV files name this student (app/services/pseudonym.py), so the survey's
-    # participant codes can be joined to the data. The files never carry the account id.
-    pilot_name: str
     stats: AccountStats
     videos: list[AccountVideo]
     recent_attempts: list[AccountAttempt]

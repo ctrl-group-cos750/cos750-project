@@ -9,8 +9,10 @@ import { useSyncExternalStore } from 'react'
  *   remark ("You've practised 3 of 8 objectives so far"). Off, a right answer shows only its own
  *   explanation.
  *
- * Kept per device rather than on the account: they are about how this screen behaves, and storing
- * them would need a migration for no gain.
+ * Kept on this device rather than on the account (storing them would need a migration), but per
+ * student: the key carries the signed-in student's id (`setPreferenceOwner`, from the signed-in
+ * layout), so on a shared lab computer one student turning confetti off doesn't turn it off for
+ * the next (#215 review). The profile says they are kept on this device.
  */
 export type Preference = 'confetti' | 'comments'
 
@@ -18,9 +20,25 @@ const PREFIX = 'ctrl-academy.'
 const CHANGED = 'ctrl-academy:preference-changed'
 const listeners = new Set<(name: Preference, on: boolean) => void>()
 
+// The signed-in student, whose switches are read and written; null before sign-in.
+let owner: number | null = null
+
+function key(name: Preference): string {
+  return owner === null ? PREFIX + name : `${PREFIX}${owner}.${name}`
+}
+
+/** Whose switches these are: the signed-in student's id. Safe to call on every render; when it
+ * changes, every switch on the page is read again. */
+export function setPreferenceOwner(id: number | null): void {
+  if (id === owner) return
+  owner = id
+  // After the render that set it: other components re-read their switches then.
+  queueMicrotask(() => window.dispatchEvent(new Event(CHANGED)))
+}
+
 export function preference(name: Preference): boolean {
   try {
-    return localStorage.getItem(PREFIX + name) !== 'off'
+    return localStorage.getItem(key(name)) !== 'off'
   } catch {
     return true // storage blocked: the default
   }
@@ -28,7 +46,7 @@ export function preference(name: Preference): boolean {
 
 export function setPreference(name: Preference, on: boolean): void {
   try {
-    localStorage.setItem(PREFIX + name, on ? 'on' : 'off')
+    localStorage.setItem(key(name), on ? 'on' : 'off')
   } catch {
     // storage blocked: nothing to keep it in
   }

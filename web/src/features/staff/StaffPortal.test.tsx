@@ -81,7 +81,6 @@ function portalApi(staffIds = [grace.id]) {
       people.find((p) => p.id === id)!,
       staff.has(id),
     ),
-    pilotName: 's-0123456789ab',
     stats: {
       attempts: 4,
       correctAttempts: 3,
@@ -208,8 +207,10 @@ describe('accounts pages', () => {
     expect(screen.getByText('75% of answers')).toBeInTheDocument()
     expect(screen.getByText('1 of 2 checkpoints passed')).toBeInTheDocument()
     expect(screen.getByText('Which leaves first?')).toBeInTheDocument()
-    // The pilot files' name for the student, not the account id (A13).
-    expect(screen.getByText(/s-0123456789ab/)).toBeInTheDocument()
+    // Not the pilot files' name for the student: beside the email it would put a name to every
+    // row of the CSV files (A13, #215 review).
+    expect(screen.queryByText(/CSV files/)).toBeNull()
+    expect(screen.queryByText(/^s-[0-9a-f]{12}$/)).toBeNull()
   })
 
   it('makes an account staff from its overview', async () => {

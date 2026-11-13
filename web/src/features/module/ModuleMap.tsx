@@ -12,7 +12,12 @@ import { medalText } from '../progress/medals.ts'
 import type { Medal as MedalTier } from '../progress/skills.api.ts'
 import { SkillProfileCard } from '../progress/SkillProfileCard.tsx'
 import { useRewards } from '../rewards/hooks.ts'
+import { useMediaQuery } from '../activities/pictures/useMediaQuery.ts'
 import styles from './ModuleMap.module.css'
+
+/** From here the map is two columns: "next up" and the skill profile beside the list
+ * (ModuleMap.module.css). */
+const TWO_COLUMNS = '(min-width: 72rem)'
 
 /** A module with nothing to work through yet (no segments, so it can't be completed). It doesn't
  * lock the ones after it (#123), and it isn't shown as "open" for ever or offered by Continue:
@@ -136,6 +141,9 @@ function ModuleRow({ module, medal }: { module: ModuleSummary; medal?: MedalTier
             </Tag>
           </span>
         )}
+        {(module.lookAgainCount ?? 0) > 0 && (
+          <span className={styles.lookAgain}>{module.lookAgainCount} marked to look at again</span>
+        )}
         {module.status === 'in_progress' && module.segmentCount > 0 && (
           <ProgressBar
             label={`Module ${module.number} progress`}
@@ -170,6 +178,18 @@ function ModuleRow({ module, medal }: { module: ModuleSummary; medal?: MedalTier
           Already know module {module.number}? Take the quick check
         </Link>
       )}
+      {/* A taken quick check stays findable, passed or not (#215 review). */}
+      {module.quickCheckScore && (
+        <p className={styles.quickCheckScore}>
+          Quick check: {module.quickCheckScore.correct} of {module.quickCheckScore.total},{' '}
+          <Link
+            to={`/modules/${module.id}/check`}
+            aria-label={`Quick check: ${module.quickCheckScore.correct} of ${module.quickCheckScore.total}, see the results for module ${module.number}`}
+          >
+            see results
+          </Link>
+        </p>
+      )}
     </li>
   )
 }
@@ -194,6 +214,7 @@ function findContinueTarget(modules: ModuleSummary[]): ModuleSummary | undefined
  */
 export function ModuleMap() {
   const query = useQuery({ queryKey: ['modules'], queryFn: fetchModules })
+  const twoColumns = useMediaQuery(TWO_COLUMNS)
   const skills = useSkills()
   const rewards = useRewards()
 
@@ -234,7 +255,7 @@ export function ModuleMap() {
 
       <div className={styles.side}>
         <NextUp modules={modules} next={continueTarget} />
-        <SkillProfileCard />
+        {twoColumns && <SkillProfileCard />}
       </div>
 
       <section aria-labelledby="all-modules" className={styles.all}>
@@ -247,6 +268,9 @@ export function ModuleMap() {
           ))}
         </ul>
       </section>
+      {/* In one column the skill profile comes after the modules, so it doesn't push the list
+          a screen or more down (about 1,500 px at 320 px, #215 review). */}
+      {!twoColumns && <SkillProfileCard />}
     </div>
   )
 }

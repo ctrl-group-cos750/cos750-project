@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ada, fakeApi, renderApp } from '../../test/app.tsx'
 import type { AttemptResult } from '../activities/activities.types.ts'
+import { CelebrationAllowed } from '../activities/celebration.ts'
 import { FeedbackPanel } from '../activities/FeedbackPanel.tsx'
 import type { ModuleSummary } from '../module/module.types.ts'
 import { rewardsKey } from '../rewards/hooks.ts'
@@ -15,7 +16,7 @@ import {
   stopConfetti,
 } from './confetti.ts'
 import { PRAISE_LINES, praiseFor, progressRemark } from './praise.ts'
-import { setPreference } from './preferences.ts'
+import { setPreference, setPreferenceOwner } from './preferences.ts'
 import { skillsKey } from './hooks.ts'
 import { SkillProfile } from './SkillProfile.tsx'
 import type { ModuleMedal, Skill, Skills } from './skills.api.ts'
@@ -273,6 +274,28 @@ describe('the success moment', () => {
     expect(confettiEnabled()).toBe(false)
     expect(document.querySelector('canvas')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Turn off confetti' })).toBeNull()
+    // Focus isn't dropped on the page with the button: it goes to the line saying it is off.
+    expect(screen.getByText(/Confetti is off/)).toHaveFocus()
+  })
+
+  it('is never shown in the mastery check, not even for its recall questions (#215)', () => {
+    media()
+    drawableCanvas()
+    const client = new QueryClient()
+    client.setQueryData(rewardsKey, { hideRewards: false, points: 0, badges: [] })
+    const view = (result: AttemptResult | undefined) => (
+      <QueryClientProvider client={client}>
+        <CelebrationAllowed.Provider value={false}>
+          <FeedbackPanel result={result} />
+        </CelebrationAllowed.Provider>
+      </QueryClientProvider>
+    )
+    const { rerender } = render(view(undefined))
+    rerender(view(right))
+    expect(document.querySelector('[data-success-moment]')).toBeNull()
+    expect(document.querySelector('canvas')).toBeNull()
+    expect(screen.queryByText(/points/)).toBeNull()
+    expect(screen.getByRole('group', { name: 'Correct.' })).toHaveFocus()
   })
 })
 
@@ -509,6 +532,21 @@ describe('the feedback switches on the profile page', () => {
     await userEvent.click(comments)
     expect(box).not.toBeChecked()
     expect(confettiEnabled()).toBe(false)
-    expect(localStorage.getItem('ctrl-academy.comments')).toBe('off')
+    // Kept for this student on this device: a key with her id (#215 review).
+    expect(localStorage.getItem(`ctrl-academy.${ada.id}.comments`)).toBe('off')
+    expect(localStorage.getItem('ctrl-academy.comments')).toBeNull()
+    // Each switch is described by its explanation and by where it is kept.
+    expect(box).toHaveAccessibleDescription(/A short burst for a right answer.*kept on this device/)
+    expect(comments).toHaveAccessibleDescription(/A short line under a right answer.*for you only/)
+  })
+
+  it('are each student’s own on a shared computer (#215 review)', () => {
+    setPreferenceOwner(1)
+    setPreference('confetti', false)
+    expect(confettiEnabled()).toBe(false)
+    setPreferenceOwner(2)
+    expect(confettiEnabled()).toBe(true)
+    setPreferenceOwner(1)
+    expect(confettiEnabled()).toBe(false)
   })
 })

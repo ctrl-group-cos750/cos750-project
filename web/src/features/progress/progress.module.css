@@ -194,6 +194,20 @@
   box-shadow: var(--shadow-card);
 }
 
+/* A shorter screen (a 1366 × 900 laptop): a little less space around the blocks, so the panel
+ * fits without scrolling inside it where it can (#215 review). */
+@media (max-height: 60rem) {
+  .panel {
+    top: 5.5rem;
+    gap: var(--space-3);
+    max-height: calc(100dvh - 6.5rem);
+  }
+
+  .panelBody {
+    gap: var(--space-3);
+  }
+}
+
 .panelTitle {
   margin: 0;
   font-family: var(--font-display);
@@ -209,6 +223,14 @@
 .block {
   display: grid;
   gap: var(--space-2);
+}
+
+.blockHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
 }
 
 .blockTitle {
@@ -266,6 +288,24 @@
 
 .link {
   font-size: var(--text-sm);
+}
+
+.lookAgain {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-inline-start: 1.25em;
+  list-style: disc;
+}
+
+/* Links a full 44 px tall where the pointer is a finger (WCAG 2.5.5). */
+@media (pointer: coarse) {
+  .lookAgain .link,
+  .blockHead .link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
 }
 
 /* Below the lesson on narrow screens: one line until opened. */

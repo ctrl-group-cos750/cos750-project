@@ -18,18 +18,40 @@
   pointer-events: auto;
 }
 
-/* Phones: one card (BadgeAnnouncer shows at most one), at most 40% of the screen, and the
+/* Phones: one card (BadgeAnnouncer shows at most one), a compact banner at the top of the
+ * screen, so it never covers a module's Previous and Next at the bottom (#215 review), and the
  * dismiss button a full 44 px touch target. */
 @media (max-width: 480px) {
   .region {
+    top: var(--space-2);
     right: var(--space-2);
-    bottom: var(--space-2);
+    bottom: auto;
     width: calc(100vw - 2 * var(--space-2));
     max-height: 40vh;
   }
 
+  .note {
+    align-items: center;
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .description {
+    display: none;
+  }
+
   .dismiss {
     min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* Links and buttons in a note a full 44 px tall on a phone or wherever the pointer is a finger
+ * (WCAG 2.5.5). */
+@media (max-width: 480px), (pointer: coarse) {
+  .link,
+  .off {
+    display: inline-flex;
+    align-items: center;
     min-height: 44px;
   }
 }

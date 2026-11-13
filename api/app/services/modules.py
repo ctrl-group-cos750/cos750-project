@@ -28,7 +28,8 @@ shown is done.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from sqlalchemy import func, select
@@ -46,6 +47,7 @@ from app.services import rewards
 from app.services.events import log_event
 from app.services.locks import lock_student
 from app.services.quick_check import DONE
+from app.services.quick_check import scores as quick_check_scores
 from app.services.quick_check import states as quick_check_states
 from app.services.support import hidden_segments, record_shown
 
@@ -71,6 +73,10 @@ ATTEMPTS_TO_MOVE_ON = 2
 # Purposes a student may skip (FR-8.3): a bonus quest is optional extra challenge, so its segment is
 # done whether or not it is answered, and Next is never held back by it.
 OPTIONAL_PURPOSES: frozenset[str] = frozenset({"bonus"})
+
+# Purposes that are never a module's own work for its reward (`_module_activities`): bonus quests
+# earn their own (#87), and a quick check (FR-8.2) is testing out, not working through.
+NOT_MODULE_WORK: frozenset[str] = OPTIONAL_PURPOSES | {"test_out"}
 
 
 class ModuleNotFound(ValueError):
@@ -255,10 +261,43 @@ def get_modules_for_user(session: Session, user_id: int) -> list[ModuleOut]:
         )
         for module in modules
     ]
+    looks = _look_again_counts(session, user_id, hidden)
+    scores = quick_check_scores(session, user_id)
     for summary in out:
         summary.recommended = summary.id == recommended
         summary.quick_check = checks.get(summary.id)
+        summary.quick_check_score = scores.get(summary.id)
+        summary.look_again_count = looks.get(summary.id, 0)
     return out
+
+
+def _look_again_counts(
+    session: Session, user_id: int, hidden: dict[int, frozenset[int]]
+) -> dict[int, int]:
+    """How many activity segments in each module are marked to look at again (FR-2.7, #214), for
+    the map. Support segments hidden from this student are left out, as on the module page."""
+    rows = session.execute(
+        select(Segment.module_id, Segment.kind, Segment.activity_id)
+        .where(Segment.module_id.is_not(None))
+        .order_by(Segment.module_id, Segment.position)
+    ).all()
+    look_again = answer_states(
+        session, user_id, {a for _, kind, a in rows if kind == "activity" and a}
+    ).look_again
+    index: dict[int, int] = {}  # each segment's place in its module, as `_hidden_positions` counts
+    counts: dict[int, int] = {}
+    for module_id, kind, activity_id in rows:
+        if module_id is None:
+            continue
+        place = index.get(module_id, 0)
+        index[module_id] = place + 1
+        if (
+            kind == "activity"
+            and activity_id in look_again
+            and place not in hidden.get(module_id, frozenset())
+        ):
+            counts[module_id] = counts.get(module_id, 0) + 1
+    return counts
 
 
 def _videos(session: Session, segments: Sequence[Segment]) -> dict[int, int]:
@@ -273,18 +312,90 @@ def _videos(session: Session, segments: Sequence[Segment]) -> dict[int, int]:
     }
 
 
-def done_segments(session: Session, user_id: int, segments: Sequence[Segment]) -> set[int]:
+@dataclass(frozen=True)
+class AnswerStates:
+    """Where a student stands on some module activities (FR-2.7, #214): see `answer_states`."""
+
+    done: set[int]  # may move past it
+    right: set[int]  # answered right at some point
+    look_again: set[int]  # done without a right answer: marked to look at again
+
+
+def answer_states(
+    session: Session, user_id: int, activity_ids: Collection[int], after: int | None = None
+) -> AnswerStates:
+    """The one place the rules for moving past a module activity live (FR-2.7, #214).
+
+    An activity is done once the student has answered it correctly, answered it after its last
+    hint was shown (#143: the last hint gives the answer away, so a student who needed it can still
+    move on), or answered it `ATTEMPTS_TO_MOVE_ON` times, so nobody is held on one question. A
+    mastery or diagnostic item (`ONE_ANSWER_PURPOSES`) is done once answered at all: only the
+    first answer counts towards the report (FR-7.1) and the diagnostic finds gaps rather than
+    gating. A bonus quest (`OPTIONAL_PURPOSES`) and a kind with no student UI yet
+    (`KINDS_WITHOUT_STUDENT_UI`, which also counts as right) are always done.
+
+    Done without a right answer is "look again": the student moved on, it earns nothing, and the
+    page lists it (not for a one-answer item or a bonus quest, which are never held back).
+
+    `after` is an attempt id: only attempts after it count. None for every attempt; a restarted
+    module (#211) passes the attempt id it restarted after."""
+    wanted = set(activity_ids)
+    if not wanted:
+        return AnswerStates(set(), set(), set())
+    kinds = dict(
+        session.execute(select(Activity.id, Activity.purpose).where(Activity.id.in_(wanted))).all()
+    )
+    no_ui = set(
+        session.scalars(
+            select(Activity.id).where(
+                Activity.id.in_(wanted), Activity.kind.in_(KINDS_WITHOUT_STUDENT_UI)
+            )
+        )
+    )
+    one_answer = {a for a, purpose in kinds.items() if purpose in ONE_ANSWER_PURPOSES}
+    optional = {a for a, purpose in kinds.items() if purpose in OPTIONAL_PURPOSES}
+    # Each activity's last hint level: an answer given after it was shown also counts.
+    last_hint = dict(
+        session.execute(
+            select(Hint.activity_id, func.max(Hint.level))
+            .where(Hint.activity_id.in_(wanted))
+            .group_by(Hint.activity_id)
+        ).all()
+    )
+    done: set[int] = set(no_ui) | optional
+    right: set[int] = set(no_ui)
+    attempted: set[int] = set()
+    tries: dict[int, int] = {}
+    attempts = select(Attempt.activity_id, Attempt.correct, Attempt.hint_level).where(
+        Attempt.user_id == user_id, Attempt.activity_id.in_(wanted)
+    )
+    if after is not None:
+        attempts = attempts.where(Attempt.id > after)
+    for activity_id, correct, hint_level in session.execute(attempts.order_by(Attempt.id)):
+        attempted.add(activity_id)
+        last = last_hint.get(activity_id)
+        tries[activity_id] = tries.get(activity_id, 0) + 1
+        if (
+            correct
+            or activity_id in one_answer
+            or (last is not None and hint_level >= last)
+            or tries[activity_id] >= ATTEMPTS_TO_MOVE_ON
+        ):
+            done.add(activity_id)
+        if correct:
+            right.add(activity_id)
+    look_again = (attempted & done) - right - optional - one_answer
+    return AnswerStates(done=done, right=right, look_again=look_again)
+
+
+def done_segments(
+    session: Session, user_id: int, segments: Sequence[Segment], after: int | None = None
+) -> set[int]:
     """The ids of the segments this student has done (FR-2.7).
 
-    A practice activity is done once they have answered it correctly, answered it after its
-    last hint was shown (#143): the last hint gives the answer away, so a student who needed it can
-    still move on, or answered it `ATTEMPTS_TO_MOVE_ON` times (#214), so nobody is held on one
-    question; a wrong answer is still wrong, and earns nothing. A mastery or diagnostic item (`ONE_ANSWER_PURPOSES`) is done once answered at
-    all: only the first answer counts towards the report (FR-7.1) and the diagnostic finds gaps
-    rather than gating, so asking for a right answer there would add steps that change nothing.
-    A video segment is done once they have passed every checkpoint in its video. A segment with
-    nothing to do (any other kind, or no activity or video yet) is always done, and so is an
-    activity, or a checkpoint, whose kind has no student UI yet (`KINDS_WITHOUT_STUDENT_UI`)."""
+    An activity segment once its activity is done (`answer_states`). A video segment once they
+    have passed every checkpoint in its video. A segment with nothing to do (any other kind, or no
+    activity or video yet) is always done. `after`: as for `answer_states`."""
     videos = _videos(session, segments)
     checkpoints: dict[int, set[int]] = {}
     for video_id, activity_id in session.execute(
@@ -295,63 +406,14 @@ def done_segments(session: Session, user_id: int, segments: Sequence[Segment]) -
         checkpoints.setdefault(video_id, set()).add(activity_id)
     wanted = {s.activity_id for s in segments if s.kind == "activity" and s.activity_id}
     wanted |= {a for ids in checkpoints.values() for a in ids}
-    # Nobody can answer these yet, so they count as answered and passed.
-    no_ui = set(
-        session.scalars(
-            select(Activity.id).where(
-                Activity.id.in_(wanted), Activity.kind.in_(KINDS_WITHOUT_STUDENT_UI)
-            )
-        )
-    )
-    # Each activity's last hint level: an answer given after it was shown also counts.
-    last_hint = dict(
-        session.execute(
-            select(Hint.activity_id, func.max(Hint.level))
-            .where(Hint.activity_id.in_(wanted))
-            .group_by(Hint.activity_id)
-        ).all()
-    )
-    one_answer = set(
-        session.scalars(
-            select(Activity.id).where(
-                Activity.id.in_(wanted), Activity.purpose.in_(ONE_ANSWER_PURPOSES)
-            )
-        )
-    )
-    optional = set(
-        session.scalars(
-            select(Activity.id).where(
-                Activity.id.in_(wanted), Activity.purpose.in_(OPTIONAL_PURPOSES)
-            )
-        )
-    )
-    # done: answered correctly, or after the last hint; or optional (a bonus quest)
-    answered: set[int] = set(no_ui) | optional
-    passed: set[int] = set(no_ui)
-    tries: dict[int, int] = {}
-    for activity_id, correct, hint_level in session.execute(
-        select(Attempt.activity_id, Attempt.correct, Attempt.hint_level).where(
-            Attempt.user_id == user_id, Attempt.activity_id.in_(wanted)
-        )
-    ):
-        last = last_hint.get(activity_id)
-        tries[activity_id] = tries.get(activity_id, 0) + 1
-        if (
-            correct
-            or activity_id in one_answer
-            or (last is not None and hint_level >= last)
-            or tries[activity_id] >= ATTEMPTS_TO_MOVE_ON
-        ):
-            answered.add(activity_id)
-        if correct:
-            passed.add(activity_id)
+    states = answer_states(session, user_id, wanted, after)
     done: set[int] = set()
     for segment in segments:
         if segment.kind == "activity" and segment.activity_id is not None:
-            if segment.activity_id in answered:
+            if segment.activity_id in states.done:
                 done.add(segment.id)
         elif segment.kind == "video" and segment.id in videos:
-            if checkpoints.get(videos[segment.id], set()) <= passed:
+            if checkpoints.get(videos[segment.id], set()) <= states.right:
                 done.add(segment.id)
         else:
             done.add(segment.id)
@@ -394,23 +456,10 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
         )
     )
     attempted = _answered(session, user_id, [s.activity_id for s in segments if s.activity_id])
-    right = set(
-        session.scalars(
-            select(Attempt.activity_id).where(
-                Attempt.user_id == user_id,
-                Attempt.correct.is_(True),
-                Attempt.activity_id.in_([s.activity_id for s in segments if s.activity_id]),
-            )
-        )
-    )
-    one_answer = set(
-        session.scalars(
-            select(Activity.id).where(
-                Activity.id.in_([s.activity_id for s in segments if s.activity_id]),
-                Activity.purpose.in_(ONE_ANSWER_PURPOSES),
-            )
-        )
-    )
+    # Moved on without a right answer (FR-2.7, #214): one rule, shared with `done_segments`.
+    look_again = answer_states(
+        session, user_id, {s.activity_id for s in segments if s.activity_id}
+    ).look_again
     # TODO (FR-8.1): leave out the refreshers module 0's diagnostic has ruled out, once the
     # diagnostic records its result. Until then every refresher is shown.
     detail = ModuleDetailOut(
@@ -430,10 +479,7 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
                 attempted=segment.activity_id is not None and segment.activity_id in attempted,
                 optional=segment.activity_id is not None and segment.activity_id in optional,
                 look_again=segment.kind == "activity"
-                and segment.activity_id in attempted
-                and segment.activity_id not in right
-                and segment.activity_id not in optional
-                and segment.activity_id not in one_answer
+                and segment.activity_id in look_again
                 and segment.id in done,
             )
             for index, segment in enumerate(segments)
@@ -446,6 +492,11 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
         ],
     )
     detail.quick_check = quick_check_states(session, user_id, {module_id: status})[module_id]
+    detail.quick_check_score = quick_check_scores(session, user_id).get(module_id)
+    hidden_ids = set(hidden)
+    detail.look_again_count = sum(
+        1 for out in detail.segments if out.look_again and out.id not in hidden_ids
+    )
     # Support segments (FR-8.4): which objective each is for, and the ones this student doesn't
     # need are hidden and count as done, so they never hold the student up.
     support_for = {segment.id: segment.support_for for segment in segments}
@@ -598,15 +649,19 @@ def save_position(
 
 def _module_activities(session: Session, module_id: int) -> set[int]:
     """The activities a module asks for: those its segments show, and its own (recall questions).
-    Not its optional bonus quests (FR-8.3), which earn their own reward (#87)."""
+    Not its optional bonus quests (FR-8.3), which earn their own reward (#87), nor its quick check
+    questions (FR-8.2): testing out isn't working through, so a right answer there is no real work
+    in the module (#215 review)."""
     shown = session.scalars(
         select(Segment.activity_id).where(
             Segment.module_id == module_id, Segment.activity_id.is_not(None)
         )
     )
     own = session.scalars(select(Activity.id).where(Activity.module_id == module_id))
-    bonus = set(session.scalars(select(Activity.id).where(Activity.purpose.in_(OPTIONAL_PURPOSES))))
-    return ({a for a in shown if a is not None} | set(own)) - bonus
+    left_out = set(
+        session.scalars(select(Activity.id).where(Activity.purpose.in_(NOT_MODULE_WORK)))
+    )
+    return ({a for a in shown if a is not None} | set(own)) - left_out
 
 
 def reward_module(session: Session, user_id: int, module_id: int) -> bool:

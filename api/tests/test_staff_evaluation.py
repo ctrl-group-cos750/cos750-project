@@ -382,3 +382,22 @@ def test_readiness_is_for_staff_only(client: TestClient, db: Session) -> None:
     assert client.get("/api/staff/readiness").status_code == 403
     client.cookies.clear()
     assert client.get("/api/staff/readiness").status_code == 401
+
+
+def test_objective_results_are_in_pseudonym_order_not_account_order(
+    client: TestClient, db: Session, tmp_path: Path
+) -> None:
+    """Rows in account-id order would say who registered first (#215 review)."""
+    (tmp_path / "course.json").write_text(json.dumps(MASTERY_COURSE), encoding="utf-8")
+    load(db, tmp_path)
+    ids = []
+    for n in range(6):
+        ids.append(register(client, f"student{n}@example.com"))
+        answer(client, 601, "a")
+    become_staff(client, db, "grace@example.com")
+    students = [
+        r["student"] for r in rows(client.get("/api/staff/export/objective_results.csv").text)
+    ]
+    assert sorted(set(students)) == sorted(pseudonym(i) for i in ids)
+    assert students == sorted(students)
+    assert students != [pseudonym(i) for i in ids]  # six in a row in id order would be chance

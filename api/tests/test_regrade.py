@@ -326,3 +326,38 @@ def test_a_student_answering_during_the_regrade_waits_and_both_succeed(
         ).all()
         assert len(rows) == 1
         assert state(session, one, 6) == "not_attempted"  # the other module 6 items: unanswered
+
+
+def test_a_quick_check_that_passes_once_re_marked_marks_the_module_tested_out(db: Session) -> None:
+    """A quick check answer key fixed after students took it: the re-grade re-marks their answers
+    and, where the check now passes, marks the module tested out as taking it would have
+    (#215 review, API 6). Nothing is earned."""
+    from app.models import ModuleProgress
+    from app.services import quick_check
+
+    load(db)
+    user = student(db, 1)
+    questions = quick_check.items(db, 1)
+    chosen = []
+    for index, activity in enumerate(questions):
+        right_id = activity.solution["correct"]
+        wrong_id = next(o["id"] for o in activity.config["options"] if o["id"] != right_id)
+        chosen.append(quick_check.Answer(activity.id, right_id if index < 2 else wrong_id))
+    result = quick_check.take(db, user, 1, chosen)
+    db.commit()
+    assert (result.passed, result.correct) == (False, 2)
+    # The key had the third question wrong: the answer the student chose is the right one.
+    third = questions[2]
+    third.solution = {**third.solution, "correct": chosen[2].selected}
+    db.commit()
+
+    report = regrade.regrade(db, "commit")
+    assert report.tested_out == [(user, 1)]
+    row = db.scalars(
+        select(ModuleProgress).where(ModuleProgress.user_id == user, ModuleProgress.module_id == 1)
+    ).one()
+    assert row.status == "tested_out"
+    assert quick_check.passed(db, user) == {1}
+    assert db.scalar(select(func.count()).select_from(PointsEntry)) == 0
+    # A second run changes nothing.
+    assert regrade.regrade(db, "commit").tested_out == []

@@ -30,10 +30,16 @@ Then (`medal_for`, the one place the rule lives):
 
 - **gold**: every activity right first time,
 - **silver**: every activity right on your own,
-- **bronze**: the module finished.
+- **bronze**: the module finished with at least one activity right on your own,
+- **none**: the module finished without one (every answer wrong, moved on after two tries): the
+  same line as the module's points and First Module badge (app/services/modules.py
+  `reward_module`), so walking through a module earns nothing (#215 review).
 
-A module passed by testing out (its quick check) earns silver: the check showed the student can do
-it on their own, but not every activity was answered. A module with nothing to mark (module 0's
+A module whose quick check the student passed earns silver: the check showed the student can do
+it on their own, but not every activity was answered. That stays when the student works through
+the module afterwards: more work never lowers a medal, so they get the better of the two
+(`quick_check.passed` is read from the check's answers, not from the module's status, which
+becomes "complete"). A module with nothing to mark (module 0's
 diagnostic, module 6's mastery check, whose results are the report) has no medal. While a module
 is in progress, `heading_for` is the medal the answers so far are on course for, counting only
 activities already answered.
@@ -47,6 +53,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Activity, Attempt, Checkpoint, Module, ModuleProgress, Segment
+from app.services import quick_check
 from app.services.mastery import MASTERY_MODULE, State, evaluate
 from app.services.rewards import SUPPORT_LEVEL
 
@@ -96,15 +103,20 @@ def level_for(answered: int, on_your_own: int, total: int) -> Level:
     return "practising"
 
 
-def medal_for(total: int, first_time: int, on_your_own: int, *, tested_out: bool = False) -> Medal:
+def medal_for(
+    total: int, first_time: int, on_your_own: int, *, tested_out: bool = False
+) -> Medal | None:
     """The medal for a finished module with `total` activities: gold if every one was right first
-    time without hint 3 or 4, silver if every one was right without them, else bronze. A module
-    passed by testing out (`tested_out`) earns silver, or better if its activities earn it."""
-    if first_time >= total:
+    time without hint 3 or 4, silver if every one was right without them, bronze if at least one
+    was, else none. A module passed by testing out (`tested_out`) earns silver, or better if its
+    activities earn it."""
+    if total > 0 and first_time >= total:
         return "gold"
-    if on_your_own >= total or tested_out:
+    if (total > 0 and on_your_own >= total) or tested_out:
         return "silver"
-    return "bronze"
+    if on_your_own > 0:
+        return "bronze"
+    return None
 
 
 def _practice(session: Session) -> list[Activity]:
@@ -207,8 +219,10 @@ def module_medals(session: Session, user_id: int) -> list[ModuleMedal]:
         )
     }
     complete = set(statuses)
-    # A module passed through its quick check (FR-8.2) has a medal too (#214).
+    # A module passed through its quick check (FR-8.2) has a medal too (#214), and keeps it once
+    # worked through (the status is then "complete"): the better of the two.
     tested_out = {m for m, status in statuses.items() if status == "tested_out"}
+    tested_out |= quick_check.passed(session, user_id)
     got = _answers(session, user_id, list(by_id))
     medals = []
     for module in session.scalars(select(Module).order_by(Module.position)):

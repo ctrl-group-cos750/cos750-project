@@ -28,6 +28,13 @@ QuickCheckState = Literal["available", "passed", "not_passed"]
 SegmentKind = Literal["video", "text", "worked_example", "activity", "refresher"]
 
 
+class QuickCheckScoreOut(ApiModel):
+    """How a quick check went, for the map and the module page to link back to its result."""
+
+    correct: int
+    total: int
+
+
 class ModuleOut(ApiModel):
     """A module as it appears on the module map.
 
@@ -61,6 +68,12 @@ class ModuleOut(ApiModel):
     recommended: bool = False
     # The module's quick check, for the "Already know this?" offer (FR-8.2, #214).
     quick_check: QuickCheckState | None = None
+    # Once the quick check is taken: its score, so the map and the module page can link back to
+    # the result page ("Quick check: 2 of 4, see results"). None until then.
+    quick_check_score: QuickCheckScoreOut | None = None
+    # How many of its activities the student moved past without a right answer, marked to look
+    # at again (FR-2.7, #214).
+    look_again_count: int = 0
 
 
 class CourseLengthOut(ApiModel):

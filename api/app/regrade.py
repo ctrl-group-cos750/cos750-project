@@ -27,6 +27,11 @@ updates `correct`, `score` and `detail`, then recomputes the results of each stu
 - **Idempotent.** A second run finds nothing to change.
 - **Private.** The report names attempts, activities and students by id only, never by email.
 
+- **Quick checks too** (FR-8.2, #215 review). Answers to quick check questions (purpose
+  `test_out`, multiple choice) are re-marked the same way, and a module whose quick check now
+  passes is marked tested out, as taking it would have done (`quick_check.refresh_tested_out`).
+  They earn nothing, as when taken.
+
 No migration: it only updates rows that exist. It does not touch other kinds.
 """
 
@@ -37,15 +42,21 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import ColumnElement, or_, select
 from sqlalchemy.orm import Session
 
 from app.models import Activity, Attempt, ObjectiveResult
-from app.services import mastery, rewards
+from app.services import mastery, quick_check, rewards
 from app.services.checking import check_activity
 from app.services.locks import StudentGone, lock_student
 
 KINDS = ("parsons", "fix_the_bug")
+QUICK_CHECK = "test_out"  # quick check questions, re-marked whatever their kind
+
+
+def _regraded() -> ColumnElement[bool]:
+    """The attempts a re-grade looks at: Parsons and fix-the-bug answers, and quick check ones."""
+    return or_(Activity.kind.in_(KINDS), Activity.purpose == QUICK_CHECK)
 
 
 @dataclass
@@ -59,6 +70,8 @@ class Report:
     edited: list[int] = field(default_factory=list)  # activity edited by staff (#128): skipped
     results: list[tuple[int, int, str, str]] = field(default_factory=list)
     """(user, objective, before, after) for each objective result that changed."""
+    tested_out: list[tuple[int, int]] = field(default_factory=list)
+    """(user, module) for each module now tested out: its quick check passes after a re-grade."""
 
     def lines(self) -> list[str]:
         """The report as text, ids only."""
@@ -83,6 +96,8 @@ class Report:
             f"  user {u}, objective {o}: {before} -> {after}"
             for u, o, before, after in self.results
         ]
+        out.append(f"modules now tested out: {len(self.tested_out)}")
+        out += [f"  user {u}, module {m}" for u, m in self.tested_out]
         if self.kept:
             out.append(f"kept: attempts {self.kept}")
         if self.unreadable:
@@ -104,10 +119,11 @@ def _regrade_student(session: Session, user_id: int, report: Report) -> None:
     rows = session.execute(
         select(Attempt, Activity)
         .join(Activity, Activity.id == Attempt.activity_id)
-        .where(Attempt.user_id == user_id, Activity.kind.in_(KINDS))
+        .where(Attempt.user_id == user_id, _regraded())
         .order_by(Attempt.id)
     ).all()
     changed = False
+    quick_check_changed = False
     before: dict[int, str] = {}
     for attempt, activity in rows:
         if activity.edited_at is not None:  # staff changed it: the stored answer may not fit
@@ -137,9 +153,15 @@ def _regrade_student(session: Session, user_id: int, report: Report) -> None:
         attempt.correct, attempt.score, attempt.detail = result.correct, result.score, detail
         session.flush()
         # A quick check answer earns nothing (FR-8.2, #214), so a re-grade gives it nothing either.
-        if became_correct and activity.purpose != "test_out":
+        if activity.purpose == QUICK_CHECK:
+            quick_check_changed = True
+        elif became_correct:
             rewards.on_attempt(session, attempt)  # once per activity: points are keyed by ref
         report.changed.append((attempt.id, user_id, activity.id, result.correct))
+    if quick_check_changed:
+        report.tested_out += [
+            (user_id, m) for m in quick_check.refresh_tested_out(session, user_id)
+        ]
     if changed:
         mastery.recompute(session, user_id)
         session.flush()
@@ -152,14 +174,14 @@ def _regrade_student(session: Session, user_id: int, report: Report) -> None:
 
 
 def regrade(session: Session, after_each: Literal["commit", "rollback"] | None = None) -> Report:
-    """Re-grade every Parsons and fix-the-bug attempt, student by student, and recompute the
+    """Re-grade every Parsons, fix-the-bug and quick check attempt, student by student, and recompute the
     results of the students it changed. `after_each` ends each student's transaction (commit for
     --apply, rollback for a dry run), releasing their lock; None leaves it to the caller."""
     report = Report()
     users = session.scalars(
         select(Attempt.user_id)
         .join(Activity, Activity.id == Attempt.activity_id)
-        .where(Activity.kind.in_(KINDS))
+        .where(_regraded())
         .distinct()
         .order_by(Attempt.user_id)
     ).all()

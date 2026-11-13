@@ -247,12 +247,20 @@ def _trace_columns_wrong(have: TraceRow, want: TraceRow | BfsStep) -> list[str]:
     ]
 
 
-def _impossible_queue(row: TraceRow) -> str | None:
+def _impossible_queue(row: TraceRow, left: set[str]) -> str | None:
     """Why no BFS can reach this row's queue, or None: a vertex in it twice (`QUEUE_TWICE`), or one
-    the row lists as visited (`QUEUE_AFTER_VISIT`). Such a row is wrong on every reading."""
+    that has already left the queue (`QUEUE_AFTER_VISIT`). `left` is the vertices the student's
+    own trace took off the queue: the current vertex of every row before this one, and this
+    row's own once its order says it has left (so a slip in this row's current vertex alone gets
+    that column's hint). Such a row is wrong on every reading. Not against the visited column:
+    module 4's Python `found` set (called `visited` before the review of 13 Nov) holds the vertices
+    found, queued ones included (TraceTable.tsx warns of it), so a correct student who writes that
+    set there must not be told this misconception; their visited column is still wrong, and its own
+    hint says why (review of 13 Nov on #221, item 1502). Nor against the order column, so a slip
+    there gets the order column's hint."""
     if len(set(row.queue)) < len(row.queue):
         return QUEUE_TWICE
-    if set(row.queue) & set(row.visited):
+    if set(row.queue) & left:
         return QUEUE_AFTER_VISIT
     return None
 
@@ -287,7 +295,7 @@ def check_trace(config: TraceConfig, submission: TraceSubmission) -> CheckResult
     There are at least as many parts as the engine has steps, so a short answer leaves its missing
     steps wrong; a step after the traversal has finished, on either reading, is wrong too.
 
-    A row whose queue no BFS can hold (a vertex in it twice, or one already visited) is wrong
+    A row whose queue no BFS can hold (a vertex in it twice, or one already taken off it) is wrong
     whatever the readings say, and its message names the misconception behind it: marking a
     vertex found only when it leaves the queue (`_impossible_queue`). Otherwise follow-through
     would carry that misconception through every later row at the cost of one step, and pass
@@ -304,6 +312,7 @@ def check_trace(config: TraceConfig, submission: TraceSubmission) -> CheckResult
     adjacency = bfs_adjacency(scenario)
     got = submission.rows
     parts: list[PartResult] = []
+    left: set[str] = set()  # the vertices the student's trace has taken off the queue so far
     for i in range(max(len(expected), len(got))):
         if i >= len(got):
             parts.append(PartResult(ref=i, correct=False, message=MISSING_TRACE_STEP))
@@ -318,7 +327,9 @@ def check_trace(config: TraceConfig, submission: TraceSubmission) -> CheckResult
         if not readings:
             parts.append(PartResult(ref=i, correct=False, message=EXTRA_TRACE_STEP))
             continue
-        impossible = _impossible_queue(have)
+        own = {have.visited_vertex} if have.visited_vertex in have.order else set()
+        impossible = _impossible_queue(have, left | own)
+        left.add(have.visited_vertex)
         if impossible is not None:
             parts.append(
                 PartResult(ref=i, correct=False, message=f"{WRONG_TRACE_STEP} {impossible}")

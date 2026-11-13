@@ -1967,7 +1967,8 @@ export interface components {
      * HintOut
      * @description The hint just revealed. `next_counts_as_support` is true when the *next* hint would be level
      *     3 or 4: warn before asking for it (ID doc §7.4). On an item that decides an objective an
-     *     answer after it counts as "met with support"; on practice it earns fewer points.
+     *     answer after it counts as "met with support"; on practice it earns fewer points, and after
+     *     hint 4, the worked answer, none (FR-9.2).
      */
     HintOut: {
       /** Level */

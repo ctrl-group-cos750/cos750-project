@@ -115,8 +115,8 @@ export function CheckpointQuestion(props: CheckpointQuestionProps) {
             <Alert>
               <AlertTitle>The next hint gives a lot away</AlertTitle>
               <AlertDescription>
-                Answer after it and this question earns fewer points. Press &quot;Show next
-                hint&quot; again to see it.
+                Answer after it and this question earns fewer points, and after the worked answer
+                none. Press &quot;Show next hint&quot; again to see it.
               </AlertDescription>
             </Alert>
           )}

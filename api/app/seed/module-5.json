@@ -441,44 +441,6 @@
             ],
             109,
             113
-          ],
-          [
-            102,
-            [
-              120,
-              104,
-              105
-            ],
-            106,
-            107,
-            109,
-            110,
-            111,
-            [
-              121,
-              112
-            ],
-            113,
-            101
-          ],
-          [
-            102,
-            [
-              120,
-              104,
-              105
-            ],
-            106,
-            107,
-            110,
-            111,
-            [
-              121,
-              112
-            ],
-            109,
-            113,
-            101
           ]
         ],
         "explanation": "Marking a vertex found when it joins the queue, not when it leaves, means a vertex that is still waiting can't be added again: on the diamond, B and C both find D, but only B adds it. Starting with found = {start} does the same for the start vertex, which is in the queue from the beginning.",
@@ -631,44 +593,6 @@
             ],
             158,
             166
-          ],
-          [
-            152,
-            [
-              153,
-              154,
-              155
-            ],
-            156,
-            157,
-            158,
-            159,
-            160,
-            [
-              161,
-              162
-            ],
-            166,
-            151
-          ],
-          [
-            152,
-            [
-              153,
-              154,
-              155
-            ],
-            156,
-            157,
-            159,
-            160,
-            [
-              161,
-              162
-            ],
-            158,
-            166,
-            151
           ]
         ],
         "explanation": "BFS only visits the vertices it can reach by following edges from the start, so on the two islands it returns A, B, C. The extra loop added every vertex the search never reached, D and E, so without it the program is plain BFS.",

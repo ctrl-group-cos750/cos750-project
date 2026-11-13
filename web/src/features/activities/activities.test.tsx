@@ -984,7 +984,9 @@ describe('the warning before hint 3 (review of 13 Nov)', () => {
 
   it('is about points on practice, which decides no objective', async () => {
     const warning = await warn()
-    expect(warning).toHaveTextContent('Answer after it and this one earns fewer points.')
+    expect(warning).toHaveTextContent(
+      'Answer after it and this one earns fewer points, and after the worked answer none.',
+    )
     expect(warning).not.toHaveTextContent(/met with support/)
   })
 

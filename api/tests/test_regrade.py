@@ -136,6 +136,25 @@ def test_an_equivalent_order_marked_wrong_is_now_correct_and_decides_objective_6
     assert (one, 6, "not_yet", "met_independently") in report.results
 
 
+def test_a_module_6_answer_re_marked_before_the_check_is_finished_earns_nothing_yet(
+    db: Session,
+) -> None:
+    """Review of 13 Nov on #221: the re-grade paid a module 6 item's points while the check was
+    still open, which says the answer is right before the report does (#144)."""
+    load(db)
+    one = student(db, 1)
+    parsons = db.get(Activity, 619)
+    assert parsons is not None
+    stored_as_on_staging(db, one, parsons, EQUIVALENT)
+    db.commit()
+    assert not mastery.check_finished(db, one)
+
+    regrade.regrade(db)
+    db.commit()
+    refs = db.scalars(select(PointsEntry.ref).where(PointsEntry.user_id == one)).all()
+    assert "activity:619" not in refs
+
+
 def test_a_second_run_changes_nothing(db: Session) -> None:
     load(db)
     one = student(db, 1)

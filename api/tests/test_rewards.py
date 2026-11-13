@@ -31,10 +31,18 @@ WRONG = {"submitted": {"selected": "b"}}
 
 @pytest.fixture
 def user(db: Session) -> User:
+    """A student, and two real activities for their attempts: SQLite doesn't enforce an attempt's
+    foreign key to its activity, Postgres does (review of 13 Nov on #221: CI failed there)."""
     student = User(email="s@example.com", display_name="S", password_hash="x")  # noqa: S106
     db.add(student)
+    db.add_all([Activity(**MCQ), Activity(**MCQ)])
     db.flush()
     return student
+
+
+def activity_id(db: Session, n: int) -> int:
+    """The id of the fixture's `n`th activity (1 or 2)."""
+    return list(db.scalars(select(Activity.id).order_by(Activity.id)))[n - 1]
 
 
 def badges(db: Session, user_id: int) -> dict[tuple[str, str], str | None]:
@@ -53,7 +61,7 @@ def attempt(
 ) -> int:
     row = Attempt(
         user_id=user.id,
-        activity_id=activity,
+        activity_id=activity_id(db, activity),
         submitted={},
         correct=correct,
         score=1.0 if correct else 0.0,
@@ -69,10 +77,11 @@ def test_a_first_correct_answer_earns_the_full_points(db: Session, user: User) -
     assert attempt(db, user, correct=True) == 10
 
 
-@pytest.mark.parametrize(("level", "points"), [(1, 10), (2, 10), (3, 4), (4, 4)])
-def test_hint_level_3_or_4_earns_fewer_points(
+@pytest.mark.parametrize(("level", "points"), [(1, 10), (2, 10), (3, 4), (4, 0)])
+def test_hint_level_3_earns_fewer_points_and_the_worked_answer_none(
     db: Session, user: User, level: int, points: int
 ) -> None:
+    """After hint 4, the worked answer, the answer is the hint's: it never counts (FR-9.6)."""
     assert attempt(db, user, correct=True, hint_level=level) == points
 
 
@@ -95,7 +104,7 @@ def test_a_right_answer_after_a_wrong_first_attempt_earns_nothing(
 
 
 def test_answering_an_activity_again_earns_nothing_more(db: Session, user: User) -> None:
-    attempt(db, user, correct=True, hint_level=4)
+    attempt(db, user, correct=True, hint_level=3)
     assert attempt(db, user, correct=True) == 0
     assert attempt(db, user, correct=True, activity=2) == 10
     assert rewards.total_points(db, user.id) == 14
@@ -238,17 +247,18 @@ def test_a_correct_answer_shows_up_as_points(client: TestClient, db: Session) ->
     assert client.get("/api/rewards").json()["points"] == 10
 
 
-def test_a_correct_answer_after_the_worked_solution_earns_4(
-    client: TestClient, db: Session
+@pytest.mark.parametrize(("level", "points"), [(3, 4), (4, 0)])
+def test_a_correct_answer_after_hint_3_earns_4_and_after_the_worked_solution_nothing(
+    client: TestClient, db: Session, level: int, points: int
 ) -> None:
     activity = Activity(**MCQ, module_id=open_module(db))
     db.add(activity)
     db.commit()
     log_in(client)
-    db.add(HintView(user_id=student_id(db), activity_id=activity.id, level=4))
+    db.add(HintView(user_id=student_id(db), activity_id=activity.id, level=level))
     db.commit()
     client.post(f"/api/activities/{activity.id}/attempts", json=RIGHT)
-    assert client.get("/api/rewards").json()["points"] == 4
+    assert client.get("/api/rewards").json()["points"] == points
 
 
 def test_new_badges_are_announced_once(client: TestClient, db: Session) -> None:

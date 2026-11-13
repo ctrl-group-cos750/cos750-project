@@ -22,11 +22,12 @@ type HintLadderProps = {
 }
 
 /** What the warning before hint 3 says. Only a question that decides an objective is "met with
- * support" after it; practice decides nothing, so there it is about points (review of 13 Nov). */
+ * support" after it; practice decides nothing, so there it is about points: fewer after hint 3,
+ * none after hint 4, the worked answer (FR-9.2; review of 13 Nov). */
 function supportWarning(bonus: boolean, assessed: HintLadderProps['assessed']) {
   if (bonus) return 'After it, this quest earns no points or badge. '
   if (assessed) return 'Answer after it and this objective counts as met with support. '
-  return 'Answer after it and this one earns fewer points. '
+  return 'Answer after it and this one earns fewer points, and after the worked answer none. '
 }
 
 /**

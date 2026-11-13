@@ -21,7 +21,9 @@ from app.schemas.activities import (
     TraceConfig,
     TraceSubmission,
 )
+from app.schemas.graphs import GraphScenarioOut
 from app.services import checking
+from app.services.bfs import run_bfs
 from app.services.mastery import Rule
 
 SEED = Path(__file__).resolve().parents[1] / "app" / "seed"
@@ -485,6 +487,33 @@ def test_a_queue_no_bfs_can_hold_is_wrong_even_following_the_row_before(
     result = checking.check_trace(TRACE, TraceSubmission.model_validate({"rows": rows}))
     assert not result.parts[1].correct
     assert result.parts[1].message == f"{checking.WRONG_TRACE_STEP} {message}"
+
+
+def test_the_found_set_in_the_visited_column_is_not_called_marking_on_leaving() -> None:
+    """Review of 13 Nov on #221: module 4's Python `found` set (`visited` before the review of 13
+    Nov) holds the vertices found, so a student may write that set in the visited column. On item 1502 a correct BFS written that way
+    was told on every row that a vertex had left the queue and come back. Only the visited
+    column is wrong, and its message is the visited column's."""
+    config = TraceConfig.model_validate(_seed_activity("review.json", 1502)["config"])
+    scenario = GraphScenarioOut(id=0, name="", **config.model_dump())
+    rows = [
+        {
+            "visited_vertex": step.visited_vertex,
+            "queue": list(step.queue),
+            "visited": sorted({*step.order, *step.queue}),  # found: visited or waiting
+            "order": list(step.order),
+        }
+        for step in run_bfs(scenario).steps
+    ]
+    assert any(set(r["visited"]) != set(r["order"]) for r in rows)  # the case under test
+    result = checking.check_trace(config, TraceSubmission.model_validate({"rows": rows}))
+    for part, row in zip(result.parts, rows, strict=True):
+        assert part.message is None or checking.QUEUE_AFTER_VISIT not in part.message
+        if set(row["visited"]) != set(row["order"]):
+            assert not part.correct
+            assert part.message == (
+                f"{checking.WRONG_TRACE_STEP} {checking.TRACE_COLUMN_HINTS['visited']}"
+            )
 
 
 def test_a_slip_carried_through_wrongly_is_still_wrong() -> None:

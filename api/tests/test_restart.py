@@ -291,11 +291,15 @@ def test_hints_opened_after_a_right_answer_take_nothing_from_it(
 
     # The same rule wherever rewards are decided (reward_module and the seed's backfill use it):
     # the first answer to 380 is still real work; an answer to it now would not be.
-    first = db.scalar(select(Attempt.id).where(Attempt.activity_id == 380))
-    assert db.scalar(select(Attempt.id).where(Attempt.id == first, real_work())) == first
+    first = db.scalar(select(Attempt).where(Attempt.activity_id == 380).order_by(Attempt.id))
+    assert first is not None
+    assert real_work(db, first)
     assert client.post("/api/activities/380/attempts", json=right).status_code == 201
-    latest = db.scalar(select(func.max(Attempt.id)).where(Attempt.activity_id == 380))
-    assert db.scalar(select(Attempt.id).where(Attempt.id == latest, real_work())) is None
+    latest = db.scalar(
+        select(Attempt).where(Attempt.activity_id == 380).order_by(Attempt.id.desc())
+    )
+    assert latest is not None
+    assert not real_work(db, latest)
 
 
 def test_the_evaluation_data_tells_the_rounds_apart(

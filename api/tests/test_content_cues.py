@@ -406,14 +406,14 @@ RETIRED = {
     1303: {"a", "b", "c"},
     1304: {"a", "b", "c"},
     1305: {"a", "b", "c"},
-    316: {"a", "b", "c"},
+    316: {"a", "b", "c"},  # a new closing task (#214 C3): routes from E, not a count from A
     # Objective 1 (#214 C5): examples to classify instead of the definition's own words.
     601: {"a", "b"},
     602: {"a", "b"},
     604: {"a", "b", "c"},
     1102: {"a", "b"},
     1103: {"a", "b", "c"},
-    1105: {"a", "b", "c"},  # a new closing task (#214 C3): routes from E, not a count from A
+    1105: {"a", "b", "c"},
     614: {"a", "b", "c"},  # a new question: every staging id, the key's included
     615: {"c"},
     616: {"c"},
@@ -753,6 +753,23 @@ def test_a_markers_first_word_does_not_predict_vertex_or_edge() -> None:
         assert best_rule <= always_commoner, (where, by_word)
 
 
+# --- Code comments don't fill the blanks (#214 C15, round 2 review of #215) -----------------------
+# What the comments in 205, 291 and 405 said: "an empty list" ([]), "unless v is already in" (not
+# in), "the edge goes from a to b" (a, b), "back from b to a" (not self.directed), "the front of
+# the queue" (popleft).
+STATED = ("empty list", "unless", "from a to b", "back from b", "front of the queue")
+
+
+@pytest.mark.parametrize(
+    "a", [a for a in CONTENT.activities if a.kind == "fill_in"], ids=lambda a: str(a.id)
+)
+def test_no_code_comment_states_a_blank(a: ActivityFixture) -> None:
+    for line in a.config["code"].splitlines():
+        code, _, comment = line.partition("#")
+        assert not (comment and "__" in code), line  # no comment beside a blank
+        assert not any(phrase in comment.lower() for phrase in STATED), line
+
+
 # --- No word or pattern only the keys share (round 2 review of #215, content 5) ----------------
 # Only the right option said "since" in 611-613, only the right one wrote "Directed:" or
 # "Undirected:" in 1302 and 1305, and only the right one said "ring" in 614, 628 and 1402. A
@@ -833,7 +850,8 @@ WORDING_ONLY = {
     # with the same answer, so an earlier pair means what it meant.
     "matching_left": {(a, m) for a in (606, 607, 608, 1202, 1203, 1204) for m in ("1", "2", "3")},
     # 102's definitions keep their meaning in new words, without the term's own word (#214 C6).
-    "matching_right": {(102, d) for d in ("d1", "d2", "d3", "d4")} | {(313, "r1")},
+    # 313's reasons no longer share a word with their situation (round 2 review of #215, content 10).
+    "matching_right": {(102, d) for d in ("d1", "d2", "d3", "d4")} | {(313, "r1"), (313, "r2")},
 }
 # Matching items that left an item: 609 and 1205 classify new situations by meaning (#214 C4), and
 # 603 matches three terms instead of "graph" (#214 C5).

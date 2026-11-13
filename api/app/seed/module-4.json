@@ -475,7 +475,7 @@
           },
           {
             "id": "d",
-            "label": "So BFS doesn't go round a cycle for ever."
+            "label": "So bfs can return visited, which keeps the vertices in order."
           },
           {
             "id": "c",
@@ -488,7 +488,7 @@
         "correct": "c",
         "feedback": {
           "a": "Not quite. The sorted call gives the alphabetical order; visited does a different job. It records every vertex BFS has found, so a vertex that is waiting is never added again. Look at the if line just before visited.add(n).",
-          "d": "Not quite. Marking a vertex when it leaves the queue would also stop BFS going round a cycle for ever. Marking it when it joins does more: a vertex already waiting is never added again. Look at the if line just before visited.add(n)."
+          "d": "Not quite. visited is a set, and a set keeps no order: bfs returns the order list. visited records every vertex BFS has found, so a vertex that is waiting is never added again. Look at the if line just before visited.add(n)."
         }
       },
       "hints": [
@@ -630,7 +630,7 @@
       "purpose": "practice",
       "objective_id": 6,
       "config": {
-        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    # Two lines are missing. Fill them in so bfs returns the vertices in the order BFS visits them.\n    # graph is your Graph class from module 2: graph.adjacency[v] is the list of v's neighbours.\n    visited = {start}  # every vertex BFS has found\n    queue = deque([start])\n    order = []\n    while queue:\n        v = __1__  # take the vertex at the front of the queue\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                __2__\n                __3__\n    return order",
+        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    # Two lines are missing. Fill them in so bfs returns the vertices in the order BFS visits them.\n    # graph is your Graph class from module 2: graph.adjacency[v] is the list of v's neighbours.\n    visited = {start}  # every vertex BFS has found\n    queue = deque([start])\n    order = []\n    while queue:\n        v = __1__\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                __2__\n                __3__\n    return order",
         "blanks": [
           1,
           2,

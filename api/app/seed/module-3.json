@@ -259,7 +259,7 @@
         "right": [
           {
             "id": "r2",
-            "label": "Good fit: BFS explores one ring of neighbours at a time, so it finds everyone within two steps first."
+            "label": "Good fit: BFS explores one ring of neighbours at a time, so it finds all the vertices close to the start first."
           },
           {
             "id": "r4",
@@ -267,7 +267,7 @@
           },
           {
             "id": "r6",
-            "label": "Not a fit: BFS counts edges, but here each edge has its own time."
+            "label": "Not a fit: BFS counts edges, but here the edges aren't all worth the same."
           },
           {
             "id": "r3",
@@ -275,7 +275,7 @@
           },
           {
             "id": "r1",
-            "label": "Good fit: BFS reaches vertices in rings, one edge further out each time, so the first time it reaches the goal it has used as few edges as possible."
+            "label": "Good fit: BFS works outwards one edge at a time, so it first reaches the goal by a shortest path."
           },
           {
             "id": "r5",
@@ -297,7 +297,7 @@
           "s2": "Not quite. Friends are one edge away and friends of friends two. BFS finds them ring by ring, whatever the vertices stand for. Look for the reason about rings of neighbours.",
           "s3": "Not quite. A list of prices has no vertices and edges to traverse, so a simple loop is enough. Look for the reason that says there is nothing to follow.",
           "s4": "Not quite. Pages are vertices and links are edges, so the fewest clicks is the fewest edges. Alphabetical order only decides which neighbour joins the queue first. Look for the reason about how BFS reaches vertices ring by ring.",
-          "s5": "Not quite. Each ride between stations takes its own time, so the route with the fewest stops isn't always the quickest. BFS counts edges, not minutes. Look for the reason about edges with their own time."
+          "s5": "Not quite. Each ride between stations takes its own time, so the route with the fewest stops isn't always the quickest. BFS counts edges, not minutes. Look for the reason about edges that aren't all worth the same."
         }
       },
       "hints": [
@@ -315,7 +315,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: s1 → r1 (fewest stops), s2 → r2 (ring by ring), s3 → r3 (not a graph), s4 → r1 (fewest clicks), s5 → r6 (each edge has its own time)."
+          "body": "Answer: s1 → r1 (fewest stops), s2 → r2 (ring by ring), s3 → r3 (not a graph), s4 → r1 (fewest clicks), s5 → r6 (edges not all worth the same)."
         }
       ]
     },
@@ -794,46 +794,46 @@
       "purpose": "practice",
       "objective_id": 8,
       "config": {
-        "prompt": "BFS now starts at D on the campus graph (edges A–C, A–E, B–C, B–G, C–F, D–E, E–F) and visits D, E, A, F, C, B, G. What is the fewest number of walkways from D to the Green (G)?",
+        "prompt": "BFS now starts at the Fountain (F) on the campus graph (edges A–C, A–E, B–C, B–G, C–F, D–E, E–F) and visits F, C, E, A, B, D, G. What is the fewest number of walkways from F to the Green (G)?",
         "options": [
           {
             "id": "a",
-            "label": "4"
+            "label": "2"
           },
           {
             "id": "b",
-            "label": "5"
+            "label": "3"
           },
           {
             "id": "c",
-            "label": "6"
+            "label": "4"
           }
         ]
       },
       "solution": {
-        "explanation": "Walking back from G: B, C, A, E, D. The route D → E → A → C → B → G has 5 walkways, and BFS guarantees none is shorter.",
+        "explanation": "Walking back from G: B found G, C found B, and F found C. The route F → C → B → G has 3 walkways, and BFS guarantees none is shorter.",
         "correct": "b",
         "feedback": {
-          "a": "Not quite. Walk back from G: B found G, C found B, A found C, E found A, D found E. That is 5 walkways. Count each step back.",
-          "c": "Not quite. 6 is the number of places on the route D, E, A, C, B, G, not the walkways between them. Count the edges, not the vertices."
+          "a": "Not quite. No walkway joins C to G. Walk back from G: B found G, C found B, F found C. That is 3 walkways. Count each step back.",
+          "c": "Not quite. 4 is the number of places on the route F, C, B, G, not the walkways between them. Count the edges, not the vertices."
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Write down who found each vertex as BFS runs from D."
+          "body": "Write down who found each vertex as BFS runs from F."
         },
         {
           "level": 2,
-          "body": "E found A and F; A found C; C found B. Who found G?"
+          "body": "F found C and E; C found A and B. Who found G?"
         },
         {
           "level": 3,
-          "body": "B found G. Now walk back from G to D and count the steps."
+          "body": "B found G. Now walk back from G to F and count the steps."
         },
         {
           "level": 4,
-          "body": "Answer: 5 walkways, D → E → A → C → B → G."
+          "body": "Answer: 3 walkways, F → C → B → G."
         }
       ]
     },

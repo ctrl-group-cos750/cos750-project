@@ -5,6 +5,7 @@ so these tests run it and compare: if the content or a graph changes, a stale an
 worked-example row fails here instead of teaching students something the checker marks wrong.
 """
 
+import json
 import re
 
 from app.schemas.graphs import BfsStep, GraphScenarioOut
@@ -82,6 +83,36 @@ def test_the_closing_task_answer_is_the_route_bfs_records_from_e_to_b() -> None:
     assert labels["f"] == "E → F → C → B: 3 walkways"
     assert {"F", "C"} in [{e.source, e.target} for e in CAMPUS.edges]
     assert {"E", "C"} not in [{e.source, e.target} for e in CAMPUS.edges]  # option g's walkway
+
+
+def test_the_practice_before_the_closing_task_does_not_walk_its_route() -> None:
+    """317, two items before 316, walked D → E → A → C → B → G in its explanation, feedback and
+    hints: 316's answer, E → A → C → B, read straight off it (round 2 review of #215, content 6).
+    317 now starts at F, and its answer is the engine's."""
+    path = route_back(CAMPUS.model_copy(update={"start_vertex": "F"}), "G")
+    assert chosen_label(317) == str(len(path) - 1)
+    assert activity(317).hints[-1].body == f"Answer: {len(path) - 1} walkways, {' → '.join(path)}."
+    a = activity(317)
+    shown = json.dumps([a.config, a.solution, [h.body for h in a.hints]], ensure_ascii=False)
+    answer = route_back(FROM_E, "B")
+    for u, v, w in zip(answer, answer[1:], answer[2:], strict=False):
+        assert f"{u} → {v} → {w}" not in shown  # no two steps of 316's route, either way round
+        assert f"{w} → {v} → {u}" not in shown
+    assert "A found C" not in shown  # 316's tie-break
+
+
+def test_when_bfs_fits_reasons_share_no_word_with_their_situations() -> None:
+    """313 could be matched by keyword: "time" in a situation and its reason, "two" friends and
+    "two steps" (round 2 review of #215, content 10)."""
+    a = activity(313)
+
+    def words(text: str) -> set[str]:
+        return {w for w in re.findall(r"[a-z]+", text.lower()) if len(w) >= 4}
+
+    reasons = {r["id"]: r["label"] for r in a.config["right"]}
+    for situation in a.config["left"]:
+        reason = reasons[a.solution["pairs"][situation["id"]]]
+        assert not words(situation["label"]) & words(reason), (situation["label"], reason)
 
 
 def test_the_trace_tables_last_hint_is_the_engines_answer() -> None:

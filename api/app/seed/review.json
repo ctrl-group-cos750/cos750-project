@@ -1768,7 +1768,7 @@
       "purpose": "mastery",
       "objective_id": 6,
       "config": {
-        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    # Return the vertices in the order BFS visits them from start,\n    # taking neighbours in alphabetical order.\n    discovered = __1__\n    lineup = deque([start])\n    order = []\n    while len(lineup) > 0:\n        here = lineup.__2__\n        order.append(here)\n        for nbr in __3__:\n            if nbr not in discovered:\n                discovered.add(nbr)\n                lineup.append(nbr)\n    return __4__",
+        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    # Return the vertices in the order BFS visits them from start,\n    # taking neighbours in alphabetical order.\n    discovered = {start}\n    lineup = __1__\n    order = []\n    while lineup:\n        here = lineup.popleft()\n        order.append(here)\n        for nbr in sorted(graph.adjacency[__2__]):\n            if nbr not in discovered:\n                discovered.add(__3__)\n                lineup.__4__\n    return order",
         "blanks": [
           1,
           2,
@@ -1776,62 +1776,65 @@
           4
         ],
         "options": [
+          "deque([start])",
+          "deque()",
+          "[start]",
           "{start}",
-          "set()",
-          "{}",
-          "popleft()",
-          "pop()",
-          "pop(0)",
-          "sorted(graph.adjacency[here])",
-          "graph.adjacency[here]",
-          "sorted(graph.adjacency[start])",
-          "order",
-          "discovered",
-          "lineup"
+          "here",
+          "start",
+          "lineup[0]",
+          "nbr",
+          "lineup",
+          "append(nbr)",
+          "appendleft(nbr)",
+          "append(here)",
+          "add(nbr)"
         ]
       },
       "solution": {
         "answers": {
-          "1": "{start}",
-          "2": "popleft()",
-          "3": "sorted(graph.adjacency[here])",
-          "4": "order"
+          "1": "deque([start])",
+          "2": "here",
+          "3": "nbr",
+          "4": "append(nbr)"
         },
         "feedback": {
           "1": {
-            "set()": "Not quite. The start vertex is in the queue but not in discovered, which holds every vertex found so far, so a neighbour can add it to the queue again and it is visited twice. Start with the start vertex already in discovered.",
-            "{}": "Not quite. {} is an empty dictionary, not an empty set, so discovered.add(nbr) stops with an error. A set holding the start vertex is written {start}."
+            "deque()": "Not quite. The queue starts empty, so the while loop never runs and bfs returns an empty list. The start vertex must be waiting in the queue before the loop: deque([start]).",
+            "[start]": "Not quite. A list has no popleft, so the first time round the loop stops with an error. Build a deque that holds the start vertex: deque([start]).",
+            "{start}": "Not quite. That is a set, like discovered, and a set has no popleft and no order. The queue is a deque that holds the start vertex: deque([start])."
           },
           "2": {
-            "pop()": "Not quite. pop() takes the newest vertex, from the back of the queue, so BFS goes deep instead of wide. Take the vertex that has waited longest, from the front, with popleft().",
-            "pop(0)": "Not quite. A deque's pop takes no position, so pop(0) stops with an error. A deque takes the vertex at the front with popleft()."
+            "start": "Not quite. That loops over the start's neighbours every time, not the neighbours of the vertex that just left the queue, so BFS never gets past the first ring. Use here.",
+            "lineup[0]": "Not quite. lineup[0] is the vertex waiting at the front now, not the one that just left, and on the last vertex lineup is empty, so it stops with an error. Use here, the vertex just taken out."
           },
           "3": {
-            "graph.adjacency[here]": "Not quite. That takes here's neighbours in the order their edges were added, not alphabetically. Loop over sorted(graph.adjacency[here]).",
-            "sorted(graph.adjacency[start])": "Not quite. That looks at the start's neighbours every time, not the neighbours of here, the vertex that just left the queue, so BFS never gets past the first ring. Loop over here's neighbours, sorted."
+            "start": "Not quite. start has been in discovered from the beginning. The new neighbour isn't marked, so a second vertex can add it again and it is visited twice. Mark nbr.",
+            "lineup": "Not quite. lineup is the queue itself, and a deque can't go in a set, so this stops with an error. The new neighbour isn't marked either. Mark nbr, the vertex that is joining the queue."
           },
           "4": {
-            "discovered": "Not quite. discovered is a set, and a set has no order. bfs must return the list of vertices in the order BFS visited them.",
-            "lineup": "Not quite. The loop only ends when the queue is empty, so lineup has nothing left in it. Return the list of vertices in the order BFS visited them."
+            "appendleft(nbr)": "Not quite. appendleft puts nbr at the front, so it leaves before vertices that have waited longer, and BFS goes deep instead of wide. New vertices join at the back: append(nbr).",
+            "append(here)": "Not quite. That puts here back in the queue instead of its new neighbour, so the neighbour is marked but never visited, and here comes round again. Add nbr to the back: append(nbr).",
+            "add(nbr)": "Not quite. A deque has no add, so this stops with an error. A deque takes a new vertex at the back with append(nbr)."
           }
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "You need a set of found vertices, a queue and an order list before the loop."
+          "body": "You need a queue holding the start before the loop, and, inside it, the neighbours of the vertex that has just left the queue."
         },
         {
           "level": 2,
-          "body": "BFS takes the vertex that has waited longest, from the front of the queue."
+          "body": "A deque is built from a list of what it starts with. New vertices join it at the back, and the one that has waited longest leaves from the front."
         },
         {
           "level": 3,
-          "body": "The start vertex is in discovered (found) from the beginning, neighbours are taken in alphabetical order, and the order is a list."
+          "body": "Loop over the neighbours of the vertex just taken out, and mark the new neighbour, not that vertex, as found before it joins the back."
         },
         {
           "level": 4,
-          "body": "Answer: blank 1 is {start}, blank 2 is popleft(), blank 3 is sorted(graph.adjacency[here]), and blank 4 is order."
+          "body": "Answer: blank 1 is deque([start]), blank 2 is here, blank 3 is nbr, and blank 4 is append(nbr)."
         }
       ]
     },

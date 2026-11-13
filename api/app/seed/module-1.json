@@ -1135,7 +1135,7 @@
         "left": [
           {
             "id": "s1",
-            "label": "Taxi ranks and the taxi routes between them. Taxis drive every route both ways."
+            "label": "Taxi ranks, and the roads taxis drive between them. Taxis use every road both ways."
           },
           {
             "id": "s2",
@@ -1157,15 +1157,15 @@
           },
           {
             "id": "m5",
-            "label": "The items are vertices, each “comes straight after” link is an edge, and it is directed."
+            "label": "The items are vertices, an edge leads from each item to the next, and it is directed."
           },
           {
             "id": "m1",
-            "label": "The places are vertices, the routes between them are edges, and it is undirected."
+            "label": "The places are vertices, the connections between them are edges, and it is undirected."
           },
           {
             "id": "m2",
-            "label": "The routes are vertices, the places they join are edges, and it is undirected."
+            "label": "The connections are vertices, the places they join are edges, and it is undirected."
           },
           {
             "id": "m3",
@@ -1184,11 +1184,11 @@
           "s3": "m5",
           "s4": "m6"
         },
-        "explanation": "The things are the vertices and the links between them are the edges, so the taxi ranks, children, songs and puzzle pieces are the vertices. Taxi routes and pieces that fit work both ways, so those graphs are undirected. An invitation and “plays straight after” work one way only, so those graphs are directed.",
+        "explanation": "The things are the vertices and the links between them are the edges, so the taxi ranks, children, songs and puzzle pieces are the vertices. Roads that taxis use both ways and pieces that fit work both ways, so those graphs are undirected. An invitation and “plays straight after” work one way only, so those graphs are directed.",
         "feedback": {
-          "s1": "Not quite. The taxi ranks are the places, so they are the vertices, and the routes joining them are the edges. Taxis drive each route both ways, so it is undirected. Watch out for the description that swaps the places and the routes.",
+          "s1": "Not quite. The taxi ranks are the places, so they are the vertices, and the roads joining them are the edges. Taxis use each road both ways, so it is undirected. Watch out for the description that swaps the places and the connections.",
           "s2": "Not quite. The children are the people, so they are the vertices, and each invitation is an edge. One child can invite another without being invited back, so it is directed, even though two children are involved. Ask: if this edge exists, must the reverse one exist too?",
-          "s3": "Not quite. The songs are the items, and each link from a song to the one after it is an edge. One song playing after another doesn't mean the other plays after it, so it is directed. Look for the description of items in order, with arrows.",
+          "s3": "Not quite. The songs are the items, and each link from a song to the one after it is an edge. One song playing after another doesn't mean the other plays after it, so it is directed. Look for the description of items each leading to the next.",
           "s4": "Not quite. The pieces are the objects, and each pair that fits is an edge. If one piece fits another, the other fits it too, so it is undirected. Look for the description of objects that fit together."
         }
       },
@@ -1207,7 +1207,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: taxis → places and routes, undirected; birthday party → people and one-way acts, directed; playlist → items and “comes straight after” links, directed; puzzle → objects and pairs that fit, undirected."
+          "body": "Answer: taxis → places and connections, undirected; birthday party → people and one-way acts, directed; playlist → items each leading to the next, directed; puzzle → objects and pairs that fit, undirected."
         }
       ]
     }

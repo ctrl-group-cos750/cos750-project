@@ -495,7 +495,7 @@
       "purpose": "practice",
       "objective_id": 6,
       "config": {
-        "code": "class Graph:\n    def __init__(self):\n        self.adjacency = {}  # vertex -> list of neighbours\n\n    def add_vertex(self, v):\n        # Add v with an empty list of neighbours, unless v is already in the graph.\n        if v __1__ self.adjacency:\n            self.adjacency[v] = __2__",
+        "code": "class Graph:\n    def __init__(self):\n        self.adjacency = {}  # vertex -> list of neighbours\n\n    def add_vertex(self, v):\n        # add_edge calls this for both ends of every edge, so v may be here already.\n        if v __1__ self.adjacency:\n            self.adjacency[v] = __2__",
         "blanks": [
           1,
           2
@@ -814,7 +814,7 @@
       "purpose": "practice",
       "objective_id": 6,
       "config": {
-        "code": "class Graph:\n    def __init__(self, directed=False):\n        self.directed = directed\n        self.adjacency = {}  # vertex -> list of neighbours\n\n    def add_vertex(self, v):\n        # A new vertex gets an empty list. A vertex already in the graph keeps its list.\n        if v not in self.adjacency:\n            self.adjacency[v] = __1__\n\n    def add_edge(self, a, b):\n        self.add_vertex(a)\n        self.add_vertex(b)\n        # The edge goes from a to b.\n        self.adjacency[__2__].append(__3__)\n        # With no arrows, it goes back from b to a as well.\n        if __4__:\n            self.adjacency[b].append(a)",
+        "code": "class Graph:\n    def __init__(self, directed=False):\n        self.directed = directed\n        self.adjacency = {}  # vertex -> list of neighbours\n\n    def add_vertex(self, v):\n        # add_edge calls this for both ends, so v may be here already.\n        if v not in self.adjacency:\n            self.adjacency[v] = __1__\n\n    def add_edge(self, a, b):\n        self.add_vertex(a)\n        self.add_vertex(b)\n        self.adjacency[__2__].append(__3__)\n        if __4__:\n            self.adjacency[b].append(a)",
         "blanks": [
           1,
           2,

@@ -708,6 +708,28 @@ def test_a_review_fill_in_is_as_hard_as_the_module_6_one() -> None:
             assert len(a.solution["feedback"][str(blank)]) >= 2, (a.id, blank)
 
 
+def test_the_review_fill_in_blanks_other_parts_than_620() -> None:
+    """1602 was 620 with renamed variables: the same four blanks, the same tokens (round 2 review
+    of #215). Now it blanks other parts of BFS: building the queue, whose neighbours, which vertex
+    is marked found, and where it joins."""
+    names = {"discovered": "visited", "lineup": "queue", "here": "v", "nbr": "n"}
+
+    def blanked(a: ActivityFixture) -> set[str]:
+        lines = {line.strip() for line in a.config["code"].splitlines() if BLANK.search(line)}
+        for old, new in names.items():
+            lines = {re.sub(rf"\b{old}\b", new, line) for line in lines}
+        return {BLANK.sub("__", line) for line in lines}
+
+    def answers(a: ActivityFixture) -> set[str]:
+        found = set(a.solution["answers"].values())
+        for old, new in names.items():
+            found = {re.sub(rf"\b{old}\b", new, x) for x in found}
+        return found
+
+    assert not blanked(ACTIVITIES[1602]) & blanked(ACTIVITIES[620])
+    assert not answers(ACTIVITIES[1602]) & answers(ACTIVITIES[620])
+
+
 @pytest.mark.parametrize("a", LABELLING, ids=lambda a: str(a.id))
 def test_the_places_letters_are_not_their_initials(a: ActivityFixture) -> None:
     """The kitchen was K and the river corner R in 607 and 1204, so the letter lookup was a free

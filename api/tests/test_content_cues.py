@@ -784,7 +784,8 @@ WORDING_ONLY = {
     # An objective 2 marker now describes its part instead of naming it; it is the same part,
     # with the same answer, so an earlier pair means what it meant.
     "matching_left": {(a, m) for a in (606, 607, 608, 1202, 1203, 1204) for m in ("1", "2", "3")},
-    "matching_right": set(),
+    # 102's definitions keep their meaning in new words, without the term's own word (#214 C6).
+    "matching_right": {(102, d) for d in ("d1", "d2", "d3", "d4")},
 }
 # Matching items that left an item: 609 and 1205 classify new situations by meaning (#214 C4), and
 # 603 matches three terms instead of "graph" (#214 C5).

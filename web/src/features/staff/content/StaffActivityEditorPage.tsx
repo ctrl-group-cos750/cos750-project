@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { Alert, Button, Spinner, TextField } from '../../../components'
 import styles from '../staff.module.css'
@@ -17,6 +17,7 @@ import {
   type ContentOverview,
 } from './content.api.ts'
 import { Provenance, SaveBar, SeedNote, Select, TextArea } from './ContentFields.tsx'
+import { usePageTitle } from '../../../pages/usePageTitle.ts'
 import { useWarnBeforeLeaving } from './useWarnBeforeLeaving.ts'
 
 const LEVELS = [1, 2, 3, 4] as const
@@ -138,15 +139,27 @@ function fresh(kind: ActivityKind): Draft {
   })
 }
 
-function parse(label: string, text: string): Record<string, unknown> {
+/** A JSON field that can't be sent, naming the field so the editor can mark it. */
+class JsonFieldError extends Error {
+  readonly field: 'config' | 'solution'
+  constructor(field: 'config' | 'solution', message: string, options?: ErrorOptions) {
+    super(message, options)
+    this.field = field
+  }
+}
+
+function parse(field: 'config' | 'solution', text: string): Record<string, unknown> {
+  const label = field === 'config' ? 'The config' : 'The solution'
   let value: unknown
   try {
     value = JSON.parse(text)
   } catch (e) {
-    throw new Error(`${label} is not valid JSON: ${(e as Error).message}`, { cause: e })
+    throw new JsonFieldError(field, `${label} is not valid JSON: ${(e as Error).message}`, {
+      cause: e,
+    })
   }
   if (typeof value !== 'object' || value === null || Array.isArray(value))
-    throw new Error(`${label} must be a JSON object, in { }.`)
+    throw new JsonFieldError(field, `${label} must be a JSON object, in { }.`)
   return value as Record<string, unknown>
 }
 
@@ -187,7 +200,12 @@ function ActivityEditor(props: {
   const [dirty, setDirty] = useState(false)
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  useWarnBeforeLeaving(dirty)
+  const allowLeaving = useWarnBeforeLeaving(dirty)
+  usePageTitle(id === undefined ? 'New activity' : `Activity #${id}`)
+  const jsonFields = useRef<Record<'config' | 'solution', HTMLTextAreaElement | null>>({
+    config: null,
+    solution: null,
+  })
 
   function change(next: Partial<Draft>) {
     setDraft((d) => ({ ...d, ...next }))
@@ -203,21 +221,28 @@ function ActivityEditor(props: {
     mutationFn: () =>
       saveActivity(id, {
         ...draft,
-        config: parse('The config', draft.config),
-        solution: parse('The solution', draft.solution),
+        config: parse('config', draft.config),
+        solution: parse('solution', draft.solution),
       } as ActivityIn),
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ['staff', 'content'] })
       setDraft(toDraft(result))
       setDirty(false)
+      allowLeaving()
       if (id === undefined)
         void navigate(`/staff/content/activities/${result.id}`, { replace: true })
     },
+    // A JSON field that can't be read: focus it, where its message is (WCAG 3.3.1).
+    onError: (error) => {
+      if (error instanceof JsonFieldError) jsonFields.current[error.field]?.focus()
+    },
   })
+  const jsonError = save.error instanceof JsonFieldError ? save.error : null
   const remove = useMutation({
     mutationFn: () => deleteActivity(id!),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['staff', 'content'] })
+      allowLeaving() // deleted: nothing left to save
       void navigate('/staff/content')
     },
   })
@@ -327,6 +352,10 @@ function ActivityEditor(props: {
             monospace
             rows={18}
             value={draft.config}
+            error={jsonError?.field === 'config' ? jsonError.message : undefined}
+            inputRef={(element) => {
+              jsonFields.current.config = element
+            }}
             onChange={(config) => change({ config })}
           />
           <TextArea
@@ -334,6 +363,10 @@ function ActivityEditor(props: {
             monospace
             rows={18}
             value={draft.solution}
+            error={jsonError?.field === 'solution' ? jsonError.message : undefined}
+            inputRef={(element) => {
+              jsonFields.current.solution = element
+            }}
             onChange={(solution) => change({ solution })}
           />
         </div>

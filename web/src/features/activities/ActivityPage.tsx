@@ -6,6 +6,7 @@ import { ApiError } from '../../api/client.ts'
 import { retryUnlessRefused } from '../../api/retry.ts'
 import { Alert, Spinner } from '../../components'
 import { BackLink } from '../../components/BackLink.tsx'
+import { usePageTitle } from '../../pages/usePageTitle.ts'
 import { useRefreshRewards } from '../rewards/hooks.ts'
 import {
   fetchActivity,
@@ -146,6 +147,14 @@ export function NotAvailable({
 export function ActivityPage() {
   const activityId = Number(useParams().activityId)
   const validActivityId = Number.isInteger(activityId) && activityId > 0
+  // The same query ActivityView makes (one request): names the tab after the activity.
+  const { data } = useQuery({
+    queryKey: ['activities', activityId],
+    queryFn: () => fetchActivity(activityId),
+    retry: retryUnlessRefused,
+    enabled: validActivityId,
+  })
+  usePageTitle(data?.title)
 
   if (!validActivityId)
     return <Alert tone="danger">The activity identifier must be a positive number.</Alert>

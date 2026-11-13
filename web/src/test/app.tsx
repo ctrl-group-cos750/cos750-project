@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render } from '@testing-library/react'
-import { MemoryRouter } from 'react-router'
+import { createMemoryRouter, RouterProvider } from 'react-router'
 import { vi } from 'vitest'
 import App from '../App.tsx'
 import type { User } from '../auth/api.ts'
@@ -120,9 +120,9 @@ export function renderApp(path = '/') {
   })
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[path]}>
-        <App />
-      </MemoryRouter>
+      <RouterProvider
+        router={createMemoryRouter([{ path: '*', element: <App /> }], { initialEntries: [path] })}
+      />
     </QueryClientProvider>,
   )
 }

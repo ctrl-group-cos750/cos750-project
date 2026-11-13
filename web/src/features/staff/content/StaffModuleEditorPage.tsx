@@ -18,6 +18,7 @@ import {
   type SegmentIn,
 } from './content.api.ts'
 import { Provenance, SaveBar, SeedNote, TextArea } from './ContentFields.tsx'
+import { usePageTitle } from '../../../pages/usePageTitle.ts'
 import { useWarnBeforeLeaving } from './useWarnBeforeLeaving.ts'
 import { SegmentsEditor } from './SegmentsEditor.tsx'
 
@@ -71,7 +72,8 @@ function ModuleEditor(props: {
   const [dirty, setDirty] = useState(false)
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  useWarnBeforeLeaving(dirty)
+  const allowLeaving = useWarnBeforeLeaving(dirty)
+  usePageTitle(id === undefined ? 'New module' : `Module ${id}`)
 
   function change(next: Partial<ModuleIn>) {
     setDraft((d) => ({ ...d, ...next }))
@@ -84,6 +86,7 @@ function ModuleEditor(props: {
       void queryClient.invalidateQueries({ queryKey: ['staff', 'content'] })
       setDraft(toInput(result))
       setDirty(false)
+      allowLeaving()
       if (id === undefined) void navigate(`/staff/content/modules/${result.id}`, { replace: true })
     },
   })
@@ -91,6 +94,7 @@ function ModuleEditor(props: {
     mutationFn: () => deleteModule(id!),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['staff', 'content'] })
+      allowLeaving() // deleted: nothing left to save
       void navigate('/staff/content')
     },
   })
@@ -221,6 +225,7 @@ function ReviewPathEditor(props: {
   const [dirty, setDirty] = useState(false)
   const queryClient = useQueryClient()
   useWarnBeforeLeaving(dirty)
+  usePageTitle(`Review path, objective ${saved.objectiveId}`)
   const objective = props.overview.objectives.find((o) => o.id === saved.objectiveId)
   const save = useMutation({
     mutationFn: () => saveReviewPath(saved.objectiveId, segments),

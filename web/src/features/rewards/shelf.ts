@@ -79,8 +79,10 @@ function item(
       next = 'Practised; not yet met in the check.'
       if (skill.improve?.kind === 'review') review = skill.id
     } else {
+      // Module 6 stops at hint 2, so meeting an objective there is always gold; bronze (met with
+      // support, hint 3) only comes from a review path (#222 review, A2).
       next =
-        'Next: bronze when you meet it in the mastery check, gold when you meet it there without hint 3 or 4.'
+        'Next: gold when you meet it in the mastery check. If the check says not yet, its review path gives bronze, or gold without hint 3.'
     }
   } else if (state === 'bronze') {
     next = 'Met with support. Gold is for meeting it without hint 3 or 4.'

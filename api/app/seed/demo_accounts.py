@@ -45,6 +45,7 @@ from sqlalchemy.orm import Session
 from app.models import Activity, Attempt, Checkpoint, Module, Segment, User, Video
 from app.models.user import DEMO_EMAIL_DOMAIN
 from app.passwords import password_problem
+from app.routers.activities import MASTERY_HINT_LIMIT
 from app.schemas.activities import (
     ChooseTestsConfig,
     ChooseTestsSolution,
@@ -66,16 +67,18 @@ from app.services.attempts import hint_level_seen, record_attempt, reveal_next_h
 from app.services.bfs import run_bfs
 from app.services.checking import check_activity
 from app.services.history import delete_history
-from app.services.mastery import evaluate, is_ready
+from app.services.mastery import evaluate, in_check, is_ready
 from app.services.modules import ModuleLocked, done_segments, get_module_detail, save_position
 
 DEMO_FILE = Path(__file__).parent / "demo" / "accounts.json"
 
 
 class DemoStep(BaseModel, extra="forbid"):
-    """Answer some of a module's questions, in the order its segments show them."""
+    """Answer some of a module's questions, or of an objective's review path (FR-7.5), in the
+    order its segments show them. Exactly one of `module` and `review` (the objective)."""
 
-    module: int
+    module: int | None = None
+    review: int | None = None
     # Only questions with one of these purposes, or for one of these objectives. Unset: all.
     purposes: list[Purpose] | None = None
     objectives: list[int] | None = None
@@ -84,8 +87,15 @@ class DemoStep(BaseModel, extra="forbid"):
     limit: int | None = Field(default=None, ge=1)
     answer: Literal["right", "wrong"]
     # Hints to reveal before answering, up to as many as each question has. 3 or 4 makes a right
-    # answer "with support" (FR-7.2).
+    # answer "with support" (FR-7.2). Revealed under the same limit the hints route sets, so a
+    # step can't ask for more than a student could see: module 6 stops at hint 2 (#222 review).
     hints: int = Field(default=0, ge=0, le=4)
+
+    @model_validator(mode="after")
+    def one_place(self) -> "DemoStep":
+        if (self.module is None) == (self.review is None):
+            raise ValueError("a step names exactly one of module and review")
+        return self
 
 
 class DemoProgress(BaseModel, extra="forbid"):
@@ -189,8 +199,15 @@ def _rebuild(session: Session, account: DemoAccount, password_hash: str) -> str 
     for n, step in enumerate(account.steps, start=1):
         for activity in _questions(session, step):
             where = f"{account.email}, step {n}, activity {activity.id}"
+            # The hints route's limit (app/routers/activities.py): a student can't see more.
+            limit = MASTERY_HINT_LIMIT if in_check(activity) else None
             while hint_level_seen(session, user.id, activity.id) < step.hints:
-                if reveal_next_hint(session, user.id, activity) is None:
+                if reveal_next_hint(session, user.id, activity, limit=limit) is None:
+                    if limit is not None and step.hints > limit:
+                        raise ValueError(
+                            f"{where}: asks for hint {step.hints}, but a student sees no more "
+                            f"than hint {limit} here"
+                        )
                     break  # fewer hints than asked for: show what there is
             record_attempt(session, user.id, activity, answer_for(activity, step.answer, where))
     stopped = _walk(session, user.id, account)
@@ -295,12 +312,17 @@ def _do(session: Session, user_id: int, segment: Segment, where: str) -> None:
 
 
 def _questions(session: Session, step: DemoStep) -> list[Activity]:
-    """The step's questions, in the order the module's segments show them."""
+    """The step's questions, in the order the module's (or review path's) segments show them."""
+    place = (
+        Segment.module_id == step.module
+        if step.module is not None
+        else Segment.review_objective_id == step.review
+    )
     shown = session.scalars(
         select(Activity)
         .join(Segment, Segment.activity_id == Activity.id)
         # Support segments (FR-8.4) only appear for a struggling student: never a step's question.
-        .where(Segment.module_id == step.module, Segment.support_for.is_(None))
+        .where(place, Segment.support_for.is_(None))
         .order_by(Segment.position)
     ).all()
     picked = [

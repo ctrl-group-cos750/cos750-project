@@ -9,7 +9,7 @@ import type { Skill } from './skills.api.ts'
  * objective; the ring carries the level, never the colour alone:
  *
  *   0 centre: not started · 1 practising · 2 secure in practice
- *   3 bronze: met with support · 4 gold: met on your own (both from the mastery check)
+ *   3 bronze: met with support (a review path) · 4 gold: met on your own (the check or a review path)
  *
  * "Not yet" in the mastery check keeps the practice ring it had and is drawn as an open point.
  */

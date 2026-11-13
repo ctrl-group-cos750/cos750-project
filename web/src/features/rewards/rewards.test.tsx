@@ -332,7 +332,7 @@ describe('badge levels', () => {
     const byId = Object.fromEntries(shelf.objective.map((i) => [i.achievement.id, i]))
     expect(byId.lo1.state).toBe('practised')
     expect(byId.lo1.next).toBe(
-      'Next: bronze when you meet it in the mastery check, gold when you meet it there without hint 3 or 4.',
+      'Next: gold when you meet it in the mastery check. If the check says not yet, its review path gives bronze, or gold without hint 3.',
     )
     expect(byId.lo3.next).toBe('Practise it in module 1 until it is secure.')
     expect(byId.lo6.next).toBe('Practise it in modules 2 and 4 until it is secure.')

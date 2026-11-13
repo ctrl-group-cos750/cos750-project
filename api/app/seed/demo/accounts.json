@@ -78,7 +78,7 @@
     {
       "key": "bronze",
       "display_name": "Demo: met with support",
-      "stage": "Finished the course and met every objective in the mastery check, objectives 2 and 7 only after hint 3: bronze on those two, gold on the rest.",
+      "stage": "Finished the course; the mastery check said not yet on objectives 2 and 7, and each one's review path then met it after hint 3: bronze on those two (met with support, which only a review path gives, since the check stops at hint 2), gold on the rest.",
       "progress": [
         { "module": 0 },
         { "module": 1 },
@@ -96,7 +96,11 @@
         { "module": 4, "answer": "right" },
         { "module": 5, "answer": "right" },
         { "module": 6, "purposes": ["mastery"], "except_objectives": [2, 7], "answer": "right" },
-        { "module": 6, "purposes": ["mastery"], "objectives": [2, 7], "answer": "right", "hints": 3 }
+        { "module": 6, "purposes": ["mastery"], "objectives": [2, 7], "answer": "wrong" },
+        { "review": 2, "purposes": ["review"], "answer": "right" },
+        { "review": 2, "purposes": ["mastery"], "answer": "right", "hints": 3 },
+        { "review": 7, "purposes": ["review"], "answer": "right" },
+        { "review": 7, "purposes": ["mastery"], "answer": "right", "hints": 3 }
       ],
       "expect": { "ready": true }
     }

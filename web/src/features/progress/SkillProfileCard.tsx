@@ -13,7 +13,7 @@ import styles from './progress.module.css'
 function note(checked: boolean): string {
   return checked
     ? 'Your results from the mastery check, with your practice before it. Open an objective for the detail.'
-    : 'How your practice is going on each of the eight objectives. The mastery check in module 6 adds gold or bronze. Open an objective for the detail.'
+    : 'How your practice is going on each of the eight objectives. The mastery check in module 6 adds gold, or a review path bronze or gold after a not yet. Open an objective for the detail.'
 }
 
 /** The skill profile as a card with its own heading, for the mastery report (#214): the list

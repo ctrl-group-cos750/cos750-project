@@ -235,9 +235,11 @@ def test_a_medal_needs_the_module_finished(client: TestClient, db: Session, load
     assert profile(client)["modules"][0]["medal"] == "gold"
 
 
-def test_a_wrong_first_answer_makes_it_silver(
+def test_a_wrong_first_answer_is_not_on_your_own(
     client: TestClient, db: Session, loaded: None
 ) -> None:
+    """Right after wrong in the same round is not real work (#222 review, A1): only a first
+    attempt per round is evidence, so one guessed item costs silver."""
     user = log_in(client)
     answer(client, 101, WRONG)
     answer(client, 101)
@@ -246,11 +248,49 @@ def test_a_wrong_first_answer_makes_it_silver(
     answer(client, 104)
     complete(db, user, 1)
     medal = profile(client)["modules"][0]
-    assert (medal["medal"], medal["firstTime"], medal["onYourOwn"]) == ("silver", 3, 4)
+    assert (medal["medal"], medal["firstTime"], medal["onYourOwn"]) == ("finished", 3, 3)
 
     see_hints(db, user, 102, 4)
     # Already answered right without the hints, so it stays on your own: a medal never goes down.
-    assert profile(client)["modules"][0]["medal"] == "silver"
+    assert profile(client)["modules"][0]["medal"] == "finished"
+
+
+def test_guessing_until_right_earns_no_silver_and_no_practised(
+    client: TestClient, db: Session, loaded: None
+) -> None:
+    """Wrong then right on every item of module 1 (two options each, so a guess): no silver, no
+    Practised, and the objectives stay practising (#222 review, A1; the rule #221 uses for
+    points)."""
+    user = log_in(client)
+    for activity in (101, 102, 103, 104):
+        answer(client, activity, WRONG)
+        answer(client, activity)
+    complete(db, user, 1)
+    medal = profile(client)["modules"][0]
+    assert (medal["medal"], medal["firstTime"], medal["onYourOwn"]) == (None, 0, 0)
+    levels = {s["id"]: (s["level"], s["onYourOwn"]) for s in profile(client)["objectives"]}
+    assert levels == {1: ("practising", 0), 2: ("practising", 0)}
+    assert objective_badges(client) == {}
+
+
+def test_right_first_time_after_a_restart_counts(
+    client: TestClient, db: Session, loaded: None
+) -> None:
+    """A round is one time through the module: after a restart, a right first attempt is
+    evidence again, so the student who guessed can show they know it. Gold stays for right at the
+    very first attempt."""
+    user = log_in(client)
+    for activity in (101, 102, 103, 104):
+        answer(client, activity, WRONG)
+        answer(client, activity)
+    complete(db, user, 1)
+    assert client.post("/api/modules/1/restart").status_code == 200
+    for activity in (101, 102, 103, 104):
+        answer(client, activity)
+        answer(client, activity, WRONG)  # a later wrong answer in the round changes nothing
+    medal = next(m for m in profile(client)["modules"] if m["moduleId"] == 1)
+    assert (medal["medal"], medal["firstTime"], medal["onYourOwn"]) == ("silver", 0, 4)
+    assert objective_badges(client) == {"lo1": "practised", "lo2": "practised"}
 
 
 def test_hint_3_before_the_only_right_answer_makes_it_finished(
@@ -514,3 +554,49 @@ def test_hints_before_a_restart_still_count_for_the_medal(
     medal = next(m for m in profile(client)["modules"] if m["moduleId"] == 1)
     assert (medal["medal"], medal["onYourOwn"], medal["firstTime"]) == (None, 0, 0)
     assert objective_badges(client) == {}  # not secure in practice either: no Practised
+
+
+def test_following_the_practise_it_in_list_earns_practised_on_the_real_content(
+    db: Session,
+) -> None:
+    """The shelf's "Practise it in modules ..." (`modules`) names every module holding an item
+    counted toward the objective, retrieval questions included, so answering right first time
+    in exactly those modules makes every objective secure (#222 review, A3)."""
+    from app.models import User
+    from app.services import skills as skill_service
+
+    load(db)
+    user = User(email="ada@example.com", password_hash="x", display_name="Ada")  # noqa: S106
+    db.add(user)
+    db.flush()
+    profile_now = skill_service.skills(db, user.id)
+    items = skill_service._practice(db)
+    places = skill_service._places(db, items)
+    retrieval_elsewhere = False
+    for skill in profile_now:
+        mine = [a for a in items if a.objective_id == skill.objective_id]
+        if not mine:
+            continue
+        counted = {places[a.id][1] for a in mine if a.id in places}
+        assert set(skill.modules) == counted, skill.objective_id
+        practice_only = {places[a.id][1] for a in mine if a.purpose == "practice"}
+        retrieval_elsewhere |= counted != practice_only
+    assert retrieval_elsewhere  # the real content has retrieval questions outside the practice
+
+    listed = {s.objective_id: set(s.modules) for s in profile_now}
+    for a in items:
+        if a.objective_id is not None and places.get(a.id, (0, -1))[1] in listed[a.objective_id]:
+            db.add(
+                Attempt(
+                    user_id=user.id,
+                    activity_id=a.id,
+                    submitted={},
+                    correct=True,
+                    score=1.0,
+                    detail={},
+                    hint_level=0,
+                )
+            )
+    db.flush()
+    with_items = {s.objective_id for s in profile_now if s.total > 0}
+    assert skill_service.secure_objectives(db, user.id) == with_items

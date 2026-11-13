@@ -6,10 +6,12 @@ What the rules follow (research: the ID document §7.2 and the #32 research note
   failing it, changes nothing.
 - A badge, once earned, is never removed. Recomputing results (FR-7.6) may add badges, never take
   them; an objective badge only ever goes up a level: practised (secure in the modules' practice,
-  app/services/skills.py), then bronze (met with support in the mastery check), then gold (met
-  independently). It can start at any level and skip one; it never goes down.
+  app/services/skills.py), then bronze (met with support, which only a review path gives: the
+  mastery check stops at hint 2), then gold (met independently). It can start at any level and
+  skip one; it never goes down.
 - Badges name a skill. None counts hints, attempts, days or speed, so none can be earned by
-  clicking through hints or guessing.
+  clicking through hints or guessing: only a first attempt per round counts as evidence, an
+  answer after hint 4 never counts, and right after wrong in the same round is not real work.
 
 The activity routes award activity points through `on_attempt`. The other `on_*` functions are
 for the features that own those events: objective results (#22), the review path (#23), a

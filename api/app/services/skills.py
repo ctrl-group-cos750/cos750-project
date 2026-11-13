@@ -7,8 +7,14 @@ shows practice progress as one of three coarse levels, not a percentage of a han
 
 - **not started**: none of the objective's practice items answered yet,
 - **practising**: some answered,
-- **secure**: every one answered, and at least 80% of them right without hint 3 or 4 (the
-  same line as the ID document's typical criterion, "at least 4 of 5").
+- **secure**: every one answered, and at least 80% of them right on your own (the same line as
+  the ID document's typical criterion, "at least 4 of 5").
+
+**On your own** is the rule every reward shares (FR-9.6, and #221 for points): only a first
+attempt per round counts as evidence; an answer after hint 4 (here, after hint 3 or 4) never
+counts; right after wrong in the same round is not real work. A round is one time through the
+module: restarting it (app/services/restart.py) starts a new one, so a student who guessed the
+first time can show they know it by answering right first time after a restart.
 
 The counts behind the level are sent too, for the profile to show on request. Practice items are
 the module activities tagged with the objective whose purpose is practice or retrieval, that every
@@ -24,7 +30,7 @@ never for effort or speed. Each activity the module asks every student to answer
 module 0's diagnostic finds gaps rather than marking, so it isn't one) is:
 
 - *first time* if the student's first answer to it was right without hint 3 or 4,
-- *on your own* if some answer to it was right without hint 3 or 4 (FR-7.2 and FR-9.2's line).
+- *on your own* if the first answer to it in some round was right without hint 3 or 4 (above).
 
 Then (`medal_for`, the one place the rule lives):
 
@@ -42,7 +48,7 @@ out here from the content so the web doesn't guess (`improve`):
   item on it the student hasn't answered yet (or, all answered, hasn't got right without hint 3
   or 4), at that item's segment when the student has already reached it (a segment further on
   can't be opened yet, FR-2.7, so the module opens where it resumes);
-- *secure*, or bronze from the mastery check: **revisit** the first module that practises it
+- *secure*, or bronze (met with support, which only a review path gives): **revisit** the first module that practises it
   (the result stands; going over it again is the student's choice);
 - *not yet* from the mastery check: its **review** path, the designed route after module 6, once
   open (FR-7.5);
@@ -60,6 +66,7 @@ is in progress, `heading_for` is the medal the answers so far are on course for,
 activities already answered.
 """
 
+from bisect import bisect_left
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from typing import Literal, cast
@@ -67,7 +74,16 @@ from typing import Literal, cast
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, Checkpoint, Module, ModuleProgress, Segment, Video
+from app.models import (
+    Activity,
+    Attempt,
+    Checkpoint,
+    Event,
+    Module,
+    ModuleProgress,
+    Segment,
+    Video,
+)
 from app.services import quick_check, rewards
 from app.services.mastery import MASTERY_MODULE, State, evaluate
 
@@ -104,13 +120,14 @@ class Skill:
     text: str
     answered: int  # practice items answered at all
     correct: int  # answered right at some point
-    on_your_own: int  # answered right without hint 3 or 4
+    on_your_own: int  # answered right on your own: first attempt in a round, no hint 3 or 4
     total: int
     level: Level
     result: State | None  # None until the mastery check (or a review path) decides it
     improve: Improve | None = None
-    # The modules, in course order, whose segments hold its practice questions (not the spaced
-    # retrieval questions): where its badge's first level, Practised, is earned.
+    # The modules, in course order, holding every item counted toward it (practice questions and
+    # spaced retrieval questions): where its badge's first level, Practised, is earned, so doing
+    # what the list says is enough to get there (#222 review, A3).
     modules: tuple[int, ...] = ()
 
 
@@ -119,7 +136,7 @@ class ModuleMedal:
     module_id: int
     complete: bool
     first_time: int  # activities whose first answer was right without hint 3 or 4
-    on_your_own: int  # activities answered right without hint 3 or 4
+    on_your_own: int  # activities answered right on your own (first attempt in some round)
     answered: int  # activities answered at all
     total: int
     medal: Medal | None  # set once the module is complete
@@ -184,26 +201,51 @@ class _Answers:
     first_time: set[int]
 
 
-def _answers(session: Session, user_id: int, ids: Collection[int]) -> _Answers:
-    """Of these activities: those answered at all, right at some point, right without hint 3 or
-    4, and right without them at the first answer."""
-    if not ids:
+def _round_starts(session: Session, user_id: int) -> dict[int, list[int]]:
+    """Each module's restarts for this student, as the newest attempt id at each one, in order.
+    The progress row keeps only the latest; every one is in the event log (restart.py)."""
+    starts: dict[int, list[int]] = {}
+    for ref, payload in session.execute(
+        select(Event.ref, Event.payload).where(
+            Event.user_id == user_id, Event.type == "module_restarted"
+        )
+    ).all():
+        after = (payload or {}).get("after_attempt")
+        if ref.startswith("module:") and isinstance(after, int):
+            starts.setdefault(int(ref.removeprefix("module:")), []).append(after)
+    return {module: sorted(afters) for module, afters in starts.items()}
+
+
+def _answers(session: Session, user_id: int, items: Sequence[Activity]) -> _Answers:
+    """Of these activities: those answered at all, right at some point, right on your own (the
+    first attempt in some round, without hint 3 or 4: the module docstring), and right without
+    them at the very first answer."""
+    if not items:
         return _Answers(set(), set(), set(), set())
+    module_of = {a.id: a.module_id for a in items}
+    starts = _round_starts(session, user_id)
     # "Without hint 3 or 4" is the rewards' rule (rewards.real_work): a hint 3 or 4 seen before
     # the answer in any round counts, so restarting a module after opening every hint doesn't
     # turn the answers the hints gave into a silver or gold medal (13 Nov review).
     rows = session.execute(
-        select(Attempt.activity_id, Attempt.correct, rewards.real_work().label("real"))
-        .where(Attempt.user_id == user_id, Attempt.activity_id.in_(ids))
+        select(Attempt.id, Attempt.activity_id, Attempt.correct, rewards.real_work().label("real"))
+        .where(Attempt.user_id == user_id, Attempt.activity_id.in_(list(module_of)))
         .order_by(Attempt.id)
     ).all()
     first: dict[int, bool] = {}
-    for activity, correct, real in rows:
-        first.setdefault(activity, bool(correct) and bool(real))
+    # The first attempt at each activity in each round: the only ones that are evidence, so
+    # wrong then right in the same round (guessing until right) is not on your own (#222, A1).
+    first_in_round: dict[tuple[int, int], bool] = {}
+    for attempt_id, activity, correct, real in rows:
+        ok = bool(correct) and bool(real)
+        first.setdefault(activity, ok)
+        module = module_of.get(activity)
+        round_ = bisect_left(starts.get(module, []), attempt_id) if module is not None else 0
+        first_in_round.setdefault((activity, round_), ok)
     return _Answers(
         answered=set(first),
-        right={a for a, correct, _ in rows if correct},
-        on_own={a for a, correct, real in rows if correct and real},
+        right={a for _, a, correct, _ in rows if correct},
+        on_own={a for (a, _), ok in first_in_round.items() if ok},
         first_time={a for a, ok in first.items() if ok},
     )
 
@@ -298,7 +340,7 @@ def _reached(session: Session, user_id: int) -> dict[int, int | None]:
 def skills(session: Session, user_id: int) -> list[Skill]:
     """The student's skill profile, in objective order."""
     items = _practice(session)
-    got = _answers(session, user_id, [a.id for a in items])
+    got = _answers(session, user_id, items)
     places = _places(session, items)
     reached = _reached(session, user_id)
     out = []
@@ -309,7 +351,6 @@ def skills(session: Session, user_id: int) -> list[Skill]:
                 (places[a.id][0], places[a.id][1])
                 for a in items
                 if a.objective_id == outcome.objective.id
-                and a.purpose == "practice"
                 and a.id in places
                 and places[a.id][1] != MASTERY_MODULE
             }
@@ -351,11 +392,12 @@ def secure_objectives(
     """The objectives this student is secure in, in practice (`level_for`), of `only` if given,
     for the Practised badge: the skill profile's count, without the rest of it. "On your own" is
     real work (`_answers`), so an answer given away by hint 3 or 4 before a module's restart
-    doesn't count after it, as for every other reward (13 Nov audit)."""
+    doesn't count after it, and right after wrong in the same round doesn't count at all, as for
+    every other reward (13 Nov audit; #222 review, A1)."""
     items = [a for a in _practice(session) if a.objective_id is not None]
     if only is not None:
         items = [a for a in items if a.objective_id in only]
-    got = _answers(session, user_id, [a.id for a in items])
+    got = _answers(session, user_id, items)
     answered_ids, own_ids = got.answered, got.on_own
     secure = set()
     for objective in {cast(int, a.objective_id) for a in items}:
@@ -417,7 +459,7 @@ def module_medals(session: Session, user_id: int) -> list[ModuleMedal]:
     # worked through (the status is then "complete"): the better of the two.
     tested_out = {m for m, status in statuses.items() if status == "tested_out"}
     tested_out |= quick_check.passed(session, user_id)
-    got = _answers(session, user_id, list(by_id))
+    got = _answers(session, user_id, items)
     medals = []
     for module in session.scalars(select(Module).order_by(Module.position)):
         if module.id == MASTERY_MODULE:

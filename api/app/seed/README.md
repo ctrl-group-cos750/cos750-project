@@ -42,6 +42,10 @@ point at them.
   segment. A module whose segments staff have edited in the portal keeps its list (the seed reports
   it as held), so the replacement doesn't reach it: make the change in the portal, or export the
   portal's content and commit it first.
+- To replace a module 6 mastery item, give the new one a new id too, and add the pair to
+  `REPLACES` in `app/services/mastery.py` (new id: old id). A student who answered the old item
+  keeps that answer for the new one until they answer it, so a student who had finished the check
+  isn't marked "not attempted" again. Without the entry, nobody has answered the new item yet.
 
 Text is plain, short sentences, in British/South African spelling. Segment bodies and activity
 prompts are Markdown, so you can use **bold**, lists and code blocks (` ```python `).

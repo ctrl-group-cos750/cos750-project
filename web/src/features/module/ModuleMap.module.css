@@ -1,5 +1,8 @@
 .page {
   display: grid;
+  /* One column no wider than the screen: an auto track would widen to its widest line and run
+   * past the page's padding at 320 px (WCAG 1.4.10). */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-5);
   max-width: 56rem;
   margin-inline: auto;
@@ -101,7 +104,8 @@
 .totalDuration {
   color: var(--color-text-muted);
   font-size: var(--text-sm);
-  white-space: nowrap;
+  /* Wraps rather than overflowing at 320 px or with larger text spacing (WCAG 1.4.12). */
+  overflow-wrap: anywhere;
 }
 
 /* Module list */

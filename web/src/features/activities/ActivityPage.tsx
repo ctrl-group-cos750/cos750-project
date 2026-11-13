@@ -64,9 +64,10 @@ export function ActivityView({ activityId, heading, showTitle, onResult }: Activ
       const nextResult = await submitActivityAttempt(activityId, submitted)
       setResult(nextResult)
       onResult?.(nextResult)
-      // A withheld (mastery check) answer may be the one that finishes the check, and earns the
-      // check's points and badges at once (#144).
-      if (nextResult.correct || nextResult.withheld) refreshRewards()
+      // After every answer, not only a correct one: a withheld (mastery check) answer may finish
+      // the check (#144), and on a review path a wrong answer can still meet the objective, which
+      // is judged on all its parts, and earn its badges (13 Nov audit). They are announced at once.
+      refreshRewards()
       // The next time it is shown (Previous, a refresh), the server has this answer: it comes back
       // with the answer and its result (#171), and once solved or answered for good, with no hints
       // offered (#158, #144). After every answer, so a wrong one comes back too.

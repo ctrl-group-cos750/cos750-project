@@ -754,7 +754,7 @@
             "queue.pop()": "Not quite. pop() takes from the back of the queue, so the search goes deep instead of wide. BFS takes from the front with popleft()."
           },
           "5": {
-            "graph.adjacency[v]": "Not quite. That takes the neighbours in the order their edges were added. BFS takes them in alphabetical order: if the edges were added in the order D, B, C, it must still take B, C, D. Sort the list.",
+            "graph.adjacency[v]": "Not quite. That takes the neighbours in the order their edges were added. This BFS takes them in alphabetical order, as its comment asks: if the edges were added in the order D, B, C, it must still take B, C, D. Sort the list.",
             "sorted(graph.adjacency)": "Not quite. That loops over every vertex in the graph, not just v's neighbours, so BFS would reach vertices with no path from the start. Loop over v's own list of neighbours."
           },
           "6": {

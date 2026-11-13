@@ -185,6 +185,8 @@ def test_the_code_calls_the_found_set_found() -> None:
 
 # Module 6's items. A review path's fresh items (1602 is the practice program again) are #148's.
 MASTERY = [a for a in CONTENT.activities if a.purpose == "mastery" and a.module_id == 6]
+# Everything on a review path: its practice and its fresh items.
+REVIEWS = [a for a in CONTENT.activities if a.module_id is None]
 PRACTICE = [a for a in CONTENT.activities if a.purpose == "practice"]
 
 
@@ -218,6 +220,49 @@ def test_a_mastery_fix_the_bug_item_is_not_a_practice_one(a: ActivityFixture) ->
     mine = [line["text"] for line in a.config["lines"]]
     for p in (p for p in PRACTICE if p.kind == "fix_the_bug"):
         assert mine != [line["text"] for line in p.config["lines"]], p.id
+
+
+ASSESSED_FIXES = [
+    a for a in CONTENT.activities if a.kind == "fix_the_bug" and a.purpose == "mastery"
+]
+
+
+@pytest.mark.parametrize("a", ASSESSED_FIXES, ids=lambda a: str(a.id))
+def test_an_assessed_fix_offers_a_correction_for_a_line_that_is_not_faulty(
+    a: ActivityFixture,
+) -> None:
+    """Locating the bug is the Analyse part of objective 7. When every correction rewrites the
+    faulty line (all `for n in sorted…`, all `v = queue…`), the choices point at it and only
+    Understand is left (Thompson 2008; review 13 Nov, High 10). So at least one correction looks
+    like a fix for a line that is not faulty."""
+    fixed = {i for x in a.solution["order"] for i in (x if isinstance(x, list) else [x])}
+    lines = {x["id"]: x["text"] for x in a.config["lines"]}
+    faulty = [lines[i] for i in lines if i not in fixed]
+
+    def head(text: str) -> str:
+        return re.split(r"[ (.=:]", text.strip())[0]
+
+    elsewhere = [
+        c["text"]
+        for c in a.config["corrections"]
+        if c["id"] not in fixed and all(head(c["text"]) != head(f) for f in faulty)
+    ]
+    assert elsewhere, f"every wrong correction rewrites the faulty line: {faulty}"
+
+
+@pytest.mark.parametrize("a", MASTERY + REVIEWS, ids=lambda a: str(a.id))
+def test_alphabetical_order_is_never_called_a_rule_of_bfs(a: ActivityFixture) -> None:
+    """Module 4 teaches that alphabetical order is a choice the course makes, not a rule of BFS
+    (473, 461, 462); 621 and 619 said BFS must take neighbours alphabetically (review 13 Nov,
+    High 4)."""
+    for text in everything([a.config, a.solution, [h.body for h in a.hints]]):
+        low = text.lower()
+        assert "must take neighbours in alphabetical" not in low, a.id
+        assert not re.search(
+            r"(?<!our )\bbfs (takes|orders) (each vertex's |the )?neighbours"
+            r"[^.]*alphabetical",
+            low,
+        ), (a.id, text)
 
 
 @pytest.mark.parametrize(
@@ -458,6 +503,8 @@ RETIRED = {
 
 def test_a_retired_option_id_is_never_reused() -> None:
     for activity_id, retired in RETIRED.items():
+        if activity_id in RETIRED_ACTIVITIES:
+            continue  # the whole activity is gone, and its id is never reused
         options = {o["id"] for o in ACTIVITIES[activity_id].config["options"]}
         assert not retired & options, activity_id
 
@@ -747,14 +794,17 @@ def test_objective_3_and_4_options_are_about_the_same_length(a: ActivityFixture)
 @pytest.mark.parametrize("where", CHECK_SETS)
 def test_the_keys_length_rank_varies(where: str, objective: int) -> None:
     longest = shortest = 0
-    for a in (a for a in CHECK_SETS[where] if a.objective_id == objective):
+    chosen = [
+        a for a in CHECK_SETS[where] if a.objective_id == objective and a.kind == "multiple_choice"
+    ]
+    for a in chosen:
         lengths = {o["id"]: len(o["label"]) for o in a.config["options"]}
         key = lengths[a.solution["correct"]]
         longest += key == max(lengths.values())
         shortest += key == min(lengths.values())
     assert longest >= 1
     assert shortest >= 1
-    items = sum(1 for a in CHECK_SETS[where] if a.objective_id == objective)
+    items = len(chosen)
     assert longest < items - 1
     assert shortest < items - 1
 
@@ -919,17 +969,23 @@ GONE_RIGHT = (
     | {(1204, e) for e in ("vR", "vS", "vT", "vU", "eRS", "eST", "eTU", "eSR", "eTS", "eUT")}
 )
 # Fix-the-bug corrections that left an item: 621 is a new bug (#214 C2), so all its corrections are.
-RETIRED_CORRECTIONS = {621: {20, 21, 22, 23}, 1703: {22}}
+# 621 (its 26, newer than the snapshot), 622 and 1702 each lost a correction that rewrote the
+# faulty line again, for one that rewrites another line, so the corrections no longer point at
+# the bug (review 13 Nov, High 10).
+RETIRED_CORRECTIONS = {621: {20, 21, 22, 23}, 622: {21}, 1702: {22}, 1703: {22}}
 # Ids that left an item; they must never come back (RETIRED, plus the retired corrections).
-GONE = {(a, i) for a, ids in RETIRED.items() for i in ids} | {
+GONE = {(a, i) for a, ids in RETIRED.items() if a != 612 for i in ids} | {
     (a, str(i)) for a, ids in RETIRED_CORRECTIONS.items() for i in ids
-}
+}  # 612 left whole (RETIRED_ACTIVITIES below), not option by option
 # Whole activities taken out of the course; their ids must never return with other content. 107,
 # module 1's closing task, matched four situations against one shared list, so each situation's
 # own nouns gave its answer away; it became four questions, 108-111, each with its own options,
 # shown by fresh segments 114-117. Segment 110, which showed 107, is retired with it.
-RETIRED_ACTIVITIES = {107}
-RETIRED_SEGMENTS = {110}
+# 612, objective 3's house-building item, asked the student to recognise a model among four; it
+# became 630, a matching item in which the student builds it: the jobs, the link, its direction
+# and the kind of graph (review 13 Nov, High 10). Segment 613, which showed 612, is retired with it.
+RETIRED_ACTIVITIES = {107, 612}
+RETIRED_SEGMENTS = {110, 613}
 
 
 def _now(a: ActivityFixture, kind: str) -> dict[str, str]:

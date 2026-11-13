@@ -116,6 +116,12 @@
           "activity_id": 1301
         },
         {
+          "id": 1307,
+          "kind": "activity",
+          "title": "Review practice: build the reserve's graph",
+          "activity_id": 1306
+        },
+        {
           "id": 1303,
           "kind": "activity",
           "title": "Objective 3 · fresh item 1 of 4",
@@ -1119,6 +1125,108 @@
       ]
     },
     {
+      "id": 1306,
+      "kind": "matching",
+      "title": "Review practice: build the reserve's graph",
+      "module_id": null,
+      "purpose": "review",
+      "objective_id": 3,
+      "config": {
+        "prompt": "Build the graph of the nature reserve from the worked example: match each part of the reserve to what it becomes in the graph. Some choices fit nothing.",
+        "left": [
+          {
+            "id": "p1",
+            "label": "The gate, the three huts and the waterfall"
+          },
+          {
+            "id": "p2",
+            "label": "The zip line"
+          },
+          {
+            "id": "p3",
+            "label": "The way the zip line points"
+          },
+          {
+            "id": "p4",
+            "label": "The hikers"
+          },
+          {
+            "id": "p5",
+            "label": "The whole graph"
+          }
+        ],
+        "right": [
+          {
+            "id": "und",
+            "label": "An undirected graph: each edge goes both ways"
+          },
+          {
+            "id": "e1",
+            "label": "An edge"
+          },
+          {
+            "id": "wh",
+            "label": "From the waterfall to hut 3"
+          },
+          {
+            "id": "vs",
+            "label": "Vertices"
+          },
+          {
+            "id": "no",
+            "label": "Not part of the graph"
+          },
+          {
+            "id": "dir",
+            "label": "A directed graph: at least one edge goes one way only"
+          },
+          {
+            "id": "hw",
+            "label": "From hut 3 to the waterfall"
+          },
+          {
+            "id": "es",
+            "label": "Edges"
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "p1": "vs",
+          "p2": "e1",
+          "p3": "hw",
+          "p4": "no",
+          "p5": "dir"
+        },
+        "explanation": "Correct. The places are the vertices, the zip line is an edge with an arrow from hut 3 down to the waterfall, and the hikers only move through the graph. One one-way edge is enough to make the graph directed.",
+        "feedback": {
+          "p1": "Not quite. The places are the things a hiker moves between, so each one is a vertex. Ask: which are the things, and which are the links between them?",
+          "p2": "Not quite. The zip line joins two places, hut 3 and the waterfall, so it is an edge. Ask: is it a place, or a link between two places?",
+          "p3": "Not quite. The zip line carries hikers down from hut 3 to the waterfall and never back up, so its arrow points from hut 3 to the waterfall. Ask: where does a hiker start and end?",
+          "p4": "Not quite. Hikers walk the trails, but they aren't places or links: they move through the graph and aren't part of it. Ask: does a hiker join two places?",
+          "p5": "Not quite. The trails go both ways, but the zip line goes one way only, and one one-way edge makes the graph directed. Ask: does every link work both ways?"
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Ask the worked example's three questions: what are the things, what connects them, and does each connection work both ways?"
+        },
+        {
+          "level": 2,
+          "body": "The places are the things. Hikers move through the graph, like cars on roads."
+        },
+        {
+          "level": 3,
+          "body": "The places are vertices and the zip line is an edge. The zip line only goes down, from hut 3 to the waterfall, so the graph is directed."
+        },
+        {
+          "level": 4,
+          "body": "Answer: the places → vertices; the zip line → an edge; its direction → from hut 3 to the waterfall; the hikers → not part of the graph; the whole graph → a directed graph, because one edge goes one way only."
+        }
+      ]
+    },
+    {
       "id": 1302,
       "kind": "multiple_choice",
       "title": "Objective 3 · fresh item 1 of 4",
@@ -1954,12 +2062,16 @@
         ],
         "corrections": [
           {
-            "id": 22,
-            "text": "            if n != v:"
+            "id": 23,
+            "text": "    found = set()"
           },
           {
             "id": 20,
             "text": "            if n not in found:"
+          },
+          {
+            "id": 24,
+            "text": "        v = queue.pop()"
           },
           {
             "id": 21,

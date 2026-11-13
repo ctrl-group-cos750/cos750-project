@@ -83,10 +83,10 @@
           "activity_id": 611
         },
         {
-          "id": 613,
+          "id": 630,
           "kind": "activity",
-          "title": "Objective 3 · item 3 of 4",
-          "activity_id": 612
+          "title": "Objective 3 · item 3 of 4: build the model",
+          "activity_id": 630
         },
         {
           "id": 614,
@@ -127,7 +127,7 @@
         {
           "id": 620,
           "kind": "activity",
-          "title": "Objective 6 · item 1 of 2: put BFS in order",
+          "title": "Objective 6 · item 1 of 2: put BFS in order, taking neighbours in alphabetical order as this course does",
           "activity_id": 619
         },
         {
@@ -907,57 +907,97 @@
       ]
     },
     {
-      "id": 612,
-      "kind": "multiple_choice",
-      "title": "Objective 3 · item 3 of 4",
+      "id": 630,
+      "kind": "matching",
+      "title": "Objective 3 · item 3 of 4: build the model",
       "module_id": 6,
-      "purpose": "mastery",
       "objective_id": 3,
+      "purpose": "mastery",
       "config": {
-        "prompt": "Building a house: the foundations must be finished before the walls go up, and the walls before the roof. A builder wants a graph showing which job must be finished before which. Which graph models it?",
-        "options": [
+        "prompt": "Building a house: the foundations must be finished before the walls go up, and the walls before the roof. A builder wants a graph of which job must be finished before which. Build the graph: match each part of the situation to what it becomes in the graph. Some choices fit nothing.",
+        "left": [
           {
-            "id": "f",
-            "label": "Vertices: jobs. Edges: “must finish first” links. Directed, because the roof can't come before walls."
+            "id": "p1",
+            "label": "The foundations, the walls and the roof"
           },
           {
-            "id": "e",
-            "label": "Vertices: jobs. Edges: “must finish first” links. Undirected, because each link joins two jobs."
+            "id": "p2",
+            "label": "“The foundations must be finished before the walls”"
           },
           {
-            "id": "g",
-            "label": "Vertices: builders. Edges: the jobs each builder does. Directed, because a builder does each job."
+            "id": "p3",
+            "label": "The way that link points"
           },
           {
-            "id": "h",
-            "label": "Vertices: “must finish first” links. Edges: jobs. Directed, because each job leads to the next job."
+            "id": "p4",
+            "label": "The whole graph"
+          }
+        ],
+        "right": [
+          {
+            "id": "dir",
+            "label": "A directed graph: each edge goes one way"
+          },
+          {
+            "id": "vs",
+            "label": "Vertices"
+          },
+          {
+            "id": "wf",
+            "label": "From the walls to the foundations"
+          },
+          {
+            "id": "v1",
+            "label": "A vertex"
+          },
+          {
+            "id": "e1",
+            "label": "An edge"
+          },
+          {
+            "id": "fw",
+            "label": "From the foundations to the walls"
+          },
+          {
+            "id": "es",
+            "label": "Edges"
+          },
+          {
+            "id": "und",
+            "label": "An undirected graph: each edge goes both ways"
           }
         ]
       },
       "solution": {
-        "correct": "f",
+        "pairs": {
+          "p1": "vs",
+          "p2": "e1",
+          "p3": "fw",
+          "p4": "dir"
+        },
         "feedback": {
-          "e": "Not quite. The walls must come before the roof, but the roof doesn't come before the walls. The link only works one way. Ask: if A must finish before B, must B finish before A?",
-          "g": "Not quite. The builders do the jobs, but they aren't what the graph is about: the question asks which job must come before which. Ask: what are the things being ordered?",
-          "h": "Not quite. That swaps them. Each “must finish first” link joins two jobs, so the link is the edge. Ask: which one joins the other two?"
+          "p1": "Not quite. The jobs are the things being linked, so each job is a vertex. Ask: which are the things, and which are the links between them?",
+          "p2": "Not quite. “Must be finished before” links two jobs, so it is an edge between their vertices. Ask: is it a thing, or a link between two things?",
+          "p3": "Not quite. The foundations come first and the walls wait for them, so the arrow goes from the foundations to the walls. Ask: which job must be done first?",
+          "p4": "Not quite. “Foundations before walls” doesn't work the other way round, so each edge goes one way and the graph is directed. Ask: does the link work both ways?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Ask: what are the things, and what joins two of them?"
+          "body": "First find the things being linked, then the links between them."
         },
         {
           "level": 2,
-          "body": "The vertices are the things being connected, and each edge joins exactly two of them."
+          "body": "A link that works only one way needs an arrow. Does “must be finished before” work both ways?"
         },
         {
           "level": 3,
-          "body": "Jobs are the vertices and the links are the edges. If the walls come before the roof, does the roof come before the walls?"
+          "body": "The jobs are the vertices and each “must be finished before” link is an edge. The arrow starts at the job that must be done first."
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: jobs. Edges: “must finish first” links. Directed, because the roof can't come before walls."
+          "body": "Answer: the jobs → vertices; “foundations before walls” → an edge; the way it points → from the foundations to the walls; the whole graph → a directed graph."
         }
       ]
     },
@@ -1028,7 +1068,7 @@
         "options": [
           {
             "id": "g",
-            "label": "Yes. BFS orders the neighbours of a vertex alphabetically, and that keeps the ladder short."
+            "label": "Yes. Our BFS orders the neighbours of a vertex alphabetically, and that keeps the ladder short."
           },
           {
             "id": "h",
@@ -1293,7 +1333,7 @@
     {
       "id": 619,
       "kind": "parsons",
-      "title": "Objective 6 · item 1 of 2: put BFS in order",
+      "title": "Objective 6 · item 1 of 2: put BFS in order, taking neighbours in alphabetical order as this course does",
       "module_id": 6,
       "purpose": "mastery",
       "objective_id": 6,
@@ -1401,7 +1441,7 @@
         },
         {
           "level": 3,
-          "body": "For each neighbour w in sorted(graph.adjacency[u]) that isn't in the found set yet: add it to the found set, then to the back of waiting. Return the order. Four lines don't belong: pop(), set(), the unsorted loop and return found."
+          "body": "For each neighbour w in sorted(graph.adjacency[u]) that isn't in the found set yet: add it to the found set, then to the back of waiting. Return the order. Four lines don't belong: pop(), set(), the loop that doesn't sort (a BFS could take neighbours in any order, but this course takes them alphabetically) and return found."
         },
         {
           "level": 4,
@@ -1492,7 +1532,7 @@
       "purpose": "mastery",
       "objective_id": 7,
       "config": {
-        "prompt": "On a graph whose edges were added in the order A–D, A–C, A–B, a correct BFS from A gives A, B, C, D, but this one gives A, D, C, B. Replace the faulty line with a correction.",
+        "prompt": "Our BFS takes each vertex's neighbours in alphabetical order, as in module 4: a convention this course uses so that everyone's traces agree, not a rule of BFS. On a graph whose edges were added in the order A–C, A–B, B–D, C–E, our BFS from A gives A, B, C, D, E, but this one gives A, C, B, E, D. Replace the faulty line with a correction.",
         "lines": [
           {
             "id": 1,
@@ -1549,16 +1589,20 @@
         ],
         "corrections": [
           {
+            "id": 27,
+            "text": "        v = queue.pop()"
+          },
+          {
             "id": 25,
             "text": "        for n in sorted(graph.adjacency):"
           },
           {
-            "id": 24,
-            "text": "        for n in sorted(graph.adjacency[v]):"
+            "id": 28,
+            "text": "            if n not in order:"
           },
           {
-            "id": 26,
-            "text": "        for n in sorted(graph.adjacency[start]):"
+            "id": 24,
+            "text": "        for n in sorted(graph.adjacency[v]):"
           }
         ]
       },
@@ -1583,13 +1627,13 @@
           13
         ],
         "feedback": {
-          "9": "Not quite. This loop takes v's neighbours in the order their edges were added, so D, added first, joins the queue first. The traversal must take neighbours in alphabetical order. Sort v's own list of neighbours."
+          "9": "Not quite. This loop takes v's neighbours in the order their edges were added, so C, added first, joins the queue before B. That is still breadth-first, but our BFS takes neighbours in alphabetical order, the course's convention so that traces agree. Sort v's own list of neighbours."
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Compare the two orders. Which vertices come out in a different order?"
+          "body": "Compare the two orders. Which vertices come out in a different order, and are they in the same ring?"
         },
         {
           "level": 2,
@@ -1597,7 +1641,7 @@
         },
         {
           "level": 3,
-          "body": "It takes them in the order their edges were added, so D comes first. BFS takes each vertex's neighbours in alphabetical order."
+          "body": "It takes them in the order their edges were added, so C comes before B. Our BFS takes each vertex's neighbours in alphabetical order: the course's convention, not a rule of BFS."
         },
         {
           "level": 4,
@@ -1670,16 +1714,20 @@
         ],
         "corrections": [
           {
-            "id": 21,
-            "text": "        v = queue.pop(0)"
-          },
-          {
             "id": 22,
             "text": "        v = queue[0]"
           },
           {
+            "id": 23,
+            "text": "        for n in sorted(graph.adjacency[v], reverse=True):"
+          },
+          {
             "id": 20,
             "text": "        v = queue.popleft()"
+          },
+          {
+            "id": 24,
+            "text": "            if n not in order:"
           }
         ]
       },
@@ -2369,7 +2417,7 @@
           },
           {
             "id": "a",
-            "label": "BFS takes the neighbours of each vertex in alphabetical order, which leads it straight towards the goal."
+            "label": "Our BFS takes the neighbours of each vertex in alphabetical order, which leads it straight towards the goal."
           },
           {
             "id": "b",

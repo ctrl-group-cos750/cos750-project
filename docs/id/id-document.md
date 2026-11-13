@@ -151,7 +151,7 @@ A student is ready for the lecture when no objective is marked "Not yet". The st
 
 Table: Level, CS2023 skill level, evidence and success criterion for each learning objective.
 
-Table 1 gives the evidence as designed. On staging, some items are simpler. Objective 2 uses four matching items instead of labelled diagrams. Objective 3 uses four multiple-choice items, so the student recognises a model rather than naming its parts. Objective 5 has one trace item.
+Table 1 gives the evidence as designed. On staging, some items are simpler. Objective 2 uses four matching items instead of labelled diagrams. Objective 3 uses three multiple-choice items, in which the student recognises a model, and one matching item (630), in which the student builds it: each part of the situation is matched to vertices, an edge, the edge's direction or the kind of graph, with spare choices. Its review path practises the same kind first (1306). Objective 5 has one trace item. In objective 7's fix-the-bug items, at least one wrong correction rewrites a line that is not faulty, so the choices don't point at the bug and the student still has to locate it (the Analyse part of the objective).
 
 # Instructional design model and its application
 

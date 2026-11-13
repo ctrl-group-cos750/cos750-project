@@ -215,9 +215,9 @@ def _pieces(edges: set[frozenset[str]]) -> list[set[str]]:
 def test_the_graph_words_are_taught_on_the_campus_and_are_true_of_it() -> None:
     """Path, cycle, connected, tree and weighted were used (module 5, objective 7) but never taught
     (CS2023 AL-Foundational; review 13 Nov, High 11). Segment 197 teaches them on the campus,
-    before the bus-stop graph, and each claim it makes is checked here."""
+    right after the student builds the campus graph, and each claim it makes is checked here."""
     ids = [s.id for s in MODULE.segments]
-    assert ids.index(170) < ids.index(197) < ids.index(198) < ids.index(106)
+    assert ids.index(107) < ids.index(197) < ids.index(198) < ids.index(108)
     body = next(s.body for s in MODULE.segments if s.id == 197)
     for word in ("path", "cycle", "connected", "disconnected", "tree", "weighted"):
         assert f"**{word}**" in body, word

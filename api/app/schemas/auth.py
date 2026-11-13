@@ -50,3 +50,5 @@ class UserOut(ApiModel):
     display_name: str
     is_staff: bool
     avatar: str | None = None  # an id from AVATARS (app/schemas/profile.py), or none chosen
+    # Their uploaded picture (GET /api/me/picture), which shows instead of `avatar`; null if none.
+    picture_url: str | None = None

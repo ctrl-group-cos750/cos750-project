@@ -183,7 +183,7 @@ describe('ModuleMap — Continue button', () => {
     moduleListApi([openModule, lockedModule])
     renderApp('/')
 
-    const btn = await screen.findByRole('button', { name: /continue module 0/i })
+    const btn = await screen.findByRole('button', { name: /(start|continue) module 0/i })
     expect(btn).toBeInTheDocument()
   })
 
@@ -203,7 +203,9 @@ describe('ModuleMap — Continue button', () => {
     ])
     renderApp('/')
 
-    expect(await screen.findByRole('button', { name: /continue module 6/i })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('button', { name: /(start|continue) module 6/i }),
+    ).toBeInTheDocument()
     expect(screen.getByText('coming soon')).toBeInTheDocument()
     expect(screen.getByText('open')).toBeInTheDocument() // module 6
   })
@@ -231,7 +233,7 @@ describe('ModuleMap — Continue button', () => {
     })
     renderApp('/')
 
-    const btn = await screen.findByRole('button', { name: /continue module 0/i })
+    const btn = await screen.findByRole('button', { name: /(start|continue) module 0/i })
     await userEvent.click(btn)
 
     // ModulePage renders the module title (even empty-segments state)

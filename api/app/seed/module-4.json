@@ -4,7 +4,7 @@
       "id": 4,
       "slug": "build-bfs",
       "title": "Build BFS",
-      "estimated_minutes": 15,
+      "estimated_minutes": 25,
       "goals": [
         "Build bfs(graph, start) in Python on your own Graph class, using a queue and a visited set, so it returns the vertices in the order BFS visits them.",
         "Put the lines of BFS in order, then fill in its missing parts with less help each time."

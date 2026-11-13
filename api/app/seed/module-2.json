@@ -4,7 +4,7 @@
       "id": 2,
       "slug": "graph-in-python",
       "title": "A graph in Python",
-      "estimated_minutes": 10,
+      "estimated_minutes": 20,
       "goals": [
         "Store a graph in Python as a dictionary that maps each vertex to its neighbours, for directed and undirected graphs.",
         "Write add_vertex and add_edge for a Graph class, ready to use in BFS."

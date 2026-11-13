@@ -4,10 +4,11 @@
       "id": 3,
       "slug": "meet-bfs",
       "title": "Meet BFS",
-      "estimated_minutes": 12,
+      "estimated_minutes": 25,
       "goals": [
         "Explain what BFS is for, and when it is the right tool.",
-        "Trace BFS by hand: say which vertex comes next, what is in the queue, which vertices are visited and the order they are visited in."
+        "Trace BFS by hand: say which vertex comes next, what is in the queue, which vertices are visited and the order they are visited in.",
+        "Use BFS to find the route with the fewest edges between two places, and say why BFS guarantees it."
       ],
       "segments": [
         {
@@ -80,6 +81,32 @@
           "title": "Try another: a trace table",
           "activity_id": 390,
           "support_for": 5
+        },
+        {
+          "id": 320,
+          "kind": "worked_example",
+          "title": "Worked example: the fewest walkways, and why BFS finds them",
+          "body": "**Worked example.** BFS from the Admin block (A) on the campus graph visits A, C, E, B, F, D, G. Each time a vertex joins the queue, write down **who found it**:\n\n| Vertex | Found by | Walkways from A |\n|---|---|---|\n| A | (the start) | 0 |\n| C | A | 1 |\n| E | A | 1 |\n| B | C | 2 |\n| F | C | 2 |\n| D | E | 2 |\n| G | B | 3 |\n\n**Step 1. Start at the goal and walk back.** Who found D? E. Who found E? A. So the route is A → E → D: **2 walkways**.\n\n**Step 2. Why there is no shorter route.** BFS takes vertices out of the queue ring by ring: everything 1 walkway from A, then everything 2 away, then 3. D was found while BFS worked through the 1-walkway ring, so D is 2 away. If D were 1 away, A itself would have found it.\n\n**The rule:** when every edge counts the same, the first time BFS reaches a vertex is by the **fewest edges**, and following \"found by\" back to the start gives that route. (When edges have their own lengths, such as kilometres, the fewest edges may not be the shortest distance: that needs another algorithm.)"
+        },
+        {
+          "id": 321,
+          "kind": "activity",
+          "title": "Your turn: the fewest walkways",
+          "activity_id": 317
+        },
+        {
+          "id": 397,
+          "kind": "text",
+          "title": "Worked example: walking back from the goal",
+          "body": "Here is the \"found by\" method again, on a small new graph. The edges are Q–R, Q–S, R–T, S–T and T–U, and BFS starts at Q.\n\n| Vertex | Found by | Edges from Q |\n|---|---|---|\n| Q | (the start) | 0 |\n| R | Q | 1 |\n| S | Q | 1 |\n| T | R | 2 |\n| U | T | 3 |\n\nT is found by R, not S, because R leaves the queue first. **Walk back from U:** T, then R, then Q. The route Q → R → T → U has **3 edges**.\n\n**Two mistakes to avoid.** Count the **edges** (the steps between vertices), not the vertices on the route: Q, R, T, U is 4 vertices but 3 edges. And don't count how far a vertex is along the visit order: U is 5th in the order, but only 3 edges from Q.\n\n**Explain it to yourself before you go on:** why does R find T, and not S?",
+          "support_for": 8
+        },
+        {
+          "id": 398,
+          "kind": "activity",
+          "title": "Try another: the fewest edges",
+          "activity_id": 395,
+          "support_for": 8
         },
         {
           "id": 319,
@@ -451,7 +478,7 @@
       "title": "Closing task: fewest walkways",
       "module_id": 3,
       "purpose": "practice",
-      "objective_id": 4,
+      "objective_id": 8,
       "config": {
         "prompt": "On the campus graph, what is the fewest number of walkways from the Admin block (A) to the Green (G)? Use the BFS order you found: A, C, E, B, F, D, G.",
         "options": [
@@ -636,6 +663,113 @@
         {
           "level": 4,
           "body": "Answer: knight → the fewest edges; castle rooms → everything one edge away before two; least petrol → each edge has its own length; counting learners → no graph to search."
+        }
+      ]
+    },
+    {
+      "id": 317,
+      "kind": "multiple_choice",
+      "title": "Your turn: the fewest walkways",
+      "module_id": 3,
+      "purpose": "practice",
+      "objective_id": 8,
+      "config": {
+        "prompt": "BFS now starts at D on the campus graph (edges A–C, A–E, B–C, B–G, C–F, D–E, E–F) and visits D, E, A, F, C, B, G. What is the fewest number of walkways from D to the Green (G)?",
+        "options": [
+          {
+            "id": "a",
+            "label": "4"
+          },
+          {
+            "id": "b",
+            "label": "5"
+          },
+          {
+            "id": "c",
+            "label": "6"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "Walking back from G: B, C, A, E, D. The route D → E → A → C → B → G has 5 walkways, and BFS guarantees none is shorter.",
+        "correct": "b",
+        "feedback": {
+          "a": "Not quite. Walk back from G: B found G, C found B, A found C, E found A, D found E. That is 5 walkways. Count each step back.",
+          "c": "Not quite. 6 is the number of places on the route D, E, A, C, B, G, not the walkways between them. Count the edges, not the vertices."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Write down who found each vertex as BFS runs from D."
+        },
+        {
+          "level": 2,
+          "body": "E found A and F; A found C; C found B. Who found G?"
+        },
+        {
+          "level": 3,
+          "body": "B found G. Now walk back from G to D and count the steps."
+        },
+        {
+          "level": 4,
+          "body": "Answer: 5 walkways, D → E → A → C → B → G."
+        }
+      ]
+    },
+    {
+      "id": 395,
+      "kind": "multiple_choice",
+      "title": "Try another: the fewest edges",
+      "module_id": 3,
+      "purpose": "practice",
+      "objective_id": 8,
+      "config": {
+        "prompt": "In a small network, H links to J and K, both J and K link to L, and L links to M. Starting BFS at H, how many steps lie on the shortest route to M?",
+        "options": [
+          {
+            "id": "a",
+            "label": "Two steps"
+          },
+          {
+            "id": "b",
+            "label": "Five steps, one per vertex on the way"
+          },
+          {
+            "id": "c",
+            "label": "Four steps"
+          },
+          {
+            "id": "d",
+            "label": "Three steps"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "BFS from H finds J and K (1 step), then L (2), then M (3). The route H → J → L → M has 3 steps.",
+        "correct": "d",
+        "feedback": {
+          "a": "Not quite. M links only to L, and L is 2 steps from H, so M is one more. Ask: who found M, and who found that vertex?",
+          "b": "Not quite. Count the steps between vertices, not the vertices: and the route H, J, L, M has only 4 vertices anyway. Walk back from M.",
+          "c": "Not quite. 4 is the number of vertices on the route H, J, L, M. The steps between them are one fewer."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Who found J and K? Who found L?"
+        },
+        {
+          "level": 2,
+          "body": "J found L. Who found M?"
+        },
+        {
+          "level": 3,
+          "body": "L found M. Walk back: M, L, J, H."
+        },
+        {
+          "level": 4,
+          "body": "Answer: 3 steps, H → J → L → M."
         }
       ]
     },

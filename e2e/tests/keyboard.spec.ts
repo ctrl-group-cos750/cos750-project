@@ -16,7 +16,7 @@ test('module 0, from the map to "Finish module", with the keyboard only', async 
 }) => {
   const module = await course.module(0)
   await page.goto('/')
-  await press(page, page.getByRole('button', { name: /^Continue module 0/ }))
+  await press(page, page.getByRole('button', { name: /^(Start|Continue) module 0/ }))
   await expect(
     page.getByRole('heading', { level: 1, name: new RegExp(module.title) }),
   ).toBeVisible()
@@ -59,7 +59,7 @@ test('module 0, from the map to "Finish module", with the keyboard only', async 
   const modules = await course.modules()
   expect(modules.find((m) => m.number === 0)?.status).toBe('complete')
   expect(modules.find((m) => m.number === 1)?.status).toBe('open')
-  await expect(page.getByRole('button', { name: /^Continue module 1/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^(Start|Continue) module 1/ })).toBeVisible()
 })
 
 // WCAG 2.4.7: every control a keyboard user reaches in a module shows where focus is.

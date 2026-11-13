@@ -203,7 +203,7 @@ describe('AppShell', () => {
       </AppShell>,
     )
     expect(screen.getByRole('link', { name: 'Skip to content' })).toHaveAttribute('href', '#main')
-    expect(screen.getByRole('link', { name: 'Ctrl Academy' })).toHaveAttribute('href', '/')
+    expect(screen.getByRole('link', { name: /^Ctrl Academy/ })).toHaveAttribute('href', '/')
     expect(screen.getByRole('navigation', { name: 'Main' })).toContainElement(
       screen.getByRole('link', { name: 'Modules' }),
     )

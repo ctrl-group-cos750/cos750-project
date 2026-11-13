@@ -31,9 +31,11 @@ from app.schemas.activities import (
     ParsonsSubmission,
     PartResult,
     TraceConfig,
+    TraceRow,
     TraceSubmission,
 )
-from app.schemas.graphs import GraphScenarioOut
+from app.schemas.graphs import BfsStep, GraphScenarioOut
+from app.services.bfs import neighbours as bfs_adjacency
 from app.services.bfs import run_bfs
 
 OUT_OF_PLACE = "This line is in the wrong place."
@@ -218,16 +220,49 @@ def check_fill_in(
     return _result(parts)
 
 
+def _trace_columns_wrong(have: TraceRow, want: TraceRow | BfsStep) -> list[str]:
+    """The columns of `have` that differ from `want`, in table order."""
+    return [
+        column
+        for column, right in (
+            ("visited_vertex", have.visited_vertex == want.visited_vertex),
+            ("queue", have.queue == want.queue),
+            ("visited", sorted(have.visited) == sorted(want.visited)),
+            ("order", have.order == want.order),
+        )
+        if not right
+    ]
+
+
+def _next_step(adjacency: dict[str, list[str]], start: str, row: TraceRow) -> TraceRow | None:
+    """The step BFS takes from the state a student wrote in `row` (its queue and its order), or
+    None when that queue is empty and BFS has finished. Found = everything already visited or
+    waiting (and the start), so a vertex joins the queue once, as in `run_bfs`."""
+    if not row.queue:
+        return None
+    current, waiting = row.queue[0], list(row.queue[1:])
+    found = {start, *row.order, *row.queue}
+    for neighbour in adjacency.get(current, []):
+        if neighbour not in found:
+            found.add(neighbour)
+            waiting.append(neighbour)
+    order = [*row.order, current]
+    return TraceRow(visited_vertex=current, queue=waiting, visited=order, order=order)
+
+
 def check_trace(config: TraceConfig, submission: TraceSubmission) -> CheckResult:
-    """One part per step: a step is correct when the student's visited vertex, queue, visited set
-    and order all match the engine's step at that position (FR-6.6). The queue and the order are
-    sequences, so their order counts; the visited set is a set, so it is compared regardless of the
-    order the student wrote it in (a repeated vertex still makes it wrong). A wrong step's message
-    names each column that is wrong and what to check in it (`TRACE_COLUMN_HINTS`), never the
-    right value. The traversal is the engine's, not a stored answer, so a trace is always graded
-    against what the lessons teach (SE document decision "BFS computed server-side"); no
-    `solution` is kept for this kind. A short answer leaves its missing steps wrong and a long one
-    leaves its extra steps wrong, so both lower the score."""
+    """One part per step (FR-6.6). A step is right when it matches the engine's step at that
+    position, **or** the step BFS takes from the student's own previous row ("follow-through"
+    marking, as a hand trace is marked in an exam: an error is penalised once). So one slip costs one step: a student
+    who copied a wrong queue and carried on correctly from it, or who fixed it on the next row, is
+    marked wrong once, not on every row after. Without this, objective 5's "at most one error" was
+    failed by a single early slip. The queue and the order are sequences, so their order counts;
+    the visited set is compared as a set (a repeated vertex still makes it wrong). A wrong step's
+    message names each column that is wrong against the nearer of the two, and what to check in
+    it (`TRACE_COLUMN_HINTS`), never the right value. The traversal is the engine's, not a stored
+    answer (SE document decision "BFS computed server-side"); no `solution` is kept for this kind.
+    There are at least as many parts as the engine has steps, so a short answer leaves its missing
+    steps wrong; a step after the traversal has finished, on either reading, is wrong too."""
     scenario = GraphScenarioOut(
         id=0,
         name="",
@@ -237,31 +272,29 @@ def check_trace(config: TraceConfig, submission: TraceSubmission) -> CheckResult
         start_vertex=config.start_vertex,
     )
     expected = run_bfs(scenario).steps  # raises InvalidGraph for a bad stored graph
+    adjacency = bfs_adjacency(scenario)
     got = submission.rows
     parts: list[PartResult] = []
     for i in range(max(len(expected), len(got))):
-        want = expected[i] if i < len(expected) else None
-        have = got[i] if i < len(got) else None
-        if want is None:
-            parts.append(PartResult(ref=i, correct=False, message=EXTRA_TRACE_STEP))
-        elif have is None:
+        if i >= len(got):
             parts.append(PartResult(ref=i, correct=False, message=MISSING_TRACE_STEP))
+            continue
+        have = got[i]
+        readings: list[TraceRow | BfsStep] = []
+        if i < len(expected):
+            readings.append(expected[i])
+        follow = _next_step(adjacency, config.start_vertex, got[i - 1]) if i > 0 else None
+        if follow is not None:
+            readings.append(follow)
+        if not readings:
+            parts.append(PartResult(ref=i, correct=False, message=EXTRA_TRACE_STEP))
+            continue
+        wrong = min((_trace_columns_wrong(have, want) for want in readings), key=len)
+        if not wrong:
+            parts.append(PartResult(ref=i, correct=True))
         else:
-            wrong = [
-                column
-                for column, right in (
-                    ("visited_vertex", have.visited_vertex == want.visited_vertex),
-                    ("queue", have.queue == want.queue),
-                    ("visited", sorted(have.visited) == sorted(want.visited)),
-                    ("order", have.order == want.order),
-                )
-                if not right
-            ]
-            if not wrong:
-                parts.append(PartResult(ref=i, correct=True))
-            else:
-                message = " ".join([WRONG_TRACE_STEP, *(TRACE_COLUMN_HINTS[c] for c in wrong)])
-                parts.append(PartResult(ref=i, correct=False, message=message))
+            message = " ".join([WRONG_TRACE_STEP, *(TRACE_COLUMN_HINTS[c] for c in wrong)])
+            parts.append(PartResult(ref=i, correct=False, message=message))
     return _result(parts)
 
 

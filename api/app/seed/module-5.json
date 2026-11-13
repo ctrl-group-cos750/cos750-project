@@ -4,7 +4,7 @@
       "id": 5,
       "slug": "test-and-debug",
       "title": "Test and debug",
-      "estimated_minutes": 10,
+      "estimated_minutes": 25,
       "goals": [
         "Find and fix the bugs in a faulty BFS.",
         "Choose test cases, such as a cycle or a disconnected graph, that expose a bug."

@@ -10,6 +10,7 @@ const grace: User = {
   displayName: 'Grace',
   isStaff: true,
   avatar: null,
+  pictureUrl: null,
 }
 
 const twoVideos = () =>
@@ -32,17 +33,13 @@ describe('staff portal', () => {
     expect(await screen.findByText('Only team members can open this page.')).toBeInTheDocument()
   })
 
-  it('opens from the navbar and lists every setup area', async () => {
+  it('opens from the account menu and lists every setup area', async () => {
     fakeApi({ user: grace, overrides: { 'GET /api/staff/videos': twoVideos } })
     renderApp('/')
-    const main = await screen.findByRole('navigation', { name: 'Main' })
-    await userEvent.click(within(main).getByRole('link', { name: 'Staff portal' }))
+    await userEvent.click(await screen.findByRole('button', { name: /your account/ }))
+    await userEvent.click(screen.getByRole('link', { name: 'Staff portal' }))
 
     expect(await screen.findByRole('heading', { name: 'Staff portal' })).toBeInTheDocument()
-    expect(within(main).getByRole('link', { name: 'Staff portal' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    )
     expect(await screen.findByText('2 videos')).toBeInTheDocument()
   })
 
@@ -56,12 +53,6 @@ describe('staff portal', () => {
 
     const menu = screen.getByRole('navigation', { name: 'Staff portal' })
     expect(within(menu).getByRole('link', { name: 'Videos' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    )
-    // The navbar link stays highlighted on every page in the portal.
-    const main = screen.getByRole('navigation', { name: 'Main' })
-    expect(within(main).getByRole('link', { name: 'Staff portal' })).toHaveAttribute(
       'aria-current',
       'page',
     )

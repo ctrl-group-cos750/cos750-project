@@ -1,4 +1,5 @@
 /* Fonts are bundled with the app (no third-party requests). */
+@import '@fontsource-variable/geist/index.css';
 @import '@fontsource/space-grotesk/500.css';
 @import '@fontsource/space-grotesk/700.css';
 @import '@fontsource/jetbrains-mono/400.css';
@@ -10,8 +11,11 @@
   box-sizing: border-box;
 }
 
+/* Everything is sized in rem, so the whole app grows with this: 16 px on a laptop, up to 20 px on
+ * a large desktop screen, so a 4K monitor isn't a page of thumbnails with empty margins. */
 html {
   -webkit-text-size-adjust: 100%;
+  font-size: clamp(100%, 80% + 0.25vw, 125%);
 }
 
 /* Outside any layer so these document defaults apply to the legacy component CSS too. */

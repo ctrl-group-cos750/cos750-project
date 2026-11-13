@@ -104,4 +104,43 @@ test.describe('badge notes', () => {
       expect(height, 'a link in the badge note is a 44 px target').toBeGreaterThanOrEqual(44)
     }
   })
+
+  // At 320 px the note sits under the header, as at every width: over it, it covered the theme
+  // toggle, the account menu and the module's heading (#222 review).
+  test("at 320 px a new badge's note sits under the header", async ({ page, course }) => {
+    await page.setViewportSize({ width: 320, height: 640 })
+    await course.walk(0)
+    await course.walk(1)
+    await course.walk(2, 0)
+    const module = await course.module(2)
+    await page.goto(`/modules/${module.id}`)
+    await expect(segmentRegion(page, module.segments[0].title)).toBeVisible()
+    const dismiss = page
+      .getByRole('status')
+      .getByRole('button', { name: /^Dismiss/ })
+      .first()
+    await expect(dismiss).toBeVisible()
+    const header = await page.locator('header').first().boundingBox()
+    // The notes' region: its top is the first note's.
+    const note = await page
+      .getByRole('status')
+      .filter({ has: page.getByRole('button', { name: /^Dismiss/ }) })
+      .first()
+      .boundingBox()
+    expect(header, 'the header').not.toBeNull()
+    expect(note, 'the badge note').not.toBeNull()
+    expect(note?.y ?? 0, 'the note starts under the header').toBeGreaterThanOrEqual(
+      (header?.y ?? 0) + (header?.height ?? 0),
+    )
+    // Nothing in the header is under the note: its buttons can still be pressed.
+    const covered = await page.locator('header').first().evaluate((el) =>
+      [...el.querySelectorAll('button, a')].some((control) => {
+        const box = control.getBoundingClientRect()
+        if (box.width === 0) return false
+        const at = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)
+        return at !== null && !control.contains(at)
+      }),
+    )
+    expect(covered, 'a header control is covered by the badge note').toBe(false)
+  })
 })

@@ -18,6 +18,7 @@ from app.models import (
 )
 from app.routers.staff_accounts import mask_email
 from app.services import rewards
+from app.services.pseudonym import pseudonym
 
 PASSWORD = "Correct horse 1"  # noqa: S105 (a test account)
 
@@ -140,6 +141,8 @@ def test_one_account_shows_totals_video_progress_and_recent_answers(
     # Whether it was right, never what they answered.
     assert "submitted" not in response.text
     assert body["lastActiveAt"] is not None
+    # The pilot files' name for her, to join the survey; never the account id (FR-10.3).
+    assert body["pilotName"] == pseudonym(ada) != str(ada)
 
 
 def test_an_account_with_no_activity_has_zeros(client: TestClient, db: Session) -> None:

@@ -129,7 +129,8 @@ export function HintLadder({
       {hasMore && (
         <div>
           <Button
-            variant="secondary"
+            // Quieter than Check answer: the hint is there when needed, not the obvious next click.
+            variant="ghost"
             onClick={() => void showNextHint()}
             // aria-disabled, not disabled, while an answer is checked: it stays in the tab order,
             // so Tab from a busy "Check answer" still lands here, not off the end of the page.

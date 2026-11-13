@@ -111,6 +111,70 @@ function MasteryCheckLink({ o, moduleId }: { o: ObjectiveReport; moduleId: numbe
   )
 }
 
+/** The one thing to do next, as a button at the top of the report: the first review path still
+ * to work through, else the mastery check if it is open and unfinished, else back to the modules.
+ * The list below still gives every objective's own next step. */
+function NextAction({
+  objectives,
+  ready,
+  checkId,
+}: {
+  objectives: ObjectiveReport[]
+  ready: boolean
+  checkId: number | null
+}) {
+  const review = objectives.find((o) => o.state === 'not_yet' && o.review && !reviewDone(o))
+  const toAnswer = objectives.some((o) => o.state === 'not_attempted' && o.total > 0)
+  const [to, label, text] = ready
+    ? [
+        '/',
+        'Back to your modules',
+        'Every objective is met. The lecture will build on what you can do now.',
+      ]
+    : review
+      ? [
+          `/review/${review.id}`,
+          `Start with objective ${review.id}'s review path`,
+          'It teaches the objective again, then asks a few fresh questions.',
+        ]
+      : toAnswer && checkId !== null
+        ? [
+            `/modules/${checkId}`,
+            'Go to the mastery check',
+            'Your results appear here once every question in it is answered.',
+          ]
+        : ['/', 'Continue your modules', 'The mastery check in module 6 fills in this report.']
+  return (
+    <Card className={styles.next_action}>
+      <p className={styles.nextText}>{text}</p>
+      <Link to={to} className={buttonVariants({ variant: 'default' })}>
+        {label} →
+      </Link>
+    </Card>
+  )
+}
+
+/** How many objectives are in each state, as tiles above the list. */
+function Tally({ objectives }: { objectives: ObjectiveReport[] }) {
+  const count = (state: ObjectiveState) => objectives.filter((o) => o.state === state).length
+  const tiles: [string, number][] = [
+    ['Met on your own', count('met_independently')],
+    ['Met with support', count('met_with_support')],
+    ['Not yet', count('not_yet')],
+    ['Still to answer', count('not_attempted')],
+  ]
+  return (
+    <dl className={styles.tally}>
+      {tiles.map(([label, n]) => (
+        <div key={label} className={styles.tile}>
+          <dt>{label}</dt>
+          <dd>{n}</dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
 /**
  * /report — the student's mastery report: each objective's result in plain words, with what to do
  * next, and whether they are ready for the lecture (FR-7.3, FR-7.4). Never hidden, even when
@@ -135,6 +199,9 @@ export function ReportPage() {
           {summary(objectives, ready, modules.isPending || checkId !== null)}
         </p>
       </div>
+
+      <Tally objectives={objectives} />
+      <NextAction objectives={objectives} ready={ready} checkId={checkId} />
 
       <Card>
         <ol className={styles.objectives}>

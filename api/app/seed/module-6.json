@@ -1456,7 +1456,7 @@
             "pop(0)": "Not quite. A deque's pop takes no position, so pop(0) stops with an error. A deque takes the vertex at the front with popleft()."
           },
           "3": {
-            "graph.adjacency[v]": "Neighbours aren't taken in alphabetical order. The edges were added out of order, but BFS takes neighbours alphabetically. Loop over sorted(graph.adjacency[v]).",
+            "graph.adjacency[v]": "Not quite. That takes v's neighbours in the order their edges were added, not alphabetically. Loop over sorted(graph.adjacency[v]).",
             "sorted(graph.adjacency[start])": "Not quite. That looks at the start's neighbours every time, not the neighbours of v, the vertex that just left the queue, so BFS never gets past the first ring. Loop over v's neighbours, sorted."
           },
           "4": {

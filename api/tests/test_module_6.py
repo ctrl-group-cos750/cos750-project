@@ -680,3 +680,12 @@ def test_objective_4_hint_3_is_a_partial_solution_for_its_own_item() -> None:
     for a in items:
         assert a.hints[2].body != a.hints[1].body
         assert "Does this problem ask for one of those two jobs?" not in a.hints[2].body
+
+
+def test_a_review_fill_in_is_as_hard_as_the_module_6_one() -> None:
+    """1602 blanked parts with two tokens each that fit, the next line giving one away, so a
+    student met objective 6 again without the skill 620 found missing (#214 C13). Now each blank
+    has at least two wrong tokens of its own kind, each with feedback, as in 620."""
+    for a in (a for a in FRESH[6] + CHECK if a.kind == "fill_in"):
+        for blank in a.config["blanks"]:
+            assert len(a.solution["feedback"][str(blank)]) >= 2, (a.id, blank)

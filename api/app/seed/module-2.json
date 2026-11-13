@@ -328,7 +328,7 @@
         },
         {
           "level": 3,
-          "body": "Graph 2 is the only directed one. In it, C has no outgoing edges. The fourth dictionary matches none of the graphs."
+          "body": "Graph 2 is the only directed one. In it, C has no outgoing edges. One dictionary, {\"A\": [\"B\"], \"B\": [\"C\"], \"C\": [\"A\"]}, matches none of the graphs."
         },
         {
           "level": 4,

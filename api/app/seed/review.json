@@ -223,7 +223,7 @@
         {
           "id": 1602,
           "kind": "activity",
-          "title": "Review practice: writing BFS in python",
+          "title": "Review practice: writing BFS in Python",
           "activity_id": 1601
         },
         {
@@ -1712,7 +1712,7 @@
     {
       "id": 1601,
       "kind": "multiple_choice",
-      "title": "Review practice: writing BFS in python",
+      "title": "Review practice: writing BFS in Python",
       "module_id": null,
       "purpose": "review",
       "objective_id": 6,
@@ -1768,7 +1768,7 @@
       "purpose": "mastery",
       "objective_id": 6,
       "config": {
-        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    # Return the vertices in the order BFS visits them from start,\n    # taking neighbours in alphabetical order.\n    discovered = {start}\n    lineup = deque([__1__])\n    order = []\n    while len(lineup) > 0:\n        here = lineup.popleft()\n        __2__.append(here)\n        for nbr in sorted(graph.adjacency[here]):\n            if nbr __3__ discovered:\n                discovered.add(nbr)\n                lineup.__4__(nbr)\n    return order",
+        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    # Return the vertices in the order BFS visits them from start,\n    # taking neighbours in alphabetical order.\n    discovered = __1__\n    lineup = deque([start])\n    order = []\n    while len(lineup) > 0:\n        here = lineup.__2__\n        order.append(here)\n        for nbr in __3__:\n            if nbr not in discovered:\n                discovered.add(nbr)\n                lineup.append(nbr)\n    return __4__",
         "blanks": [
           1,
           2,
@@ -1776,54 +1776,62 @@
           4
         ],
         "options": [
-          "start",
-          "[]",
+          "{start}",
+          "set()",
+          "{}",
+          "popleft()",
+          "pop()",
+          "pop(0)",
+          "sorted(graph.adjacency[here])",
+          "graph.adjacency[here]",
+          "sorted(graph.adjacency[start])",
           "order",
           "discovered",
-          "not in",
-          "in",
-          "append",
-          "appendleft"
+          "lineup"
         ]
       },
       "solution": {
         "answers": {
-          "1": "start",
-          "2": "order",
-          "3": "not in",
-          "4": "append"
+          "1": "{start}",
+          "2": "popleft()",
+          "3": "sorted(graph.adjacency[here])",
+          "4": "order"
         },
         "feedback": {
           "1": {
-            "[]": "Not quite. deque([[]]) puts an empty list in the queue, not the start vertex, so BFS never starts from start. The queue starts with the start vertex."
+            "set()": "Not quite. The start vertex is in the queue but not in discovered, which holds every vertex found so far, so a neighbour can add it to the queue again and it is visited twice. Start with the start vertex already in discovered.",
+            "{}": "Not quite. {} is an empty dictionary, not an empty set, so discovered.add(nbr) stops with an error. A set holding the start vertex is written {start}."
           },
           "2": {
-            "discovered": "Not quite. discovered holds every vertex found so far, and a set has no append. Each vertex that leaves the queue joins the order list."
+            "pop()": "Not quite. pop() takes the newest vertex, from the back of the queue, so BFS goes deep instead of wide. Take the vertex that has waited longest, from the front, with popleft().",
+            "pop(0)": "Not quite. A deque's pop takes no position, so pop(0) stops with an error. A deque takes the vertex at the front with popleft()."
           },
           "3": {
-            "in": "Not quite. With in, only vertices already found would be queued, so BFS never finds anything new. Queue a neighbour only if it is not in discovered."
+            "graph.adjacency[here]": "Not quite. That takes here's neighbours in the order their edges were added, not alphabetically. Loop over sorted(graph.adjacency[here]).",
+            "sorted(graph.adjacency[start])": "Not quite. That looks at the start's neighbours every time, not the neighbours of here, the vertex that just left the queue, so BFS never gets past the first ring. Loop over here's neighbours, sorted."
           },
           "4": {
-            "appendleft": "Not quite. appendleft puts a new vertex at the front, so it is taken next and BFS goes deep instead of wide. BFS takes vertices from the front of the queue and adds new ones to the back."
+            "discovered": "Not quite. discovered is a set, and a set has no order. bfs must return the list of vertices in the order BFS visited them.",
+            "lineup": "Not quite. The loop only ends when the queue is empty, so lineup has nothing left in it. Return the list of vertices in the order BFS visited them."
           }
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "The queue starts with the start vertex, and each vertex that leaves it joins the order."
+          "body": "You need a set of found vertices, a queue and an order list before the loop."
         },
         {
           "level": 2,
-          "body": "A neighbour joins the queue only if it hasn't been found yet."
+          "body": "BFS takes the vertex that has waited longest, from the front of the queue."
         },
         {
           "level": 3,
-          "body": "New vertices wait their turn at the back of the queue."
+          "body": "The start vertex is in discovered (found) from the beginning, neighbours are taken in alphabetical order, and the order is a list."
         },
         {
           "level": 4,
-          "body": "Answer: blank 1 is start, blank 2 is order, blank 3 is not in, and blank 4 is append."
+          "body": "Answer: blank 1 is {start}, blank 2 is popleft(), blank 3 is sorted(graph.adjacency[here]), and blank 4 is order."
         }
       ]
     },

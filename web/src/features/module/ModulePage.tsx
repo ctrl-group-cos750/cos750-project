@@ -299,6 +299,9 @@ export function ModulePage() {
               pending={restart.isPending}
               error={restart.error?.message ?? null}
               onRestart={() => restart.mutate()}
+              // A failed restart's message belongs to that try: cancelling or asking again
+              // starts without it.
+              onReset={() => restart.reset()}
             />
           )}
         </div>
@@ -421,10 +424,12 @@ function RestartModule({
   pending,
   error,
   onRestart,
+  onReset,
 }: {
   pending: boolean
   error: string | null
   onRestart: () => void
+  onReset: () => void
 }) {
   const [asking, setAsking] = useState(false)
   const box = useRef<HTMLDivElement>(null)
@@ -436,25 +441,33 @@ function RestartModule({
     if (asking) buttons?.[1]?.focus()
     else if (reopened.current) buttons?.[0]?.focus()
   }, [asking])
+  const open = () => {
+    onReset()
+    setAsking(true)
+  }
   const close = () => {
     reopened.current = true
+    onReset()
     setAsking(false)
   }
   // Escape closes the question, as it would a dialog, unless the restart is already on its way.
+  // Only while focus is in it: Escape elsewhere on the page (a video, a hint) is not for it.
   useEffect(() => {
     if (!asking || pending) return
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
+      if (!(event.target instanceof Node) || !box.current?.contains(event.target)) return
       reopened.current = true
+      onReset()
       setAsking(false)
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [asking, pending])
+  }, [asking, pending, onReset])
   if (!asking)
     return (
       <div ref={box}>
-        <Button variant="ghost" size="sm" onClick={() => setAsking(true)}>
+        <Button variant="ghost" size="sm" onClick={open}>
           Restart module
         </Button>
       </div>

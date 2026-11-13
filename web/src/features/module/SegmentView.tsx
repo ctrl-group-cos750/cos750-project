@@ -22,7 +22,7 @@ export type SegmentViewProps = {
  * "Transcript" heading. */
 function TextVersion({ body }: { body: string }) {
   return (
-    <details className="rounded-lg border border-border bg-card p-6">
+    <details className="max-w-3xl rounded-lg border border-border bg-card p-6">
       <summary className="cursor-pointer text-lg font-semibold">Text version</summary>
       <div className="mt-3">
         <Markdown>{body}</Markdown>
@@ -54,13 +54,15 @@ export function SegmentView({ segment, onAnswered, intro }: SegmentViewProps) {
           {introLine}
           {picture ? (
             // The picture beside the text it explains, so neither is scrolled away from the other
-            // (Mayer's spatial contiguity): side by side on a laptop or wider, the picture first
-            // and staying in view; stacked on a phone. data-two-column lets the module page widen.
+            // (Mayer's spatial contiguity): side by side from 1280 px, where the picture still
+            // gets about 500 px, the picture first and staying in view; stacked below that, so
+            // a laptop shows it full width rather than squeezed (#211 review). data-two-column
+            // lets the module page widen.
             <div
               data-two-column
-              className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,var(--reading-width))]"
+              className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,var(--reading-width))]"
             >
-              <div className="lg:sticky lg:top-24">
+              <div className="xl:sticky xl:top-24">
                 <PicturePanel tabs={[{ name: pictureName(picture), picture }]} />
               </div>
               {/* The text keeps a readable line length (--reading-width); the picture takes the rest. */}
@@ -89,18 +91,12 @@ export function SegmentView({ segment, onAnswered, intro }: SegmentViewProps) {
           </h2>
           {introLine}
           {segment.videoId !== null ? (
-            // On a wide screen the text version sits beside the video, not below it.
-            <div
-              data-two-column={segment.body ? true : undefined}
-              className={
-                segment.body
-                  ? 'grid items-start gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]'
-                  : 'grid gap-4'
-              }
-            >
+            // The text version below the video at every width: closed, it is one line, so beside
+            // the video it would leave a mostly empty column (#211 review).
+            <>
               <VideoView videoId={segment.videoId} heading="h3" onResult={onAnswered} />
               {segment.body && <TextVersion body={segment.body} />}
-            </div>
+            </>
           ) : segment.body ? (
             // No video yet (or it can't be played): the narration as text is the lesson (FR-3.2, #149).
             <Markdown>{segment.body}</Markdown>

@@ -415,6 +415,9 @@ Code activities never execute student-written code. The student constructs code 
 - **FR-9.4** Points and badges are **private**: each student sees only their own. There is no public leaderboard, because public ranking discourages the students who most need the app (those motivated by avoiding failure, L05 [4]).
 - **FR-9.5** A student can hide points and badges. They are still earned while hidden, and the per-objective mastery report is never hidden. About a third of students in a data-structures course found badges demotivating [9], so opting out is the student's choice.
 - **FR-9.6** Points are never taken away and each thing is rewarded once; a badge, once earned, is never removed. Recomputing results (FR-7.6) may add badges but never removes them, and an objective badge only goes up, from bronze (met with support) to gold (met independently). No badge counts hints, attempts, days or speed, so none can be earned by clicking through hints or guessing.
+- **FR-9.7** A skill profile shows the eight learning objectives on the module map, the mastery report and the progress panel (FR-9.9). Before the mastery check each is *not started*, *practising* or *secure* (every practice item answered, at least 80% right without hint 3 or 4), counted over the practice items every student meets (not support-only items, skip checks, bonus quests or mastery items); once module 6 or a review path decides it, gold (met independently), bronze (met with support) or not yet. Each row opens to its evidence. It is a mastery view, so it shows even when rewards are hidden (#214).
+- **FR-9.8** A finished module shows a medal: gold if every activity it asks for was right first time without hint 3 or 4, silver if every one was right without them (or the module was tested out), bronze otherwise. The rule is shown with the medal and lives in one function (`app/services/skills.py` `medal_for`). Module 0 (diagnostic) and module 6 (the report) have none. Medals are hidden with points and badges (FR-9.5).
+- **FR-9.9** A right answer leads with the item's explanation of why it is right, then a short success moment: a drawn tick, a calm varied line and a remark on progress (with "Encouraging comments" on), the points it earned unless hidden, and a short confetti burst (with "Confetti" on); finishing a module and Ready for the Lecture get a fuller burst. None of it in the mastery check or under reduced motion. Both switches are on the profile page, on by default and kept on the device. Module and activity pages show a progress panel beside the lesson on wide screens and a closed strip under it on narrow ones: the module's progress, points, the skill profile with the module's objectives marked, the medal it is heading for and recent badges (#214).
 
 The rules, as confirmed by the ID document (§7.2):
 
@@ -625,7 +628,7 @@ Example `POST /api/activities/405/attempts`, one of module 4's two fill-in activ
 }
 ```
 
-`parts` has one entry per graded part (a blank here; a position in a Parsons problem, an item in matching, a step in a trace table). The message is shortened here. `hintLevel` is the highest hint seen before this attempt; 3 or 4 means "with support". Points are not in the response: the app reads them from `GET /api/rewards`.
+`parts` has one entry per graded part (a blank here; a position in a Parsons problem, an item in matching, a step in a trace table). The message is shortened here. `hintLevel` is the highest hint seen before this attempt; 3 or 4 means "with support". `points` (left out above) is what this answer earned for the activity, for the success moment (FR-9.9): 0 on a mastery check item, and 0 when the answer is shown again later. The total is in `GET /api/rewards`.
 
 ## BFS
 | Method | Path | Auth | Purpose |
@@ -661,6 +664,7 @@ Each step is one vertex taken from the queue, with the state after it. The visua
 | GET | `/api/rewards` | user | This student's points total and badges, and whether they are hidden (FR-9). |
 | POST | `/api/rewards/seen` | user | The app has announced every new badge, so none is announced twice. |
 | PUT | `/api/rewards/settings` | user | Hide or show points and badges (FR-9.5). |
+| GET | `/api/me/skills` | user | The skill profile and module medals: per objective, practice counts, level and result once decided; per module, its medal or the one it is heading for (FR-9.7, FR-9.8). |
 | GET | `/api/me/report` | user | The mastery report: each objective's result, whether the student is ready for the lecture, and the review path's progress for each "not yet" objective. |
 | GET | `/api/me/review/{objective_id}` | user | That objective's review path: its steps in order and which the student has answered. 403 until the mastery check marks the objective "not yet"; the activities on it are 403 until then too. Staff may always open it, to preview it. |
 
@@ -775,7 +779,7 @@ The components as they are on `staging`, organised by feature as in `web/src/fea
   - `ReportPage`: each objective's result in plain words, "ready for the lecture" or not, and next steps (FR-7.3).
   - `ReviewPage`: one objective's review path, its worked example, practice and fresh mastery items (FR-7.5); each step links back to the path (#146).
 - **Points, badges and profile**
-  - `BadgesPage`: the student's own points and badges, with the switch to hide them (FR-9.4, FR-9.5). `ProfilePage`: display name, picture, objectives met, points and the password change (FR-1.5 to FR-1.7). There is no leaderboard.
+  - `BadgesPage`: the student's own points and badges, with the switch to hide them (FR-9.4, FR-9.5). `ProfilePage`: display name, picture, objectives met, points, the Feedback switches (confetti, encouraging comments; FR-9.9) and the password change (FR-1.5 to FR-1.7). There is no leaderboard.
 - **Staff portal** (`/staff`, inside `StaffLayout`; `StaffPortalPage` is its index)
   - Content editor (FR-11) in `features/staff/content/`: `StaffContentPage` (every item, marked edited or not), `StaffModuleEditorPage` and `StaffReviewPathEditorPage` (with `SegmentsEditor`, the ordered list of segments, where a video is placed in a module), `StaffActivityEditorPage` (config and solution as JSON, with a template per kind), `StaffObjectiveEditorPage` and `StaffGraphEditorPage`; each warns before leaving with unsaved changes.
   - `StaffVideosPage`, `StaffVideoEditorPage` and `StaffVideoImportPage` (FR-3.6, FR-3.7); `StaffAccountsPage` and `StaffAccountPage` (FR-1.8); `StaffMembersPage` (FR-1.9); `StaffPilotPage`, the insights and the CSV downloads (FR-10.2).

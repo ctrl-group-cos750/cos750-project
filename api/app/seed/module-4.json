@@ -20,8 +20,7 @@
           "id": 404,
           "kind": "worked_example",
           "title": "Worked example: BFS line by line",
-          "body": "Tracing BFS on seven buildings took a whole table. How long would a campus with a hundred buildings take, or a social network with millions of people? Each step of your module 3 trace becomes a line of Python: here is the whole function.\n\nEach line does something you did by hand in module 3.\n\n```python\nfrom collections import deque\n\n\ndef bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                visited.add(n)\n                queue.append(n)\n    return order\n```\n\nThe lines fall into four subgoals, the same four you used in your module 3 trace:\n\n1. **Initialise:** `visited = {start}`, `queue = deque([start])` and `order = []`.\n2. **Take the next vertex:** `while queue:`, `v = queue.popleft()` and `order.append(v)`.\n3. **For each neighbour:** `for n in sorted(graph.adjacency[v]):` and `if n not in visited:`.\n4. **Mark and enqueue:** `visited.add(n)` and `queue.append(n)`.\n\nThe set is called `visited`, as in most BFS code, but it holds every vertex BFS has **found**. A vertex goes in it when it joins the queue, as in module 3, so it can never join the queue twice.\n\n| Line | What it does in the trace |\n|---|---|\n| `visited = {start}` | The start is found straight away. |\n| `queue = deque([start])` | The start waits in the queue. |\n| `order = []` | Nothing has been visited yet. |\n| `while queue:` | Keep going until no vertex is waiting. |\n| `v = queue.popleft()` | Take the vertex at the front: it is visited now. |\n| `order.append(v)` | Write it in the order. |\n| `for n in sorted(graph.adjacency[v]):` | Look at its neighbours in alphabetical order. |\n| `if n not in visited:` | Skip a neighbour BFS has already found. |\n| `visited.add(n)`, then `queue.append(n)` | A new neighbour is found and joins the back of the queue. |\n| `return order` | The queue is empty, so the order is complete. |\n\n**Running it** on the graph with edges P–Q, P–R and Q–S, starting at P:\n\n| `v` | Order so far | Queue after | Found (`visited`) |\n|---|---|---|---|\n| P | P | Q, R | P, Q, R |\n| Q | P, Q | R, S | P, Q, R, S |\n| R | P, Q, R | S | P, Q, R, S |\n| S | P, Q, R, S | (empty) | P, Q, R, S |\n\n**Result:** `[\"P\", \"Q\", \"R\", \"S\"]`.\n\nNext you put these lines in order yourself, one subgoal at a time. The three starting values can come in any order, and so can `visited.add(n)` and `queue.append(n)`: each order gives the same BFS.",
-          "skip_check_activity_id": 403
+          "body": "Tracing BFS on seven buildings took a whole table. How long would a campus with a hundred buildings take, or a social network with millions of people? Each step of your module 3 trace becomes a line of Python: here is the whole function.\n\nEach line does something you did by hand in module 3.\n\n```python\nfrom collections import deque\n\n\ndef bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                visited.add(n)\n                queue.append(n)\n    return order\n```\n\nThe lines fall into four subgoals, the same four you used in your module 3 trace:\n\n1. **Initialise:** `visited = {start}`, `queue = deque([start])` and `order = []`.\n2. **Take the next vertex:** `while queue:`, `v = queue.popleft()` and `order.append(v)`.\n3. **For each neighbour:** `for n in sorted(graph.adjacency[v]):` and `if n not in visited:`.\n4. **Mark and enqueue:** `visited.add(n)` and `queue.append(n)`.\n\nThe set is called `visited`, as in most BFS code, but it holds every vertex BFS has **found**. A vertex goes in it when it joins the queue, as in module 3, so it can never join the queue twice.\n\n| Line | What it does in the trace |\n|---|---|\n| `visited = {start}` | The start is found straight away. |\n| `queue = deque([start])` | The start waits in the queue. |\n| `order = []` | Nothing has been visited yet. |\n| `while queue:` | Keep going until no vertex is waiting. |\n| `v = queue.popleft()` | Take the vertex at the front: it is visited now. |\n| `order.append(v)` | Write it in the order. |\n| `for n in sorted(graph.adjacency[v]):` | Look at its neighbours in alphabetical order. |\n| `if n not in visited:` | Skip a neighbour BFS has already found. |\n| `visited.add(n)`, then `queue.append(n)` | A new neighbour is found and joins the back of the queue. |\n| `return order` | The queue is empty, so the order is complete. |\n\n**Running it** on the graph with edges P–Q, P–R and Q–S, starting at P:\n\n| `v` | Order so far | Queue after | Found (`visited`) |\n|---|---|---|---|\n| P | P | Q, R | P, Q, R |\n| Q | P, Q | R, S | P, Q, R, S |\n| R | P, Q, R | S | P, Q, R, S |\n| S | P, Q, R, S | (empty) | P, Q, R, S |\n\n**Result:** `[\"P\", \"Q\", \"R\", \"S\"]`.\n\nNext you put these lines in order yourself, one subgoal at a time. The three starting values can come in any order, and so can `visited.add(n)` and `queue.append(n)`: each order gives the same BFS."
         },
         {
           "id": 470,
@@ -207,12 +206,12 @@
     {
       "id": 403,
       "kind": "multiple_choice",
-      "title": "Check: BFS line by line",
+      "title": "BFS line by line",
       "module_id": 4,
-      "purpose": "practice",
+      "purpose": "test_out",
       "objective_id": 6,
       "config": {
-        "prompt": "Already confident? The graph has edges W–X, W–Z, X–Y and Y–Z. What does bfs(g, \"W\") return?",
+        "prompt": "The graph has edges W–X, W–Z, X–Y and Y–Z. What does bfs(g, \"W\") return?",
         "options": [
           {
             "id": "a",
@@ -225,6 +224,10 @@
           {
             "id": "c",
             "label": "[\"W\", \"X\", \"Z\", \"Y\", \"Y\"]"
+          },
+          {
+            "id": "d",
+            "label": "[\"W\", \"Z\", \"X\", \"Y\"]"
           }
         ]
       },
@@ -232,28 +235,125 @@
         "explanation": "BFS visits W, then its neighbours X and Z. Y is found from X, so when Z is processed, Y is already found and isn't added again.",
         "correct": "a",
         "feedback": {
-          "b": "Not quite. That goes deep first. Y is two edges from W, so it comes after both X and Z. Read the worked example: the queue keeps the rings in order.",
-          "c": "Not quite. Y appears twice. Y is added to visited when X finds it, so Z doesn't add it again. Read the worked example: a vertex goes in visited when it joins the queue."
+          "b": "Not quite. That goes deep first. Y is two edges from W, so it comes after both X and Z.",
+          "c": "Not quite. Y appears twice. Y is added to visited when X finds it, so Z doesn't add it again.",
+          "d": "Not quite. bfs takes neighbours in sorted order, so X joins the queue before Z."
         }
+      }
+    },
+    {
+      "id": 450,
+      "kind": "multiple_choice",
+      "title": "What bfs returns",
+      "module_id": 4,
+      "purpose": "test_out",
+      "objective_id": 6,
+      "config": {
+        "prompt": "The graph is undirected, with the edges A–C, A–B, B–D and C–D, added in that order. What does bfs(g, \"A\") return?",
+        "options": [
+          {
+            "id": "a",
+            "label": "[\"A\", \"C\", \"B\", \"D\"]"
+          },
+          {
+            "id": "b",
+            "label": "[\"A\", \"B\", \"C\", \"D\"]"
+          },
+          {
+            "id": "c",
+            "label": "[\"A\", \"B\", \"D\", \"C\"]"
+          },
+          {
+            "id": "d",
+            "label": "[\"A\", \"B\", \"C\", \"D\", \"D\"]"
+          }
+        ]
       },
-      "hints": [
-        {
-          "level": 1,
-          "body": "Start with W in the queue and in visited."
-        },
-        {
-          "level": 2,
-          "body": "W's neighbours X and Z join the queue in alphabetical order."
-        },
-        {
-          "level": 3,
-          "body": "X finds Y. When Z leaves the queue, Y is already in visited."
-        },
-        {
-          "level": 4,
-          "body": "Answer: [\"W\", \"X\", \"Z\", \"Y\"]."
+      "solution": {
+        "explanation": "bfs takes each vertex's neighbours in sorted order, whatever order the edges were added in, so A adds B then C. D is found from B and is already visited when C looks at it.",
+        "correct": "b",
+        "feedback": {
+          "a": "bfs sorts each vertex's neighbours, so B comes before C whichever edge was added first.",
+          "c": "That goes deep first. C is one edge from A, D two, so C comes first.",
+          "d": "D goes in visited when B finds it, so C doesn't add it again."
         }
-      ]
+      }
+    },
+    {
+      "id": 451,
+      "kind": "multiple_choice",
+      "title": "BFS on a directed graph",
+      "module_id": 4,
+      "purpose": "test_out",
+      "objective_id": 6,
+      "config": {
+        "prompt": "The directed graph has the edges P → Q, Q → R, R → P and S → P. What does bfs(g, \"P\") return?",
+        "options": [
+          {
+            "id": "a",
+            "label": "[\"P\", \"Q\", \"R\", \"S\"]"
+          },
+          {
+            "id": "b",
+            "label": "[\"P\", \"Q\", \"R\"]"
+          },
+          {
+            "id": "c",
+            "label": "[\"P\", \"Q\", \"R\", \"P\"]"
+          },
+          {
+            "id": "d",
+            "label": "[\"P\", \"S\", \"Q\", \"R\"]"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "From P the arrows lead to Q, then to R. R's arrow leads back to P, which is already visited. No arrow leads to S, so BFS from P never reaches it.",
+        "correct": "b",
+        "feedback": {
+          "a": "S → P goes into P, not out of it. No arrow leads from P's side to S.",
+          "c": "P is already in visited, so R doesn't add it again.",
+          "d": "BFS can only follow arrows forwards. S → P can't be followed from P."
+        }
+      }
+    },
+    {
+      "id": 452,
+      "kind": "multiple_choice",
+      "title": "A queue, not a stack",
+      "module_id": 4,
+      "purpose": "test_out",
+      "objective_id": 6,
+      "config": {
+        "prompt": "A student's bfs uses queue.pop() instead of queue.popleft(). Everything else is the module's bfs. On the undirected graph with edges A–B, A–C and B–D, what does their bfs(g, \"A\") return?",
+        "options": [
+          {
+            "id": "a",
+            "label": "[\"A\", \"B\", \"C\", \"D\"]"
+          },
+          {
+            "id": "b",
+            "label": "[\"A\", \"B\", \"D\", \"C\"]"
+          },
+          {
+            "id": "c",
+            "label": "[\"A\", \"C\", \"B\", \"D\"]"
+          },
+          {
+            "id": "d",
+            "label": "[\"A\", \"C\", \"D\", \"B\"]"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "pop() takes the newest vertex from the back, like a stack. After A, the queue holds B, C, so C comes out first, then B, which then adds D. A real BFS takes the oldest vertex from the front with popleft().",
+        "correct": "c",
+        "feedback": {
+          "a": "That is what popleft() gives. pop() takes from the back of the queue.",
+          "b": "After A, B and C are both waiting. pop() takes C, the last one added, first.",
+          "d": "D only joins the queue when B is taken out, and B comes out before D can."
+        }
+      }
     },
     {
       "id": 404,

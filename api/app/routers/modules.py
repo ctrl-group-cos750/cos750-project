@@ -9,12 +9,13 @@ GET  /api/modules                       → list[ModuleOut]
 GET  /api/modules/length                → CourseLengthOut  (public: the register page shows it)
 GET  /api/modules/{module_id}           → ModuleDetailOut
 POST /api/modules/{module_id}/position  → ModuleDetailOut  (body: PositionIn)
+GET  /api/modules/{module_id}/quick-check → QuickCheckOut
+POST /api/modules/{module_id}/quick-check → QuickCheckResultOut  (body: QuickCheckIn)
 
 Error mapping
 -------------
 ``ModuleNotFound`` (service) → 404  "Module not found."
-``ModuleLocked``   (service) → 403  "This module is not available yet.
-                                      Complete the previous module to unlock it."
+``ModuleLocked``   (service) → 403  "The mastery check opens once ..." (only module 6 locks)
 ``PositionTooFar`` (service) → 409  "Work through the module one segment at a time."
 """
 
@@ -23,7 +24,15 @@ from fastapi import APIRouter, HTTPException, status
 from app.auth import CurrentUser
 from app.db import DbSession
 from app.schemas.ids import RowId
-from app.schemas.modules import CourseLengthOut, ModuleDetailOut, ModuleOut, PositionIn
+from app.schemas.modules import (
+    CourseLengthOut,
+    ModuleDetailOut,
+    ModuleOut,
+    PositionIn,
+    QuickCheckIn,
+    QuickCheckOut,
+    QuickCheckResultOut,
+)
 from app.services.modules import (
     ModuleLocked,
     ModuleNotFound,
@@ -35,12 +44,31 @@ from app.services.modules import (
     get_modules_for_user,
     save_position,
 )
+from app.services.quick_check import (
+    Answer,
+    AnswersDontFit,
+    ModuleAlreadyDone,
+    QuickCheckMissing,
+    QuickCheckTaken,
+    quick_check,
+    take,
+)
 
 router = APIRouter(prefix="/api/modules", tags=["modules"])
 
 # Student-friendly error messages (NFR-U3).
 _NOT_FOUND = "Module not found."
-_LOCKED = "This module is not available yet. Complete the previous module to unlock it."
+_LOCKED = (
+    "The mastery check opens once modules 1 to 5 are each complete or tested out with their "
+    "quick check."
+)
+_NO_QUICK_CHECK = "This module has no quick check."
+_QUICK_CHECK_TAKEN = (
+    "You have taken this module's quick check. It is one try per module: work through the module "
+    "to learn what it missed."
+)
+_ALREADY_DONE = "You have completed this module already, so there is nothing to test out of."
+_ANSWERS_DONT_FIT = "Answer every question in the quick check, with one of its options."
 _TOO_FAR = "Work through the module one segment at a time."
 _RETRIEVAL_INCOMPLETE = "Answer the retrieval questions before starting this module."
 _NOT_DONE = "Answer this segment's activity, or the video's checkpoints, before moving on."
@@ -67,7 +95,7 @@ def get_module(module_id: RowId, user: CurrentUser, session: DbSession) -> Modul
     """One module with its full ordered segment list and the student's status.
 
     Returns 404 if the module does not exist; 403 if it is locked for this
-    student (the previous module has not been completed yet)."""
+    student (only the mastery check is: until modules 1 to 5 are complete or tested out)."""
     try:
         return get_module_detail(session, user.id, module_id)
     except ModuleNotFound:
@@ -112,3 +140,42 @@ def save_module_position(
         raise HTTPException(status.HTTP_409_CONFLICT, detail=_RETRIEVAL_INCOMPLETE) from None
     except SegmentNotDone:
         raise HTTPException(status.HTTP_409_CONFLICT, detail=_NOT_DONE) from None
+
+
+@router.get("/{module_id}/quick-check")
+def get_quick_check(module_id: RowId, user: CurrentUser, session: DbSession) -> QuickCheckOut:
+    """The module's quick check, "Already know this?" (FR-8.2, #214): its questions while this
+    student may take it (no answers or hints are in them), or its result once taken. 404 for a
+    module with no quick check (modules 0 and 6)."""
+    try:
+        return quick_check(session, user.id, module_id)
+    except QuickCheckMissing:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=_NO_QUICK_CHECK) from None
+
+
+@router.post("/{module_id}/quick-check")
+def take_quick_check(
+    module_id: RowId, body: QuickCheckIn, user: CurrentUser, session: DbSession
+) -> QuickCheckResultOut:
+    """Mark the quick check: one answer for every question, sent together, marked at once
+    (FR-8.2, #214). At most one wrong passes, and marks the module tested out; the result says
+    what was missed and where to go next either way. One try per module: 409 once taken, or once
+    the module is complete. 422 unless there is exactly one answer per question, each one of its
+    options; nothing is recorded then. 404 for a module with no quick check."""
+    try:
+        result = take(
+            session,
+            user.id,
+            module_id,
+            [Answer(a.activity_id, a.selected) for a in body.answers],
+        )
+    except QuickCheckMissing:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=_NO_QUICK_CHECK) from None
+    except QuickCheckTaken:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=_QUICK_CHECK_TAKEN) from None
+    except ModuleAlreadyDone:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=_ALREADY_DONE) from None
+    except AnswersDontFit:
+        raise HTTPException(422, detail=_ANSWERS_DONT_FIT) from None
+    session.commit()
+    return result

@@ -480,8 +480,42 @@ describe('ModulePage — navigation and position saving', () => {
     renderApp('/modules/1')
     const next = await screen.findByRole('button', { name: 'Next →' })
     expect(next).toHaveAccessibleDescription(
-      'Get it right to continue. If you’re stuck, the hints can help.',
+      'Not yet right. Try again: after one more answer you can move on, and the hints can help.',
     )
+  })
+
+  it('lets the student move on after two answers, marked to look at again (#214)', async () => {
+    setupModuleApi({
+      ...allKindsDetail,
+      status: 'in_progress',
+      currentSegmentPosition: 2,
+      segments: [
+        textSegment,
+        videoSegment,
+        { ...activitySegment, done: true, attempted: true, lookAgain: true },
+        workedExampleSegment,
+      ],
+    })
+    renderApp('/modules/1')
+    const next = await screen.findByRole('button', { name: 'Next →' })
+    expect(next).not.toHaveAttribute('aria-disabled')
+    expect(
+      screen.getByText('You can move on: this one is marked to look at again.'),
+    ).toBeInTheDocument()
+  })
+
+  it('offers the quick check at the top while it can be taken (#214)', async () => {
+    setupModuleApi({ ...allKindsDetail, quickCheck: 'available' })
+    renderApp('/modules/1')
+    const link = await screen.findByRole('link', { name: 'Take the quick check' })
+    expect(link).toHaveAttribute('href', '/modules/1/check')
+  })
+
+  it('offers no quick check once taken, and says when the module was tested out (#214)', async () => {
+    setupModuleApi({ ...allKindsDetail, status: 'tested_out', quickCheck: 'passed' })
+    renderApp('/modules/1')
+    expect(await screen.findByText(/You tested out of this module/)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Take the quick check' })).toBeNull()
   })
 
   it('resumes an in-progress module on the segment the student is doing', async () => {

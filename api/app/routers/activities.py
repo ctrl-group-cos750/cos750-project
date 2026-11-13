@@ -53,7 +53,11 @@ NO_MORE_HINTS = "You have seen every hint for this activity."
 SOLVED = "You have already answered this correctly, so no more hints are given."
 REVIEW_CLOSED = "This activity is on a review path, which opens when the mastery check marks its objective 'not yet'."
 MODULE_LOCKED = (
-    "This activity is in a module that isn't open yet. Complete the module before it to unlock it."
+    "This activity is in the mastery check, which opens once modules 1 to 5 are each complete or "
+    "tested out."
+)
+QUICK_CHECK = (
+    "This question is part of a module's quick check. Take the quick check from the module's page."
 )
 ALREADY_ANSWERED = (
     "You have answered this mastery check question. Only your first answer counts, so it can't "
@@ -173,6 +177,8 @@ def _activity_or_404(session: DbSession, activity_id: int, user: User) -> Activi
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=REVIEW_CLOSED)
     if refusal == "module_locked":
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=MODULE_LOCKED)
+    if refusal == "quick_check":  # answered only in the quick check (FR-8.2, #214)
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=QUICK_CHECK)
     if refusal == "not_shown":  # a support item this student isn't shown (FR-8.4)
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=NOT_SHOWN)
     return activity

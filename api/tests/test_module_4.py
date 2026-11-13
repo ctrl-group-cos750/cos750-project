@@ -30,7 +30,9 @@ from app.services.checking import check_activity
 CONTENT: FixtureFile = read_fixtures()
 CAMPUS = GraphScenarioOut(**next(g for g in CONTENT.graphs if g.id == 4).model_dump())
 MODULE = next(m for m in CONTENT.modules if m.id == 4)
-ACTIVITIES = [a for a in CONTENT.activities if a.module_id == 4]
+# The module's quick check (FR-8.2, #214) is checked in test_quick_check_content.py.
+QUICK_CHECK = [a for a in CONTENT.activities if a.module_id == 4 and a.purpose == "test_out"]
+ACTIVITIES = [a for a in CONTENT.activities if a.module_id == 4 and a.purpose != "test_out"]
 WORKED = next(s for s in MODULE.segments if s.kind == "worked_example")
 BLANK = re.compile(r"__(\d+)__")
 DASH = "\N{EN DASH}"  # the content joins an undirected edge's ends with it
@@ -168,11 +170,11 @@ def setup_from(text: str) -> str:
 
 def test_every_activity_is_shown_once_and_every_objective_has_one() -> None:
     shown = [s.activity_id for s in MODULE.segments if s.activity_id is not None]
-    skip_checks = [s.skip_check_activity_id for s in MODULE.segments if s.skip_check_activity_id]
+    skip_checks = [a.id for a in QUICK_CHECK]  # asked in the quick check, in no segment
     # The recall questions are asked before the segments (FR-2.4), not in one.
     recall = [a.id for a in ACTIVITIES if a.purpose == "retrieval"]
     assert recall == [401, 402]
-    assert sorted(shown + skip_checks + recall) == sorted(a.id for a in ACTIVITIES)
+    assert sorted(shown + skip_checks + recall) == sorted(a.id for a in ACTIVITIES + QUICK_CHECK)
     assert {a.objective_id for a in ACTIVITIES} == {2, 5, 6}
 
 
@@ -187,7 +189,7 @@ def test_support_fades_parsons_then_fill_in_then_most_lines_blank() -> None:  # 
     assert [a.id for a in code] == [404, 405, 406]
     assert code[0].kind == "parsons"
     assert len(code[1].config["blanks"]) < len(code[2].config["blanks"])
-    assert WORKED.skip_check_activity_id == 403
+    assert WORKED.skip_check_activity_id is None  # its check is the quick check now (FR-8.2, #214)
     assert MODULE.segments.index(WORKED) < MODULE.segments.index(
         next(s for s in MODULE.segments if s.activity_id == 404)
     )

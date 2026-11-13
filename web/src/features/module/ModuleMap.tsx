@@ -18,7 +18,12 @@ import styles from './ModuleMap.module.css'
  * lock the ones after it (#123), and it isn't shown as "open" for ever or offered by Continue:
  * it reads "coming soon" until it has content (#146). */
 function notReady(module: ModuleSummary): boolean {
-  return module.segmentCount === 0 && module.status !== 'complete' && module.status !== 'locked'
+  return module.segmentCount === 0 && module.status === 'open'
+}
+
+/** Done: worked through, or tested out with the quick check (#214). */
+function isDone(module: ModuleSummary): boolean {
+  return module.status === 'complete' || module.status === 'tested_out'
 }
 
 /** Maps a module status to a Tag tone and display label. */
@@ -33,6 +38,8 @@ function statusDisplay(module: ModuleSummary): { tone: TagTone; label: string; i
       return { tone: 'warning', label: 'in progress', icon: '◑' }
     case 'complete':
       return { tone: 'success', label: 'complete', icon: '✓' }
+    case 'tested_out':
+      return { tone: 'success', label: 'tested out', icon: '»' }
   }
 }
 
@@ -55,7 +62,7 @@ function NextUp({ modules, next }: { modules: ModuleSummary[]; next: ModuleSumma
   const navigate = useNavigate()
   const { data: user } = useCurrentUser()
   const started = modules.some((m) => m.status !== 'open' && m.status !== 'locked')
-  const allDone = modules.every((m) => m.status === 'complete' || m.segmentCount === 0)
+  const allDone = modules.every((m) => isDone(m) || m.segmentCount === 0)
   const name = user?.displayName
   if (allDone)
     return (
@@ -108,7 +115,9 @@ function NextUp({ modules, next }: { modules: ModuleSummary[]; next: ModuleSumma
   )
 }
 
-/** A single module row on the map. Locked modules are shown but not interactive. */
+/** A single module row on the map. Only the mastery check is ever locked: shown but not
+ * interactive. The recommended next module says so, and a module the student could test out of
+ * offers its quick check under the card (FR-8.2, #214). */
 function ModuleRow({ module, medal }: { module: ModuleSummary; medal?: MedalTier | null }) {
   const { tone, label, icon } = statusDisplay(module)
   const isLocked = module.status === 'locked'
@@ -120,6 +129,13 @@ function ModuleRow({ module, medal }: { module: ModuleSummary; medal?: MedalTier
       </span>
       <div className={styles.info}>
         <span className={styles.title}>{module.title}</span>
+        {module.recommended && (
+          <span>
+            <Tag tone="accent" icon="→">
+              recommended next
+            </Tag>
+          </span>
+        )}
         {module.status === 'in_progress' && module.segmentCount > 0 && (
           <ProgressBar
             label={`Module ${module.number} progress`}
@@ -130,7 +146,7 @@ function ModuleRow({ module, medal }: { module: ModuleSummary; medal?: MedalTier
       </div>
       <span className={styles.meta}>
         <span className={styles.duration}>{formatDuration(module.estimatedMinutes)}</span>
-        {medal && module.status === 'complete' && (
+        {medal && (module.status === 'complete' || module.status === 'tested_out') && (
           <Medal tier={medal} label={`Module ${module.number}: ${medalText(medal)}`} />
         )}
         <Tag tone={tone} icon={icon}>
@@ -149,20 +165,30 @@ function ModuleRow({ module, medal }: { module: ModuleSummary; medal?: MedalTier
           {cardContent}
         </Link>
       )}
+      {module.quickCheck === 'available' && !isDone(module) && (
+        <Link to={`/modules/${module.id}/check`} className={styles.quickCheck}>
+          Already know module {module.number}? Take the quick check
+        </Link>
+      )}
     </li>
   )
 }
 
-/** Picks the first in-progress module, else the first open module, to continue from; never one
- * with nothing in it yet (#146). */
+/** Picks the first in-progress module, else the recommended one, else the first open one, to
+ * continue from; never one with nothing in it yet (#146). */
 function findContinueTarget(modules: ModuleSummary[]): ModuleSummary | undefined {
   const ready = modules.filter((m) => m.segmentCount > 0)
-  return ready.find((m) => m.status === 'in_progress') ?? ready.find((m) => m.status === 'open')
+  return (
+    ready.find((m) => m.status === 'in_progress') ??
+    ready.find((m) => m.recommended === true) ??
+    ready.find((m) => m.status === 'open')
+  )
 }
 
 /**
- * The module map (FR-2.6): all seven modules with their state, estimated duration, and a
- * Continue button that picks up where the student left off.
+ * The module map (FR-2.1, FR-2.6): all seven modules in order with their state and estimated
+ * duration, the one recommended next, and a Continue button that picks up where the student left
+ * off. The student may open any module but the mastery check (#214).
  *
  * Route: / (index)
  */

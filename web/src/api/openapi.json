@@ -1331,7 +1331,7 @@
           "modules"
         ],
         "summary": "Get Module",
-        "description": "One module with its full ordered segment list and the student's status.\n\nReturns 404 if the module does not exist; 403 if it is locked for this\nstudent (the previous module has not been completed yet).",
+        "description": "One module with its full ordered segment list and the student's status.\n\nReturns 404 if the module does not exist; 403 if it is locked for this\nstudent (only the mastery check is: until modules 1 to 5 are complete or tested out).",
         "operationId": "get_module_api_modules__module_id__get",
         "parameters": [
           {
@@ -1440,6 +1440,136 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ModuleDetailOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/modules/{module_id}/quick-check": {
+      "get": {
+        "tags": [
+          "modules"
+        ],
+        "summary": "Get Quick Check",
+        "description": "The module's quick check, \"Already know this?\" (FR-8.2, #214): its questions while this\nstudent may take it (no answers or hints are in them), or its result once taken. 404 for a\nmodule with no quick check (modules 0 and 6).",
+        "operationId": "get_quick_check_api_modules__module_id__quick_check_get",
+        "parameters": [
+          {
+            "name": "module_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 2147483647,
+              "minimum": 0,
+              "title": "Module Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuickCheckOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "modules"
+        ],
+        "summary": "Take Quick Check",
+        "description": "Mark the quick check: one answer for every question, sent together, marked at once\n(FR-8.2, #214). At most one wrong passes, and marks the module tested out; the result says\nwhat was missed and where to go next either way. One try per module: 409 once taken, or once\nthe module is complete. 422 unless there is exactly one answer per question, each one of its\noptions; nothing is recorded then. 404 for a module with no quick check.",
+        "operationId": "take_quick_check_api_modules__module_id__quick_check_post",
+        "parameters": [
+          {
+            "name": "module_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 2147483647,
+              "minimum": 0,
+              "title": "Module Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuickCheckIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuickCheckResultOut"
                 }
               }
             }
@@ -4353,7 +4483,8 @@
               "retrieval",
               "mastery",
               "review",
-              "bonus"
+              "bonus",
+              "test_out"
             ],
             "title": "Purpose",
             "default": "practice"
@@ -4450,7 +4581,8 @@
               "retrieval",
               "mastery",
               "review",
-              "bonus"
+              "bonus",
+              "test_out"
             ],
             "title": "Purpose",
             "default": "practice"
@@ -4565,7 +4697,8 @@
               "retrieval",
               "mastery",
               "review",
-              "bonus"
+              "bonus",
+              "test_out"
             ],
             "title": "Purpose"
           }
@@ -5655,7 +5788,8 @@
               "locked",
               "open",
               "in_progress",
-              "complete"
+              "complete",
+              "tested_out"
             ],
             "title": "Status"
           },
@@ -5674,6 +5808,27 @@
           "shownSegmentsPassed": {
             "type": "integer",
             "title": "Shownsegmentspassed"
+          },
+          "recommended": {
+            "type": "boolean",
+            "title": "Recommended",
+            "default": false
+          },
+          "quickCheck": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "available",
+                  "passed",
+                  "not_passed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quickcheck"
           },
           "segments": {
             "items": {
@@ -5827,7 +5982,8 @@
               "locked",
               "open",
               "in_progress",
-              "complete"
+              "complete",
+              "tested_out"
             ],
             "title": "Status"
           },
@@ -5846,6 +6002,27 @@
           "shownSegmentsPassed": {
             "type": "integer",
             "title": "Shownsegmentspassed"
+          },
+          "recommended": {
+            "type": "boolean",
+            "title": "Recommended",
+            "default": false
+          },
+          "quickCheck": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "available",
+                  "passed",
+                  "not_passed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quickcheck"
           }
         },
         "additionalProperties": false,
@@ -6041,6 +6218,248 @@
         ],
         "title": "PositionIn",
         "description": "Request body for ``POST /api/modules/{moduleId}/position`` (FR-2.5).\n\nThe client sends the zero-based position of the segment the student just\nreached. The server keeps the furthest one, and refuses a position more than one past it,\nso a module can't be finished by jumping to its end.\n\n``ge=0`` rejects negative values at the API boundary: a negative position stored in\n``ModuleProgress.current_segment_position`` would cause ``segments[-1]`` (undefined\nin JavaScript) on resume, crashing the ModulePage render."
+      },
+      "QuickCheckAnswerIn": {
+        "properties": {
+          "activityId": {
+            "type": "integer",
+            "title": "Activityid"
+          },
+          "selected": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Selected"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "activityId",
+          "selected"
+        ],
+        "title": "QuickCheckAnswerIn"
+      },
+      "QuickCheckIn": {
+        "properties": {
+          "answers": {
+            "items": {
+              "$ref": "#/components/schemas/QuickCheckAnswerIn"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Answers"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "answers"
+        ],
+        "title": "QuickCheckIn",
+        "description": "`POST /api/modules/{moduleId}/quick-check`: one answer for every question, sent together."
+      },
+      "QuickCheckItemResultOut": {
+        "properties": {
+          "activityId": {
+            "type": "integer",
+            "title": "Activityid"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "correct": {
+            "type": "boolean",
+            "title": "Correct"
+          },
+          "chosen": {
+            "type": "string",
+            "title": "Chosen"
+          },
+          "answer": {
+            "type": "string",
+            "title": "Answer"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "activityId",
+          "title",
+          "prompt",
+          "correct",
+          "chosen",
+          "answer",
+          "explanation"
+        ],
+        "title": "QuickCheckItemResultOut",
+        "description": "How one question went, shown once every question is answered."
+      },
+      "QuickCheckOptionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "QuickCheckOptionOut"
+      },
+      "QuickCheckOut": {
+        "properties": {
+          "moduleId": {
+            "type": "integer",
+            "title": "Moduleid"
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "passMark": {
+            "type": "integer",
+            "title": "Passmark"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/QuickCheckQuestionOut"
+            },
+            "type": "array",
+            "title": "Questions"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuickCheckResultOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "moduleId",
+          "available",
+          "passMark",
+          "questions"
+        ],
+        "title": "QuickCheckOut",
+        "description": "`GET /api/modules/{moduleId}/quick-check`. `available` while the student may take it;\n`questions` then holds its questions. Once taken, `result` holds how it went."
+      },
+      "QuickCheckQuestionOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/QuickCheckOptionOut"
+            },
+            "type": "array",
+            "title": "Options"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "prompt",
+          "options"
+        ],
+        "title": "QuickCheckQuestionOut",
+        "description": "One quick check question: multiple choice, no hints, no feedback until the end."
+      },
+      "QuickCheckResultOut": {
+        "properties": {
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          },
+          "correct": {
+            "type": "integer",
+            "title": "Correct"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "suggestion": {
+            "type": "string",
+            "enum": [
+              "move_on",
+              "start_with",
+              "work_through"
+            ],
+            "title": "Suggestion"
+          },
+          "suggestedModule": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggestedmodule"
+          },
+          "lookAt": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Lookat"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/QuickCheckItemResultOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "passed",
+          "correct",
+          "total",
+          "suggestion",
+          "suggestedModule",
+          "lookAt",
+          "items"
+        ],
+        "title": "QuickCheckResultOut",
+        "description": "The quick check's result (FR-8.2, #214). `passed` with at most one wrong. `suggestion`:\n`move_on` after a pass, `start_with` an earlier module after a fail that points there (see\napp/services/quick_check.py), else `work_through` this module. `suggested_module` is the\nmodule named: the next one to do after a pass (None if there is none), the earlier one, or\nthis one. `look_at` names what was missed: the titles of the questions answered wrongly."
       },
       "Readiness": {
         "properties": {
@@ -6393,6 +6812,11 @@
           "attempted": {
             "type": "boolean",
             "title": "Attempted",
+            "default": false
+          },
+          "lookAgain": {
+            "type": "boolean",
+            "title": "Lookagain",
             "default": false
           },
           "optional": {

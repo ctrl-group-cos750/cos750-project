@@ -1,7 +1,7 @@
 """The pilot's event log (FR-10.1, ID document §8): what each student did, with when.
 
 Two kinds of event. The server logs the ones it decides (`SERVER_EVENTS`): a hint shown, an
-objective's result changing, a module completed. The browser reports the ones only it sees (`CLIENT_EVENTS`): a video
+objective's result changing, a module completed, a module's quick check taken (with its score). The browser reports the ones only it sees (`CLIENT_EVENTS`): a video
 started or finished, a checkpoint reached, a segment viewed, a next-vertex prediction made in the
 BFS visualiser (with whether it was right). Those come through
 POST /api/events, which takes only these types, each about one kind of thing that must exist, and
@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Checkpoint, Event, GraphScenario, Segment, Video
 
-ServerEvent = Literal["hint_shown", "result_changed", "module_completed"]
+ServerEvent = Literal["hint_shown", "result_changed", "module_completed", "quick_check_taken"]
 ClientEvent = Literal[
     "video_started", "video_completed", "checkpoint_reached", "segment_viewed", "prediction_made"
 ]

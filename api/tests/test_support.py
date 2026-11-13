@@ -106,13 +106,16 @@ def _question(db: Session, activity_id: int, **tags: Any) -> None:
 
 def _make_module(db: Session, *, closing: bool = True, late_base: bool = False) -> None:
     """Module 0: an intro, three base practice items on objective 2, its support (a worked example
-    and a fresh item), and a closing text. Module 1 after it."""
+    and a fresh item), and a closing text. Module 1 after it, locked until module 0 is done."""
     for objective in (1, 2):
         db.add(Objective(id=objective, text="o", bloom_level="Apply", criterion="c", max_wrong=1))
     db.add_all(
         [
-            Module(id=0, slug="m0", title="Zero", goals=[], estimated_minutes=10, position=0),
-            Module(id=1, slug="m1", title="One", goals=[], estimated_minutes=10, position=1),
+            # A warm-up first, with no content yet, so module 1 is the last module: like the
+            # mastery check, it is locked until module 0 is complete (#214).
+            Module(id=5, slug="m5", title="Warm-up", goals=[], estimated_minutes=1, position=0),
+            Module(id=0, slug="m0", title="Zero", goals=[], estimated_minutes=10, position=1),
+            Module(id=1, slug="m1", title="One", goals=[], estimated_minutes=10, position=2),
         ]
     )
     db.flush()

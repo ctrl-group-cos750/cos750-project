@@ -136,7 +136,8 @@ def _regrade_student(session: Session, user_id: int, report: Report) -> None:
         became_correct = result.correct and not attempt.correct
         attempt.correct, attempt.score, attempt.detail = result.correct, result.score, detail
         session.flush()
-        if became_correct:
+        # A quick check answer earns nothing (FR-8.2, #214), so a re-grade gives it nothing either.
+        if became_correct and activity.purpose != "test_out":
             rewards.on_attempt(session, attempt)  # once per activity: points are keyed by ref
         report.changed.append((attempt.id, user_id, activity.id, result.correct))
     if changed:

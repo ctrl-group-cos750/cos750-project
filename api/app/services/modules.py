@@ -4,9 +4,12 @@ The modules and their segments are content (app/models/content.py, loaded from t
 `ModuleProgress` is the student's part. Functions take a session and the student's id, flush
 and never commit: the router commits.
 
-Unlocking (FR-2.1): the first module (by `position`) is always open. Any other module opens when
-the one before it is complete, and stays as it is once the student has started it. A module with
-no segments yet is passed over, so missing content never locks the rest of the course.
+Opening (FR-2.1, #214): the student chooses where to start. Every module but the last is open from
+the start; the order stays visible, and the map recommends one module next (`_recommended`). The
+last module is the mastery check (module 6): it opens once every module between the first (the
+warm-up) and it is complete or tested out (app/services/quick_check.py), and stays as it is once
+the student has started it. A module with no segments yet is passed over, so missing content
+never locks the mastery check.
 
 Progress (FR-2.5, FR-2.6): the student moves through a module one segment at a time. The
 furthest segment reached is kept, so stepping back to reread never loses progress. A student moves
@@ -42,6 +45,8 @@ from app.schemas.modules import (
 from app.services import rewards
 from app.services.events import log_event
 from app.services.locks import lock_student
+from app.services.quick_check import DONE
+from app.services.quick_check import states as quick_check_states
 from app.services.support import hidden_segments, record_shown
 
 # Activity kinds the web can't show a student yet: it says "This activity kind is not available
@@ -56,6 +61,13 @@ KINDS_WITHOUT_STUDENT_UI: frozenset[str] = frozenset()
 # first answer counts (FR-7.1), and module 0's diagnostic, which finds gaps rather than gating.
 ONE_ANSWER_PURPOSES: frozenset[str] = frozenset({"mastery", "diagnostic"})
 
+# How many wrong answers let a student move past a module activity without getting it right
+# (FR-2.7, #214): being held on one question until it is right, or until every hint is open,
+# frustrated testers. The activity is still not right: it earns nothing, decides no result, and
+# the page says it is marked to look at again. Not for the mastery check (one answer counts) or a
+# review path (its own page).
+ATTEMPTS_TO_MOVE_ON = 2
+
 # Purposes a student may skip (FR-8.3): a bonus quest is optional extra challenge, so its segment is
 # done whether or not it is answered, and Next is never held back by it.
 OPTIONAL_PURPOSES: frozenset[str] = frozenset({"bonus"})
@@ -66,7 +78,7 @@ class ModuleNotFound(ValueError):
 
 
 class ModuleLocked(ValueError):
-    """The module before this one isn't complete yet."""
+    """The mastery check, before modules 1 to 5 are each complete or tested out."""
 
 
 class PositionTooFar(ValueError):
@@ -109,26 +121,43 @@ def _segment_counts(session: Session) -> dict[int, int]:
 def _statuses(
     modules: Sequence[Module], progress: dict[int, ModuleProgress], counts: dict[int, int]
 ) -> dict[int, ModuleStatus]:
-    """Each module's status for one student, in map order (FR-2.1).
+    """Each module's status for one student, in map order (FR-2.1, #214).
 
-    A module with no segments yet (its content hasn't been written) can't be completed, so it
-    doesn't hold back the modules after it: it opens when they would, and unlocking passes over
-    it. Once it has content it counts like any other.
+    Every module is open but the last, the mastery check, which is locked until each module
+    between the first and it is complete or tested out. A module with no segments yet (its
+    content hasn't been written) can't be completed, so it doesn't hold the mastery check back.
     """
     statuses: dict[int, ModuleStatus] = {}
-    previous_complete = True  # nothing comes before the first module
     for module in modules:
         row = progress.get(module.id)
-        if row is not None and row.status == "complete":
-            status: ModuleStatus = "complete"
+        if row is not None and row.status in ("complete", "tested_out"):
+            statuses[module.id] = row.status  # type: ignore[assignment]
         elif row is not None:
-            status = "in_progress"
+            statuses[module.id] = "in_progress"
         else:
-            status = "open" if previous_complete else "locked"
-        statuses[module.id] = status
-        if counts.get(module.id, 0) > 0:
-            previous_complete = status == "complete"
+            statuses[module.id] = "open"
+    if len(modules) > 1 and progress.get(modules[-1].id) is None:
+        between = [m for m in modules[1:-1] if counts.get(m.id, 0) > 0]
+        if any(statuses[m.id] not in DONE for m in between):
+            statuses[modules[-1].id] = "locked"
     return statuses
+
+
+def _recommended(
+    modules: Sequence[Module], statuses: dict[int, ModuleStatus], counts: dict[int, int]
+) -> int | None:
+    """The module the map recommends next (#214): the first in order, with content, that the
+    student hasn't completed or tested out of and can open. The warm-up (the first module) is
+    passed over once any later module is done: a student who has shown they know a later module
+    isn't sent back to the warm-up. None once every module is done."""
+    ready = [m for m in modules if counts.get(m.id, 0) > 0]
+    later_done = any(statuses[m.id] in DONE for m in ready[1:])
+    for index, module in enumerate(ready):
+        if index == 0 and later_done and module.id == modules[0].id:
+            continue
+        if statuses[module.id] not in DONE and statuses[module.id] != "locked":
+            return module.id
+    return None
 
 
 def _status(session: Session, user_id: int, module_id: int) -> ModuleStatus:
@@ -214,7 +243,9 @@ def get_modules_for_user(session: Session, user_id: int) -> list[ModuleOut]:
     counts = _segment_counts(session)
     statuses = _statuses(modules, progress, counts)
     hidden = _hidden_by_module(session, user_id, progress)
-    return [
+    recommended = _recommended(modules, statuses, counts)
+    checks = quick_check_states(session, user_id, dict(statuses))
+    out = [
         _summary(
             module,
             statuses[module.id],
@@ -224,6 +255,10 @@ def get_modules_for_user(session: Session, user_id: int) -> list[ModuleOut]:
         )
         for module in modules
     ]
+    for summary in out:
+        summary.recommended = summary.id == recommended
+        summary.quick_check = checks.get(summary.id)
+    return out
 
 
 def _videos(session: Session, segments: Sequence[Segment]) -> dict[int, int]:
@@ -241,9 +276,10 @@ def _videos(session: Session, segments: Sequence[Segment]) -> dict[int, int]:
 def done_segments(session: Session, user_id: int, segments: Sequence[Segment]) -> set[int]:
     """The ids of the segments this student has done (FR-2.7).
 
-    A practice activity is done once they have answered it correctly, or answered it after its
+    A practice activity is done once they have answered it correctly, answered it after its
     last hint was shown (#143): the last hint gives the answer away, so a student who needed it can
-    still move on. A mastery or diagnostic item (`ONE_ANSWER_PURPOSES`) is done once answered at
+    still move on, or answered it `ATTEMPTS_TO_MOVE_ON` times (#214), so nobody is held on one
+    question; a wrong answer is still wrong, and earns nothing. A mastery or diagnostic item (`ONE_ANSWER_PURPOSES`) is done once answered at
     all: only the first answer counts towards the report (FR-7.1) and the diagnostic finds gaps
     rather than gating, so asking for a right answer there would add steps that change nothing.
     A video segment is done once they have passed every checkpoint in its video. A segment with
@@ -292,13 +328,20 @@ def done_segments(session: Session, user_id: int, segments: Sequence[Segment]) -
     # done: answered correctly, or after the last hint; or optional (a bonus quest)
     answered: set[int] = set(no_ui) | optional
     passed: set[int] = set(no_ui)
+    tries: dict[int, int] = {}
     for activity_id, correct, hint_level in session.execute(
         select(Attempt.activity_id, Attempt.correct, Attempt.hint_level).where(
             Attempt.user_id == user_id, Attempt.activity_id.in_(wanted)
         )
     ):
         last = last_hint.get(activity_id)
-        if correct or activity_id in one_answer or (last is not None and hint_level >= last):
+        tries[activity_id] = tries.get(activity_id, 0) + 1
+        if (
+            correct
+            or activity_id in one_answer
+            or (last is not None and hint_level >= last)
+            or tries[activity_id] >= ATTEMPTS_TO_MOVE_ON
+        ):
             answered.add(activity_id)
         if correct:
             passed.add(activity_id)
@@ -351,6 +394,23 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
         )
     )
     attempted = _answered(session, user_id, [s.activity_id for s in segments if s.activity_id])
+    right = set(
+        session.scalars(
+            select(Attempt.activity_id).where(
+                Attempt.user_id == user_id,
+                Attempt.correct.is_(True),
+                Attempt.activity_id.in_([s.activity_id for s in segments if s.activity_id]),
+            )
+        )
+    )
+    one_answer = set(
+        session.scalars(
+            select(Activity.id).where(
+                Activity.id.in_([s.activity_id for s in segments if s.activity_id]),
+                Activity.purpose.in_(ONE_ANSWER_PURPOSES),
+            )
+        )
+    )
     # TODO (FR-8.1): leave out the refreshers module 0's diagnostic has ruled out, once the
     # diagnostic records its result. Until then every refresher is shown.
     detail = ModuleDetailOut(
@@ -369,6 +429,12 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
                 done=segment.id in done,
                 attempted=segment.activity_id is not None and segment.activity_id in attempted,
                 optional=segment.activity_id is not None and segment.activity_id in optional,
+                look_again=segment.kind == "activity"
+                and segment.activity_id in attempted
+                and segment.activity_id not in right
+                and segment.activity_id not in optional
+                and segment.activity_id not in one_answer
+                and segment.id in done,
             )
             for index, segment in enumerate(segments)
         ],
@@ -379,6 +445,7 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
             for activity in retrieval
         ],
     )
+    detail.quick_check = quick_check_states(session, user_id, {module_id: status})[module_id]
     # Support segments (FR-8.4): which objective each is for, and the ones this student doesn't
     # need are hidden and count as done, so they never hold the student up.
     support_for = {segment.id: segment.support_for for segment in segments}
@@ -453,7 +520,12 @@ def save_position(
 
     Raises `RetrievalIncomplete` until the student has answered the module's retrieval questions
     (FR-2.4), unless the module is already complete: a student who finished it before its
-    questions were added can still go back over it.
+    questions were added can still go back over it. Any answer will do, right or wrong, so they
+    never stop a student who chose to start here (#214): for one who skipped the modules they
+    recall, they are a short check of what this module builds on, with feedback and hints.
+
+    A module the student tested out of (#214) is worked through like one in progress: reaching its
+    end completes it, with its points and badge if it earns them (`reward_module`).
 
     Takes the student's write lock first (app/services/locks.py): the `FOR UPDATE` on the
     progress row below locks nothing before the first save has made that row, so two first saves

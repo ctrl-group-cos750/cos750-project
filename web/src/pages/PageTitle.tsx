@@ -7,6 +7,7 @@ const TITLES: [RegExp, string][] = [
   [/^\/$/, 'Your modules'],
   [/^\/login$/, 'Log in'],
   [/^\/register$/, 'Create an account'],
+  [/^\/modules\/\d+\/check$/, 'Quick check'],
   [/^\/modules\/\d+/, 'Module'],
   [/^\/activities\//, 'Activity'],
   [/^\/videos\//, 'Video'],

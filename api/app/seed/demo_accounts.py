@@ -17,7 +17,7 @@ A segment must be done before the walk moves past it (FR-2.7), so it answers any
 the steps haven't answered, and passes any video checkpoint, right first time. It runs after the
 steps, so the steps' answers stay the first attempts that mastery counts.
 A module with no segments yet is passed over, as it is for a student (FR-2.1). If a module is
-still locked when the walk reaches it, the walk stops there and the seed says so, rather than
+still locked when the walk reaches it (only the mastery check can be, #214), the walk stops there and the seed says so, rather than
 failing: the account goes as far as the course allows.
 
 `expect` says what the account must end up as (ready for the lecture or not, and which objectives
@@ -254,7 +254,7 @@ def _walk(session: Session, user_id: int, account: DemoAccount) -> str | None:
         except ModuleLocked:
             return (
                 f"{account.email}: stopped at module {entry.module}, which is still locked "
-                "because the module before it isn't complete"
+                "because modules 1 to 5 aren't each complete or tested out"
             )
     return None
 

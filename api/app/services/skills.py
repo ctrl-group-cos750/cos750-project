@@ -197,13 +197,18 @@ def module_medals(session: Session, user_id: int) -> list[ModuleMedal]:
             Segment.activity_id.is_not(None),
         )
     ).all()
-    complete = set(
-        session.scalars(
-            select(ModuleProgress.module_id).where(
-                ModuleProgress.user_id == user_id, ModuleProgress.status == "complete"
+    statuses: dict[int, str] = {
+        module_id: status
+        for module_id, status in session.execute(
+            select(ModuleProgress.module_id, ModuleProgress.status).where(
+                ModuleProgress.user_id == user_id,
+                ModuleProgress.status.in_(("complete", "tested_out")),
             )
         )
-    )
+    }
+    complete = set(statuses)
+    # A module passed through its quick check (FR-8.2) has a medal too (#214).
+    tested_out = {m for m, status in statuses.items() if status == "tested_out"}
     got = _answers(session, user_id, list(by_id))
     medals = []
     for module in session.scalars(select(Module).order_by(Module.position)):
@@ -224,7 +229,11 @@ def module_medals(session: Session, user_id: int) -> list[ModuleMedal]:
             sum(1 for a in done if a in got.first_time),
             sum(1 for a in done if a in got.on_own),
         )
-        medal = medal_for(len(mine), first, own) if finished else None
+        medal = (
+            medal_for(len(mine), first, own, tested_out=module.id in tested_out)
+            if finished
+            else None
+        )
         medals.append(
             ModuleMedal(
                 module_id=module.id,

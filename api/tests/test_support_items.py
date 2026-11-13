@@ -623,7 +623,7 @@ def plain_text(value: Any, key: str = "") -> Iterator[str]:
 def shown(a: dict[str, Any]) -> Iterator[str]:
     yield from plain_text(a["config"])
     yield from plain_text(a["solution"].get("feedback", {}))
-    yield from (h["body"] for h in a["hints"])
+    yield from (h["body"] for h in a.get("hints", []))
 
 
 @pytest.mark.parametrize("a", SUPPORT_ACTIVITIES, ids=lambda a: str(a["id"]))

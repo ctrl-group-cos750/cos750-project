@@ -13,7 +13,8 @@ router = APIRouter(prefix="/api/videos", tags=["videos"])
 
 NOT_FOUND = "This video does not exist."
 MODULE_LOCKED = (
-    "This video is in a module that isn't open yet. Complete the module before it to unlock it."
+    "This video is in the mastery check, which opens once modules 1 to 5 are each complete or "
+    "tested out."
 )
 LOCKED = "This video is in a part of the course that isn't open yet."
 

@@ -284,3 +284,14 @@ def test_a_mastery_check_answer_reports_no_points(
     assert answer(client, 601)["points"] == 0
     # The last answer finishes the check and gives its points, but still reports none (#144).
     assert answer(client, 602)["points"] == 0
+
+
+def test_a_module_tested_out_through_its_quick_check_has_silver(
+    client: TestClient, db: Session, loaded: None
+) -> None:
+    """A module passed by testing out (FR-8.2, #214) shows a medal like a finished one."""
+    user = log_in(client)
+    db.add(ModuleProgress(user_id=user, module_id=1, status="tested_out"))
+    db.commit()
+    medal = profile(client)["modules"][0]
+    assert (medal["moduleId"], medal["complete"], medal["medal"]) == (1, True, "silver")

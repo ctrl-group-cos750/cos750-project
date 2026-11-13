@@ -20,7 +20,9 @@ from app.seed import ActivityFixture, FixtureFile, read_fixtures
 CONTENT: FixtureFile = read_fixtures()
 CAMPUS = next(g for g in CONTENT.graphs if g.id == 4)
 MODULE = next(m for m in CONTENT.modules if m.id == 2)
-ACTIVITIES = [a for a in CONTENT.activities if a.module_id == 2]
+# The module's quick check (FR-8.2, #214) is checked in test_quick_check_content.py.
+QUICK_CHECK = [a for a in CONTENT.activities if a.module_id == 2 and a.purpose == "test_out"]
+ACTIVITIES = [a for a in CONTENT.activities if a.module_id == 2 and a.purpose != "test_out"]
 BLANK = re.compile(r"__(\d+)__")
 DASH = "\N{EN DASH}"  # the content joins an undirected edge's ends with it
 EDGE = re.compile(rf"\b([A-Z]) ?({DASH}|→) ?([A-Z])\b")
@@ -71,7 +73,7 @@ TESTS = {
 
 
 def activity(activity_id: int) -> ActivityFixture:
-    return next(a for a in ACTIVITIES if a.id == activity_id)
+    return next(a for a in ACTIVITIES + QUICK_CHECK if a.id == activity_id)
 
 
 def chosen_label(activity_id: int) -> str:
@@ -113,11 +115,11 @@ def run(calls: str) -> dict[str, list[str]]:
 
 def test_every_activity_is_shown_once_and_every_objective_has_one() -> None:
     shown = [s.activity_id for s in MODULE.segments if s.activity_id is not None]
-    skip_checks = [s.skip_check_activity_id for s in MODULE.segments if s.skip_check_activity_id]
+    skip_checks = [a.id for a in QUICK_CHECK]  # asked in the quick check, in no segment
     # The recall questions are asked before the segments (FR-2.4), not in one.
     recall = [a.id for a in ACTIVITIES if a.purpose == "retrieval"]
     assert recall == [201, 202]
-    assert sorted(shown + skip_checks + recall) == sorted(a.id for a in ACTIVITIES)
+    assert sorted(shown + skip_checks + recall) == sorted(a.id for a in ACTIVITIES + QUICK_CHECK)
     assert {a.objective_id for a in ACTIVITIES} == {None, 2, 6}
 
 
@@ -207,7 +209,7 @@ def test_each_graph_matches_the_dictionary_the_class_builds() -> None:
 
 def test_the_worked_example_rows_are_what_the_class_does() -> None:
     worked = next(s for s in MODULE.segments if s.kind == "worked_example")
-    assert worked.skip_check_activity_id == 203
+    assert worked.skip_check_activity_id is None  # its check is the quick check now (FR-8.2, #214)
     rows = re.findall(r"^\| `(.+?)` \| `(.+?)` \|", worked.body, re.M)
     assert len(rows) == 5
     calls = []

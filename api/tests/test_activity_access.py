@@ -480,7 +480,8 @@ def test_staff_may_open_any_activity_and_video_to_preview_it(
         assert client.get(f"/api/activities/{activity}").status_code == 200, activity
     # The hint first: once answered right, no more hints are given, to staff too (#158).
     assert client.post("/api/activities/601/hints").status_code == 201
-    assert client.post("/api/activities/601/attempts", json=MC_RIGHT).status_code == 201
+    right = {"submitted": {"selected": "d"}}  # 601's key since #214 (C5)
+    assert client.post("/api/activities/601/attempts", json=right).status_code == 201
     assert client.get(f"/api/videos/{video_id}").status_code == 200
 
 

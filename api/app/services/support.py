@@ -114,20 +114,41 @@ def struggling_objectives(
     base = _base_practice(session, segments, objectives)
     if not base:
         return set()
-    firsts: dict[int, list[FirstAttempt]] = {}
-    seen: set[int] = set()
-    # In the order they were made: ids grow with time, and two at once are serialised per student
+    # Per item, in the order the student first answered them: whether that first answer was right,
+    # and the highest hint level seen at any of its attempts (hint 3 after a wrong first answer is
+    # struggling too, 13 Nov audit). Ids grow with time, and two at once are serialised per student
     # (app/services/locks.py), so the id order is the order the student answered in.
+    items: dict[int, FirstAttempt] = {}
     for activity_id, correct, hint_level in session.execute(
         select(Attempt.activity_id, Attempt.correct, Attempt.hint_level)
         .where(Attempt.user_id == user_id, Attempt.activity_id.in_(base))
         .order_by(Attempt.id)
     ):
-        if activity_id in seen:
-            continue  # only the first attempt at each item counts
-        seen.add(activity_id)
-        firsts.setdefault(base[activity_id], []).append(FirstAttempt(bool(correct), hint_level))
-    return {objective for objective, attempts in firsts.items() if struggling(attempts)}
+        first = items.get(activity_id)
+        if first is None:
+            items[activity_id] = FirstAttempt(bool(correct), hint_level)
+        elif hint_level > first.hint_level:
+            items[activity_id] = FirstAttempt(first.correct, hint_level)
+    firsts: dict[int, list[FirstAttempt]] = {}
+    for activity_id, attempt in items.items():
+        firsts.setdefault(base[activity_id], []).append(attempt)
+    # How many base practice items come before each objective's support: the rule needs 2 wrong
+    # of 3, so with only one there, that one answered wrong first time is enough.
+    per_objective: dict[int, int] = {}
+    reached: set[int] = set()
+    for segment in segments:
+        if segment.support_for is not None:
+            reached.add(segment.support_for)
+        elif segment.activity_id in base and base[segment.activity_id] not in reached:
+            objective = base[segment.activity_id]
+            per_objective[objective] = per_objective.get(objective, 0) + 1
+    return {
+        objective
+        for objective, attempts in firsts.items()
+        if struggling(attempts)
+        # (13 Nov audit: four of the course's nine blocks follow a single practice item.)
+        or (per_objective.get(objective) == 1 and not attempts[0].correct)
+    }
 
 
 def hidden_segments(

@@ -78,10 +78,14 @@ const countObjectives = (n: number) => `${n} objective${n === 1 ? '' : 's'}`
  * not attempted (still to answer in module 6), so neither hides the other (#136 review). */
 function summary(objectives: ObjectiveReport[], ready: boolean, checkOpen: boolean): string {
   if (ready) return 'Ready for the lecture'
-  const notYet = objectives.filter((o) => o.state === 'not_yet').length
+  // A "not yet" objective whose review path is finished has nothing left to do here: it goes to
+  // the lecture, not back to review (13 Nov audit).
+  const notYet = objectives.filter((o) => o.state === 'not_yet' && !reviewDone(o)).length
+  const forLecture = objectives.filter((o) => o.state === 'not_yet' && reviewDone(o)).length
   const toAnswer = objectives.filter((o) => o.state === 'not_attempted' && o.total > 0).length
   const left = [
     notYet > 0 ? `${countObjectives(notYet)} to review` : '',
+    forLecture > 0 ? `${countObjectives(forLecture)} to bring to the lecture` : '',
     toAnswer > 0
       ? `${countObjectives(toAnswer)} to answer in module 6${checkOpen ? '' : ', once you reach it'}`
       : '',
@@ -112,7 +116,8 @@ function MasteryCheckLink({ o, moduleId }: { o: ObjectiveReport; moduleId: numbe
 }
 
 /** The one thing to do next, as a button at the top of the report: the first review path still
- * to work through, else the mastery check if it is open and unfinished, else back to the modules.
+ * to work through, else the mastery check if it is open and unfinished, else (every review path
+ * done, something still not yet) the lecture, else back to the modules.
  * The list below still gives every objective's own next step. */
 function NextAction({
   objectives,
@@ -143,7 +148,13 @@ function NextAction({
             'Go to the mastery check',
             'Your results appear here once every question in it is answered.',
           ]
-        : ['/', 'Continue your modules', 'The mastery check in module 6 fills in this report.']
+        : objectives.some((o) => o.state === 'not_yet')
+          ? [
+              '/',
+              'Back to your modules',
+              'You have worked through every review path. What is still not yet, bring to the lecture: it starts from here, and you can ask about it there.',
+            ]
+          : ['/', 'Continue your modules', 'The mastery check in module 6 fills in this report.']
   return (
     <Card className={styles.next_action}>
       <p className={styles.nextText}>{text}</p>

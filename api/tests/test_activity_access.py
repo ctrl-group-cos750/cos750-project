@@ -144,6 +144,20 @@ def test_each_modules_activities_open_exactly_when_the_module_does(
         )
     )
     support_only = on_support - on_base
+    # A practice item that is only a worked example's skip check is never shown while skipping
+    # (FR-8.2) isn't built, so it is never open (13 Nov audit).
+    unused_checks = (
+        set(
+            db.scalars(
+                select(Segment.skip_check_activity_id).where(
+                    Segment.skip_check_activity_id.is_not(None)
+                )
+            )
+        )
+        - on_base
+    )
+    unused_checks = {a for a in unused_checks if db.get_one(Activity, a).purpose == "practice"}
+    assert unused_checks  # the course has some: 103, 203, 314, 403, 503
     modules = db.scalars(select(Activity.module_id).distinct()).all()
     for module_id in sorted(m for m in modules if m is not None):
         activities = db.scalars(select(Activity.id).where(Activity.module_id == module_id)).all()
@@ -151,12 +165,17 @@ def test_each_modules_activities_open_exactly_when_the_module_does(
         if statuses[module_id] == "locked":
             for activity in activities:
                 response = client.get(f"/api/activities/{activity}")
+                if activity in unused_checks:
+                    assert response.status_code == 404, activity
+                    continue
                 assert (response.status_code, response.json()["detail"]) == (403, MODULE_LOCKED)
         db.query(ModuleProgress).filter(ModuleProgress.user_id == user_id).delete()
         db.commit()
         complete_modules_before(db, STUDENT["email"], module_id)
         for activity in activities:
-            expected = 403 if activity in support_only else 200
+            expected = (
+                403 if activity in support_only else 404 if activity in unused_checks else 200
+            )
             assert client.get(f"/api/activities/{activity}").status_code == expected, activity
 
 
@@ -253,12 +272,15 @@ def test_a_skip_check_never_opens_a_review_path_item(
 def test_a_skip_check_of_no_module_opens_with_the_module_that_names_it(
     client: TestClient, committed: Session
 ) -> None:
+    """A diagnostic skip check opens with its module. (A practice item used only as a skip check
+    stays shut while skipping isn't built: the test above.)"""
     db = committed
     activity = Activity(
         kind="multiple_choice",
         title="Quick check",
         config={"prompt": "Q", "options": [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}]},
         solution={"correct": "a"},
+        purpose="diagnostic",
     )
     db.add(activity)
     db.commit()

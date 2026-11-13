@@ -56,7 +56,8 @@ MODULE_LOCKED = (
 )
 ALREADY_ANSWERED = (
     "You have answered this mastery check question. Only your first answer counts, so it can't "
-    "be changed. Your results are in your mastery report once you finish the check."
+    "be changed. Your results are in your mastery report once every question in the check is "
+    "answered."
 )
 ANSWERED_NO_HINTS = "You have answered this mastery check question, so no more hints are given."
 HINT_LIMIT = (
@@ -64,7 +65,8 @@ HINT_LIMIT = (
     "if this objective comes out 'not yet', its review path teaches it again with every hint."
 )
 RECORDED = (
-    "Answer recorded. You will see your results in your mastery report when you finish the check."
+    "Answer recorded. Your results are in your mastery report once every question in the check "
+    "is answered."
 )
 NOT_SHOWN = "This activity is extra help that isn't part of your way through the module."
 SUPPORT_LEVEL = 3  # hint levels 3 and 4 make a correct answer count as "with support" (FR-7.2)

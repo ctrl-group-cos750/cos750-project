@@ -10,7 +10,9 @@ const READY = 'ready-for-lecture'
 const MAX_NOTES = 3
 
 function announcement(item: ShelfItem) {
-  if (item.state === 'gold') return `${item.title} is now gold`
+  // "Now gold" only for a real upgrade from bronze; met on their own first time, it is just gold.
+  if (item.state === 'gold')
+    return item.earned?.upgradedAt ? `${item.title} is now gold` : `${item.title}: gold`
   return item.title
 }
 

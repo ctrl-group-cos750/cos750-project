@@ -26,12 +26,20 @@ type ActivityViewProps = {
   /** Called with each checked answer, e.g. so a module knows the segment is done, or that its
    * recall questions are answered. */
   onResult?: (result: AttemptResult) => void
+  /** An optional bonus quest (FR-8.3). */
+  bonus?: boolean
 }
 
 /** One activity with its feedback and hint ladder: the activity page, an activity segment in a
  * module (SegmentView), which keeps the module's own navigation on screen, and a module's recall
  * questions. */
-export function ActivityView({ activityId, heading, showTitle, onResult }: ActivityViewProps) {
+export function ActivityView({
+  activityId,
+  heading,
+  showTitle,
+  onResult,
+  bonus,
+}: ActivityViewProps) {
   const [result, setResult] = useState<AttemptResult>()
   const [submitting, setSubmitting] = useState(false)
   // Set synchronously, so a second Enter that lands before React re-renders the busy button
@@ -64,9 +72,10 @@ export function ActivityView({ activityId, heading, showTitle, onResult }: Activ
       const nextResult = await submitActivityAttempt(activityId, submitted)
       setResult(nextResult)
       onResult?.(nextResult)
-      // A withheld (mastery check) answer may be the one that finishes the check, and earns the
-      // check's points and badges at once (#144).
-      if (nextResult.correct || nextResult.withheld) refreshRewards()
+      // After every answer, not only a correct one: a withheld (mastery check) answer may finish
+      // the check (#144), and on a review path a wrong answer can still meet the objective, which
+      // is judged on all its parts, and earn its badges (13 Nov audit). They are announced at once.
+      refreshRewards()
       // The next time it is shown (Previous, a refresh), the server has this answer: it comes back
       // with the answer and its result (#171), and once solved or answered for good, with no hints
       // offered (#158, #144). After every answer, so a wrong one comes back too.
@@ -91,6 +100,7 @@ export function ActivityView({ activityId, heading, showTitle, onResult }: Activ
         </Alert>
       )}
       <ActivityRenderer
+        bonus={bonus}
         activity={query.data}
         result={result ?? restored?.result}
         previous={restored?.submitted}

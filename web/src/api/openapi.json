@@ -4213,6 +4213,17 @@
           "seen": {
             "type": "boolean",
             "title": "Seen"
+          },
+          "questNumber": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Questnumber"
           }
         },
         "additionalProperties": false,

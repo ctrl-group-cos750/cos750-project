@@ -200,6 +200,22 @@ describe('ReportPage', () => {
     expect(row(7).getByText('You met this on your own after the review path.')).toBeVisible()
   })
 
+  it('sends a student whose review paths are done but still not yet to the lecture, not round in a circle', async () => {
+    withReport({
+      ready: false,
+      objectives: [
+        objective(1),
+        objective(5, { state: 'not_yet', review: { answered: 2, total: 2 } }),
+      ],
+    })
+    renderApp('/report')
+    expect(
+      await screen.findByText('Not ready yet: 1 objective to bring to the lecture'),
+    ).toBeVisible()
+    expect(screen.getByText(/bring to the lecture: it starts from here/)).toBeVisible()
+    expect(screen.queryByRole('link', { name: /Continue your modules/ })).toBeNull()
+  })
+
   it('has no review link for an objective whose path is not open', async () => {
     withReport({ ready: true, objectives: [objective(1)] })
     renderApp('/report')

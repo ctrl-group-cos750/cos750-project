@@ -82,9 +82,13 @@ def activity_homes(session: Session, activity: Activity) -> Homes:
     ).all()
     modules = {m for m, _, _, _ in shown if m is not None}
     review_paths = frozenset(o for _, o, _, _ in shown if o is not None)
-    if activity.purpose != "mastery" and not review_paths:
+    # A practice item that is only a worked example's skip check is never shown: skipping a worked
+    # example (FR-8.2) isn't built. Until it is, it has no home, so it can't be answered by its URL
+    # for points (13 Nov audit). Module 0's diagnostic items are shown, and stay open.
+    unused_check = bool(checks) and not shown and not videos and activity.purpose == "practice"
+    if activity.purpose != "mastery" and not review_paths and not unused_check:
         modules |= {m for m in checks if m is not None and activity.module_id in (None, m)}
-    if activity.module_id is not None:
+    if activity.module_id is not None and not unused_check:
         modules.add(activity.module_id)
     return Homes(
         modules=frozenset(modules),

@@ -14,6 +14,8 @@ type HintLadderProps = {
   /** Called with the highest hint level shown so far, e.g. so a picture can offer the correct
    * graph once hint 4 is open (#155). */
   onLevel?: (level: number) => void
+  /** An optional bonus quest: after hint 3 it earns nothing, rather than counting as support. */
+  bonus?: boolean
 }
 
 /**
@@ -32,6 +34,7 @@ export function HintLadder({
   requestHint,
   loadHints = fetchActivityHints,
   onLevel,
+  bonus = false,
 }: HintLadderProps) {
   const [hints, setHints] = useState<readonly Hint[]>([])
   const [error, setError] = useState('')
@@ -114,8 +117,10 @@ export function HintLadder({
       {/* Only while another hint is on offer: once solved, there is no button left to press. */}
       {confirmingSupport && hasMore && (
         <Alert tone="warning" title="The next hint gives a lot away">
-          Using it means a later correct answer counts as met with support. Choose “Show next hint”
-          again if you want to continue.
+          {bonus
+            ? 'After it, this quest earns no points or badge. '
+            : 'Using it means a later correct answer counts as met with support. '}
+          Choose “Show next hint” again if you want to continue.
         </Alert>
       )}
       {/* The mastery check gives hints 1 and 2 only (#144). */}

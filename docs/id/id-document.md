@@ -830,9 +830,29 @@ Each instructional designer records their own use, in the same format as above. 
 
 **Tool:** Claude Code, Anthropic's coding assistant, using the Claude Opus 5.5 model.
 
-**What it was used for:** drafting the pilot kit (`docs/pilot/`): the plan and schedule, the survey and the think-aloud note sheet (#75); and the engineering backlog items he took on: the seeded demo accounts (#34, #121) and a reason for each wrong token in fill-in activities (#119).
+**What it was used for:**
 
-How its output was checked, and the main prompts as typed, to be added by Jacobus Hoogenboezem (#74).
+- **Course content:** a sentence for each right answer saying why it is right (#158, #167); the optional bonus quests after modules 3 and 4, and module 5's closing transfer task (#87, #196); and a reason for each wrong token in fill-in activities (#119).
+- **The learning flow, from problems he found while testing the app:** activities shown inside their segments, with a way to move on (#129); a segment must be done before a student moves past it (FR-2.7, #130, #143); course progress shown in minutes (#131); and a student's last answer shown again when they come back (#171, #195).
+- **Presentation and evaluation:** the demo script, with each step named by its instructional decision (#82, #197), and the pilot kit (`docs/pilot/`): the plan and schedule, the survey and the think-aloud note sheet (#75).
+- **Engineering items he took on:** the seeded demo accounts (#34, #121); module locks, concurrent answers, and module completion rewards (#137, #138, #141); and drafting reviews of team members' pull requests, which he read, edited and posted.
+
+**How its output was checked:** the design decisions were his; the assistant set out the options and drafted what he chose. For example, he decided that a practice item is done once it is answered correctly or answered after its last hint (#143), that module points need at least one right answer (#166), that the module 1 badge keeps its 25 points (#141), and that there are two bonus quests, after modules 3 and 4, with the transfer task at the end of module 5 (#87). Every change went through a pull request reviewed by a software engineer, and passed the automated content tests and `python -m app.seed --check`. He also tried each change on staging with the demo accounts before review.
+
+**Main prompts.** Examples, with spelling corrected:
+
+| Date | Prompt | Used for |
+|---|---|---|
+| 5 Nov 2026 | "While we wait for that PR, can I test this properly to see if it works?" | Testing the demo accounts locally before review (#34) |
+| 10 Nov 2026 | "I found a bug when doing an activity: when it's completed, there's no 'continue' or 'next' button, so it just sits in the activity until you go to the previous page." | Activities inside their segments, with Next (#129) |
+| 10 Nov 2026 | "I found another bug where if you don't complete the activities, you can still complete the module. Is it the same with the videos?" | A segment must be done before moving past it (FR-2.7, #130) |
+| 10 Nov 2026 | "I also want to know if it's possible to add a progression status … the program is about 74 minutes long, so progression would then say 27 of 74 minutes completed." | Course progress in minutes (#131) |
+| 10 Nov 2026 | "#87: Bonus quest and closing transfer task. … What's needed for you to do it?" | The bonus quests and the transfer task (#196) |
+| 11 Nov 2026 | "I also noticed that the student's answer isn't saved when he goes back to the questions." | Showing the last answer on return (#171, #195) |
+| 11 Nov 2026 | "Go through the website and tell me what you see." | A walkthrough of the app as a student, filed as new issues |
+| 12 Nov 2026 | "Remember, this module is COS750 … It is about educational software development, not software engineering. So we should cover everything related to educational development and theories around it, not technical engineering points." | The demo script (#197) |
+
+Table: Generative AI prompts, Jacobus Hoogenboezem.
 
 ### Mohtashim Hussain
 

@@ -184,8 +184,9 @@ function Downloads() {
           Download for the evaluation
         </h2>
         <p className="text-muted-foreground">
-          CSV files for the ID team&apos;s analysis. Students appear by internal number only, never
-          by name or email. Staff and demo accounts are left out.
+          CSV files for the ID team&apos;s analysis. Students appear by a pseudonym only, never by
+          name, email or account number; an account&apos;s page shows its pseudonym. Staff and demo
+          accounts are left out.
         </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">

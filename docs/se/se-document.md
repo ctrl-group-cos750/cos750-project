@@ -431,7 +431,7 @@ Table: Points rules, stored on the server and tunable without a code change.
 ## Evaluation data (FR-10)
 - **FR-10.1** Log every event (segment viewed, video checkpoint reached, attempt, hint requested, module completed, result changed) with the user and time.
 - **FR-10.2** Staff can download the log, attempts and objective results as CSV, for the ID team's pilot and evaluation. A pilot page in the staff portal shows the same data as counts: per activity, how many students tried it, answered wrongly and needed hint 3 or 4; per video, how many started it, passed each checkpoint and finished it.
-- **FR-10.3** The export identifies students by an internal ID, not by email or display name.
+- **FR-10.3** The export identifies students by a pseudonym (a keyed hash of their account ID, `app/services/pseudonym.py`), not by email, display name or the account ID that the staff portal's addresses use. The same student has the same pseudonym in every file, so the files can be joined; one account's staff page shows it, to join the pilot survey.
 - **FR-10.4** A "Before the lecture" page in the staff portal shows the lecturer, from real students who have answered the mastery check: how many are ready, each objective's results across the class, and on each multiple-choice mastery question the wrong option most students chose at their first answer, with the content's feedback for it (ID document §8, Just-in-Time Teaching). Counts only, no names.
 
 ## Content editing (FR-11)
@@ -488,7 +488,7 @@ Table: Which part of the ID document each functional requirement delivers.
 - **NFR-S7** **No untrusted code execution.** Code activities run no student-written code anywhere in the system. The student constructs code by ordering shuffled lines (Parsons) or filling in tokens from a given set, and the server checks the submission by comparison with the solution (FR-5). This removes the untrusted-code-execution attack surface entirely, rather than trying to contain it.
 
   An isolated code runner was built and hardened earlier (a network-less container running each submission as a separate seccomp-confined process) and was pentested on staging across several rounds (see the security review under §14). Those rounds confirmed the escape defences held but also found that the in-process grading channel could be forged to fake a pass, and — because staging shares a personal server with unrelated personal data — the residual risk of executing arbitrary student code was judged not worth the marks a freeform editor earned. The team therefore dropped freeform code writing and removed the runner (decision §15.3, 3 November). The runner's code is preserved in git history (tag `archive/code-runner`) should the decision be revisited with a stronger sandbox (gVisor or a per-submission microVM — §15.4).
-- **NFR-S8** **Privacy (POPIA [8]).** The app stores only what it needs: email (to log in), a display name, and learning data. It shows no student's data to another student, and exports only internal IDs (FR-10.3). Staff do see students' display names, and the accounts list (FR-1.8) masks each email (`a•••@domain`); the full email appears only on one account's page, where staff need it (#146). Those pages show whether an answer was right but never the answer. Test and demo data never uses real students' details.
+- **NFR-S8** **Privacy (POPIA [8]).** The app stores only what it needs: email (to log in), a display name, and learning data. It shows no student's data to another student, and exports only pseudonyms, never account IDs (FR-10.3). Staff do see students' display names, and the accounts list (FR-1.8) masks each email (`a•••@domain`); the full email appears only on one account's page, where staff need it (#146). Those pages show whether an answer was right but never the answer. Test and demo data never uses real students' details.
 
 ## Maintainability
 - **NFR-M1** Layered backend (routers → services → data) with the BFS engine (`run_bfs`), the answer checkers and the mastery rules isolated from web concerns and unit-testable in isolation.
@@ -669,14 +669,14 @@ Progress, results and points change only as a side effect of attempts and segmen
 ## Staff portal (staff only)
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/api/staff/export/{table}.csv` | staff | `events`, `attempts`, `hints` or `objective_results` as CSV, students identified by internal ID only, staff and demo accounts left out (FR-10). |
+| GET | `/api/staff/export/{table}.csv` | staff | `events`, `attempts`, `hints` or `objective_results` as CSV, students identified by a pseudonym only (FR-10.3), staff and demo accounts left out (FR-10). |
 | GET | `/api/staff/insights` | staff | The pilot page's counts per activity and per video, real students only (FR-10.2). |
 | GET | `/api/staff/readiness` | staff | Before the lecture: students who took the mastery check, how many are ready, each objective's results, and the most common wrong first answers on the mastery items (FR-10.4). |
 | POST | `/api/staff/media?kind=…` | staff | Upload an MP4 (`kind=video`, up to 95 MB) or a WebVTT file (`kind=captions`, up to 1 MB) to the media volume, as the raw body with that exact `Content-Type`. Returns its `/media/` path (FR-3.6). |
 | GET, POST | `/api/staff/videos` | staff | List the videos, or make one with its checkpoints (FR-3.6). |
 | GET, PUT | `/api/staff/videos/{video_id}` | staff | One video with every checkpoint's question, answer and hints; PUT replaces it, keeping the attempts of each checkpoint it keeps. |
 | GET | `/api/staff/accounts` | staff | Every account: email, display name, staff or not, created, last active (FR-1.8). |
-| GET, DELETE | `/api/staff/accounts/{user_id}` | staff | One account's totals, progress through each video and last ten answers; DELETE removes it and its history, and is refused (409) for one's own account (FR-1.8). |
+| GET, DELETE | `/api/staff/accounts/{user_id}` | staff | One account's totals, progress through each video, last ten answers and its pilot pseudonym (FR-10.3); DELETE removes it and its history, and is refused (409) for one's own account (FR-1.8). |
 | GET, POST | `/api/staff/members` | staff | The team members; make a registered account one, by its email (not case-sensitive; 404 if no account has it) (FR-1.9). |
 | DELETE | `/api/staff/members/{user_id}` | staff | Take staff access away; 409 for one's own (FR-1.9). |
 

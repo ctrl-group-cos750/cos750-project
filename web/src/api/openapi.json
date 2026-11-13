@@ -3550,6 +3550,10 @@
             ],
             "title": "Lastactiveat"
           },
+          "pilotName": {
+            "type": "string",
+            "title": "Pilotname"
+          },
           "stats": {
             "$ref": "#/components/schemas/AccountStats"
           },
@@ -3577,6 +3581,7 @@
           "isStaff",
           "createdAt",
           "lastActiveAt",
+          "pilotName",
           "stats",
           "videos",
           "recentAttempts"

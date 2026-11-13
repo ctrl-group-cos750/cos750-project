@@ -1,5 +1,6 @@
 """Evaluation data for the pilot (GET /api/staff/export/{table}.csv and /api/staff/insights):
-staff only, student accounts only, internal ids only, and safe to open in a spreadsheet."""
+staff only, student accounts only, pseudonyms only (never the account id), and safe to open in a
+spreadsheet."""
 
 import csv
 import io
@@ -12,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Activity, Checkpoint, Hint, User, Video
 from app.seed import load
+from app.services.pseudonym import pseudonym
 
 PASSWORD = "Correct horse 1"  # noqa: S105 (a test account)
 
@@ -180,11 +182,12 @@ def test_attempts_csv_has_internal_ids_only_and_no_staff(client: TestClient, db:
     assert "Ada" not in response.text
 
     attempts = rows(response.text)
-    assert [(int(a["user_id"]), a["correct"]) for a in attempts] == [
-        (ids["ada"], "False"),
-        (ids["ada"], "True"),
-        (ids["ada"], "True"),
-        (ids["alan"], "True"),
+    ada, alan = pseudonym(ids["ada"]), pseudonym(ids["alan"])
+    assert [(a["student"], a["correct"]) for a in attempts] == [
+        (ada, "False"),
+        (ada, "True"),
+        (ada, "True"),
+        (alan, "True"),
     ]
     assert attempts[0]["submitted"] == '{"selected":"b"}'
     assert attempts[1]["hint_level"] == "3"
@@ -193,11 +196,8 @@ def test_attempts_csv_has_internal_ids_only_and_no_staff(client: TestClient, db:
 def test_hints_csv(client: TestClient, db: Session) -> None:
     ids = pilot(client, db)
     hints_rows = rows(client.get("/api/staff/export/hints.csv").text)
-    assert [(int(h["user_id"]), h["level"]) for h in hints_rows] == [
-        (ids["ada"], "1"),
-        (ids["ada"], "2"),
-        (ids["ada"], "3"),
-    ]
+    ada = pseudonym(ids["ada"])
+    assert [(h["student"], h["level"]) for h in hints_rows] == [(ada, "1"), (ada, "2"), (ada, "3")]
 
 
 def test_unknown_tables_are_refused(client: TestClient, db: Session) -> None:
@@ -254,11 +254,12 @@ def test_insights_before_the_pilot_are_empty(client: TestClient, db: Session) ->
 def test_events_csv_is_the_students_timeline(client: TestClient, db: Session) -> None:
     ids = pilot(client, db)
     events = rows(client.get("/api/staff/export/events.csv").text)
-    assert [(int(e["user_id"]), e["type"], e["ref"], e["payload"]) for e in events] == [
-        (ids["ada"], "video_started", f"video:{ids['video']}", "{}"),
-        (ids["ada"], "hint_shown", f"activity:{ids['first']}", '{"level":1}'),
-        (ids["ada"], "hint_shown", f"activity:{ids['first']}", '{"level":2}'),
-        (ids["ada"], "hint_shown", f"activity:{ids['first']}", '{"level":3}'),
+    ada = pseudonym(ids["ada"])
+    assert [(e["student"], e["type"], e["ref"], e["payload"]) for e in events] == [
+        (ada, "video_started", f"video:{ids['video']}", "{}"),
+        (ada, "hint_shown", f"activity:{ids['first']}", '{"level":1}'),
+        (ada, "hint_shown", f"activity:{ids['first']}", '{"level":2}'),
+        (ada, "hint_shown", f"activity:{ids['first']}", '{"level":3}'),
     ]
     assert all(e["created_at"] for e in events)
     assert "example.com" not in client.get("/api/staff/export/events.csv").text
@@ -273,19 +274,35 @@ def test_objective_results_csv(client: TestClient, db: Session, tmp_path: Path) 
     answer(client, 601, "a")
     become_staff(client, db, "grace@example.com")
     results = rows(client.get("/api/staff/export/objective_results.csv").text)
-    assert [(int(r["user_id"]), r["objective_id"], r["state"]) for r in results] == [
-        (ada, "1", "met_independently")
+    assert [(r["student"], r["objective_id"], r["state"]) for r in results] == [
+        (pseudonym(ada), "1", "met_independently")
     ]
     assert results[0]["evidence"].startswith("[")
-    assert dee not in [int(r["user_id"]) for r in results]
+    assert pseudonym(dee) not in [r["student"] for r in results]
 
 
 def test_demo_accounts_are_not_pilot_students(client: TestClient, db: Session) -> None:
     ids = pilot(client, db)
     for table in ("attempts", "hints", "events"):
-        users = {int(r["user_id"]) for r in rows(client.get(f"/api/staff/export/{table}.csv").text)}
-        assert ids["dee"] not in users, table
-        assert ids["grace"] not in users, table
+        users = {r["student"] for r in rows(client.get(f"/api/staff/export/{table}.csv").text)}
+        assert pseudonym(ids["dee"]) not in users, table
+        assert pseudonym(ids["grace"]) not in users, table
+
+
+def test_students_are_pseudonyms_not_their_account_ids(client: TestClient, db: Session) -> None:
+    """The account id is in /staff/accounts/<id>, so it would let anyone with staff access put a
+    name to a row; the files carry a keyed hash instead, the same in every file (13 Nov audit)."""
+    ids = pilot(client, db)
+    files = {
+        table: rows(client.get(f"/api/staff/export/{table}.csv").text)
+        for table in ("attempts", "hints", "events")
+    }
+    for table, found in files.items():
+        assert "user_id" not in found[0], table
+        assert {r["student"] for r in found} <= {pseudonym(ids["ada"]), pseudonym(ids["alan"])}
+        assert not any(r["student"].isdigit() for r in found), table
+    assert pseudonym(ids["ada"]) != pseudonym(ids["alan"])
+    assert str(ids["ada"]) not in pseudonym(ids["ada"])
 
 
 def test_insights_count_who_started_and_finished_a_video(client: TestClient, db: Session) -> None:

@@ -20,6 +20,7 @@ from app.schemas.accounts import (
 from app.schemas.ids import RowId
 from app.services.history import delete_history
 from app.services.locks import StudentGone, lock_student
+from app.services.pseudonym import pseudonym
 
 router = APIRouter(prefix="/api/staff/accounts", tags=["staff"])
 
@@ -154,6 +155,7 @@ def get_account(user_id: RowId, session: DbSession, _staff: StaffUser) -> Accoun
     last_at = max((t for t in times if t is not None), default=None)
     return AccountDetail(
         **_summary(user, last_at).model_dump(),
+        pilot_name=pseudonym(user_id),
         stats=_stats(session, user_id),
         videos=_videos(session, user_id),
         recent_attempts=_recent(session, user_id),

@@ -705,7 +705,7 @@ The results feed back into the Design and Develop phases, which makes ADDIE a re
 
 Team members are not the target learners. They already know graphs and BFS, and they know the design. The pilot can therefore show usability problems, unclear feedback, defects and timing, but not whether the application teaches a student who starts with no knowledge. The SE document reports the same limitation (§14.7). A study with real COS212 students, using the pre-test and post-test above, is needed to measure learning.
 
-Taking part is voluntary, and a participant can stop at any time. The data export identifies students by an internal ID only, not by name or email (SE document, FR-10.3). A study with real COS212 students would first need the faculty’s research ethics approval.
+Taking part is voluntary, and a participant can stop at any time. The data export identifies students by a pseudonym only, not by name, email or account ID (SE document, FR-10.3). A study with real COS212 students would first need the faculty’s research ethics approval.
 
 ## Planned extension: a spaced retrieval quiz
 

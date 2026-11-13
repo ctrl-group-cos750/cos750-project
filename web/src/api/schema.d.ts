@@ -1128,6 +1128,8 @@ export interface components {
       createdAt: string
       /** Lastactiveat */
       lastActiveAt: string | null
+      /** Pilotname */
+      pilotName: string
       stats: components['schemas']['AccountStats']
       /** Videos */
       videos: components['schemas']['AccountVideo'][]

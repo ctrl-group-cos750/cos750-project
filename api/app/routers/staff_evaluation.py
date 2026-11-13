@@ -1,7 +1,9 @@
 """Evaluation data for the ID team's pilot (FR-10, ID document §8): CSV downloads and the
 "Pilot insights" page. Staff only.
 
-Students are identified by their internal id only, never by email or name (FR-10.3). Staff and
+Students are identified by a pseudonym only, never by email, name or account id (FR-10.3): the same
+pseudonym in every file, so the files join, but not the number in /staff/accounts/<id>, so a row
+can't be traced back to a person from the portal (13 Nov audit, A13). Staff and
 demo accounts are left out: the team's own testing, and the demo accounts' replayed histories
 (app/seed/demo_accounts.py), would otherwise count as pilot students.
 """
@@ -38,6 +40,7 @@ from app.schemas.evaluation import (
     Readiness,
     VideoInsight,
 )
+from app.services.pseudonym import pseudonym
 
 router = APIRouter(prefix="/api/staff", tags=["staff"])
 
@@ -97,9 +100,9 @@ def export_csv(
     if table == "events":
         return _csv(
             "events",
-            ["event_id", "user_id", "type", "ref", "payload", "created_at"],
+            ["event_id", "student", "type", "ref", "payload", "created_at"],
             [
-                [e.id, e.user_id, e.type, e.ref, e.payload, e.created_at]
+                [e.id, pseudonym(e.user_id), e.type, e.ref, e.payload, e.created_at]
                 for e in session.scalars(
                     select(Event)
                     .where(Event.user_id.in_(_students()))
@@ -110,9 +113,9 @@ def export_csv(
     if table == "objective_results":
         return _csv(
             "objective-results",
-            ["user_id", "objective_id", "state", "evidence", "updated_at"],
+            ["student", "objective_id", "state", "evidence", "updated_at"],
             [
-                [r.user_id, r.objective_id, r.state, r.evidence, r.updated_at]
+                [pseudonym(r.user_id), r.objective_id, r.state, r.evidence, r.updated_at]
                 for r in session.scalars(
                     select(ObjectiveResult)
                     .where(ObjectiveResult.user_id.in_(_students()))
@@ -131,7 +134,7 @@ def export_csv(
             "attempts",
             [
                 "attempt_id",
-                "user_id",
+                "student",
                 "activity_id",
                 "activity_title",
                 "activity_kind",
@@ -145,7 +148,7 @@ def export_csv(
             [
                 [
                     a.id,
-                    a.user_id,
+                    pseudonym(a.user_id),
                     a.activity_id,
                     title,
                     kind,
@@ -167,8 +170,11 @@ def export_csv(
     ).all()
     return _csv(
         "hints",
-        ["hint_view_id", "user_id", "activity_id", "activity_title", "level", "created_at"],
-        [[h.id, h.user_id, h.activity_id, title, h.level, h.created_at] for h, title in hints],
+        ["hint_view_id", "student", "activity_id", "activity_title", "level", "created_at"],
+        [
+            [h.id, pseudonym(h.user_id), h.activity_id, title, h.level, h.created_at]
+            for h, title in hints
+        ],
     )
 
 

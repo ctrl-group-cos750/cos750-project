@@ -217,6 +217,22 @@ describe('accounts pages', () => {
     expect(api.callsTo('POST /api/staff/members')).toHaveLength(1)
   })
 
+  it('asks before removing staff access from the overview, as the members page does (A13)', async () => {
+    const api = portalApi([adaRow.id, grace.id])
+    renderApp('/staff/accounts/1')
+    await userEvent.click(await screen.findByRole('button', { name: 'Remove staff access' }))
+    expect(screen.getByText("Remove Ada's staff access?")).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Remove access' })).toHaveFocus()
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.getByRole('button', { name: 'Remove staff access' })).toHaveFocus()
+    expect(api.callsTo('DELETE /api/staff/members/1')).toHaveLength(0)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remove staff access' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Remove access' }))
+    expect(await screen.findByRole('button', { name: 'Make staff' })).toHaveFocus()
+    expect(api.callsTo('DELETE /api/staff/members/1')).toHaveLength(1)
+  })
+
   it('deletes an account only once its email is typed, then goes back to the list', async () => {
     const api = portalApi()
     renderApp('/staff/accounts/1')
@@ -230,6 +246,9 @@ describe('accounts pages', () => {
 
     expect(await screen.findByText('2 accounts')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Ada' })).not.toBeInTheDocument()
+    // It says so, and focus starts at the heading, not the page (A13).
+    expect(screen.getByText(/Ada's account was deleted/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Accounts' })).toHaveFocus()
     expect(api.callsTo('DELETE /api/staff/accounts/1')).toHaveLength(1)
   })
 

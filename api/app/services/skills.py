@@ -198,8 +198,8 @@ def module_medals(session: Session, user_id: int) -> list[ModuleMedal]:
         )
     ).all()
     statuses: dict[int, str] = {
-        module_id: status
-        for module_id, status in session.execute(
+        row.module_id: row.status
+        for row in session.execute(
             select(ModuleProgress.module_id, ModuleProgress.status).where(
                 ModuleProgress.user_id == user_id,
                 ModuleProgress.status.in_(("complete", "tested_out")),

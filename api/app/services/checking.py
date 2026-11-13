@@ -329,7 +329,9 @@ def check_trace(config: TraceConfig, submission: TraceSubmission) -> CheckResult
             continue
         own = {have.visited_vertex} if have.visited_vertex in have.order else set()
         impossible = _impossible_queue(have, left | own)
-        left.add(have.visited_vertex)
+        # Only a current vertex the order column agrees with has left the queue: a slip in the
+        # current-vertex column alone must not make a later, correct queue "impossible".
+        left |= own
         if impossible is not None:
             parts.append(
                 PartResult(ref=i, correct=False, message=f"{WRONG_TRACE_STEP} {impossible}")

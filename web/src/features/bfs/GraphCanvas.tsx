@@ -30,7 +30,7 @@ function graphLabel(input: { scenario: BfsScenario; frame: BfsFrame }): string {
       .join(', ') || 'none'
   const list = (ids: readonly string[]) => ids.map(name).join(', ') || 'empty'
   return [
-    `${scenario.title}, a ${scenario.directed ? 'directed' : 'undirected'} graph`,
+    `${scenario.title}, ${scenario.directed ? 'a directed' : 'an undirected'} graph`,
     `Vertices: ${list(scenario.vertices.map((v) => v.id))}`,
     `Edges: ${edges}`,
     `Current vertex: ${frame.current ? name(frame.current) : 'none'}`,

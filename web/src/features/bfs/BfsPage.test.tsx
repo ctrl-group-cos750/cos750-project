@@ -220,5 +220,8 @@ describe('BfsPage', () => {
     expect(screen.getByText('Visited (has left the queue)').nextElementSibling).toHaveTextContent(
       'Empty',
     )
+    // The text alternative names both states too, with the right article (review 13 Nov).
+    const graph = screen.getByRole('img', { name: /^Short path, an undirected graph/ })
+    expect(graph).toHaveAccessibleName(/Found \(has joined the queue\): A\./)
   })
 })

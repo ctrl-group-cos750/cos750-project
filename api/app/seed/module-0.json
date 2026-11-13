@@ -19,7 +19,7 @@
         {
           "id": 2,
           "kind": "activity",
-          "title": "Diagnostic: which item leaves the queue?",
+          "title": "Warm-up question: which item leaves the queue?",
           "activity_id": 1
         },
         {
@@ -33,7 +33,7 @@
         {
           "id": 4,
           "kind": "activity",
-          "title": "Diagnostic: reading a list",
+          "title": "Warm-up question: reading a list",
           "activity_id": 2
         },
         {
@@ -47,7 +47,7 @@
         {
           "id": 6,
           "kind": "activity",
-          "title": "Diagnostic: reading a loop",
+          "title": "Warm-up question: reading a loop",
           "activity_id": 3
         },
         {

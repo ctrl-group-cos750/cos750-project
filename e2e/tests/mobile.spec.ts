@@ -85,7 +85,7 @@ test.describe('badge notes', () => {
         .getByRole('button', { name: /^Dismiss/ })
         .first(),
     ).toBeVisible()
-    const next = page.getByRole('navigation', { name: 'Segment navigation' }).getByRole('button', {
+    const next = page.getByRole('navigation', { name: 'Step navigation' }).getByRole('button', {
       name: /^Next/,
     })
     // What a tap would hit in the middle of Next, scrolled as far into view as it goes.

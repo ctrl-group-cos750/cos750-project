@@ -72,7 +72,7 @@ export function QuickCheckPage() {
         <>
           <h1 className="text-2xl font-bold">{name}: quick check</h1>
           <Alert tone="info">
-            You have completed this module already, so there is nothing to test out of.
+            You have completed this module already, so you don’t need its quick check.
           </Alert>
           <BackToModules />
         </>
@@ -137,8 +137,8 @@ function Questions({
         <h1 className="text-2xl font-bold">{name}: quick check</h1>
         <p className="m-0 text-muted-foreground">
           Already know this module? Answer these {questions.length} questions. There are no hints,
-          and you see how you did at the end. Get at least {passMark} right and the module is marked
-          as tested out, so you can move on. You get one try.{' '}
+          and you see how you did at the end. Get at least {passMark} right and the module counts as
+          done, so you can move on. You get one try.{' '}
           <Link to={`/modules/${moduleId}`}>Work through the module instead</Link>.
         </p>
       </div>
@@ -220,8 +220,8 @@ function Result({
       </h1>
       {result.passed ? (
         <Alert tone="success" title="You know this already">
-          Module {here?.number ?? moduleId} is marked as tested out. It stays open if you want to
-          look through it.
+          Module {here?.number ?? moduleId} counts as done: you passed its quick check. It stays
+          open if you want to look through it.
           {result.lookAt.length > 0 && ` Worth a second look: ${result.lookAt.join(', ')}.`}
         </Alert>
       ) : (

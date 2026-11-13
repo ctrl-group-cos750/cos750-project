@@ -315,7 +315,7 @@ export async function walkModule(
     await onSegment?.(`module ${module.number}, segment ${n + 1} (${segment.kind})`)
     const last = n === total - 1
     const next = page
-      .getByRole('navigation', { name: 'Segment navigation' })
+      .getByRole('navigation', { name: 'Step navigation' })
       .getByRole('button', { name: last ? 'Finish module' : /^Next/ })
     // Next stays blocked until the module, fetched again after the answer, says the segment is done.
     await expect(next).not.toHaveAttribute('aria-disabled', 'true')

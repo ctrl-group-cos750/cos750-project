@@ -746,6 +746,10 @@ WORDING_ONLY = {
     "matching_left": {(a, m) for a in (606, 607, 608, 1202, 1203, 1204) for m in ("1", "2", "3")},
     "matching_right": set(),
 }
+# Whole activities taken out of the course; their ids must never return with other content. 107,
+# module 1's closing task, matched four situations against one shared list, so each situation's
+# own nouns gave its answer away; it became four questions, 108-111, each with its own options.
+RETIRED_ACTIVITIES = {107}
 # Ids that left an item; they must never come back (the same as RETIRED, plus 1703's correction).
 GONE = {(a, i) for a, ids in RETIRED.items() for i in ids} | {(1703, "22")}
 
@@ -763,6 +767,9 @@ def _now(a: ActivityFixture, kind: str) -> dict[str, str]:
 def test_an_id_from_staging_keeps_its_text_unless_retired_or_listed(kind: str) -> None:
     changed, gone = set(), set()
     for activity_id, staged in SNAPSHOT[kind].items():
+        if int(activity_id) in RETIRED_ACTIVITIES:
+            assert int(activity_id) not in ACTIVITIES
+            continue
         now = _now(ACTIVITIES[int(activity_id)], kind)
         for item_id, text in staged.items():
             if item_id not in now:

@@ -124,8 +124,26 @@
         {
           "id": 110,
           "kind": "activity",
-          "title": "Closing task: graphs in real life",
-          "activity_id": 107
+          "title": "Closing task 1 of 4: the Gautrain",
+          "activity_id": 108
+        },
+        {
+          "id": 111,
+          "kind": "activity",
+          "title": "Closing task 2 of 4: Instagram",
+          "activity_id": 109
+        },
+        {
+          "id": 112,
+          "kind": "activity",
+          "title": "Closing task 3 of 4: the web",
+          "activity_id": 110
+        },
+        {
+          "id": 113,
+          "kind": "activity",
+          "title": "Closing task 4 of 4: handshakes",
+          "activity_id": 111
         }
       ]
     }
@@ -670,90 +688,6 @@
       ]
     },
     {
-      "id": 107,
-      "kind": "matching",
-      "title": "Closing task: graphs in real life",
-      "module_id": 1,
-      "purpose": "practice",
-      "objective_id": 3,
-      "config": {
-        "prompt": "Match each real situation to the graph that models it: what the vertices are, what the edges are, and whether it's directed.",
-        "left": [
-          {
-            "id": "s1",
-            "label": "Gautrain stations and the tracks between them. Trains run both ways."
-          },
-          {
-            "id": "s2",
-            "label": "Instagram accounts and who follows whom."
-          },
-          {
-            "id": "s3",
-            "label": "Web pages and the links from one page to another."
-          },
-          {
-            "id": "s4",
-            "label": "Classmates and who has shaken hands with whom."
-          }
-        ],
-        "right": [
-          {
-            "id": "r3",
-            "label": "Vertices: pages. Edges: links. Directed."
-          },
-          {
-            "id": "r5",
-            "label": "Vertices: tracks. Edges: stations. Undirected."
-          },
-          {
-            "id": "r1",
-            "label": "Vertices: stations. Edges: tracks. Undirected."
-          },
-          {
-            "id": "r4",
-            "label": "Vertices: classmates. Edges: handshakes. Undirected."
-          },
-          {
-            "id": "r2",
-            "label": "Vertices: accounts. Edges: follows. Directed."
-          }
-        ]
-      },
-      "solution": {
-        "explanation": "The things are the vertices and the connections between them are the edges. A connection that works both ways, like a track or a handshake, makes the graph undirected. A one-way one, like a follow or a link, makes it directed.",
-        "pairs": {
-          "s1": "r1",
-          "s2": "r2",
-          "s3": "r3",
-          "s4": "r4"
-        },
-        "feedback": {
-          "s1": "Check the Gautrain. The stations are the things (vertices) and the tracks connect them (edges). Trains run both ways, so it's undirected. Watch out for the option that swaps tracks and stations.",
-          "s2": "Check Instagram. Following someone doesn't mean they follow you back, so the edges are one-way. Look for the option with accounts and directed edges.",
-          "s3": "Check the web pages. A link from page X to page Y doesn't create a link back, so it's directed. Look for the option with pages and links.",
-          "s4": "Check the handshakes. A handshake involves both people equally, so it's undirected. Look for the option with classmates and handshakes."
-        }
-      },
-      "hints": [
-        {
-          "level": 1,
-          "body": "For each situation, ask: what are the things, and what connects them?"
-        },
-        {
-          "level": 2,
-          "body": "The things are vertices. The connections are edges."
-        },
-        {
-          "level": 3,
-          "body": "Then ask: does the connection work both ways? If not, the graph is directed. Following and linking are one-way."
-        },
-        {
-          "level": 4,
-          "body": "Answer: Gautrain → stations/tracks/undirected; Instagram → accounts/follows/directed; web → pages/links/directed; handshakes → classmates/handshakes/undirected."
-        }
-      ]
-    },
-    {
       "id": 190,
       "kind": "matching",
       "title": "Try another: name the term",
@@ -1094,6 +1028,250 @@
         {
           "level": 4,
           "body": "Answer: taxis → ranks, routes, undirected; birthday party → children, invitations, directed; playlist → songs, “plays next” links, directed; puzzle → pieces, pairs that fit, undirected."
+        }
+      ]
+    },
+    {
+      "id": 108,
+      "kind": "multiple_choice",
+      "title": "Closing task 1 of 4: the Gautrain",
+      "module_id": 1,
+      "purpose": "practice",
+      "objective_id": 3,
+      "config": {
+        "prompt": "Gautrain stations and the tracks between them. Trains run both ways along every track. Which graph models it?",
+        "options": [
+          {
+            "id": "b",
+            "label": "Vertices: tracks. Edges: stations. Undirected."
+          },
+          {
+            "id": "d",
+            "label": "Vertices: trains. Edges: tracks. Undirected."
+          },
+          {
+            "id": "a",
+            "label": "Vertices: stations. Edges: tracks. Undirected."
+          },
+          {
+            "id": "c",
+            "label": "Vertices: stations. Edges: tracks. Directed."
+          },
+          {
+            "id": "e",
+            "label": "Vertices: stations. Edges: trains. Directed."
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "Correct. The stations are the things (vertices) and the tracks join them (edges). Trains run both ways along a track, so each edge works in both directions: undirected.",
+        "correct": "a",
+        "feedback": {
+          "b": "Not quite: that swaps them. A track joins two stations, so the track is the edge and the stations are the vertices. Ask: which one joins the other two?",
+          "c": "Not quite: the stations and tracks are right, but trains run both ways along every track, so an edge has no single direction. Ask: can you travel the track the other way?",
+          "d": "Not quite. Trains move along the tracks; they aren't places the network joins. The places are the stations. Ask: what are the fixed things the tracks connect?",
+          "e": "Not quite. A train travels along an edge; it isn't the edge, and the direction is wrong too: tracks work both ways. Ask: what physically joins one station to the next?"
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "First ask: what are the things here, and what joins them? The things are the vertices; what joins them is the edges."
+        },
+        {
+          "level": 2,
+          "body": "Here the things are stations, and tracks join them."
+        },
+        {
+          "level": 3,
+          "body": "Now ask: can you travel each track both ways? Then the graph is undirected."
+        },
+        {
+          "level": 4,
+          "body": "Answer: Vertices: stations. Edges: tracks. Undirected."
+        }
+      ]
+    },
+    {
+      "id": 109,
+      "kind": "multiple_choice",
+      "title": "Closing task 2 of 4: Instagram",
+      "module_id": 1,
+      "purpose": "practice",
+      "objective_id": 3,
+      "config": {
+        "prompt": "Instagram accounts and who follows whom. You can follow someone who doesn't follow you back. Which graph models it?",
+        "options": [
+          {
+            "id": "a",
+            "label": "Vertices: accounts. Edges: follows. Directed."
+          },
+          {
+            "id": "c",
+            "label": "Vertices: follows. Edges: accounts. Directed."
+          },
+          {
+            "id": "b",
+            "label": "Vertices: accounts. Edges: follows. Undirected."
+          },
+          {
+            "id": "d",
+            "label": "Vertices: posts. Edges: likes. Directed."
+          },
+          {
+            "id": "e",
+            "label": "Vertices: follows. Edges: accounts. Undirected."
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "Correct. The accounts are the vertices and each follow is an edge. A follow goes one way (Thandi can follow Sipho without Sipho following her), so the edges have a direction: directed.",
+        "correct": "a",
+        "feedback": {
+          "b": "Not quite: the accounts and follows are right, but a follow goes one way. If Thandi follows Sipho, Sipho doesn't automatically follow Thandi. Ask: does the connection always work both ways?",
+          "c": "Not quite: that swaps them. A follow joins two accounts, so the follow is the edge and the accounts are the vertices. Ask: which one joins the other two?",
+          "d": "Not quite. Posts and likes are part of Instagram, but this situation is about accounts and who follows whom. Ask: what are the things in this situation, and what joins them?",
+          "e": "Not quite: that swaps them, and a follow has a direction too. Ask: which joins which, and does a follow always go both ways?"
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "First ask: what are the things here, and what joins them? The things are the vertices; what joins them is the edges."
+        },
+        {
+          "level": 2,
+          "body": "Here the things are accounts, and follows join them."
+        },
+        {
+          "level": 3,
+          "body": "Now ask: if one account follows another, does the other always follow back? If not, the graph is directed."
+        },
+        {
+          "level": 4,
+          "body": "Answer: Vertices: accounts. Edges: follows. Directed."
+        }
+      ]
+    },
+    {
+      "id": 110,
+      "kind": "multiple_choice",
+      "title": "Closing task 3 of 4: the web",
+      "module_id": 1,
+      "purpose": "practice",
+      "objective_id": 3,
+      "config": {
+        "prompt": "Web pages and the links from one page to another. A link from one page doesn't mean the other page links back. Which graph models it?",
+        "options": [
+          {
+            "id": "c",
+            "label": "Vertices: links. Edges: pages. Directed."
+          },
+          {
+            "id": "b",
+            "label": "Vertices: pages. Edges: links. Undirected."
+          },
+          {
+            "id": "d",
+            "label": "Vertices: websites. Edges: the servers that host them. Undirected."
+          },
+          {
+            "id": "e",
+            "label": "Vertices: links. Edges: pages. Undirected."
+          },
+          {
+            "id": "a",
+            "label": "Vertices: pages. Edges: links. Directed."
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "Correct. Each page is a vertex and each link is an edge from the page it is on to the page it opens. A link doesn't create one back, so the graph is directed.",
+        "correct": "a",
+        "feedback": {
+          "b": "Not quite: the pages and links are right, but a link goes one way: from the page it sits on to the page it opens. Ask: does a link from page X give you a link back from page Y?",
+          "c": "Not quite: that swaps them. A link joins two pages, so the link is the edge and the pages are the vertices. Ask: which one joins the other two?",
+          "d": "Not quite. This situation is about pages and the links between them, not websites and servers. Ask: what are the things in this situation, and what joins them?",
+          "e": "Not quite: that swaps them, and a link has a direction too. Ask: which joins which, and does a link always go both ways?"
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "First ask: what are the things here, and what joins them? The things are the vertices; what joins them is the edges."
+        },
+        {
+          "level": 2,
+          "body": "Here the things are pages, and links join them."
+        },
+        {
+          "level": 3,
+          "body": "Now ask: does a link from one page mean there is a link back? If not, the graph is directed."
+        },
+        {
+          "level": 4,
+          "body": "Answer: Vertices: pages. Edges: links. Directed."
+        }
+      ]
+    },
+    {
+      "id": 111,
+      "kind": "multiple_choice",
+      "title": "Closing task 4 of 4: handshakes",
+      "module_id": 1,
+      "purpose": "practice",
+      "objective_id": 3,
+      "config": {
+        "prompt": "Classmates and who has shaken hands with whom. When two people shake hands, each has shaken the other's hand. Which graph models it?",
+        "options": [
+          {
+            "id": "d",
+            "label": "Vertices: classmates. Edges: pairs who have not shaken hands. Undirected."
+          },
+          {
+            "id": "a",
+            "label": "Vertices: classmates. Edges: handshakes. Undirected."
+          },
+          {
+            "id": "c",
+            "label": "Vertices: classmates. Edges: handshakes. Directed."
+          },
+          {
+            "id": "b",
+            "label": "Vertices: handshakes. Edges: classmates. Undirected."
+          },
+          {
+            "id": "e",
+            "label": "Vertices: handshakes. Edges: classmates. Directed."
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "Correct. The classmates are the vertices and each handshake is an edge joining two of them. A handshake involves both people equally, so it has no direction: undirected.",
+        "correct": "a",
+        "feedback": {
+          "b": "Not quite: that swaps them. A handshake joins two classmates, so the handshake is the edge and the classmates are the vertices. Ask: which one joins the other two?",
+          "c": "Not quite: the classmates and handshakes are right, but if Lerato shook Ayo's hand, Ayo also shook Lerato's. The connection has no direction. Ask: is a handshake one-way?",
+          "d": "Not quite. That graph shows who hasn't met, the opposite of what the situation asks about. An edge shows a connection that exists. Ask: which pairs are joined here?",
+          "e": "Not quite: that swaps them, and a handshake has no direction either. Ask: which joins which, and is a handshake one-way?"
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "First ask: what are the things here, and what joins them? The things are the vertices; what joins them is the edges."
+        },
+        {
+          "level": 2,
+          "body": "Here the things are classmates, and handshakes join them."
+        },
+        {
+          "level": 3,
+          "body": "Now ask: if one person shook another's hand, did the other shake theirs? Then the graph is undirected."
+        },
+        {
+          "level": 4,
+          "body": "Answer: Vertices: classmates. Edges: handshakes. Undirected."
         }
       ]
     }

@@ -15,6 +15,7 @@ import {
   moduleDoneLine,
   quickCheckLine,
   resetStreak,
+  RIGHT_AFTER_WRONG,
   rightLine,
   wrongLine,
 } from './companion.ts'
@@ -83,6 +84,8 @@ describe('the study companion (#214)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'No thanks' }))
     expect(prompt()).toBeNull()
     expect(storedCompanion()).toBe('off')
+    // The hidden live region no longer holds a question that has gone (#222 re-review).
+    expect(announced()).toBe('')
     show(result(false))
     expect(prompt()).toBeNull()
     expect(document.querySelector('[data-companion]')).toBeNull()
@@ -263,7 +266,7 @@ describe('what the companion says', () => {
       rightLine(3),
       wrongLine([], 0),
       wrongLine([], 3),
-      quickCheckLine(2, 3, 4, [{ title: 'When BFS fits' }]).text,
+      quickCheckLine(2, 3, 4, [{ activityId: 350, title: 'When BFS fits' }]).text,
       moduleDoneLine(2, ['Map Maker']).text,
     ]
     for (const line of lines) {
@@ -279,9 +282,16 @@ describe('what the companion says', () => {
     expect(answerLine(result(false)).text).not.toBeNull() // a wrong answer always gets its pointer
   })
 
+  it('never says "without a hint" for a right answer after a wrong one, which counts for no medal', () => {
+    expect(answerLine(result(false)).pose).toBe('encouraging')
+    expect(answerLine(result(true))).toEqual({ pose: 'pleased', text: RIGHT_AFTER_WRONG })
+    // Another activity, right at its first attempt, is still right without a hint.
+    expect(answerLine(result(true, { activityId: 8 })).text).toBe('Right, without a hint.')
+  })
+
   it('sums up a quick check and a finished module', () => {
     expect(quickCheckLine(2, 4, 4, []).text).toBe("4 of 4. You passed module 2's quick check.")
-    expect(quickCheckLine(3, 3, 4, [{ title: 'When BFS fits' }]).text).toBe(
+    expect(quickCheckLine(3, 3, 4, [{ activityId: 350, title: 'When BFS fits' }]).text).toBe(
       '3 of 4. Look again at the one on when BFS fits: BFS follows connections, ring by ring, so look for the job with none to follow.',
     )
     expect(moduleDoneLine(2, ['Map Maker']).text).toBe('Module 2 done. Map Maker is now secure.')
@@ -292,13 +302,13 @@ describe('what the companion says', () => {
   })
 
   it('has a fitting tip for every quick check item in modules 1 to 5', () => {
-    type Item = { title: string; purpose?: string }
+    type Item = { id: number; title: string; purpose?: string }
     const items = [module1, module2, module3, module4, module5].flatMap((m) =>
       (m.activities as Item[]).filter((a) => a.purpose === 'test_out'),
     )
     expect(items.length).toBeGreaterThanOrEqual(15)
     for (const item of items) {
-      const text = quickCheckLine(1, 3, 4, [item]).text ?? ''
+      const text = quickCheckLine(1, 3, 4, [{ activityId: item.id, title: item.title }]).text ?? ''
       // Named, so a missing tip says which item: "add_vertex: 3 of 4. Look again at “add_vertex”."
       expect(`${item.title}: ${text}`).toMatch(/: 3 of 4\. Look again at the one on /)
     }

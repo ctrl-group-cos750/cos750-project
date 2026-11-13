@@ -45,12 +45,25 @@ export function wrongLine(parts: readonly PartResult[], hintLevel: number): stri
 // its pose changes (say less to students doing well, research note: D'Mello).
 let streak = 0
 
+// Activities answered wrong this visit. Only a first attempt counts (the evidence rule, FR-9.6),
+// so a right answer after a wrong one isn't "right, without a hint" for its medal (#222 re-review).
+const answeredWrong = new Set<number>()
+
+/** After a right answer that came after a wrong one: it counts for no medal, but still helps. */
+export const RIGHT_AFTER_WRONG =
+  'Right this time. Only a first answer counts toward a medal, but working it out still helps.'
+
 /** The line for an answer just checked, or a pose with no words while the student is on a run. */
 export function answerLine(result: {
+  activityId: number
   correct: boolean | null
   parts: readonly PartResult[]
   hintLevel: number
 }): Line {
+  if (result.correct && answeredWrong.has(result.activityId)) {
+    streak = 1
+    return { pose: 'pleased', text: RIGHT_AFTER_WRONG }
+  }
   if (result.correct) {
     streak += 1
     // Quiet for the 4th to 7th in a row, a word again at the 8th, and so on.
@@ -58,56 +71,47 @@ export function answerLine(result: {
     return { pose: 'pleased', text: quiet ? null : rightLine(result.hintLevel) }
   }
   streak = 0
+  answeredWrong.add(result.activityId)
   return { pose: 'encouraging', text: wrongLine(result.parts, result.hintLevel) }
 }
 
-/** For tests: forget the run of right answers. */
+/** For tests: forget the run of right answers and the activities answered wrong. */
 export function resetStreak(): void {
   streak = 0
+  answeredWrong.clear()
 }
 
-/** What each quick check item was about, for the one line after a near pass. Keyed by title:
- * every module's quick check (1 to 5) has its items here, each tip fitting its question. */
-const QUICK_CHECK_TIP: Record<string, string> = {
+/** What each quick check item was about, for the one line after a near pass. Keyed by activity
+ * id, not title, so renaming an item (#223) never loses its tip: every module's quick check (1 to
+ * 5) has its items here, each tip fitting its question. */
+const QUICK_CHECK_TIP: Record<number, string> = {
   // Module 1
-  'Directed or undirected': 'the one on directed edges: a follow goes one way, so it is an arrow.',
-  'Counting edges and neighbours': 'the one on neighbours: count the edges at the vertex.',
-  'The four key terms': 'the one on the four key terms: a traversal visits every vertex.',
-  'From a situation to a graph':
-    'the one on turning a situation into a graph: who is next to whom.',
+  151: 'the one on directed edges: a follow goes one way, so it is an arrow.',
+  103: 'the one on neighbours: count the edges at the vertex.',
+  // The question asks which is a traversal (#222 re-review): moving along connections.
+  150: 'the one on the four key terms: a traversal moves along the connections, from each thing to the next.',
+  152: 'the one on turning a situation into a graph: who is next to whom.',
   // Module 2
-  'add_edge in an undirected graph':
-    "the one on add_edge: an undirected edge goes in both vertices' lists.",
-  'A directed graph in code':
-    "the one on the directed graph: add_edge(u, v) adds v to u's list only.",
-  'Reading a dictionary':
-    'the one on reading the dictionary: an undirected edge is listed twice but is one edge.',
-  add_vertex: 'the one on add_vertex: a new vertex starts with an empty list.',
+  203: "the one on add_edge: an undirected edge goes in both vertices' lists.",
+  250: "the one on the directed graph: add_edge(u, v) adds v to u's list only.",
+  251: 'the one on reading the dictionary: an undirected edge is listed twice but is one edge.',
+  252: 'the one on add_vertex: a new vertex starts with an empty list.',
   // Module 3
-  'The queue after a step':
-    'the one on the queue: a neighbour joins at the back, in the order you find it.',
+  314: 'the one on the queue: a neighbour joins at the back, in the order you find it.',
   // The question asks which job is not for BFS (#222 review): the tip says what BFS is for.
-  'When BFS fits':
-    'the one on when BFS fits: BFS follows connections, ring by ring, so look for the job with none to follow.',
-  'The BFS order': 'the one on the order: whoever joins the queue first is visited first.',
-  'The fewest edges': 'the one on the fewest edges: count the rings out from the start.',
+  350: 'the one on when BFS fits: BFS follows connections, ring by ring, so look for the job with none to follow.',
+  351: 'the one on the order: whoever joins the queue first is visited first.',
+  352: 'the one on the fewest edges: count the rings out from the start.',
   // Module 4
-  'BFS line by line': 'the one on bfs line by line: a vertex already found is not added again.',
-  'What bfs returns':
-    'the one on what bfs returns: neighbours are taken in sorted order, whatever order the edges were added in.',
-  'Building bfs: the neighbour loop':
-    'the one on the neighbour loop: mark a neighbour found as it joins the queue.',
-  'A queue, not a stack':
-    'the one on the queue: popleft() takes the oldest vertex, from the front.',
-  // Module 5
-  'Spotting a BFS bug':
-    'the one on the visited bug: a vertex marked only as it leaves the queue can join it twice.',
-  'A test for the visited bug':
-    'the one on testing the visited bug: the graph needs two routes to one vertex.',
-  'A test for unreachable vertices':
-    'the one on unreachable vertices: only a graph in separate pieces has any.',
-  'What the test should expect':
-    'the one on what to expect: BFS returns only what it can reach from the start.',
+  403: 'the one on bfs line by line: a vertex already found is not added again.',
+  450: 'the one on what bfs returns: neighbours are taken in sorted order, whatever order the edges were added in.',
+  451: 'the one on the neighbour loop: mark a neighbour found as it joins the queue.',
+  452: 'the one on the queue: popleft() takes the oldest vertex, from the front.',
+  // Module 5: the bug named by what goes wrong, not by the set's name, which #223 changes.
+  503: 'the one on spotting the bug: a vertex marked only as it leaves the queue can join it twice.',
+  550: 'the one on testing for that bug: the graph needs two routes to one vertex.',
+  551: 'the one on unreachable vertices: only a graph in separate pieces has any.',
+  552: 'the one on what to expect: BFS returns only what it can reach from the start.',
 }
 
 /** The line after a quick check is marked. */
@@ -115,7 +119,7 @@ export function quickCheckLine(
   moduleNumber: number | undefined,
   correct: number,
   total: number,
-  missed: readonly { title: string }[],
+  missed: readonly { activityId: number; title: string }[],
 ): Line {
   const score = `${correct} of ${total}.`
   // "Passed the quick check", the words the module page and the map use (#223), not "tested out".
@@ -125,7 +129,7 @@ export function quickCheckLine(
       text: `${score} You passed ${moduleNumber === undefined ? 'this module' : `module ${moduleNumber}`}'s quick check.`,
     }
   if (missed.length === 1) {
-    const tip = QUICK_CHECK_TIP[missed[0].title] ?? `“${missed[0].title}”.`
+    const tip = QUICK_CHECK_TIP[missed[0].activityId] ?? `“${missed[0].title}”.`
     return { pose: 'encouraging', text: `${score} Look again at ${tip}` }
   }
   return {

@@ -25,8 +25,17 @@ let spoken: { id: number; text: string } | null = null
 let nextId = 1
 const listeners = new Set<() => void>()
 
-function announce(text: string): void {
+function announce(text: string): number {
   spoken = { id: nextId++, text }
+  listeners.forEach((listener) => listener())
+  return spoken.id
+}
+
+/** Empties the live region if it still holds line `id`, so text whose control has gone isn't left
+ * there for a screen reader to find later (#222 re-review). */
+function unannounce(id: number): void {
+  if (spoken?.id !== id) return
+  spoken = null
   listeners.forEach((listener) => listener())
 }
 
@@ -132,7 +141,9 @@ const QUESTION = 'Want a study companion? Inka can comment on your answers.'
  */
 function CompanionPrompt({ onAnswer }: { onAnswer: (choice: CompanionChoice) => void }) {
   useEffect(() => {
-    announce(`${QUESTION} Yes or No thanks, under the result. Kept on this device.`)
+    const id = announce(`${QUESTION} Yes or No thanks, under the result. Kept on this device.`)
+    // Once the prompt has gone (answered, or the student moved on), so has its question.
+    return () => unannounce(id)
   }, [])
   return (
     <div className={styles.prompt} data-companion-prompt>

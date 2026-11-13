@@ -186,7 +186,9 @@ def check_parsons(
     not position: the lines of a longest common subsequence stay, the rest are marked. So one
     line in the wrong place is the only line marked wrong, instead of every line after it. The
     Parsons reviews (Du et al. 2020; Ericson et al. 2022) set line-order grading against
-    execution-based grading; this keeps line order but accepts every order the content lists.
+    execution-based grading; this keeps line order but accepts every order the content lists,
+    and the content tests (tests/parsons_orders.py) run every order to check the list holds
+    exactly the orders that work, so a correct BFS is never marked wrong (review of 13 Nov).
 
     There is one part per position of the answer, as before: right if the line there is in that
     longest run, otherwise "in the wrong place" (a solution line, or one used twice) or "does not

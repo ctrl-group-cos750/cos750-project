@@ -601,8 +601,8 @@ def test_the_parsons_answer_is_module_4s_bfs_with_new_names() -> None:
 
 
 def test_the_parsons_problem_accepts_exactly_the_orders_that_work() -> None:
-    """As for 404: every runnable order that passes the tests is accepted, except the two the
-    lessons rule out (the import after the function, order.append not straight after popleft)."""
+    """As for 404: every runnable order that passes the tests is accepted, the import after the
+    function and order.append after the neighbour loop included (review of 13 Nov, High 5)."""
     a = activity(490)
     text: dict[int, str] = {line["id"]: line["text"] for line in a["config"]["lines"]}
     working, accepted = [], []
@@ -611,14 +611,8 @@ def test_the_parsons_problem_accepts_exactly_the_orders_that_work() -> None:
             working.append(order)
         if check_activity("parsons", a["config"], a["solution"], {"order": order}).correct:
             accepted.append(order)
-
-    def conventional(order: list[int]) -> bool:
-        lines = [text[i].strip() for i in order]
-        after_dequeue = lines[next(n for n, t in enumerate(lines) if ".popleft()" in t) + 1]
-        return lines[0].startswith("from ") and after_dequeue.startswith("order.append(")
-
-    assert accepted == [o for o in working if conventional(o)]
-    assert len(accepted) == 12
+    assert accepted == working
+    assert len(accepted) == 48
 
 
 def test_the_bfs_question_is_the_engines_order_and_each_mistake_is_real() -> None:

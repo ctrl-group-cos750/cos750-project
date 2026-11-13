@@ -367,6 +367,17 @@ def test_no_simple_strategy_meets_any_objective(where: str, strategy: str) -> No
 # retired, never reused: an old attempt's `selected` must not be read as new text (the lesson of
 # #117 and #133). Ids made on this branch were never deployed, so they aren't listed.
 RETIRED = {
+    # Objective 3 (#214 C1): new situations whose direction must be worked out, so every option
+    # is new text under a new id.
+    610: {"a", "b", "c"},
+    611: {"a", "b", "c"},
+    612: {"a", "b", "c"},
+    613: {"a", "b", "c"},
+    1301: {"a", "b", "c"},
+    1302: {"a", "b", "c"},
+    1303: {"a", "b", "c"},
+    1304: {"a", "b", "c"},
+    1305: {"a", "b", "c"},
     614: {"a", "b", "c"},  # a new question: every staging id, the key's included
     615: {"c"},
     616: {"c"},
@@ -730,7 +741,6 @@ WORDING_ONLY = {
         (1103, "b"),
         (1105, "b"),
         (1106, "c"),
-        (1301, "a"),
         (1401, "a"),
         (1401, "b"),
         (1402, "a"),

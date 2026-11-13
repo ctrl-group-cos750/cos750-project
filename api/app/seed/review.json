@@ -1055,46 +1055,46 @@
       "purpose": "review",
       "objective_id": 3,
       "config": {
-        "prompt": "Students email each other. How should a graph of “who emailed whom” be set up?",
+        "prompt": "During a test, a teacher notes who lent a pencil to whom. Sizwe lent one to Thandeka, and Thandeka didn't lend one to Sizwe. How should a graph of these loans be set up?",
         "options": [
           {
-            "id": "b",
-            "label": "Vertices: emails. Edges: students. Directed."
+            "id": "d",
+            "label": "Vertices: pencils. Edges: the learners who lent them. Directed, because a pencil is lent once."
           },
           {
-            "id": "c",
-            "label": "Vertices: students. Edges: emails. Undirected."
+            "id": "f",
+            "label": "Vertices: learners. Edges: loans. Directed, because a loan can go one way without one back."
           },
           {
-            "id": "a",
-            "label": "Vertices: students. Edges: emails. Directed."
+            "id": "e",
+            "label": "Vertices: learners. Edges: loans. Undirected, because a loan always involves two learners."
           }
         ]
       },
       "solution": {
-        "explanation": "The students are the things, and an email joins two of them. An email goes from one student to another, so the edges have a direction.",
-        "correct": "a",
+        "explanation": "Correct. The learners are the things, and each loan joins the lender to the borrower. Sizwe lent to Thandeka without her lending back, so each edge has a direction.",
+        "correct": "f",
         "feedback": {
-          "b": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
-          "c": "Not quite. Sending an email doesn't mean you got one back, so each edge has a direction. Check the direction."
+          "d": "Not quite. A pencil isn't joined to another pencil: each loan joins two learners. The learners are the things in this graph. Ask: what does each loan connect?",
+          "e": "Not quite. Two learners are involved, but that doesn't make a loan two-way. Sizwe lent to Thandeka, and she didn't lend to him. Ask: if this edge exists, must the reverse one exist too?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "What are the things? What connects them?"
+          "body": "Ask: what are the things, and what joins two of them?"
         },
         {
           "level": 2,
-          "body": "Students are the things; emails connect them."
+          "body": "Each loan joins two learners: the one who lent and the one who borrowed."
         },
         {
           "level": 3,
-          "body": "Does an email go both ways?"
+          "body": "Learners are the vertices and loans are the edges. Does Sizwe's loan to Thandeka mean she lent him one?"
         },
         {
           "level": 4,
-          "body": "Answer: students as vertices, emails as directed edges."
+          "body": "Answer: Vertices: learners. Edges: loans. Directed, because a loan can go one way without one back."
         }
       ]
     },
@@ -1106,50 +1106,51 @@
       "purpose": "mastery",
       "objective_id": 3,
       "config": {
-        "prompt": "Streets in a neighbourhood where some streets are one-way. Which graph models it?",
+        "prompt": "A water board maps how its dams are joined. A canal runs downhill from Dam P to Dam Q, so water flows along it from P into Q. Which graph models where water can flow?",
         "options": [
           {
-            "id": "d",
-            "label": "Vertices: one-way streets. Edges: intersections. Undirected."
+            "id": "e",
+            "label": "Vertices: dams. Edges: canals. Undirected, because each canal has a dam at both of its ends."
           },
           {
-            "id": "a",
-            "label": "Vertices: intersections. Edges: one-way streets. Undirected."
+            "id": "g",
+            "label": "Vertices: canals. Edges: the dams they join. Directed, because the water flows down the canal."
           },
           {
-            "id": "c",
-            "label": "Vertices: one-way streets. Edges: intersections. Directed."
+            "id": "f",
+            "label": "Vertices: dams. Edges: canals. Directed, since water can't flow back uphill along a canal."
           },
           {
-            "id": "b",
-            "label": "Vertices: intersections. Edges: one-way streets. Directed."
+            "id": "h",
+            "label": "Vertices: dams. Edges: the litres of water each dam holds. Directed, because water flows."
           }
         ]
       },
       "solution": {
-        "correct": "b",
+        "explanation": "Correct. The dams are the things, and each canal joins two of them. Water flows downhill from P into Q and never back, so each edge has a direction.",
+        "correct": "f",
         "feedback": {
-          "a": "Not quite. These connections only go one way. One-way connections need arrows, so the graph is directed. Check the direction.",
-          "c": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
-          "d": "Not quite. Vertices and edges are swapped, and the direction is wrong too. The things are the vertices; the connections between them are the edges. Then check whether each connection works both ways."
+          "e": "Not quite. A canal touches both dams, but the water in it only flows downhill, from P into Q. Ask: can water flow along this canal from Q back into P?",
+          "g": "Not quite. That swaps them. A canal joins two dams, so the canal is the edge and the dams are the vertices. Ask: which one joins the other two?",
+          "h": "Not quite. The litres a dam holds belong to that one dam: they don't join two dams, so they can't be an edge. An edge always has two ends. Ask: what joins two dams?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Ask: what are the things, and what connects them?"
+          "body": "Ask: what are the things, and what joins two of them?"
         },
         {
           "level": 2,
-          "body": "The things are vertices; the connections are edges."
+          "body": "Each canal joins two dams."
         },
         {
           "level": 3,
-          "body": "Then ask whether each connection works both ways. Here: one way only, so directed."
+          "body": "Dams are the vertices and canals are the edges. Can water flow along the canal from Q back into P?"
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: intersections. Edges: one-way streets. Directed."
+          "body": "Answer: Vertices: dams. Edges: canals. Directed, since water can't flow back uphill along a canal."
         }
       ]
     },
@@ -1161,50 +1162,51 @@
       "purpose": "mastery",
       "objective_id": 3,
       "config": {
-        "prompt": "Cities joined by highways that can be driven both ways. Which graph models it?",
+        "prompt": "In a home network, the laptop, the printer and the TV each have a Wi-Fi link to the router. The laptop sends a page to the printer through the router, and the printer tells the laptop when it's done. Which graph models the network?",
         "options": [
           {
-            "id": "a",
-            "label": "Vertices: cities. Edges: highways. Directed."
+            "id": "f",
+            "label": "Vertices: devices. Edges: Wi-Fi links. Undirected, because data travels along a link either way."
           },
           {
-            "id": "c",
-            "label": "Vertices: cities. Edges: highways. Undirected."
+            "id": "e",
+            "label": "Vertices: devices. Edges: Wi-Fi links. Directed, because the laptop sends the page to the printer."
           },
           {
-            "id": "b",
-            "label": "Vertices: highways. Edges: cities. Undirected."
+            "id": "g",
+            "label": "Vertices: pages sent. Edges: the devices that sent them. Directed, as a page goes from a device."
           },
           {
-            "id": "d",
-            "label": "Vertices: highways. Edges: cities. Directed."
+            "id": "h",
+            "label": "Vertices: the people at home. Edges: the devices they use. Undirected, as people share devices."
           }
         ]
       },
       "solution": {
-        "correct": "c",
+        "explanation": "Correct. The devices are the things, and each Wi-Fi link joins two of them. The printer answers the laptop along the same links the page came by, so data travels both ways and the edges have no direction.",
+        "correct": "f",
         "feedback": {
-          "a": "Not quite. These connections work both ways, so the edges have no arrows and the graph is undirected. Check the direction.",
-          "b": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
-          "d": "Not quite. Vertices and edges are swapped, and the direction is wrong too. The things are the vertices; the connections between them are the edges. Then check whether each connection works both ways."
+          "e": "Not quite. The page goes from the laptop to the printer, but the printer also answers the laptop along the same links. Something moving along an edge doesn't give it an arrow. Ask: can data travel along this link one way only?",
+          "g": "Not quite. A page isn't joined to another page: the Wi-Fi links join devices. The devices are the things in this graph. Ask: what does each link connect?",
+          "h": "Not quite. The people use the devices, but the question is about how the devices are joined. Ask: what are the things the Wi-Fi links join?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Ask: what are the things, and what connects them?"
+          "body": "Ask: what are the things, and what joins two of them?"
         },
         {
           "level": 2,
-          "body": "The things are vertices; the connections are edges."
+          "body": "Each Wi-Fi link joins two devices: the router and one other."
         },
         {
           "level": 3,
-          "body": "Then ask whether each connection works both ways. Here: both ways, so undirected."
+          "body": "Devices are the vertices and the links are the edges. The page went to the printer: did anything come back along the same links?"
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: cities. Edges: highways. Undirected."
+          "body": "Answer: Vertices: devices. Edges: Wi-Fi links. Undirected, because data travels along a link either way."
         }
       ]
     },
@@ -1216,50 +1218,51 @@
       "purpose": "mastery",
       "objective_id": 3,
       "config": {
-        "prompt": "Recipe steps, where some steps must happen before others. Which graph models it?",
+        "prompt": "A family tree records who is whose parent. Nomsa is Thabo's mother, and Thabo is Lindiwe's father. Which graph models who is whose parent?",
         "options": [
           {
-            "id": "d",
-            "label": "Vertices: “comes before” links. Edges: steps. Undirected."
+            "id": "e",
+            "label": "Vertices: family members. Edges: parent links. Undirected, as a parent and child are related."
           },
           {
-            "id": "c",
-            "label": "Vertices: “comes before” links. Edges: steps. Directed."
+            "id": "g",
+            "label": "Vertices: generations. Edges: the people born in them. Directed, from older to younger ones."
           },
           {
-            "id": "a",
-            "label": "Vertices: steps. Edges: “comes before” links. Directed."
+            "id": "h",
+            "label": "Vertices: parent links. Edges: family members. Directed, because each link goes to a child."
           },
           {
-            "id": "b",
-            "label": "Vertices: steps. Edges: “comes before” links. Undirected."
+            "id": "f",
+            "label": "Vertices: family members. Edges: parent links. Directed, because a child isn't its parent's parent."
           }
         ]
       },
       "solution": {
-        "correct": "a",
+        "explanation": "Correct. The family members are the things, and each parent link joins a parent to their child. Nomsa is Thabo's parent and Thabo isn't Nomsa's, so each edge has a direction.",
+        "correct": "f",
         "feedback": {
-          "b": "Not quite. These connections only go one way. One-way connections need arrows, so the graph is directed. Check the direction.",
-          "c": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
-          "d": "Not quite. Vertices and edges are swapped, and the direction is wrong too. The things are the vertices; the connections between them are the edges. Then check whether each connection works both ways."
+          "e": "Not quite. A parent and a child are related both ways, but “is the parent of” only goes one way: Nomsa is Thabo's parent, and Thabo isn't Nomsa's. Ask: if this edge exists, must the reverse one exist too?",
+          "g": "Not quite. A generation is a group of people, and a person doesn't join two generations. The tree is about which person is whose parent. Ask: what are the things each parent link joins?",
+          "h": "Not quite. That swaps them. A parent link joins two people, so the link is the edge and the people are the vertices. Ask: which one joins the other two?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Ask: what are the things, and what connects them?"
+          "body": "Ask: what are the things, and what joins two of them?"
         },
         {
           "level": 2,
-          "body": "The things are vertices; the connections are edges."
+          "body": "Each parent link joins two people: a parent and their child."
         },
         {
           "level": 3,
-          "body": "Then ask whether each connection works both ways. Here: one way only, so directed."
+          "body": "Family members are the vertices and parent links are the edges. Is Thabo Nomsa's parent?"
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: steps. Edges: “comes before” links. Directed."
+          "body": "Answer: Vertices: family members. Edges: parent links. Directed, because a child isn't its parent's parent."
         }
       ]
     },
@@ -1271,50 +1274,51 @@
       "purpose": "mastery",
       "objective_id": 3,
       "config": {
-        "prompt": "Players and which pairs of them have played a match together. Which graph models it?",
+        "prompt": "An atlas has a table of which countries share a border. Botswana shares a border with Namibia, and Namibia with Angola. Which graph models the table?",
         "options": [
           {
-            "id": "c",
-            "label": "Vertices: matches. Edges: players. Undirected."
+            "id": "g",
+            "label": "Vertices: borders. Edges: the countries on each side. Undirected, because a border has two sides."
           },
           {
-            "id": "a",
-            "label": "Vertices: players. Edges: matches. Directed."
+            "id": "f",
+            "label": "Vertices: countries. Edges: shared borders. Undirected, as a border belongs to both countries."
           },
           {
-            "id": "b",
-            "label": "Vertices: players. Edges: matches. Undirected."
+            "id": "h",
+            "label": "Vertices: border posts. Edges: the travellers who cross them. Directed, from one side to the other."
           },
           {
-            "id": "d",
-            "label": "Vertices: matches. Edges: players. Directed."
+            "id": "e",
+            "label": "Vertices: countries. Edges: shared borders. Directed, because you cross a border into a country."
           }
         ]
       },
       "solution": {
-        "correct": "b",
+        "explanation": "Correct. The countries are the things, and each shared border joins two of them. If Botswana shares a border with Namibia, Namibia shares it with Botswana, so the edges have no direction.",
+        "correct": "f",
         "feedback": {
-          "a": "Not quite. These connections work both ways, so the edges have no arrows and the graph is undirected. Check the direction.",
-          "c": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
-          "d": "Not quite. Vertices and edges are swapped, and the direction is wrong too. The things are the vertices; the connections between them are the edges. Then check whether each connection works both ways."
+          "g": "Not quite. That swaps them. A border joins two countries, so the border is the edge and the countries are the vertices. Ask: which one joins the other two?",
+          "h": "Not quite. The travellers cross borders, but the table is about which countries share one. Ask: what are the things each shared border joins?",
+          "e": "Not quite. You can cross a border either way, and if Botswana shares a border with Namibia, Namibia shares it with Botswana. Something moving across an edge doesn't give it an arrow. Ask: could this connection exist one way only?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Ask: what are the things, and what connects them?"
+          "body": "Ask: what are the things, and what joins two of them?"
         },
         {
           "level": 2,
-          "body": "The things are vertices; the connections are edges."
+          "body": "Each shared border joins two countries."
         },
         {
           "level": 3,
-          "body": "Then ask whether each connection works both ways. Here: both ways, so undirected."
+          "body": "Countries are the vertices and shared borders are the edges. If Botswana shares a border with Namibia, does Namibia share one with Botswana?"
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: players. Edges: matches. Undirected."
+          "body": "Answer: Vertices: countries. Edges: shared borders. Undirected, as a border belongs to both countries."
         }
       ]
     },

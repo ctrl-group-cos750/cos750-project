@@ -789,50 +789,51 @@
       "purpose": "mastery",
       "objective_id": 3,
       "config": {
-        "prompt": "Each flight route between airports only flies one way. Which graph models it?",
+        "prompt": "In a class WhatsApp group, the app keeps a record of who has replied to whose message. Ayanda replied to Bongani's message, but Bongani hasn't replied to any of Ayanda's. Which graph models who has replied to whom?",
         "options": [
           {
-            "id": "c",
-            "label": "Vertices: flight routes. Edges: airports. Directed."
+            "id": "f",
+            "label": "Vertices: learners. Edges: replies. Undirected, because a reply is part of a chat between two people."
           },
           {
-            "id": "a",
-            "label": "Vertices: airports. Edges: flight routes. Undirected."
+            "id": "e",
+            "label": "Vertices: learners. Edges: replies. Directed, because a reply can go one way without one coming back."
           },
           {
-            "id": "d",
-            "label": "Vertices: flight routes. Edges: airports. Undirected."
+            "id": "g",
+            "label": "Vertices: messages. Edges: the learners who wrote them. Directed, because a message has one writer."
           },
           {
-            "id": "b",
-            "label": "Vertices: airports. Edges: flight routes. Directed."
+            "id": "h",
+            "label": "Vertices: learners. Edges: the messages each learner sent to the group. Directed, as each is sent."
           }
         ]
       },
       "solution": {
-        "correct": "b",
+        "explanation": "Correct. The learners are the things, and each reply joins the learner who replied to the learner they replied to. Ayanda can reply to Bongani without Bongani replying back, so each edge has a direction.",
+        "correct": "e",
         "feedback": {
-          "a": "Not quite. These connections only go one way. One-way connections need arrows, so the graph is directed. Check the direction.",
-          "c": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
-          "d": "Not quite. Vertices and edges are swapped, and the direction is wrong too. The things are the vertices; the connections between them are the edges. Then check whether each connection works both ways."
+          "f": "Not quite. Two people are involved, but that doesn't make a connection two-way. Ayanda replied to Bongani, and Bongani didn't reply to Ayanda. Ask: if this edge exists, must the reverse one exist too?",
+          "g": "Not quite. A message isn't joined to another message here: the replies join learners. The learners are the things in this graph. Ask: what does each reply connect?",
+          "h": "Not quite. A message sent to the whole group doesn't join two particular learners, so it can't be an edge. An edge always has two ends. Ask: which connection always joins exactly two learners?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Ask: what are the things, and what connects them?"
+          "body": "Ask: what are the things, and what joins two of them?"
         },
         {
           "level": 2,
-          "body": "The things are vertices; the connections are edges."
+          "body": "Each reply joins two learners: the one who replied and the one whose message it was."
         },
         {
           "level": 3,
-          "body": "Then ask whether each connection works both ways. Here: one way only, so directed."
+          "body": "The learners are the vertices and the replies are the edges. Now: does Ayanda's reply mean Bongani replied too?"
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: airports. Edges: flight routes. Directed."
+          "body": "Answer: Vertices: learners. Edges: replies. Directed, because a reply can go one way without one coming back."
         }
       ]
     },
@@ -844,50 +845,51 @@
       "purpose": "mastery",
       "objective_id": 3,
       "config": {
-        "prompt": "Substations are joined by power lines that carry power both ways. Which graph models it?",
+        "prompt": "In a molecule of water, the oxygen atom is bonded to each of the two hydrogen atoms. A chemist wants a graph of which atoms are bonded to which. Which graph models it?",
         "options": [
           {
-            "id": "c",
-            "label": "Vertices: substations. Edges: power lines. Undirected."
+            "id": "e",
+            "label": "Vertices: atoms. Edges: bonds. Directed, because each bond goes from one atom to the other atom."
           },
           {
-            "id": "b",
-            "label": "Vertices: power lines. Edges: substations. Undirected."
+            "id": "g",
+            "label": "Vertices: bonds. Edges: the atoms at their two ends. Undirected, because each bond has two atoms."
           },
           {
-            "id": "d",
-            "label": "Vertices: power lines. Edges: substations. Directed."
+            "id": "h",
+            "label": "Vertices: molecules. Edges: the atoms in them. Undirected, because each atom is in one molecule."
           },
           {
-            "id": "a",
-            "label": "Vertices: substations. Edges: power lines. Directed."
+            "id": "f",
+            "label": "Vertices: atoms. Edges: bonds. Undirected, since being bonded works the same from either side."
           }
         ]
       },
       "solution": {
-        "correct": "c",
+        "explanation": "Correct. The atoms are the things, and each bond joins two of them. If oxygen is bonded to hydrogen, hydrogen is bonded to oxygen, so the edges have no direction.",
+        "correct": "f",
         "feedback": {
-          "a": "Not quite. These connections work both ways, so the edges have no arrows and the graph is undirected. Check the direction.",
-          "b": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
-          "d": "Not quite. Vertices and edges are swapped, and the direction is wrong too. The things are the vertices; the connections between them are the edges. Then check whether each connection works both ways."
+          "e": "Not quite. A bond joins two atoms equally: if oxygen is bonded to hydrogen, hydrogen is bonded to oxygen. Something touching both ends doesn't give it an arrow. Ask: could this connection exist one way only?",
+          "g": "Not quite. That swaps them. A bond joins two atoms, so the bond is the edge and the atoms are the vertices. Ask: which one joins the other two?",
+          "h": "Not quite. There is only one molecule here, and the question is about which atoms are bonded. Ask: what are the things being joined?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Ask: what are the things, and what connects them?"
+          "body": "Ask: what are the things, and what joins two of them?"
         },
         {
           "level": 2,
-          "body": "The things are vertices; the connections are edges."
+          "body": "A bond joins two atoms."
         },
         {
           "level": 3,
-          "body": "Then ask whether each connection works both ways. Here: both ways, so undirected."
+          "body": "Atoms are the vertices and bonds are the edges. Is being bonded ever one-way?"
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: substations. Edges: power lines. Undirected."
+          "body": "Answer: Vertices: atoms. Edges: bonds. Undirected, since being bonded works the same from either side."
         }
       ]
     },
@@ -899,50 +901,51 @@
       "purpose": "mastery",
       "objective_id": 3,
       "config": {
-        "prompt": "A module must be passed before another one can be taken. Which graph models it?",
+        "prompt": "Building a house: the foundations must be finished before the walls go up, and the walls before the roof. A builder wants a graph showing which job must be finished before which. Which graph models it?",
         "options": [
           {
-            "id": "c",
-            "label": "Vertices: “must pass first” links. Edges: modules. Directed."
+            "id": "f",
+            "label": "Vertices: jobs. Edges: “must finish first” links. Directed, since the roof can't come before walls."
           },
           {
-            "id": "b",
-            "label": "Vertices: modules. Edges: “must pass first” links. Undirected."
+            "id": "e",
+            "label": "Vertices: jobs. Edges: “must finish first” links. Undirected, because each link joins two jobs."
           },
           {
-            "id": "a",
-            "label": "Vertices: modules. Edges: “must pass first” links. Directed."
+            "id": "g",
+            "label": "Vertices: builders. Edges: the jobs each builder does. Directed, because a builder does each job."
           },
           {
-            "id": "d",
-            "label": "Vertices: “must pass first” links. Edges: modules. Undirected."
+            "id": "h",
+            "label": "Vertices: “must finish first” links. Edges: jobs. Directed, because each job leads to the next job."
           }
         ]
       },
       "solution": {
-        "correct": "a",
+        "explanation": "Correct. The jobs are the things, and each “must finish first” link joins two of them. The walls come before the roof, never the other way round, so each edge has a direction.",
+        "correct": "f",
         "feedback": {
-          "b": "Not quite. These connections only go one way. One-way connections need arrows, so the graph is directed. Check the direction.",
-          "c": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
-          "d": "Not quite. Vertices and edges are swapped, and the direction is wrong too. The things are the vertices; the connections between them are the edges. Then check whether each connection works both ways."
+          "e": "Not quite. The walls must come before the roof, but the roof doesn't come before the walls. The link only works one way. Ask: if A must finish before B, must B finish before A?",
+          "g": "Not quite. The builders do the jobs, but they aren't what the graph is about: the question asks which job must come before which. Ask: what are the things being ordered?",
+          "h": "Not quite. That swaps them. Each “must finish first” link joins two jobs, so the link is the edge. Ask: which one joins the other two?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Ask: what are the things, and what connects them?"
+          "body": "Ask: what are the things, and what joins two of them?"
         },
         {
           "level": 2,
-          "body": "The things are vertices; the connections are edges."
+          "body": "Each “must finish first” link joins two jobs: the earlier one and the later one."
         },
         {
           "level": 3,
-          "body": "Then ask whether each connection works both ways. Here: one way only, so directed."
+          "body": "Jobs are the vertices and the links are the edges. If the walls come before the roof, does the roof come before the walls?"
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: modules. Edges: “must pass first” links. Directed."
+          "body": "Answer: Vertices: jobs. Edges: “must finish first” links. Directed, since the roof can't come before walls."
         }
       ]
     },
@@ -954,50 +957,51 @@
       "purpose": "mastery",
       "objective_id": 3,
       "config": {
-        "prompt": "Students and which pairs of them share a desk. Which graph models it?",
+        "prompt": "The exams office says two subjects clash when at least one learner takes both, so they can't be written at the same time. It wants a graph of which subjects clash. Which graph models it?",
         "options": [
           {
-            "id": "c",
-            "label": "Vertices: shared desks. Edges: students. Undirected."
+            "id": "h",
+            "label": "Vertices: learners. Edges: the subjects they take. Undirected, as a learner takes many subjects."
           },
           {
-            "id": "b",
-            "label": "Vertices: students. Edges: shared desks. Undirected."
+            "id": "e",
+            "label": "Vertices: subjects. Edges: clashes. Directed, because one subject is written before the other."
           },
           {
-            "id": "d",
-            "label": "Vertices: shared desks. Edges: students. Directed."
+            "id": "f",
+            "label": "Vertices: subjects. Edges: clashes. Undirected, since a clash is shared by both of its subjects."
           },
           {
-            "id": "a",
-            "label": "Vertices: students. Edges: shared desks. Directed."
+            "id": "g",
+            "label": "Vertices: exam sessions. Edges: subjects. Undirected, because each session holds a few of the subjects."
           }
         ]
       },
       "solution": {
-        "correct": "b",
+        "explanation": "Correct. The subjects are the things, and each clash joins two of them. If Maths clashes with Physics, Physics clashes with Maths, so the edges have no direction.",
+        "correct": "f",
         "feedback": {
-          "a": "Not quite. These connections work both ways, so the edges have no arrows and the graph is undirected. Check the direction.",
-          "c": "Not quite. Vertices and edges are swapped. The things are the vertices; the connections between them are the edges. Swap them round.",
-          "d": "Not quite. Vertices and edges are swapped, and the direction is wrong too. The things are the vertices; the connections between them are the edges. Then check whether each connection works both ways."
+          "h": "Not quite. The learners cause the clashes, but the office wants to know which subjects clash. A clash joins two subjects. Ask: which things does each clash join?",
+          "e": "Not quite. If Maths clashes with Physics, Physics clashes with Maths: nothing has been written yet, so there is no first or later. Ask: can a clash go one way only?",
+          "g": "Not quite. The sessions are what the office will choose later; the graph shows which subjects clash. Ask: which things does each clash join?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Ask: what are the things, and what connects them?"
+          "body": "Ask: what are the things, and what joins two of them?"
         },
         {
           "level": 2,
-          "body": "The things are vertices; the connections are edges."
+          "body": "Each clash joins two subjects that one learner takes."
         },
         {
           "level": 3,
-          "body": "Then ask whether each connection works both ways. Here: both ways, so undirected."
+          "body": "Subjects are the vertices and clashes are the edges. If Maths clashes with Physics, does Physics clash with Maths?"
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: students. Edges: shared desks. Undirected."
+          "body": "Answer: Vertices: subjects. Edges: clashes. Undirected, since a clash is shared by both of its subjects."
         }
       ]
     },

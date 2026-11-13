@@ -2135,7 +2135,7 @@
         },
         {
           "level": 2,
-          "body": "On the square A–B, B–C, C–D, D–A from A, it gives A, B, D, C, C. B and D both add C before C has left the queue. When D looks at C, has C been found already?"
+          "body": "On the square A–B, B–C, C–D, D–A from A, it gives A, B, D, C, C. B and D both add C before C has left the queue. When D looks at C, C is still waiting in the queue: why does it join again?"
         },
         {
           "level": 3,
@@ -2281,7 +2281,7 @@
         },
         {
           "level": 2,
-          "body": "On the triangle A–B, B–C, C–A from A, it gives A, B, C, A: A comes out again after its neighbours. When C looks at A, has A been found already?"
+          "body": "On the triangle A–B, B–C, C–A from A, it gives A, B, C, A: A comes out again after its neighbours. When C looks at A, A has already left the queue: why does it join again?"
         },
         {
           "level": 3,

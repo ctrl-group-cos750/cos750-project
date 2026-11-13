@@ -269,13 +269,17 @@ def test_objective_3_counts_situations() -> None:
 def test_630_states_which_way_a_must_be_finished_before_arrow_points() -> None:
     """Nothing in modules 1 to 6 teaches which way a "must be finished before" edge points, and a
     dependency arrow from the walls to the foundations is as defensible as the other way round
-    (#223 review, Must fix 3). The prompt says it; hint 2 is about the situation, not about the
-    direction, which "does it work both ways?" gave away."""
+    (#223 review, Must fix 3). The prompt says it without saying the graph has arrows, so whether
+    it is directed is still the student's to work out (#223 re-review); hint 2 is about the
+    situation, not about the direction, which "does it work both ways?" gave away."""
     item = ACTIVITIES[630]
+    prompt = item.config["prompt"]
     assert (
-        "an arrow from one job to another means the first job must be finished before the second"
-        in item.config["prompt"]
+        "if a link points from one job to another, it means the first job must be finished before"
+        " the second" in prompt
     )
+    assert "arrow" not in prompt.lower()
+    assert "direct" not in prompt.lower()
     hint_2 = item.hints[1].body.lower()
     for word in ("arrow", "way", "direct", "point"):
         assert word not in hint_2, word

@@ -914,7 +914,7 @@
       "objective_id": 3,
       "purpose": "mastery",
       "config": {
-        "prompt": "Building a house: the foundations must be finished before the walls go up, and the walls before the roof. A builder wants a graph of which job must be finished before which. In the graph, an arrow from one job to another means the first job must be finished before the second. Build the graph: match each part of the situation to what it becomes in the graph. Some choices fit nothing.",
+        "prompt": "Building a house: the foundations must be finished before the walls go up, and the walls before the roof. A builder wants a graph of which job must be finished before which. In the graph, if a link points from one job to another, it means the first job must be finished before the second. Build the graph: match each part of the situation to what it becomes in the graph. Some choices fit nothing.",
         "left": [
           {
             "id": "p1",

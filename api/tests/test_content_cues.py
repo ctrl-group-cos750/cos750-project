@@ -275,7 +275,8 @@ def test_hints_1_and_2_of_an_assessed_fix_are_about_what_the_program_does(
 ) -> None:
     """Module 6 counts an answer after hints 1 and 2 as met independently, and "Look at the line
     that loops over v's neighbours" located the bug for the student (#223 review, Should fix 4).
-    Hints 1 and 2 talk about the output; neither points at a line or quotes the code."""
+    Hints 1 and 2 talk about the output; neither points at a line or quotes the code, nor asks
+    whether a vertex has been "found", which names 1702's and 1703's fix (#223 re-review)."""
     fixed = {i for x in a.solution["order"] for i in (x if isinstance(x, list) else [x])}
     faulty = [x["text"].strip() for x in a.config["lines"] if x["id"] not in fixed]
     for hint in a.hints[:2]:
@@ -284,6 +285,7 @@ def test_hints_1_and_2_of_an_assessed_fix_are_about_what_the_program_does(
         for text in faulty:
             assert text.lower() not in low, (a.id, hint.body)
         assert not re.search(r"queue\.\w|found =|graph\.adjacency|\bif n\b", hint.body), hint.body
+        assert "found" not in low, (a.id, hint.body)
 
 
 @pytest.mark.parametrize("a", MASTERY + REVIEWS, ids=lambda a: str(a.id))

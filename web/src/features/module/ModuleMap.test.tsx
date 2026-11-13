@@ -430,4 +430,53 @@ describe('ModuleMap — learner choice (#214)', () => {
     renderApp('/')
     expect(await screen.findByRole('button', { name: /Start module 3/ })).toBeInTheDocument()
   })
+
+  it('keeps a taken quick check findable, passed or not, with its score (#215)', async () => {
+    moduleListApi([
+      { ...openModule, quickCheck: 'not_passed', quickCheckScore: { correct: 2, total: 4 } },
+    ])
+    renderApp('/')
+    const link = await screen.findByRole('link', {
+      name: 'Quick check: 2 of 4, see the results for module 0',
+    })
+    expect(link).toHaveAttribute('href', '/modules/1/check')
+    expect(link.closest('a')).toBe(link) // its own link, not inside the module's
+    expect(screen.queryByText(/Take the quick check/)).toBeNull()
+  })
+
+  it('counts the activities marked to look at again (#215)', async () => {
+    moduleListApi([{ ...inProgressModule, lookAgainCount: 2 }, openModule])
+    renderApp('/')
+    expect(await screen.findByText('2 marked to look at again')).toBeInTheDocument()
+    expect(screen.getAllByText(/marked to look at again/)).toHaveLength(1)
+  })
+
+  it('puts the skill profile after the module list in one column (#215)', async () => {
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules': () => Response.json([openModule]),
+        'GET /api/me/skills': () =>
+          Response.json({
+            objectives: [
+              {
+                id: 1,
+                text: 'Objective 1.',
+                answered: 0,
+                correct: 0,
+                onYourOwn: 0,
+                total: 4,
+                level: 'not_started',
+                result: null,
+              },
+            ],
+            modules: [],
+          }),
+      },
+    })
+    renderApp('/')
+    const list = await screen.findByRole('heading', { name: 'All modules' })
+    const profile = await screen.findByRole('heading', { name: 'Skill profile' })
+    expect(list.compareDocumentPosition(profile) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
 })

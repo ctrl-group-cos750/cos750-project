@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { Alert, Button, Card, Spinner, Tag } from '../../components'
+import { usePageTitle } from '../../pages/usePageTitle.ts'
+import { useRefreshRewards } from '../rewards/hooks.ts'
 import { fetchModules, fetchQuickCheck, takeQuickCheck } from './module.api.ts'
 import type { ModuleSummary, QuickCheckQuestion, QuickCheckResult } from './module.types.ts'
 
@@ -17,9 +19,16 @@ export function QuickCheckPage() {
   const queryClient = useQueryClient()
   const check = useQuery({ queryKey: ['quick-check', id], queryFn: () => fetchQuickCheck(id) })
   const modules = useQuery({ queryKey: ['modules'], queryFn: fetchModules })
+  const refreshRewards = useRefreshRewards()
+  // Set at once, so a second press that lands before React re-renders the busy button doesn't
+  // send the answers twice (#215 review); the API refuses a second send too.
+  const inFlight = useRef(false)
   const mutation = useMutation({
     mutationFn: (answers: { activityId: number; selected: string }[]) =>
       takeQuickCheck(id, answers),
+    onSettled: () => {
+      inFlight.current = false
+    },
     onSuccess: (result) => {
       queryClient.setQueryData(['quick-check', id], {
         ...check.data,
@@ -29,8 +38,12 @@ export function QuickCheckPage() {
       })
       void queryClient.invalidateQueries({ queryKey: ['modules'] })
       void queryClient.invalidateQueries({ queryKey: ['module', id] })
+      // A pass gives the module its medal at once, not after the skills' 30 s (#215 review).
+      refreshRewards()
     },
   })
+  const module = modules.data?.find((m) => m.id === id)
+  usePageTitle(module && `Quick check: module ${module.number}, ${module.title}`)
 
   if (check.isPending) return <Spinner label="Loading the quick check" />
   if (check.isError)
@@ -42,7 +55,6 @@ export function QuickCheckPage() {
       </section>
     )
 
-  const module = modules.data?.find((m) => m.id === id)
   const name = module ? `Module ${module.number} · ${module.title}` : `Module ${id}`
   const result = check.data.result
 
@@ -50,12 +62,12 @@ export function QuickCheckPage() {
     <section className="mx-auto grid w-full max-w-3xl gap-6" aria-label={`${name}: quick check`}>
       <Link
         to="/"
-        className="justify-self-start text-sm text-muted-foreground hover:text-foreground"
+        className="inline-flex min-h-11 items-center justify-self-start text-sm text-muted-foreground hover:text-foreground"
       >
         ← All modules
       </Link>
       {result ? (
-        <Result result={result} moduleId={id} modules={modules.data ?? []} />
+        <Result result={result} name={name} moduleId={id} modules={modules.data ?? []} />
       ) : !check.data.available ? (
         <>
           <h1 className="text-2xl font-bold">{name}: quick check</h1>
@@ -72,7 +84,11 @@ export function QuickCheckPage() {
           questions={check.data.questions}
           submitting={mutation.isPending}
           error={mutation.isError ? mutation.error.message : undefined}
-          onSubmit={(answers) => mutation.mutate(answers)}
+          onSubmit={(answers) => {
+            if (inFlight.current || mutation.isPending) return
+            inFlight.current = true
+            mutation.mutate(answers)
+          }}
         />
       )}
     </section>
@@ -184,10 +200,12 @@ function moduleName(modules: ModuleSummary[], id: number | null): string {
 
 function Result({
   result,
+  name,
   moduleId,
   modules,
 }: {
   result: QuickCheckResult
+  name: string
   moduleId: number
   modules: ModuleSummary[]
 }) {
@@ -198,7 +216,7 @@ function Result({
   return (
     <div className="grid gap-6">
       <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold">
-        {result.correct} of {result.total} right
+        {name}: quick check, {result.correct} of {result.total} right
       </h1>
       {result.passed ? (
         <Alert tone="success" title="You know this already">

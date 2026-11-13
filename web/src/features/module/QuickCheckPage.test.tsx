@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { ada, fakeApi, renderApp } from '../../test/app.tsx'
@@ -82,7 +82,12 @@ describe('QuickCheckPage (#214)', () => {
 
     await user.click(screen.getByLabelText('Wrong 4'))
     await user.click(screen.getByRole('button', { name: 'Check my answers' }))
-    expect(await screen.findByRole('heading', { name: '4 of 4 right' })).toBeInTheDocument()
+    // The result names the module (#215 review).
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Module 3 · Meet BFS: quick check, 4 of 4 right',
+      }),
+    ).toBeInTheDocument()
     const post = api.calls.find((c) => c.method === 'POST')
     expect(post?.body).toEqual({
       answers: [
@@ -133,5 +138,56 @@ describe('QuickCheckPage (#214)', () => {
       'href',
       '/modules/3',
     )
+  })
+
+  it('sends the answers once, however fast "Check my answers" is pressed (#215)', async () => {
+    let release: () => void = () => {}
+    const api = fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules': () => Response.json(modules),
+        'GET /api/modules/:id/quick-check': () => Response.json(check),
+        'POST /api/modules/:id/quick-check': () =>
+          new Promise<Response>((resolve) => {
+            release = () => resolve(Response.json(result(4)))
+          }),
+      },
+    })
+    renderApp('/modules/3/check')
+    const user = userEvent.setup()
+    await screen.findByLabelText('Right 1')
+    await user.click(screen.getByLabelText('Right 1'))
+    await user.click(screen.getByLabelText('Right 2'))
+    await user.click(screen.getByLabelText('Right 3'))
+    await user.click(screen.getByLabelText('Right 4'))
+    const button = screen.getByRole('button', { name: 'Check my answers' })
+    // Pressed, then the form sent again before the first answer comes back: Enter in a field
+    // submits a form without going through the button (implicit submission).
+    const form = button.closest('form')!
+    fireEvent.submit(form)
+    fireEvent.submit(form)
+    await user.click(button)
+    release()
+    expect(await screen.findByRole('heading', { name: /4 of 4 right/ })).toBeInTheDocument()
+    expect(api.callsTo('POST /api/modules/3/quick-check')).toHaveLength(1)
+  })
+
+  it('refreshes the rewards once marked, and names the module in the tab (#215)', async () => {
+    const api = setup(check)
+    renderApp('/modules/3/check')
+    const user = userEvent.setup()
+    await screen.findByLabelText('Right 1')
+    await user.click(screen.getByLabelText('Right 1'))
+    await user.click(screen.getByLabelText('Right 2'))
+    await user.click(screen.getByLabelText('Right 3'))
+    await user.click(screen.getByLabelText('Right 4'))
+    await waitFor(() => expect(document.title).toMatch(/Quick check: module 3, Meet BFS/))
+    // The badge announcer has the rewards on screen: they are fetched again at once (the skills,
+    // not on screen here, are marked stale, so the map fetches them when it opens).
+    await waitFor(() => expect(api.callsTo('GET /api/rewards').length).toBeGreaterThan(0))
+    const before = api.callsTo('GET /api/rewards').length
+    await user.click(screen.getByRole('button', { name: 'Check my answers' }))
+    await screen.findByRole('heading', { name: /4 of 4 right/ })
+    await waitFor(() => expect(api.callsTo('GET /api/rewards').length).toBeGreaterThan(before))
   })
 })

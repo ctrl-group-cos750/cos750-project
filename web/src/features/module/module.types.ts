@@ -29,6 +29,10 @@ export type ModuleSummary = {
   recommended?: boolean
   /** The module's quick check, for the "Already know this?" offer (FR-8.2, #214). */
   quickCheck?: QuickCheckState | null
+  /** Once the quick check is taken: its score, so the map and the module link back to the result. */
+  quickCheckScore?: { correct: number; total: number } | null
+  /** How many activities the student moved past without a right answer (FR-2.7, #215 review). */
+  lookAgainCount?: number
 }
 
 /** Matches `SegmentOut` nested inside `ModuleDetailOut`. */

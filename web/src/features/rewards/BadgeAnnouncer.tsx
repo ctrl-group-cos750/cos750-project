@@ -75,9 +75,10 @@ function Celebration({ item, onClose }: { item: ShelfItem; onClose: () => void }
  * seen), and nothing is announced while the student has hidden rewards.
  *
  * The notes are a polite live region. On a phone they take one card at most (a burst becomes
- * "3 new badges"), never more than 40% of the screen, and go by themselves after a few seconds
- * unless focus is in them, so they don't sit over the lesson's buttons; the badges page keeps
- * them. Dismissing one moves focus to the next note's ×, or back to where the student was.
+ * "3 new badges"), shown as a compact banner at the top of the screen (the badge's name and its
+ * links, not its description), so they never cover a module's Previous and Next at the bottom
+ * (#215 review), and go by themselves after a few seconds unless focus is in them; the badges
+ * page keeps them. Their links are 44 px tall on a touch screen. Dismissing one moves focus to the next note's ×, or back to where the student was.
  */
 export function BadgeAnnouncer() {
   const { data } = useRewards()
@@ -207,7 +208,7 @@ export function BadgeAnnouncer() {
             <AchievementBadge achievement={item.achievement} state={item.state} size={48} />
             <div className={styles.text}>
               <strong>{announcement(item)}</strong>
-              <span>{item.achievement.description}</span>
+              <span className={styles.description}>{item.achievement.description}</span>
               <span className={styles.links}>
                 <Link to="/badges" className={styles.link} onClick={() => dismiss(item.key)}>
                   See your badges

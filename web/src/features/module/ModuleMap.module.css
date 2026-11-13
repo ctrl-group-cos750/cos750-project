@@ -186,6 +186,33 @@
   text-underline-offset: 0.2em;
 }
 
+/* "Quick check: 2 of 4, see results" once taken (#215 review), lined up with the title. */
+.quickCheckScore {
+  margin: var(--space-2) 0 0 calc(2rem + var(--space-4) + var(--space-5));
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.quickCheckScore a {
+  color: var(--color-accent-text);
+  font-weight: 600;
+}
+
+/* Links a full 44 px tall where the pointer is a finger (WCAG 2.5.5). */
+@media (pointer: coarse) {
+  .quickCheck,
+  .quickCheckScore a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}
+
+.lookAgain {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
 /* Phones: the time and the state go on their own line under the title, never over it. */
 @media (max-width: 30rem) {
   .row {
@@ -201,7 +228,8 @@
     padding: var(--space-4);
   }
 
-  .quickCheck {
+  .quickCheck,
+  .quickCheckScore {
     margin-inline-start: calc(2rem + var(--space-4) + var(--space-4));
   }
 }

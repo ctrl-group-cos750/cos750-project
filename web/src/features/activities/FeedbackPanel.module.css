@@ -82,6 +82,13 @@
   color: var(--color-text);
 }
 
+/* A full 44 px touch target where the pointer is a finger (WCAG 2.5.5). */
+@media (pointer: coarse) {
+  .off {
+    min-height: 44px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .check circle,
   .check path {

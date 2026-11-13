@@ -232,12 +232,13 @@ function RewardsSetting() {
 }
 
 /** The feedback switches (#214), together under "Feedback": confetti and encouraging comments.
- * Both on by default and kept on this device (features/progress/preferences.ts). */
+ * Both on by default and kept on this device, per student (features/progress/preferences.ts). */
 function FeedbackSettings() {
   const [confettiOn, setConfetti] = useConfettiSetting()
   const [comments, setComments] = usePreference('comments')
   const confettiId = useId()
   const commentsId = useId()
+  const feedbackNote = useId()
   return (
     <section aria-labelledby="feedback-heading" className={styles.section}>
       <h2 id="feedback-heading">Feedback</h2>
@@ -246,11 +247,12 @@ function FeedbackSettings() {
           id={confettiId}
           type="checkbox"
           checked={confettiOn}
+          aria-describedby={`${confettiId}-about ${feedbackNote}`}
           onChange={(e) => setConfetti(e.target.checked)}
         />
         <label htmlFor={confettiId}>Confetti when you get something right</label>
       </div>
-      <p className={styles.muted}>
+      <p id={`${confettiId}-about`} className={styles.muted}>
         A short burst for a right answer, and a bigger one when you finish a module or are ready for
         the lecture. Never during the mastery check.
         {prefersReducedMotion() && ' Your device asks for reduced motion, so it stays off anyway.'}
@@ -260,13 +262,18 @@ function FeedbackSettings() {
           id={commentsId}
           type="checkbox"
           checked={comments}
+          aria-describedby={`${commentsId}-about ${feedbackNote}`}
           onChange={(e) => setComments(e.target.checked)}
         />
         <label htmlFor={commentsId}>Encouraging comments</label>
       </div>
-      <p className={styles.muted}>
+      <p id={`${commentsId}-about`} className={styles.muted}>
         A short line under a right answer, and a word on how far you have come. Off, you see only
-        the explanation of why the answer is right. Both are saved on this device only.
+        the explanation of why the answer is right.
+      </p>
+      <p id={feedbackNote} className={styles.muted}>
+        Both are kept on this device, for you only: on a shared computer they don&apos;t change
+        anyone else&apos;s, and on another device they start on again.
       </p>
     </section>
   )

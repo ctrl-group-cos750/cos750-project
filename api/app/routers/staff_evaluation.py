@@ -87,10 +87,15 @@ def export_csv(
 
     - `attempts`: each answer; `submitted` and `detail` are what was answered and the per-part
       result, as JSON.
-    - `hints`: each hint shown.
+    - `hints`: each hint shown. `round` is which time through its module (0, then one more for
+      each restart, app/services/restart.py); `after_attempt` is the newest attempt id when it
+      was shown, so it came before exactly that student's attempts with a higher `attempt_id`.
     - `events`: the timeline (app/services/events.py): videos started and finished, checkpoints
-      reached, segments viewed, hints shown, results changing, modules completed; `payload` as JSON.
-      Segment views and module completions give time per segment and per module.
+      reached, segments viewed, hints shown, results changing, modules completed and restarted;
+      `payload` as JSON. Segment views and module completions give time per segment and per
+      module. Each `module_restarted` carries its `round` and `after_attempt`: a student's
+      attempts at that module's activities with an id above one restart's `after_attempt`, and
+      not above the next one's, are that round's.
     - `objective_results`: each student's current result per objective, with the attempts it was
       decided from (`evidence`).
     """
@@ -167,8 +172,20 @@ def export_csv(
     ).all()
     return _csv(
         "hints",
-        ["hint_view_id", "user_id", "activity_id", "activity_title", "level", "created_at"],
-        [[h.id, h.user_id, h.activity_id, title, h.level, h.created_at] for h, title in hints],
+        [
+            "hint_view_id",
+            "user_id",
+            "activity_id",
+            "activity_title",
+            "level",
+            "round",
+            "after_attempt",
+            "created_at",
+        ],
+        [
+            [h.id, h.user_id, h.activity_id, title, h.level, h.round, h.after_attempt, h.created_at]
+            for h, title in hints
+        ],
     )
 
 
@@ -191,10 +208,26 @@ def _activity_insights(session: DbSession) -> list[ActivityInsight]:
             .group_by(Attempt.activity_id)
         ).all()
     )
+    # Needed hint 3 or 4: shown it before ever answering correctly. Hints opened on a question
+    # already solved, after restarting its module, are practice, not support it needed (#211).
+    solved_before = (
+        select(Attempt.id)
+        .where(
+            Attempt.user_id == HintView.user_id,
+            Attempt.activity_id == HintView.activity_id,
+            Attempt.correct.is_(True),
+            Attempt.id <= HintView.after_attempt,
+        )
+        .exists()
+    )
     support = dict(
         session.execute(
             select(HintView.activity_id, func.count(distinct(HintView.user_id)))
-            .where(HintView.user_id.in_(students), HintView.level >= SUPPORT_LEVEL)
+            .where(
+                HintView.user_id.in_(students),
+                HintView.level >= SUPPORT_LEVEL,
+                ~solved_before,
+            )
             .group_by(HintView.activity_id)
         ).all()
     )

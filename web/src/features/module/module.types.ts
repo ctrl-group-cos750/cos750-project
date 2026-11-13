@@ -20,6 +20,10 @@ export type ModuleSummary = {
   shownSegmentCount?: number
   /** How many of the segments shown come before `currentSegmentPosition`. */
   shownSegmentsPassed?: number
+  /** The student restarted it to redo its questions: it opens at its start. */
+  restarted?: boolean
+  /** Whether "Restart module" is offered: started, and not the mastery check. */
+  canRestart?: boolean
 }
 
 /** Matches `SegmentOut` nested inside `ModuleDetailOut`. */

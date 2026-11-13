@@ -84,6 +84,23 @@ export function ModulePage() {
       if (finishing || (saved.status === 'complete' && !wasComplete)) refreshRewards()
     },
   })
+  // Restart the module to redo its questions: it reopens at its start (or its recall questions),
+  // and every activity on screen is fetched afresh, so no earlier answer is restored.
+  const [restarts, setRestarts] = useState(0)
+  const restart = useMutation({
+    mutationFn: () => restartModule(id),
+    onSuccess: (detail) => {
+      queryClient.removeQueries({ queryKey: ['activities'] })
+      queryClient.removeQueries({ queryKey: ['video'] })
+      queryClient.setQueryData(['module', id], detail)
+      void queryClient.invalidateQueries({ queryKey: ['modules'] })
+      moveFocus.current = true
+      setSegmentIndex(null)
+      setRetrievalIndex(null)
+      setRetrievalChecked(false)
+      setRestarts((n) => n + 1)
+    },
+  })
   // Another module opened in place (a link, or Back and Forward): start it afresh, so a segment
   // index from the last module never carries over (#136 review). React's pattern for state that
   // resets when a prop changes.
@@ -196,9 +213,11 @@ export function ModulePage() {
   const firstSkipped = segments.findIndex(
     (s) => !s.done && !(s.kind === 'activity' && s.attempted === true),
   )
+  // A restarted module opens at its start, not at its first question (they are all undone).
   const skipped =
     firstSkipped >= 0 &&
-    (module.status === 'complete' || firstSkipped < module.currentSegmentPosition)
+    ((module.status === 'complete' && !module.restarted) ||
+      firstSkipped < module.currentSegmentPosition)
   const openedAt = skipped
     ? firstSkipped
     : Math.min(module.currentSegmentPosition, segments.length - 1)
@@ -285,17 +304,28 @@ export function ModulePage() {
   return (
     <section
       ref={contentRef}
-      className="mx-auto grid w-full min-w-0 max-w-3xl gap-6 has-[[data-two-column]]:max-w-[70rem]"
+      className="mx-auto grid w-full min-w-0 max-w-3xl gap-6 has-[[data-two-column]]:max-w-[100rem]"
       aria-label={`Module ${module.number}: ${module.title}`}
     >
       {/* Header */}
       <div className="grid gap-3">
-        <Link
-          to="/"
-          className="justify-self-start text-sm text-muted-foreground hover:text-foreground"
-        >
-          ← All modules
-        </Link>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
+            ← All modules
+          </Link>
+          {module.canRestart && (
+            <RestartModule
+              // Remounted after each restart, so its "Restart this module?" question closes.
+              key={restarts}
+              pending={restart.isPending}
+              error={restart.error?.message ?? null}
+              onRestart={() => restart.mutate()}
+              // A failed restart's message belongs to that try: cancelling or asking again
+              // starts without it.
+              onReset={() => restart.reset()}
+            />
+          )}
+        </div>
         <h1 className="text-2xl font-bold">
           Module {module.number} · {module.title}
         </h1>
@@ -342,7 +372,7 @@ export function ModulePage() {
       {/* Current segment */}
       {segment && (
         <SegmentView
-          key={segment.id}
+          key={`${segment.id}:${restarts}`}
           segment={segment}
           intro={supportIntro(segments, currentIndex)}
           onAnswered={() => void queryClient.invalidateQueries({ queryKey: ['module', id] })}
@@ -405,5 +435,82 @@ function ModuleRefused({ title, message }: { title: string; message: string }) {
         Back to your modules
       </Link>
     </section>
+  )
+}
+
+/** "Restart module": asks first, in place (no dialog to trap focus in), then starts the module
+ * again. Says what stays (points, badges, the module being complete) and what changes (the
+ * questions show unanswered, with hints from the first again), so nobody fears losing progress. */
+function RestartModule({
+  pending,
+  error,
+  onRestart,
+  onReset,
+}: {
+  pending: boolean
+  error: string | null
+  onRestart: () => void
+  onReset: () => void
+}) {
+  const [asking, setAsking] = useState(false)
+  const box = useRef<HTMLDivElement>(null)
+  // Keyboard focus follows the question (WCAG 2.4.3): into it when it opens, onto Cancel (the
+  // safe choice), and back to the button that opened it when it closes.
+  const reopened = useRef(false)
+  useEffect(() => {
+    const buttons = box.current?.querySelectorAll('button')
+    if (asking) buttons?.[1]?.focus()
+    else if (reopened.current) buttons?.[0]?.focus()
+  }, [asking])
+  const open = () => {
+    onReset()
+    setAsking(true)
+  }
+  const close = () => {
+    reopened.current = true
+    onReset()
+    setAsking(false)
+  }
+  // Escape closes the question, as it would a dialog, unless the restart is already on its way.
+  // Only while focus is in it: Escape elsewhere on the page (a video, a hint) is not for it.
+  useEffect(() => {
+    if (!asking || pending) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      if (!(event.target instanceof Node) || !box.current?.contains(event.target)) return
+      reopened.current = true
+      onReset()
+      setAsking(false)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [asking, pending, onReset])
+  if (!asking)
+    return (
+      <div ref={box}>
+        <Button variant="ghost" size="sm" onClick={open}>
+          Restart module
+        </Button>
+      </div>
+    )
+  return (
+    <div ref={box} className="w-full">
+      <fieldset className="grid w-full gap-2 rounded-lg border border-border bg-card p-4 m-0 min-w-0">
+        <legend className="float-left mb-1 w-full p-0 font-semibold">Restart this module?</legend>
+        <p className="m-0 text-sm text-muted-foreground">
+          Its questions will show unanswered, with their hints from the first again, so you can try
+          them afresh. You keep your points and badges, and the module stays complete.
+        </p>
+        {error && <Alert tone="danger">{error}</Alert>}
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" loading={pending} onClick={onRestart}>
+            Restart module
+          </Button>
+          <Button variant="ghost" size="sm" disabled={pending} onClick={close}>
+            Cancel
+          </Button>
+        </div>
+      </fieldset>
+    </div>
   )
 }

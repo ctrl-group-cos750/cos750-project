@@ -1407,13 +1407,77 @@
         }
       }
     },
+    "/api/modules/{module_id}/restart": {
+      "post": {
+        "tags": [
+          "modules"
+        ],
+        "summary": "Restart",
+        "description": "Start the module again to redo its questions (app/services/restart.py): it opens at its\nstart, and every question, retrieval question and video checkpoint in it shows unanswered,\nwith hints from level 1 again. The module stays complete and earned points and badges stay;\nearlier answers stay recorded for the evaluation but aren't shown. 404 if there is no such\nmodule, 403 while it is locked, 409 for the mastery check or a module not finished.",
+        "operationId": "restart_api_modules__module_id__restart_post",
+        "parameters": [
+          {
+            "name": "module_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 2147483647,
+              "minimum": 0,
+              "title": "Module Id"
+            }
+          },
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleDetailOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The mastery check, or a module not finished yet."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/videos/{video_id}": {
       "get": {
         "tags": [
           "videos"
         ],
         "summary": "Get Video",
-        "description": "Everything the player needs in one call (FR-3): media and captions paths, the transcript,\nand each checkpoint with its activity (without the answer) and whether this student has\npassed it. Answer a checkpoint with `POST /api/activities/{activityId}/attempts`.\n\n403 while the segment that plays the video is in a locked module or a closed review path\n(#137); a video on no segment yet is open. Its checkpoint questions follow the video.",
+        "description": "Everything the player needs in one call (FR-3): media and captions paths, the transcript,\nand each checkpoint with its activity (without the answer) and whether this student has\npassed it (since the module's restart, if they restarted it). Answer a checkpoint with\n`POST /api/activities/{activityId}/attempts`.\n\n403 while the segment that plays the video is in a locked module or a closed review path\n(#137); a video on no segment yet is open. Its checkpoint questions follow the video.",
         "operationId": "get_video_api_videos__video_id__get",
         "parameters": [
           {
@@ -2112,7 +2176,7 @@
           "staff"
         ],
         "summary": "Export Csv",
-        "description": "Download one table as CSV for every real student (FR-10.2), oldest first:\n\n- `attempts`: each answer; `submitted` and `detail` are what was answered and the per-part\n  result, as JSON.\n- `hints`: each hint shown.\n- `events`: the timeline (app/services/events.py): videos started and finished, checkpoints\n  reached, segments viewed, hints shown, results changing, modules completed; `payload` as JSON.\n  Segment views and module completions give time per segment and per module.\n- `objective_results`: each student's current result per objective, with the attempts it was\n  decided from (`evidence`).",
+        "description": "Download one table as CSV for every real student (FR-10.2), oldest first:\n\n- `attempts`: each answer; `submitted` and `detail` are what was answered and the per-part\n  result, as JSON.\n- `hints`: each hint shown. `round` is which time through its module (0, then one more for\n  each restart, app/services/restart.py); `after_attempt` is the newest attempt id when it\n  was shown, so it came before exactly that student's attempts with a higher `attempt_id`.\n- `events`: the timeline (app/services/events.py): videos started and finished, checkpoints\n  reached, segments viewed, hints shown, results changing, modules completed and restarted;\n  `payload` as JSON. Segment views and module completions give time per segment and per\n  module. Each `module_restarted` carries its `round` and `after_attempt`: a student's\n  attempts at that module's activities with an id above one restart's `after_attempt`, and\n  not above the next one's, are that round's.\n- `objective_results`: each student's current result per objective, with the attempts it was\n  decided from (`evidence`).",
         "operationId": "export_csv_api_staff_export__table__csv_get",
         "parameters": [
           {
@@ -5604,6 +5668,16 @@
             "type": "integer",
             "title": "Shownsegmentspassed"
           },
+          "restarted": {
+            "type": "boolean",
+            "title": "Restarted",
+            "default": false
+          },
+          "canRestart": {
+            "type": "boolean",
+            "title": "Canrestart",
+            "default": false
+          },
           "segments": {
             "items": {
               "$ref": "#/components/schemas/SegmentOut"
@@ -5693,6 +5767,16 @@
           "shownSegmentsPassed": {
             "type": "integer",
             "title": "Shownsegmentspassed"
+          },
+          "restarted": {
+            "type": "boolean",
+            "title": "Restarted",
+            "default": false
+          },
+          "canRestart": {
+            "type": "boolean",
+            "title": "Canrestart",
+            "default": false
           }
         },
         "additionalProperties": false,

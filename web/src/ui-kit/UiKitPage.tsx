@@ -122,7 +122,7 @@ export function UiKitPage() {
           ))}
           <div className={styles.typeRow}>
             <code className={styles.muted}>--font-mono</code>
-            <pre className={styles.code}>{'queue.append(start)\nvisited = {start}'}</pre>
+            <pre className={styles.code}>{'queue.append(start)\nfound = {start}'}</pre>
           </div>
         </Card>
       </section>

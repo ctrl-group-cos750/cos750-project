@@ -531,7 +531,7 @@ def test_the_four_jobs_example_is_module_4s_bfs() -> None:
     assert code_lines(we.group(1)) == code_lines(reference())
 
 
-RENAMED = {"visited": "seen", "v": "current", "n": "neighbour"}
+RENAMED = {"found": "seen", "v": "current", "n": "neighbour"}
 
 
 def renamed(code: str) -> str:

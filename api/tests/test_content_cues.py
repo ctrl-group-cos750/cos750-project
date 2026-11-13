@@ -10,7 +10,7 @@ to them (ID document §7.3 to 7.4, SE document FR-4.3):
   them as text: backticks and code fences would appear literally and a code block's line breaks
   would collapse (segment bodies are Markdown and may hold code);
 - "found" and "visited" mean what module 3 says: found when a vertex joins the queue, visited when
-  it leaves; the code's `visited` set holds the found vertices (module 4);
+  it leaves; the code's set of found vertices is called `found`, never `visited` (module 4);
 - a mastery item is not a copy of a practice item;
 - nothing a student sees is placeholder text, and nothing promises behaviour the app doesn't have;
 - every module with content starts by gaining attention (Gagné's event 1, ID document Table 3).
@@ -134,7 +134,7 @@ WRONG_WORDS = [
     "marked as visited",
     "mark it visited",
     "mark each neighbour visited",
-    "is visited when it joins",  # the code's visited set takes it then; the vertex is only found
+    "is visited when it joins",  # the code's found set takes it then; the vertex is only found
     "is visited as it joins",
 ]
 
@@ -152,6 +152,33 @@ def test_found_and_visited_mean_what_module_3_says() -> None:
     for where, text in everything_shown():
         for words in WRONG_WORDS:
             assert words not in text.lower(), f"{where}: {text!r}"
+
+
+# The code's set of found vertices named `visited`: a set, a membership test or an add.
+CODE_VISITED = re.compile(r"\bvisited\s*=|\bvisited\.(?:add|__)|\bin visited\b")
+
+
+def everything(o: Any) -> Iterator[str]:
+    if isinstance(o, dict):
+        for v in o.values():
+            yield from everything(v)
+    elif isinstance(o, list):
+        for v in o:
+            yield from everything(v)
+    elif isinstance(o, str):
+        yield o
+
+
+def test_the_code_calls_the_found_set_found() -> None:
+    """In modules 4 to 6 the code's set held the vertices found (marked as they join the queue) but
+    was called `visited`, while the trace table and the visualiser use "visited" for "has left the
+    queue". The picture and the code disagreed on the one variable that matters (Sorva 2013; review
+    13 Nov, High 3). The set is `found` everywhere, so "visited" means one thing."""
+    for a in CONTENT.activities:
+        for text in everything([a.config, a.solution, [h.body for h in a.hints]]):
+            assert not CODE_VISITED.search(text), f"activity {a.id}: {text[:120]!r}"
+    for seg in SEGMENTS:
+        assert not CODE_VISITED.search(seg.body or ""), f"segment {seg.id}"
 
 
 # --- Mastery items are not practice items -----------------------------------------------------
@@ -845,6 +872,12 @@ WORDING_ONLY = {
         (1405, "b"),
         (1701, "b"),
         (1701, "c"),
+        # The code's set is `found`, not `visited`, so "visited" means "has left the queue"
+        # everywhere (review 13 Nov, High 3): the same line, renamed.
+        (1601, "c"),
+        (1702, "20"),
+        (1703, "20"),
+        (1703, "21"),
     },
     # An objective 2 marker now describes its part instead of naming it; it is the same part,
     # with the same answer, so an earlier pair means what it meant.

@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { GraphCanvas } from './GraphCanvas.tsx'
 import { createPlayback, playbackReducer } from './bfsPlayback.ts'
 import type { BfsScenario, VertexId } from './bfs.types.ts'
-import { expectedVertex } from './bfs.types.ts'
+import { expectedVertex, foundVertices } from './bfs.types.ts'
 
 type BfsVisualizerProps = {
   scenario: BfsScenario
@@ -132,10 +132,10 @@ export function BfsVisualizer({ scenario }: BfsVisualizerProps) {
                 <strong>▶ Current</strong> — being processed
               </span>
               <span>
-                <strong>… Queued</strong> — waiting
+                <strong>… Queued</strong> — found, waiting in the queue
               </span>
               <span>
-                <strong>✓ Visited</strong> — processed
+                <strong>✓ Visited</strong> — has left the queue
               </span>
             </div>
           </CardContent>
@@ -150,7 +150,10 @@ export function BfsVisualizer({ scenario }: BfsVisualizerProps) {
               <dt className="font-medium text-muted-foreground">Queue</dt>
               <dd className="font-mono">{displayItems({ items: frame.queue })}</dd>
 
-              <dt className="font-medium text-muted-foreground">Visited set</dt>
+              <dt className="font-medium text-muted-foreground">Found (has joined the queue)</dt>
+              <dd className="font-mono">{displayItems({ items: foundVertices({ frame }) })}</dd>
+
+              <dt className="font-medium text-muted-foreground">Visited (has left the queue)</dt>
               <dd className="font-mono">{displayItems({ items: frame.visited })}</dd>
 
               <dt className="font-medium text-muted-foreground">Traversal order</dt>

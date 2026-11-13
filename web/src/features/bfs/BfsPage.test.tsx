@@ -199,4 +199,26 @@ describe('BfsPage', () => {
     expect(forward).toHaveAttribute('aria-disabled', 'true')
     expect(forward).toHaveFocus()
   })
+
+  it('shows found (joined the queue) and visited (left the queue) as two rows (High 3)', async () => {
+    stubGraphApi()
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/graphs/2']}>
+          <Routes>
+            <Route path="/graphs/:scenarioId" element={<BfsPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(await screen.findByRole('heading', { name: 'Short path' })).toBeInTheDocument()
+    // Before the first step the start is found (it is in the queue) but not yet visited.
+    expect(screen.getByText('Found (has joined the queue)').nextElementSibling).toHaveTextContent(
+      'A',
+    )
+    expect(screen.getByText('Visited (has left the queue)').nextElementSibling).toHaveTextContent(
+      'Empty',
+    )
+  })
 })

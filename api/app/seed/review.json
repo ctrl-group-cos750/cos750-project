@@ -259,7 +259,7 @@
           "id": 1701,
           "kind": "worked_example",
           "title": "Review: worked example, testing and fixing a faulty BFS",
-          "body": "**Worked example.** This BFS has a bug. Find it with tests, then fix it.\n\n```python\ndef bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        for n in sorted(graph.adjacency[start]):\n            if n not in visited:\n                visited.add(n)\n                queue.append(n)\n    return order\n```\n\n**1. Choose tests.** A test is a graph, a start vertex and the exact order a correct BFS gives. Choose graphs that are different shapes:\n\n| Test | Graph (undirected) | Start | Correct order |\n|---|---|---|---|\n| 1, a star | A–B, A–C, A–D | A | A, B, C, D |\n| 2, a chain | A–B, B–C | A | A, B, C |\n| 3, two islands | A–B, C–D | A | A, B |\n\n**2. Run each test by hand.** On the star, every vertex is a neighbour of A, so the faulty version still finds them all and gives A, B, C, D: test 1 **passes**. On the chain, B joins the queue. Then B leaves, but the loop looks at A's neighbours again, not B's, so C is never found. The result is A, B: test 2 **fails**. On the two islands, the result is A, B: test 3 **passes**.\n\n**3. Find the line.** Test 2 fails at the first vertex two edges from the start, so the faulty version never gets past the start's neighbours. The loop that finds new vertices reads `graph.adjacency[start]`: the start's neighbours, every time.\n\n**4. Fix it and run the tests again.** Loop over `sorted(graph.adjacency[v])`, the neighbours of the vertex that just left the queue. Test 2 now gives A, B, C, and all three tests pass.\n\nTest 1 passes with or without the bug, so on its own it proves little. A useful test fails on the faulty version and passes on the fixed one."
+          "body": "**Worked example.** This BFS has a bug. Find it with tests, then fix it.\n\n```python\ndef bfs(graph, start):\n    found = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        for n in sorted(graph.adjacency[start]):\n            if n not in found:\n                found.add(n)\n                queue.append(n)\n    return order\n```\n\n**1. Choose tests.** A test is a graph, a start vertex and the exact order a correct BFS gives. Choose graphs that are different shapes:\n\n| Test | Graph (undirected) | Start | Correct order |\n|---|---|---|---|\n| 1, a star | A–B, A–C, A–D | A | A, B, C, D |\n| 2, a chain | A–B, B–C | A | A, B, C |\n| 3, two islands | A–B, C–D | A | A, B |\n\n**2. Run each test by hand.** On the star, every vertex is a neighbour of A, so the faulty version still finds them all and gives A, B, C, D: test 1 **passes**. On the chain, B joins the queue. Then B leaves, but the loop looks at A's neighbours again, not B's, so C is never found. The result is A, B: test 2 **fails**. On the two islands, the result is A, B: test 3 **passes**.\n\n**3. Find the line.** Test 2 fails at the first vertex two edges from the start, so the faulty version never gets past the start's neighbours. The loop that finds new vertices reads `graph.adjacency[start]`: the start's neighbours, every time.\n\n**4. Fix it and run the tests again.** Loop over `sorted(graph.adjacency[v])`, the neighbours of the vertex that just left the queue. Test 2 now gives A, B, C, and all three tests pass.\n\nTest 1 passes with or without the bug, so on its own it proves little. A useful test fails on the faulty version and passes on the fixed one."
         },
         {
           "id": 1702,
@@ -1717,11 +1717,11 @@
       "purpose": "review",
       "objective_id": 6,
       "config": {
-        "prompt": "What belongs inside if n not in visited: in BFS?",
+        "prompt": "What belongs inside if n not in found: in BFS?",
         "options": [
           {
             "id": "c",
-            "label": "visited.add(n) and queue.append(n)"
+            "label": "found.add(n) and queue.append(n)"
           },
           {
             "id": "d",
@@ -1752,11 +1752,11 @@
         },
         {
           "level": 3,
-          "body": "Add it to the visited set, which holds every vertex found so far, and to the back of the queue."
+          "body": "Add it to the found set, which holds every vertex found so far, and to the back of the queue."
         },
         {
           "level": 4,
-          "body": "Answer: visited.add(n) and queue.append(n)."
+          "body": "Answer: found.add(n) and queue.append(n)."
         }
       ]
     },
@@ -1909,7 +1909,7 @@
           },
           {
             "id": 3,
-            "text": "    visited = {start}"
+            "text": "    found = {start}"
           },
           {
             "id": 4,
@@ -1941,7 +1941,7 @@
           },
           {
             "id": 11,
-            "text": "                visited.add(n)"
+            "text": "                found.add(n)"
           },
           {
             "id": 12,
@@ -1959,7 +1959,7 @@
           },
           {
             "id": 20,
-            "text": "            if n not in visited:"
+            "text": "            if n not in found:"
           },
           {
             "id": 21,
@@ -2006,7 +2006,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: change if n not in order: to if n not in visited:."
+          "body": "Answer: change if n not in order: to if n not in found:."
         }
       ]
     },
@@ -2030,7 +2030,7 @@
           },
           {
             "id": 3,
-            "text": "    visited = set()"
+            "text": "    found = set()"
           },
           {
             "id": 4,
@@ -2058,11 +2058,11 @@
           },
           {
             "id": 10,
-            "text": "            if n not in visited:"
+            "text": "            if n not in found:"
           },
           {
             "id": 11,
-            "text": "                visited.add(n)"
+            "text": "                found.add(n)"
           },
           {
             "id": 12,
@@ -2076,7 +2076,7 @@
         "corrections": [
           {
             "id": 21,
-            "text": "    visited = []"
+            "text": "    found = []"
           },
           {
             "id": 23,
@@ -2084,7 +2084,7 @@
           },
           {
             "id": 20,
-            "text": "    visited = {start}"
+            "text": "    found = {start}"
           }
         ]
       },
@@ -2109,7 +2109,7 @@
           13
         ],
         "feedback": {
-          "3": "Not quite. The start vertex is in the queue but never added to visited, the set of vertices found so far, so a neighbour can add it again. Start with the start vertex already in visited."
+          "3": "Not quite. The start vertex is in the queue but never added to the found set, the set of vertices found so far, so a neighbour can add it again. Start with the start vertex already in the found set."
         }
       },
       "hints": [
@@ -2119,15 +2119,15 @@
         },
         {
           "level": 2,
-          "body": "Look at what's in visited before the loop."
+          "body": "Look at what's in the found set before the loop."
         },
         {
           "level": 3,
-          "body": "The start vertex is in the queue but never added to visited, so a neighbour can add it again."
+          "body": "The start vertex is in the queue but never added to the found set, so a neighbour can add it again."
         },
         {
           "level": 4,
-          "body": "Answer: change visited = set() to visited = {start}."
+          "body": "Answer: change found = set() to found = {start}."
         }
       ]
     },
@@ -2140,7 +2140,7 @@
       "objective_id": 7,
       "config": {
         "prompt": "This BFS has a bug. Choose every test case it fails: each one is a graph, a start vertex and the order a correct BFS visits it in.",
-        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    visited = set()\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                visited.add(n)\n                queue.append(n)\n    return order",
+        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    found = set()\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in found:\n                found.add(n)\n                queue.append(n)\n    return order",
         "tests": [
           {
             "id": "cycle",
@@ -2357,22 +2357,22 @@
           "one-way"
         ],
         "feedback": {
-          "cycle": "A's neighbours lead back to A, which was never added to visited, so the faulty version visits A twice and fails it.",
-          "residence": "P's neighbours lead back to P, which was never added to visited, so the faulty version visits P twice and fails it.",
-          "out-of-order": "A's neighbours lead back to A, which was never added to visited, so the faulty version visits A twice and fails it.",
-          "two-islands": "B leads back to A, which was never added to visited, so the faulty version visits A twice and fails it.",
-          "one-way": "C has an arrow back to A, which was never added to visited, so the faulty version visits A twice and fails it.",
+          "cycle": "A's neighbours lead back to A, which was never added to the found set, so the faulty version visits A twice and fails it.",
+          "residence": "P's neighbours lead back to P, which was never added to the found set, so the faulty version visits P twice and fails it.",
+          "out-of-order": "A's neighbours lead back to A, which was never added to the found set, so the faulty version visits A twice and fails it.",
+          "two-islands": "B leads back to A, which was never added to the found set, so the faulty version visits A twice and fails it.",
+          "one-way": "C has an arrow back to A, which was never added to the found set, so the faulty version visits A twice and fails it.",
           "one-vertex": "A has no neighbours, so nothing can lead back to it: the faulty version passes it."
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Look at what's in visited before the loop."
+          "body": "Look at what's in the found set before the loop."
         },
         {
           "level": 2,
-          "body": "The start vertex is in the queue but never added to visited."
+          "body": "The start vertex is in the queue but never added to the found set."
         },
         {
           "level": 3,
@@ -2393,7 +2393,7 @@
       "objective_id": 7,
       "config": {
         "prompt": "This BFS has a bug. Choose every test case it fails: each one is a graph, a start vertex and the order a correct BFS visits it in.",
-        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.pop()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                visited.add(n)\n                queue.append(n)\n    return order",
+        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    found = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.pop()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in found:\n                found.add(n)\n                queue.append(n)\n    return order",
         "tests": [
           {
             "id": "cycle",
@@ -2959,7 +2959,7 @@
           },
           {
             "id": 3,
-            "text": "    visited = {start}"
+            "text": "    found = {start}"
           },
           {
             "id": 4,
@@ -2987,11 +2987,11 @@
           },
           {
             "id": 10,
-            "text": "            if n not in visited:"
+            "text": "            if n not in found:"
           },
           {
             "id": 11,
-            "text": "                visited.add(n)"
+            "text": "                found.add(n)"
           },
           {
             "id": 12,
@@ -3070,7 +3070,7 @@
       "objective_id": 7,
       "config": {
         "prompt": "This BFS has a bug: it puts each new vertex at the front of the queue. Choose every test case it fails: each one is a graph, a start vertex and the order a correct BFS visits it in.",
-        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                visited.add(n)\n                queue.appendleft(n)\n    return order",
+        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    found = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in found:\n                found.add(n)\n                queue.appendleft(n)\n    return order",
         "tests": [
           {
             "id": "chain",

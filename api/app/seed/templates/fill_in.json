@@ -6,7 +6,7 @@
   "objective_id": 6,
   "purpose": "practice",
   "config": {
-    "code": "def bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.__1__()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n __2__ visited:\n                visited.add(n)\n                queue.append(n)\n    return order",
+    "code": "def bfs(graph, start):\n    found = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.__1__()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n __2__ found:\n                found.add(n)\n                queue.append(n)\n    return order",
     "blanks": [
       1,
       2
@@ -48,7 +48,7 @@
     },
     {
       "level": 4,
-      "body": "Answer: blank 1 is popleft, and blank 2 is not in. So v = queue.popleft(), and if n not in visited: adds only new neighbours."
+      "body": "Answer: blank 1 is popleft, and blank 2 is not in. So v = queue.popleft(), and if n not in found: adds only new neighbours."
     }
   ]
 }

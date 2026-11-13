@@ -93,7 +93,7 @@ Students may progress through the material at different speeds. They may also di
 Beginners make predictable mistakes when they first meet BFS. We expect students to:
 
 - confuse BFS with depth-first order and follow one branch to its end before visiting the other neighbours;
-- forget to record a vertex as found (in the code, to add it to the `visited` set) when it joins the queue, which causes repeated visits when a vertex can be reached along two routes, or an endless loop on a graph with a cycle;
+- forget to record a vertex as found (in the code, to add it to the `found` set) when it joins the queue, which causes repeated visits when a vertex can be reached along two routes, or an endless loop on a graph with a cycle;
 - record a vertex as found only when it leaves the queue (when it is visited), so the same vertex is added to the queue more than once;
 - not see why a queue, and not a stack, produces the level-by-level order;
 - assume that BFS reaches every vertex, and miss the vertices in a disconnected part of the graph.
@@ -552,7 +552,7 @@ The lecture divides each assessment criterion into a pass descriptor and differe
 | Objective and criterion | Pass descriptor | Limited | Satisfactory | Good | Excellent |
 |---|---|---|---|---|---|
 | 5. Traces BFS on an unseen graph | Correct queue, visited set and next vertex at every step, with at most one error. | Errors from the first steps, such as stack order or adding a vertex twice. | Meets the pass descriptor after hint level 3 or 4. | Meets it without hint level 3 or 4. | Meets it with no error, and can explain why the queue gives the level-by-level order. |
-| 6. Implements BFS | The ordered and completed code matches the solution. | Lines in the wrong structure, such as adding a vertex to `visited` (the set of found vertices) only when it leaves the queue. | Matches the solution after hint level 3 or 4. | Matches it without hint level 3 or 4. | Matches it at the first check, and rejects every distractor line. |
+| 6. Implements BFS | The ordered and completed code matches the solution. | Lines in the wrong structure, such as adding a vertex to `found` (the set of found vertices) only when it leaves the queue. | Matches the solution after hint level 3 or 4. | Matches it without hint level 3 or 4. | Matches it at the first check, and rejects every distractor line. |
 | 7. Tests and debugs BFS | Both faulty versions corrected, and a test chosen that exposes each bug. | Fixes one bug, or chooses tests that both versions pass. | Meets the pass descriptor after hint level 3 or 4. | Meets it without hint level 3 or 4. | Meets it, and can name the misconception behind each bug. |
 
 Table: Pass and differentiated descriptors for objectives 5 to 7 [52].
@@ -593,7 +593,7 @@ Content authors write each message in this form; the authoring guide (`api/app/s
 
 Example for a trace error: “Not quite. You added C to the queue, but C has already been found: it is still waiting in the queue. BFS adds only vertices it has not found yet. Check the neighbours of B again.”
 
-Feedback on code is given line by line. The student sees which lines or blanks are wrong and a message for each one, for example: “Vertex B was visited twice. Is it added to the `visited` set, which holds every vertex found so far, when it joins the queue?” A wrong answer at a video checkpoint can be tried again with hints, and the video continues once the answer is correct.
+Feedback on code is given line by line. The student sees which lines or blanks are wrong and a message for each one, for example: “Vertex B was visited twice. Is it added to the `found` set, which holds every vertex found so far, when it joins the queue?” A wrong answer at a video checkpoint can be tried again with hints, and the video continues once the answer is correct.
 
 Feedback on a graph question in module 1 is also drawn (#155). Each practice item shows a picture of its situation: the campus map, the bus map, the worked example's graph, the P, Q, R, S graph and the four directed-or-undirected panels; the closing task has none, because a picture would hint at the answer. After a wrong answer the student's own answer is drawn as a graph beside the map, and an edge that is not on the map is marked "✗ no such walkway". After a right answer, or once hint 4 is open, it is drawn beside the correct graph, with the walkways the student missed marked "✓ walkway on the map". Placing the student's graph beside the situation follows Mayer's spatial contiguity principle [15]. The drawing is made in the browser from the student's own answer and the per-row results, so the correct answer is not sent before it is earned.
 
@@ -602,7 +602,7 @@ Feedback on a graph question in module 1 is also drawn (#155). Each practice ite
 Every activity offers a four-level hint ladder. Hints are shown one level at a time and only when the student asks:
 
 1. Nudge: reminds the student of the key idea. Example: “Which vertex has been in the queue the longest?”
-2. Targeted hint: points to the exact step or line. Example: “Look at where a vertex is added to the visited set.”
+2. Targeted hint: points to the exact step or line. Example: “Look at where a vertex is added to the found set.”
 3. Partial solution: shows part of the answer, such as the next state of the queue or one key line of code.
 4. Worked solution: shows the full answer with an explanation of each step. On a graph question in module 1 it also offers the correct graph (#155). Mastery items never show a correct graph.
 

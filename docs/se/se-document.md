@@ -390,7 +390,7 @@ Code activities never execute student-written code. The student constructs code 
 
 ## BFS visualiser (FR-6)
 - **FR-6.1** Load a graph scenario (vertices, edges, directed or not, start vertex) and its BFS steps from the backend.
-- **FR-6.2** Draw the graph and animate BFS step by step, showing the current vertex, the queue, the visited set and the traversal order side by side.
+- **FR-6.2** Draw the graph and animate BFS step by step, showing the current vertex, the queue, the found vertices (those that have joined the queue), the visited vertices (those that have left it) and the traversal order side by side.
 - **FR-6.3** Provide controls: step forward, step back, play and pause, reset, and speed.
 - **FR-6.4** In prediction mode, pause before each step and ask the student to pick the next vertex; the animation then confirms or corrects the prediction.
 - **FR-6.5** Neighbours are visited in alphabetical order of their labels, the convention the lessons teach, so a correct prediction is always marked correct.
@@ -614,7 +614,7 @@ The ungraded **Check** of FR-5.2 has no endpoint yet: every submission is graded
 Example `POST /api/activities/405/attempts`, one of module 4's two fill-in activities, with one wrong token. The shape of `submitted` depends on the kind: `{"order": [...]}` for a Parsons problem, `{"selected": "b"}` for multiple choice.
 ```json
 // request
-{ "submitted": { "answers": { "1": "queue.pop()", "2": "visited.add(n)", "3": "queue.append(n)" } } }
+{ "submitted": { "answers": { "1": "queue.pop()", "2": "found.add(n)", "3": "queue.append(n)" } } }
 
 // response (201)
 {
@@ -742,7 +742,7 @@ The returned payload (see §9.4) contains:
 - `order`: the final visitation order (the core result the lessons teach);
 - `steps`: one snapshot per dequeued vertex (the queue after the step, the vertices visited so far, the newly discovered vertices and the edges they were found along), so the frontend can highlight vertices and edges and show the queue at each step.
 
-In a step, `visited` lists the vertices already taken from the queue, so it always equals `order`. The lessons in module 4 use "visited" for the set of vertices found, which is the engine's internal `discovered` set. A trace table therefore checks the same thing twice in its visited and order columns; the trace table's column is headed "Visited (has left the queue)" so it isn't read in module 4's sense (#136). Renaming it to a *Found* column, which would test the key idea, is open for the ID team.
+In a step, `visited` lists the vertices already taken from the queue, so it always equals `order`. "Visited" means "has left the queue" everywhere: in module 3, the trace table's column "Visited (has left the queue)", the visualiser and the engine. The set the code in modules 4 to 6 keeps, a vertex added as it joins the queue, is called `found`, which is the engine's internal `discovered` set; the visualiser shows it as its own row, "Found (has joined the queue)", computed in the client as the order plus the queue. Until 14 Nov the code called that set `visited`, so the picture and the program named the one variable that matters two ways (Sorva's notional machine must match the code; review of 13 Nov). A trace table still checks the same vertices twice in its visited and order columns; a *Found* column, which would test the key idea, needs a checker change and is listed under future work.
 
 ## Design properties
 - **Deterministic** output for a given scenario and start vertex (reproducible animations, easy tests).
@@ -884,18 +884,18 @@ Figure: The BFS visualiser in prediction mode (FR-6).
 | |   1  from collections import deque           |  | Results (submitted)              | |
 | |   2                                          |  |                                  | |
 | |   3  def bfs(graph, start):                  |  | + blank 1  deque                 | |
-| |   4      visited = {start}                   |  | + blank 2  popleft               | |
-| |   5      queue = [1 deque  ]([start])        |  | x blank 3  visited.add(v)        | |
-| |   6      order = []                          |  |   v is already visited. Mark n   | |
-| |   7      while queue:                        |  |   as visited when it is queued,  | |
+| |   4      found = {start}                     |  | + blank 2  popleft               | |
+| |   5      queue = [1 deque  ]([start])        |  | x blank 3  found.add(v)          | |
+| |   6      order = []                          |  |   v is already found. Mark n     | |
+| |   7      while queue:                        |  |   as found when it is queued,    | |
 | |   8          v = queue.[2 popleft]()         |  |   not when it leaves the queue.  | |
 | |   9          order.append(v)                 |  |                                  | |
 | |  10          for n in sorted(graph[v]):      |  | 2 of 3 blanks correct            | |
-| |  11              if n not in visited:        |  |                                  | |
-| |  12                  [3 visited.add(v) ]     |  |                                  | |
+| |  11              if n not in found:          |  |                                  | |
+| |  12                  [3 found.add(v)   ]     |  |                                  | |
 | |  13                  queue.append(n)         |  |                                  | |
 | |                                              |  |                                  | |
-| | Tokens: deque  popleft  pop  visited.add(n)  |  |                                  | |
+| | Tokens: deque  popleft  pop  found.add(n)    |  |                                  | |
 | | [ Check ]   [ Submit ]                       |  |                                  | |
 | +----------------------------------------------+  +----------------------------------+ |
 |                                                                                        |

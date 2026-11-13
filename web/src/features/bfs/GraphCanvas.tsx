@@ -1,7 +1,7 @@
 import * as d3 from 'd3'
 import { useEffect, useRef } from 'react'
 import type { BfsFrame, BfsScenario, VertexState } from './bfs.types.ts'
-import { stateForVertex } from './bfs.types.ts'
+import { foundVertices, stateForVertex } from './bfs.types.ts'
 import { routeEdge, VERTEX_RADIUS } from './edgeRouting.ts'
 
 type GraphCanvasProps = {
@@ -17,7 +17,7 @@ const stateMarker: Record<VertexState, string> = {
 }
 
 /** The graph in words for a screen reader (WCAG 1.1.1): its vertices and edges, so a student
- * can work out neighbours, then where BFS is: current vertex, queue and visited set. */
+ * can work out neighbours, then where BFS is: current vertex, queue, found and visited. */
 function graphLabel(input: { scenario: BfsScenario; frame: BfsFrame }): string {
   const { scenario, frame } = input
   const label = new Map(scenario.vertices.map((v) => [v.id, v.label]))
@@ -35,7 +35,8 @@ function graphLabel(input: { scenario: BfsScenario; frame: BfsFrame }): string {
     `Edges: ${edges}`,
     `Current vertex: ${frame.current ? name(frame.current) : 'none'}`,
     `Queue: ${list(frame.queue)}`,
-    `Visited: ${list(frame.visited)}.`,
+    `Found (has joined the queue): ${list(foundVertices({ frame }))}`,
+    `Visited (has left the queue): ${list(frame.visited)}.`,
   ].join('. ')
 }
 

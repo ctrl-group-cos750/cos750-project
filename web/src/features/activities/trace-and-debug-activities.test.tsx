@@ -205,6 +205,10 @@ describe('trace table', () => {
     ])
     // The "…" on the graph is explained in words.
     expect(screen.getByText(/At the start only B is in the queue/)).toHaveTextContent('“…” marks')
+    // Found and visited are two states, named as the code names them (review 13 Nov, High 3).
+    expect(screen.getByText(/The found vertices are the visited ones/)).toHaveTextContent(
+      'found set',
+    )
     expect(within(table).getByRole('rowheader', { name: 'start' })).toBeInTheDocument()
     // One empty step to start with: the number of rows gives nothing away.
     expect(screen.getAllByRole('combobox')).toHaveLength(1)

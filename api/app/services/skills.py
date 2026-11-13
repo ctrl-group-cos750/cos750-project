@@ -344,17 +344,38 @@ def skills(session: Session, user_id: int) -> list[Skill]:
 def secure_objectives(
     session: Session, user_id: int, only: Collection[int] | None = None
 ) -> set[int]:
-    """The objectives this student is secure in, in practice (`level_for`), of `only` if given.
-    The same count as the skill profile's, without the rest of it."""
+    """The objectives this student is secure in, in practice (`level_for`), of `only` if given,
+    for the Practised badge. Stricter than the profile's count in one way: "on your own" is real
+    work (rewards.real_work), so an answer given away by hint 3 or 4 before a module's restart
+    doesn't count after it, as for every other reward (13 Nov audit)."""
     items = [a for a in _practice(session) if a.objective_id is not None]
     if only is not None:
         items = [a for a in items if a.objective_id in only]
-    got = _answers(session, user_id, [a.id for a in items])
+    ids = [a.id for a in items]
+    if not ids:
+        return set()
+    answered_ids = set(
+        session.scalars(
+            select(Attempt.activity_id).where(
+                Attempt.user_id == user_id, Attempt.activity_id.in_(ids)
+            )
+        )
+    )
+    own_ids = set(
+        session.scalars(
+            select(Attempt.activity_id).where(
+                Attempt.user_id == user_id,
+                Attempt.activity_id.in_(ids),
+                Attempt.correct.is_(True),
+                rewards.real_work(),
+            )
+        )
+    )
     secure = set()
     for objective in {cast(int, a.objective_id) for a in items}:
         mine = [a.id for a in items if a.objective_id == objective]
-        answered = sum(1 for a in mine if a in got.answered)
-        own = sum(1 for a in mine if a in got.on_own)
+        answered = sum(1 for a in mine if a in answered_ids)
+        own = sum(1 for a in mine if a in own_ids)
         if level_for(answered, own, len(mine)) == "secure":
             secure.add(objective)
     return secure

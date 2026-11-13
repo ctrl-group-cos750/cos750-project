@@ -341,7 +341,7 @@ Figure: Use cases. The student takes part in every use case in the first two gro
 - **FR-1.1** Register with an email address, a password and a display name. The display name is shown only to the student.
 - **FR-1.2** Log in and out. A session lasts until logout or 14 days, whichever is first.
 - **FR-1.3** A student sees and changes only their own progress, attempts and results.
-- **FR-1.4** Seeded demo accounts exist at different points in the course (new, mid-course, finished with a "not yet" objective, ready for the lecture), so the demo can show any stage without working through 75 minutes of content.
+- **FR-1.4** Seeded demo accounts exist at different points in the course (new, mid-course, finished with a "not yet" objective, ready for the lecture), so the demo can show any stage without working through three hours of content.
 - **FR-1.5** A student can change their password: they give the current one, the new one must meet the password rules (NFR-S1), and every other session is logged out.
 - **FR-1.6** A student can choose a profile picture from a set the team provides (graph shapes, never an uploaded photo), shown only to them, like the display name.
 - **FR-1.7** A profile page, reached from the account menu in the header, shows the student their own objectives met and, unless hidden (FR-9.5), points and badges.
@@ -354,7 +354,7 @@ Figure: Use cases. The student takes part in every use case in the first two gro
 - **FR-2.3** Each module starts by stating its objectives in plain words ("By the end of this module you can …"), taken from the content.
 - **FR-2.4** Each module from module 2 onwards opens with one or two retrieval questions on earlier modules.
 - **FR-2.5** Save progress after every segment. A student who returns resumes at the segment they left, or, if they moved past an activity without ever answering it (possible only before its activity could be answered), at the first such activity, with a note saying why; a complete module opens at its first such activity. An activity they answered, even wrongly under an earlier rule, never pulls them back.
-- **FR-2.6** Show a module map with each module's state (locked, open, in progress, complete) and estimated duration. A module with no content yet reads "coming soon", and **Continue** passes over it. The course total is the sum of the modules' estimates (74 minutes today), the same number the register page shows (`GET /api/modules/length`, #146).
+- **FR-2.6** Show a module map with each module's state (locked, open, in progress, complete) and estimated duration. A module with no content yet reads "coming soon", and **Continue** passes over it. The course total is the sum of the modules' estimates (180 minutes today, the content as written: ID §4.4; `api/tests/test_minutes.py` keeps each within a third of an estimate from the content), the same number the register page shows (`GET /api/modules/length`, #146).
 - **FR-2.7** A student moves past a segment only once it is done: a practice activity once it has been answered correctly, or answered after its last hint was shown (the last hint gives the answer away, so no student is kept there); a mastery or diagnostic item once it has been answered at all, because only the first answer counts there (FR-7.1) and the diagnostic finds gaps rather than gating; a video segment once every checkpoint in the video is passed. Other segments are done when shown. An activity whose kind has no student UI yet counts as done until its UI exists, so it never strands a student; since #136 every kind has one, so none is let through unanswered. A module is complete once its last segment is done. A complete module can be reread freely. A blank answer (no option, line, token, pair, test or row) is refused and not recorded, so it never counts as an attempt. So is an answer that names an option, line, blank, token, test case or vertex the activity doesn't have (#139).
 
 ## Narrated video with checkpoints (FR-3)
@@ -794,7 +794,7 @@ Low-fidelity wireframes of the main screens, drawn from the requirements and the
 +----------------------------------------------------------------------------------------+
 | Ctrl Academy    Modules · Report                       * 240 points   Account v        |
 +----------------------------------------------------------------------------------------+
-| Graphs and breadth-first search                            About 74 minutes in total   |
+| Graphs and breadth-first search                           About 180 minutes in total   |
 |                                                                                        |
 |   + 0  Warm-up and queue refresher            5 min    complete                        |
 |   + 1  What is a graph?                      12 min    complete                        |
@@ -1380,7 +1380,6 @@ What the app does not yet do, or does only in part, against the requirements abo
 | Badges | The bonus-quest badges can't be earned yet. | FR‑9.3 | Follows the bonus quests |
 | Visualiser | Predictions are checked in the browser and logged as events, but not graded, so they give no evidence for an objective. The visualiser is reached only from a link in module 3. | FR‑6.4 | Not scheduled |
 | Videos | No video is recorded yet, and the fixtures hold none: staff upload each video on each site and place it in a module segment in the content editor. A video segment without a video shows its narration as text instead. | FR‑3, NFR‑A4 | #37 |
-| Timing | The app shows the planned minutes (ID Table 4, `estimated_minutes` in the fixtures): 74 in total, on the register page and the module map alike. The content as written is estimated at about 165 minutes (ID §4.4), so the app tells students less than half the real time. | FR‑2.6 | The minutes follow the pilot's timings (#76) |
 | Content | The evidence-based content is mostly in (#150: subgoal labels, "why" questions after worked examples, misconception items, the matrix and running time); no "why" question follows a level-4 hint yet. Two component kits are in use (§11). | FR‑4.2, NFR‑U2 | ID team: the "why" question after hint 4 and the timing re-plan; the kits not scheduled |
 | Tests | No timing test for NFR-P1 to NFR-P3, which are met by design (no execution, small graphs) but not measured. | NFR‑P | Not scheduled |
 | Badge note at 360 px | At 360 px a new badge's note covers the module's **Next** button. The end-to-end suite keeps it as a known bug (`test.fixme` in `mobile.spec.ts`), so it runs again once fixed. | NFR‑U1, NFR‑A1 | No card yet |

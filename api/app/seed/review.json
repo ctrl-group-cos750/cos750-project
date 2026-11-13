@@ -1127,7 +1127,6 @@
         ]
       },
       "solution": {
-        "explanation": "Correct. The dams are the things, and each canal joins two of them. Water flows downhill from P into Q and never back, so each edge has a direction.",
         "correct": "f",
         "feedback": {
           "e": "Not quite. A canal touches both dams, but the water in it only flows downhill, from P into Q. Ask: can water flow along this canal from Q back into P?",
@@ -1183,7 +1182,6 @@
         ]
       },
       "solution": {
-        "explanation": "Correct. The devices are the things, and each Wi-Fi link joins two of them. The printer answers the laptop along the same links the page came by, so data travels both ways and the edges have no direction.",
         "correct": "f",
         "feedback": {
           "e": "Not quite. The page goes from the laptop to the printer, but the printer also answers the laptop along the same links. Something moving along an edge doesn't give it an arrow. Ask: can data travel along this link one way only?",
@@ -1239,7 +1237,6 @@
         ]
       },
       "solution": {
-        "explanation": "Correct. The family members are the things, and each parent link joins a parent to their child. Nomsa is Thabo's parent and Thabo isn't Nomsa's, so each edge has a direction.",
         "correct": "f",
         "feedback": {
           "e": "Not quite. A parent and a child are related both ways, but “is the parent of” only goes one way: Nomsa is Thabo's parent, and Thabo isn't Nomsa's. Ask: if this edge exists, must the reverse one exist too?",
@@ -1295,7 +1292,6 @@
         ]
       },
       "solution": {
-        "explanation": "Correct. The countries are the things, and each shared border joins two of them. If Botswana shares a border with Namibia, Namibia shares it with Botswana, so the edges have no direction.",
         "correct": "f",
         "feedback": {
           "g": "Not quite. That swaps them. A border joins two countries, so the border is the edge and the countries are the vertices. Ask: which one joins the other two?",

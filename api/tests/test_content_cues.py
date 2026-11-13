@@ -183,6 +183,34 @@ def test_a_mastery_fill_in_is_not_a_practice_one(a: ActivityFixture) -> None:
         assert filled(a) != filled(p), p.id  # 620 was 406 with fewer blanks (#147)
 
 
+@pytest.mark.parametrize(
+    "a", [a for a in MASTERY if a.kind == "fix_the_bug"], ids=lambda a: str(a.id)
+)
+def test_a_mastery_fix_the_bug_item_is_not_a_practice_one(a: ActivityFixture) -> None:
+    """621 was 504 line for line, after a worked example that prints the fix (#214 C2)."""
+    mine = [line["text"] for line in a.config["lines"]]
+    for p in (p for p in PRACTICE if p.kind == "fix_the_bug"):
+        assert mine != [line["text"] for line in p.config["lines"]], p.id
+
+
+@pytest.mark.parametrize(
+    "a", [a for a in MASTERY if a.kind == "choose_tests"], ids=lambda a: str(a.id)
+)
+def test_a_mastery_choose_tests_item_is_not_a_practice_one(a: ActivityFixture) -> None:
+    """623 and 624 were 506 and 507: the same faulty code and half the same test graphs, with the
+    verdicts module 5's feedback had already given (#214 C2)."""
+
+    def graphs(x: ActivityFixture) -> set[tuple[Any, ...]]:
+        return {
+            graph_key(t["directed"], t["vertices"], t["edges"], t["start_vertex"])
+            for t in x.config["tests"]
+        }
+
+    for p in (p for p in PRACTICE if p.kind == "choose_tests"):
+        assert a.config["code"] != p.config["code"], p.id
+        assert len(graphs(a) & graphs(p)) <= 1, p.id
+
+
 def test_a_mastery_question_does_not_restate_a_practice_situation() -> None:
     def sentences(a: ActivityFixture) -> list[str]:
         texts = [str(a.config.get("prompt", ""))] + [x["label"] for x in a.config.get("left", [])]
@@ -474,8 +502,11 @@ def test_right_corrections_are_not_in_one_place() -> None:
 
 def test_a_retired_correction_id_is_never_reused() -> None:
     """1703's correction 22 was a harmless extra condition; its replacement breaks BFS, a different
-    meaning, so it has a new id (23) and 22 is retired."""
-    assert 22 not in {c["id"] for c in ACTIVITIES[1703].config["corrections"]}
+    meaning, so it has a new id (23) and 22 is retired. 621's corrections went with its old bug."""
+    for activity_id, retired in RETIRED_CORRECTIONS.items():
+        a = ACTIVITIES[activity_id]
+        used = {c["id"] for c in a.config["corrections"]} | {x["id"] for x in a.config["lines"]}
+        assert not retired & used, activity_id
 
 
 # --- The round-2 review's strategy search (#147) --------------------------------------------------
@@ -756,8 +787,12 @@ WORDING_ONLY = {
     "matching_left": {(a, m) for a in (606, 607, 608, 1202, 1203, 1204) for m in ("1", "2", "3")},
     "matching_right": set(),
 }
-# Ids that left an item; they must never come back (the same as RETIRED, plus 1703's correction).
-GONE = {(a, i) for a, ids in RETIRED.items() for i in ids} | {(1703, "22")}
+# Fix-the-bug corrections that left an item: 621 is a new bug (#214 C2), so all its corrections are.
+RETIRED_CORRECTIONS = {621: {20, 21, 22, 23}, 1703: {22}}
+# Ids that left an item; they must never come back (RETIRED, plus the retired corrections).
+GONE = {(a, i) for a, ids in RETIRED.items() for i in ids} | {
+    (a, str(i)) for a, ids in RETIRED_CORRECTIONS.items() for i in ids
+}
 
 
 def _now(a: ActivityFixture, kind: str) -> dict[str, str]:

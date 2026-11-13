@@ -97,9 +97,9 @@ test.describe('badge notes', () => {
     const note = page.getByRole('status')
     for (const link of await note.getByRole('link').all()) {
       const box = await link.boundingBox()
-      expect(box?.height ?? 0, 'a link in the badge note is a 44 px target').toBeGreaterThanOrEqual(
-        44,
-      )
+      // Rounded to a hundredth: Firefox reports a 44 px box at a fractional offset as 43.999996.
+      const height = Math.round((box?.height ?? 0) * 100) / 100
+      expect(height, 'a link in the badge note is a 44 px target').toBeGreaterThanOrEqual(44)
     }
   })
 })

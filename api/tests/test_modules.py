@@ -1139,3 +1139,67 @@ def test_the_course_length_is_public_and_sums_every_module(client: TestClient, d
     res = client.get("/api/modules/length")  # nobody logged in
     assert res.status_code == 200
     assert res.json() == {"minutes": 5 + 12 + 10}
+
+
+def test_a_module_of_diagnostic_questions_only_earns_no_module_reward(
+    client: TestClient, db: Session
+) -> None:
+    """Module 0, the warm-up, asks only diagnostic questions: they find gaps rather than teach, so
+    finishing it earns no module points and not the First Module badge, which comes with the first
+    module that teaches. The same right answers as practice do earn it."""
+    _make_gated_module(db)
+    _register_and_login(client, ALICE)
+    user = db.scalars(select(User).where(User.email == ALICE["email"])).one()
+    activities = [db.get_one(Activity, a) for a in (1, 3)]  # the two module 0 shows
+    for activity in activities:
+        activity.purpose = "diagnostic"
+        db.add(
+            Attempt(
+                user_id=user.id,
+                activity_id=activity.id,
+                submitted={},
+                correct=True,
+                score=1.0,
+                detail={},
+                hint_level=0,
+            )
+        )
+    db.commit()
+    assert modules_service.reward_module(db, user.id, 0) is False
+    for activity in activities:
+        activity.purpose = "practice"
+    db.commit()
+    assert modules_service.reward_module(db, user.id, 0) is True
+
+
+def test_module_0_diagnostic_earns_nothing_and_module_1_earns_first_module_and_its_points(
+    client: TestClient, db: Session
+) -> None:
+    """End to end, through the API: a student finishes module 0, whose questions are all
+    diagnostic, with every one right: no module points and no First Module badge. Then module 1
+    with a right answer: its 25 points and First Module, the badge's first and only award (#212)."""
+    _make_gated_module(db)
+    for activity_id in (1, 2, 3):
+        db.get_one(Activity, activity_id).purpose = "diagnostic"
+    _question(db, 5).purpose = "practice"
+    db.flush()
+    db.add(Segment(id=6, module_id=1, position=1, kind="activity", title="Try", activity_id=5))
+    db.commit()
+    _register_and_login(client, ALICE)
+
+    for activity_id in (1, 2, 3):
+        _answer(client, activity_id, "a")
+    for position in (1, 2, 3, 3):
+        assert _move(client, position) == 200
+    assert client.get("/api/modules/0").json()["status"] == "complete"
+    assert _module_points(db, 0) == []
+    assert _badges(client) == []
+
+    _answer(client, 5, "a")
+    for position in (1, 1):  # Next onto the activity, then "Finish module"
+        res = client.post("/api/modules/1/position", json={"segmentPosition": position})
+        assert res.status_code == 200, res.text
+    assert res.json()["status"] == "complete"
+    assert _module_points(db, 0) == []
+    assert _module_points(db, 1) == [25]
+    assert _badges(client) == ["first-module"]

@@ -74,6 +74,20 @@ describe('buildShelf', () => {
     expect(fresh.map((i) => i.title)).toEqual(['Quest 2'])
   })
 
+  it('says First Module needs a right answer before hint 3, not just a finished module', () => {
+    // Module 0's diagnostic earns no module reward, so the badge comes with the first module
+    // answered right on your own, which isn't always module 1 (#212 review).
+    const firstModule = (earned: EarnedBadge[]) =>
+      buildShelf(earned).milestone.find((i) => i.achievement.id === 'first-module')
+    expect(firstModule([])?.next).toBe(
+      'Finish a module with at least one answer right before hint 3.',
+    )
+    expect(firstModule([])?.achievement.description).toBe(
+      'You worked all the way through a module and got answers right on your own.',
+    )
+    expect(firstModule([badge('first-module')])?.next).toBeUndefined()
+  })
+
   it('ignores badge ids the app does not know', () => {
     expect(unseen([badge('retired', { seen: false })])).toEqual([])
   })

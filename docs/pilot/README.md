@@ -90,3 +90,7 @@ for modules 1 to 4 on the way to module 5, so his session is still close to full
   3 and 4, the mastery items' difficulty and discrimination, and how many participants ended in
   each state per objective. Paste its tables into the write-up.
 - The analysis follows ID document §8.4; the write-up is #76.
+- Points are not in the export and the analysis doesn't use them. If they are ever compared, note
+  that since 13 November 2026 (PR #212) module 0, the diagnostic warm-up, no longer earns its 25
+  points: a pilot participant who finished it before then has 25 more than a student who finishes
+  it now (SE document FR-9.1).

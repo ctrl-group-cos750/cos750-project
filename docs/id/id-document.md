@@ -493,7 +493,7 @@ Gamification is the use of game design elements outside games [32]. A review fou
 |---|---|
 | Module map with progress |	Shows how far the student has come and what is left. |
 | Private points	| Reward correct work, finished modules and objectives met. Fewer points are given after hint level 3 or 4. A finished module is rewarded only if at least one of its activities was answered correctly without hint 3 or 4, so clicking through hints earns nothing. Diagnostic questions don't count: they find gaps rather than teach, so module 0, which asks only diagnostic questions, earns no module points. |
-| Badges for milestones |	Mark real progress, not time spent or clicks. Built: a badge per objective met, "ready for the lecture", one for meeting every objective independently, one for meeting an objective after its review path, and one for the first module completed that teaches (module 0's diagnostic doesn't count). A Quest badge for each bonus quest, and All Quests for every one, earned only by a right answer given before hint 3 or 4, which give the answer away (#87). |
+| Badges for milestones |	Mark real progress, not time spent or clicks. Built: a badge per objective, in three levels (#214): Practised when the objective is secure in the modules' practice, then bronze (met with support) or gold (met independently) from the mastery check; "ready for the lecture", one for meeting every objective independently, one for meeting an objective after its review path, and one for the first module completed that teaches (module 0's diagnostic doesn't count). A Quest badge for each bonus quest, and All Quests for every one, earned only by a right answer given before hint 3 or 4, which give the answer away (#87). |
 | Campus storyline |	Links the modules into one problem: finding routes across campus. |
 | Optional bonus quests	| Extra challenge for strong students. They give points but never affect mastery. Two exist (#87): after module 3, a closed walkway that cuts the campus graph in two; after module 4, one-way buses BFS can't follow back to a stop. Each is labelled optional and never holds a student back. |
 
@@ -504,7 +504,8 @@ From the ID side, we confirm the default points rules in the SE document (FR-9, 
 Pilot testers said the course felt "like doing a test, with no motivating boosts" (13 November, #214). We added four things, each tied to learning rather than to time or speed, and kept them grown-up for university students:
 
 - **A skill profile** on the module map (a radar chart, one axis per objective, after Big Brain Academy's), the report and a progress panel beside each lesson: the eight objectives, each *not started*, *practising* or *secure* in practice, then gold, bronze or *not yet* from the mastery check. Each row opens to the evidence behind it, so it never rests on a percentage of a few answers. This is competence made visible (Self-Determination Theory [43]) and ARCS confidence: the student sees where they stand before the check.
-- **Module medals** for mastery, with the rule shown beside them: bronze for finishing, silver when every activity was right without hint 3 or 4, gold when every one was also right first time.
+- **Module medals** for mastery, with the rule shown beside them: bronze for finishing, silver when every activity was right without hint 3 or 4, gold when every one was also right first time, announced once in a badge note when earned ("Module 2: silver medal").
+- **Badge levels**: each objective badge is first earned as *Practised* in the modules, when the skill profile marks the objective secure, then rises to bronze or gold in the mastery check, and never goes down. Before, a badge came only at the end of the course; now the first level comes where the practice happens, so the feedback is close to the learning it marks. Badges as feedback on competence raised students' need satisfaction in an experiment on single game elements [78]. Practised gives no points and a "not yet" keeps it, with the review path linked, so the check stays the place where an objective is met.
 - **A success moment** on a right answer: the item's explanation first, a drawn tick, a short calm line and a word on progress, and the points earned. Satisfaction in ARCS terms; specific feedback rather than a bare "Correct".
 - **Confetti**: a short burst for a right answer and a fuller one for a finished module or being ready for the lecture. None in the mastery check, where results are withheld, and none under reduced motion.
 
@@ -1007,5 +1008,7 @@ Marcelo Pias, Susan Reiser, Christian Servin, Rahul Simha, Titus Winters, and Qi
 [76]	C. Brom, T. Stárková, and S. K. D'Mello. How effective is emotional design? A meta-analysis on facial anthropomorphisms and pleasant colors during multimedia learning. *Educational Research Review*, 25:100–119, 2018. https://doi.org/10.1016/j.edurev.2018.09.004
 
 [77]	G. D. Rey. A review of research and a meta-analysis of the seductive detail effect. *Educational Research Review*, 7(3):216–237, 2012. https://doi.org/10.1016/j.edurev.2012.05.003
+
+[78]	M. Sailer, J. U. Hense, S. K. Mayr, and H. Mandl. How gamification motivates: An experimental study of the effects of specific game design elements on psychological need satisfaction. *Computers in Human Behavior*, 69:371–380, 2017. https://doi.org/10.1016/j.chb.2016.12.033
 
 </div>

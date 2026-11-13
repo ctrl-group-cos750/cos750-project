@@ -146,7 +146,7 @@ Badges are private (FR-9.4) and drawn by `AchievementBadge` from the catalogue i
 
 | Kind | Shape | Colour tokens |
 |---|---|---|
-| Objective (one per learning objective) | Hexagon. Bronze = met with support; gold adds an inner outline and a star = met independently | `--badge-bronze*`, `--badge-gold*` |
+| Objective (one per learning objective) | Hexagon in three levels. Practised = an accent outline with no fill (secure in practice); bronze = met with support; gold adds an inner outline and a star = met independently | accent, `--badge-bronze*`, `--badge-gold*` |
 | Milestone (Ready for the Lecture, Came Back Stronger, Solo Run) | Medal with ribbons | accent |
 | Quest | Shield | success |
 | Hidden (Off the Map) | Diamond; shows "?" until found | accent |

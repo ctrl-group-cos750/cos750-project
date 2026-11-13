@@ -30,6 +30,14 @@ class ModuleProgress(Base):
     current_segment_position: Mapped[int] = mapped_column(default=0, server_default="0")
     # When the student first reached the last segment (FR-2.6).
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # The student restarted the module to redo its questions (app/services/restart.py): only
+    # answers and hints since then show. The module stays complete, and nothing is deleted.
+    restarted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # The newest attempt id when it was restarted: attempts are append-only, so "since the
+    # restart" is every attempt with a higher id (exact, unlike comparing timestamps).
+    restarted_after_attempt: Mapped[int | None] = mapped_column()
+    # How many times they have restarted it: the round each hint view belongs to.
+    restarts: Mapped[int] = mapped_column(default=0, server_default="0")
 
 
 class ShownSegment(Base):

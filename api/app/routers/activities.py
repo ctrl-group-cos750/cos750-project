@@ -38,6 +38,7 @@ from app.services.attempts import (
 )
 from app.services.locks import ActivityGone
 from app.services.mastery import in_check
+from app.services.restart import activity_round
 from app.services.submissions import clean, submission_problem
 
 router = APIRouter(prefix="/api/activities", tags=["activities"])
@@ -104,14 +105,16 @@ def _attempt_out(attempt: Attempt, checked: bool) -> AttemptOut:
     )
 
 
-def _last_attempt(session: DbSession, user: User, activity: Activity) -> LastAttemptOut | None:
-    """This student's latest answer to the activity and its result (#171), or None."""
-    attempt = session.scalar(
-        select(Attempt)
-        .where(Attempt.user_id == user.id, Attempt.activity_id == activity.id)
-        .order_by(Attempt.id.desc())
-        .limit(1)
-    )
+def _last_attempt(
+    session: DbSession, user: User, activity: Activity, after: int | None = None
+) -> LastAttemptOut | None:
+    """This student's latest answer to the activity and its result (#171), or None. Since the
+    module's restart, if it was restarted (app/services/restart.py): earlier answers stay recorded
+    but aren't shown, so the student redoes the question afresh."""
+    query = select(Attempt).where(Attempt.user_id == user.id, Attempt.activity_id == activity.id)
+    if after is not None:
+        query = query.where(Attempt.id > after)
+    attempt = session.scalar(query.order_by(Attempt.id.desc()).limit(1))
     if attempt is None:
         return None
     return LastAttemptOut(
@@ -186,12 +189,13 @@ def get_activity(activity_id: RowId, session: DbSession, user: CurrentUser) -> A
     longer part of the course."""
     activity = _activity_or_404(session, activity_id, user)
     out = ActivityOut.model_validate(activity)
+    after = activity_round(session, user.id, activity).after  # a restarted module shows it afresh
     if _checked(activity, user):  # says it was answered, never whether it was right (#144)
         out.mastery_check = True
         out.answered = answered(session, user.id, activity.id)
     else:
-        out.solved = answered_correctly(session, user.id, activity.id)
-    out.last_attempt = _last_attempt(session, user, activity)  # coming back shows it (#171)
+        out.solved = answered_correctly(session, user.id, activity.id, after)
+    out.last_attempt = _last_attempt(session, user, activity, after)  # coming back shows it (#171)
     return out
 
 
@@ -258,7 +262,9 @@ def get_revealed_hints(activity_id: RowId, user: CurrentUser, session: DbSession
     all_hints = session.scalars(
         select(Hint).where(Hint.activity_id == activity.id).order_by(Hint.level)
     ).all()
-    seen = hint_level_seen(session, user.id, activity.id)
+    seen = hint_level_seen(
+        session, user.id, activity.id, activity_round(session, user.id, activity).number
+    )
     limit = MASTERY_HINT_LIMIT if _checked(activity, user) else None
     out: list[HintOut] = []
     for h in all_hints:
@@ -291,8 +297,13 @@ def reveal_hint(activity_id: RowId, user: CurrentUser, session: DbSession) -> Hi
             raise HTTPException(status.HTTP_409_CONFLICT, detail=ANSWERED_NO_HINTS)
         limit = MASTERY_HINT_LIMIT
     # A hint after a right answer helps with nothing, and would count in the pilot's hint use as
-    # help the student needed (#158).
-    elif answered_correctly(session, user.id, activity.id):
+    # help the student needed (#158). A right answer in this round: a restarted module's questions
+    # are redone with their hints, which are recorded with their round, count only against the
+    # answers after them (rewards.answer_given_away) and not as support needed in the pilot
+    # insights once the question was solved (#211 review).
+    elif answered_correctly(
+        session, user.id, activity.id, activity_round(session, user.id, activity).after
+    ):
         raise HTTPException(status.HTTP_409_CONFLICT, detail=SOLVED)
     try:
         revealed = reveal_next_hint(session, user.id, activity, limit=limit)

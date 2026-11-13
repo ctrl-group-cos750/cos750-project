@@ -52,12 +52,29 @@ export function SegmentView({ segment, onAnswered, intro }: SegmentViewProps) {
             {segment.title}
           </h2>
           {introLine}
-          {picture && (
-            <div className="max-w-[520px]">
-              <PicturePanel tabs={[{ name: pictureName(picture), picture }]} />
+          {picture ? (
+            // The picture beside the text it explains, so neither is scrolled away from the other
+            // (Mayer's spatial contiguity): side by side from 1280 px, where the picture still
+            // gets about 500 px, the picture first and staying in view; stacked below that, so
+            // a laptop shows it full width rather than squeezed (#211 review). data-two-column
+            // lets the module page widen.
+            <div
+              data-two-column
+              className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,var(--reading-width))]"
+            >
+              <div className="xl:sticky xl:top-24">
+                <PicturePanel tabs={[{ name: pictureName(picture), picture }]} />
+              </div>
+              {/* The text keeps a readable line length (--reading-width); the picture takes the rest. */}
+              <div className="min-w-0 max-w-[var(--reading-width)]">
+                {segment.body ? (
+                  <Markdown>{segment.body}</Markdown>
+                ) : (
+                  <Alert tone="info">This segment has no content yet.</Alert>
+                )}
+              </div>
             </div>
-          )}
-          {segment.body ? (
+          ) : segment.body ? (
             <Markdown>{segment.body}</Markdown>
           ) : (
             <Alert tone="info">This segment has no content yet.</Alert>
@@ -74,6 +91,8 @@ export function SegmentView({ segment, onAnswered, intro }: SegmentViewProps) {
           </h2>
           {introLine}
           {segment.videoId !== null ? (
+            // The text version below the video at every width: closed, it is one line, so beside
+            // the video it would leave a mostly empty column (#211 review).
             <>
               <VideoView videoId={segment.videoId} heading="h3" onResult={onAnswered} />
               {segment.body && <TextVersion body={segment.body} />}

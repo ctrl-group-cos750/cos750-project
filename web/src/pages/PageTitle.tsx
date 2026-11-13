@@ -17,6 +17,7 @@ const TITLES: [RegExp, string][] = [
   [/^\/staff\/videos/, 'Videos · Staff portal'],
   [/^\/staff\/content/, 'Content · Staff portal'],
   [/^\/staff\/accounts/, 'Accounts · Staff portal'],
+  [/^\/staff\/readiness/, 'Before the lecture · Staff portal'],
   [/^\/staff\/pilot/, 'Pilot · Staff portal'],
   [/^\/staff\/members/, 'Team · Staff portal'],
   [/^\/staff/, 'Staff portal'],

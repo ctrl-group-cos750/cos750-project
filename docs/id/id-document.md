@@ -619,6 +619,8 @@ We use the first two levels of Kirkpatrick’s model: reaction (did students fin
 3. Does the application keep students motivated?
 4. Which parts cause the most trouble?
 
+The same data serves the lecturer before the lecture. Just-in-Time Teaching has students work on short web exercises before class, and the lecturer reads their answers to decide where the class starts [68]. The staff portal's "Before the lecture" page does this from the mastery check: how many students are ready, each objective's results across the class, and on each mastery question the wrong option most students chose first, with the content's explanation of why it is wrong. A lecture that opens with the misconception most of the class holds builds on where the students are, which is the reason the application exists.
+
 The lecture divides ADDIE's Evaluate phase into formative evaluation, done while the material is being built so that it can still change, and summative evaluation, done at the end to improve the next presentation [58, p. 31]. The team pilot (Section 8.2) is formative evaluation. A study with real COS212 students, with a separate post-test (Section 8.4), would be summative evaluation. Table 19 gives the Kirkpatrick level of each measure.
 
 ## Formative evaluation so far
@@ -964,6 +966,8 @@ Marcelo Pias, Susan Reiser, Christian Servin, Rahul Simha, Titus Winters, and Qi
 [66]	O. Seppälä, L. Malmi, and A. Korhonen. Observations on student misconceptions: A case study of the Build-Heap algorithm. *Computer Science Education*, 16(3):241–255, 2006. https://doi.org/10.1080/08993400600913523
 
 [67]	A. Tilanterä et al. Investigating students' misconceptions of Dijkstra's algorithm: Exploration of algorithm simulation traces. 2025. https://doi.org/10.1145/3724363.3729081 (venue and full author list not verified)
+
+[68]	G. M. Novak, E. T. Patterson, A. D. Gavrin, and W. Christian. *Just-in-Time Teaching: Blending Active Learning with Web Technology*. Prentice Hall, Upper Saddle River, NJ, 1999.
 
 [69]	J. Nielsen. Enhancing the explanatory power of usability heuristics. In *Proceedings of the SIGCHI Conference on Human Factors in Computing Systems (CHI '94)*, pages 152–158. ACM, 1994.
 

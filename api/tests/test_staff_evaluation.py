@@ -310,3 +310,58 @@ def test_insights_count_who_started_and_finished_a_video(client: TestClient, db:
     (insight,) = body["videos"]
     assert (insight["students"], insight["finished"]) == (2, 1)
     assert [c["studentsPassed"] for c in insight["checkpoints"]] == [1, 1]
+
+
+# --- Before the lecture: readiness and common wrong answers -------------------------------------
+
+
+def readiness_course() -> dict[str, Any]:
+    course: dict[str, Any] = json.loads(json.dumps(MASTERY_COURSE))
+    for a in course["activities"]:
+        a["solution"]["feedback"] = {"b": "Not quite: B is the one that leaves last."}
+    return course
+
+
+def test_readiness_counts_the_class_and_names_the_common_wrong_answer(
+    client: TestClient, db: Session, tmp_path: Path
+) -> None:
+    """Ada meets the objective; Alan and Bea choose B. Dee (demo) and Grace (staff) don't count."""
+    (tmp_path / "course.json").write_text(json.dumps(readiness_course()), encoding="utf-8")
+    load(db, tmp_path)
+    register(client, "ada@example.com")
+    answer(client, 601, "a")
+    register(client, "alan@example.com")
+    answer(client, 601, "b")
+    register(client, "bea@example.com")
+    answer(client, 601, "b")
+    become_demo(client, db, "dee@example.com")
+    answer(client, 601, "b")
+    become_staff(client, db, "grace@example.com")
+
+    body = client.get("/api/staff/readiness").json()
+    assert (body["students"], body["ready"]) == (3, 1)
+    (objective,) = body["objectives"]
+    assert (objective["metIndependently"], objective["metWithSupport"], objective["notYet"]) == (
+        1,
+        0,
+        2,
+    )
+    (common,) = body["commonWrongAnswers"]
+    assert common == {
+        "activityId": 601,
+        "title": "Q601",
+        "objectiveId": 1,
+        "answered": 3,
+        "wrong": 2,
+        "option": "B",
+        "chosenBy": 2,
+        "whyWrong": "Not quite: B is the one that leaves last.",
+    }
+    assert "example.com" not in json.dumps(body)
+
+
+def test_readiness_is_for_staff_only(client: TestClient, db: Session) -> None:
+    register(client, "ada@example.com")
+    assert client.get("/api/staff/readiness").status_code == 403
+    client.cookies.clear()
+    assert client.get("/api/staff/readiness").status_code == 401

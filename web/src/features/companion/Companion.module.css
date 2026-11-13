@@ -68,6 +68,10 @@
   font-size: var(--text-sm);
 }
 
+.aside {
+  color: var(--color-text-muted);
+}
+
 .answers {
   display: flex;
   gap: var(--space-2);

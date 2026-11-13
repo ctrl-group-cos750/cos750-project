@@ -23,7 +23,8 @@ import { buttonVariants } from '@/components/ui/button-variants'
 import { ApiError } from '../../api/client.ts'
 import { useMediaQuery } from '../activities/pictures/useMediaQuery.ts'
 import { confetti } from '../progress/confetti.ts'
-import { skillsKey } from '../progress/hooks.ts'
+import { skillsKey, useSkills } from '../progress/hooks.ts'
+import { secureObjectives } from '../companion/companion.ts'
 import { lessonGrid } from '../progress/lessonGrid.ts'
 import { ProgressPanel } from '../progress/ProgressPanel.tsx'
 import { usePanelMinimised, usePreference } from '../progress/preferences.ts'
@@ -68,6 +69,15 @@ export function ModulePage() {
   const [panelOn] = usePreference('progressPanel')
   const [panelRail] = usePanelMinimised('progressPanel')
   const [goalsMinimised, setGoalsMinimised] = usePanelMinimised('moduleGoals')
+  // The objectives secure (or met) when this module was opened, so the companion's word on
+  // finishing it names only those it made secure (#222 review). The progress panel asks for the
+  // same profile, so this adds no request.
+  const skills = useSkills()
+  const secureAtOpen = useRef<{ id: number; secure: number[] } | null>(null)
+  useEffect(() => {
+    if (skills.data && secureAtOpen.current?.id !== id)
+      secureAtOpen.current = { id, secure: secureObjectives(skills.data.objectives) }
+  }, [id, skills.data])
 
   const query = useQuery({
     queryKey: ['module', id],
@@ -370,7 +380,17 @@ export function ModulePage() {
           // The map hears which module was finished, for the study companion's word on it (#214).
           void navigate(
             next,
-            module.id === MASTERY_MODULE_ID ? {} : { state: { finishedModule: module.id } },
+            module.id === MASTERY_MODULE_ID
+              ? {}
+              : {
+                  state: {
+                    finishedModule: module.id,
+                    secureBefore:
+                      secureAtOpen.current?.id === module.id
+                        ? secureAtOpen.current.secure
+                        : undefined,
+                  },
+                },
           )
         },
       },

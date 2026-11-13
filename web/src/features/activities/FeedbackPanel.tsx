@@ -100,7 +100,14 @@ export function FeedbackPanel({ result }: FeedbackPanelProps) {
           result.feedback
         )}
       </Alert>
-      {companion && <FeedbackCompanion key={result.id} result={result} />}
+      {companion && (
+        <FeedbackCompanion
+          key={result.id}
+          result={result}
+          // After Yes or No thanks, focus goes back to the result, not the page (WCAG 2.4.3).
+          onAnswered={() => alert.current?.focus()}
+        />
+      )}
       {celebrate && <SuccessMoment result={result} />}
     </section>
   )

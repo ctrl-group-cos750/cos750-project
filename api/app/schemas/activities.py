@@ -16,6 +16,7 @@ from typing import Annotated, Any, Literal
 from pydantic import Field, StrictInt, ValidationInfo, field_validator, model_validator
 
 from app.schemas.base import ApiModel
+from app.schemas.content import Purpose
 from app.schemas.graphs import VERTEX, GraphEdge
 
 Vertex = Annotated[str, Field(pattern=VERTEX)]
@@ -429,6 +430,10 @@ class ActivityOut(ApiModel):
     # A module 6 mastery item (#144): one answer only, no right or wrong shown (the mastery report
     # gives the results once every item is answered), and hints up to `MASTERY_HINT_LIMIT` only.
     mastery_check: bool = False
+    # What the activity is for. A review path's fresh items are "mastery" too: they decide an
+    # objective, so the page keeps them as calm as the mastery check (no companion, confetti or
+    # success moment, #222 review).
+    purpose: Purpose = "practice"
     # This student has answered this mastery check item, so it takes no more answers or hints.
     answered: bool = False
     # This student's latest answer and the result for it, as marked now (after a regrade, #202,

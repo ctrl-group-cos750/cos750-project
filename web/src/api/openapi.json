@@ -4023,6 +4023,20 @@
             "title": "Masterycheck",
             "default": false
           },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "practice",
+              "diagnostic",
+              "retrieval",
+              "mastery",
+              "review",
+              "bonus",
+              "test_out"
+            ],
+            "title": "Purpose",
+            "default": "practice"
+          },
           "answered": {
             "type": "boolean",
             "title": "Answered",
@@ -4487,7 +4501,7 @@
           "seen"
         ],
         "title": "EarnedBadgeOut",
-        "description": "A badge the student holds. `badge` is a catalogue id (web/src/components/achievements.ts);\n`ref` tells repeatable badges apart (the bonus quest's id), \"\" otherwise. An objective badge's\n`tier` is its level: practised (secure in the modules' practice), bronze (met with support in\nthe mastery check) or gold (met independently); it only ever goes up. `seen` is false until\nthe app has announced it; going up a level makes it unseen again."
+        "description": "A badge the student holds. `badge` is a catalogue id (web/src/components/achievements.ts);\n`ref` tells repeatable badges apart (the bonus quest's id), \"\" otherwise. An objective badge's\n`tier` is its level: practised (secure in the modules' practice), bronze (met with support, on\na review path) or gold (met independently); it only ever goes up. `seen` is false until\nthe app has announced it; going up a level makes it unseen again."
       },
       "EditorActivityIn": {
         "properties": {

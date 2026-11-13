@@ -2,14 +2,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ada, fakeApi, renderApp } from '../../test/app.tsx'
 import type { AttemptResult } from '../activities/activities.types.ts'
 import { CelebrationAllowed } from '../activities/celebration.ts'
 import { FeedbackPanel } from '../activities/FeedbackPanel.tsx'
 import { praiseFor } from '../progress/praise.ts'
 import { setPreferenceOwner, storedCompanion } from '../progress/preferences.ts'
-import { CompanionAnnouncer } from './Companion.tsx'
+import { CompanionAnnouncer, PROMPT_SEEN_MS } from './Companion.tsx'
 import {
   answerLine,
   moduleDoneLine,
@@ -18,6 +18,11 @@ import {
   rightLine,
   wrongLine,
 } from './companion.ts'
+import module1 from '../../../../api/app/seed/module-1.json'
+import module2 from '../../../../api/app/seed/module-2.json'
+import module3 from '../../../../api/app/seed/module-3.json'
+import module4 from '../../../../api/app/seed/module-4.json'
+import module5 from '../../../../api/app/seed/module-5.json'
 
 let nextId = 1
 function result(correct: boolean, more: Partial<AttemptResult> = {}): AttemptResult {
@@ -53,6 +58,7 @@ function panel({ allowed = true } = {}) {
   return (r: AttemptResult | undefined) => rerender(view(r))
 }
 
+const prompt = () => document.querySelector<HTMLElement>('[data-companion-prompt]')
 const announced = () => document.querySelector('[data-companion-announcer]')?.textContent ?? ''
 
 beforeEach(() => {
@@ -61,27 +67,70 @@ beforeEach(() => {
   resetStreak()
 })
 
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
+/** The result the feedback panel focuses. */
+const resultGroup = () =>
+  document.querySelector('section[aria-label="Submission results"] [tabindex="-1"]')
+
 describe('the study companion (#214)', () => {
   it('asks once, after the first answer checked, and remembers "No thanks"', async () => {
     const show = panel()
     show(result(true))
-    expect(
-      screen.getByText('Want a study companion? Inka can comment on your answers.'),
-    ).toBeVisible()
+    expect(prompt()).toHaveTextContent('Want a study companion? Inka can comment on your answers.')
     await userEvent.click(screen.getByRole('button', { name: 'No thanks' }))
-    expect(screen.queryByText(/Want a study companion/)).toBeNull()
+    expect(prompt()).toBeNull()
     expect(storedCompanion()).toBe('off')
     show(result(false))
-    expect(screen.queryByText(/Want a study companion/)).toBeNull()
+    expect(prompt()).toBeNull()
     expect(document.querySelector('[data-companion]')).toBeNull()
   })
 
-  it('does not ask again when the question was ignored', () => {
+  it('reads the question out, politely, after the result, and says it is kept on this device', () => {
     const show = panel()
     show(result(true))
-    expect(screen.getByText(/Want a study companion/)).toBeVisible()
+    expect(announced()).toBe(
+      'Want a study companion? Inka can comment on your answers. Yes or No thanks, under the result. Kept on this device.',
+    )
+    expect(screen.getByText('Your choice is kept on this device.')).toBeVisible()
+    expect(resultGroup()).toHaveFocus() // the result keeps focus; the question is not in the way
+  })
+
+  it.each(['Yes', 'No thanks'])(
+    'moves focus back to the result after %s, never to the page',
+    async (name) => {
+      const show = panel()
+      show(result(true))
+      await userEvent.click(screen.getByRole('button', { name }))
+      expect(document.activeElement).not.toBe(document.body)
+      expect(document.activeElement).toBe(resultGroup())
+    },
+  )
+
+  it('does not ask again once the question was on screen, and heard, then ignored', () => {
+    let now = 1_000_000
+    vi.spyOn(Date, 'now').mockImplementation(() => now)
+    const show = panel()
     show(result(true))
-    expect(screen.queryByText(/Want a study companion/)).toBeNull()
+    expect(prompt()).toBeVisible()
+    expect(storedCompanion()).toBeNull() // not decided just by being shown
+    now += PROMPT_SEEN_MS
+    show(result(true))
+    expect(storedCompanion()).toBe('off')
+    expect(prompt()).toBeNull()
+  })
+
+  it('asks again when the question only flashed by, unanswered', () => {
+    let now = 1_000_000
+    vi.spyOn(Date, 'now').mockImplementation(() => now)
+    const show = panel()
+    show(result(true))
+    now += 500
+    show(result(true))
+    expect(storedCompanion()).toBeNull()
+    expect(prompt()).toBeVisible()
   })
 
   it('"Yes" brings Inka, the default, who speaks about this answer at once', async () => {
@@ -91,8 +140,10 @@ describe('the study companion (#214)', () => {
     expect(storedCompanion()).toBe('inka')
     const companion = document.querySelector('[data-companion="inka"]') as HTMLElement
     expect(companion).not.toBeNull()
-    expect(within(companion).getByText('Right: D joined the queue before E.')).toBeVisible()
-    expect(announced()).toBe('Inka: Right: D joined the queue before E.')
+    // Not the explanation again (the result gives it): how it was reached (#222 review).
+    expect(within(companion).getByText('Right, without a hint.')).toBeVisible()
+    expect(announced()).toBe('Inka: Right, without a hint.')
+    expect(companion.textContent).not.toContain('D joined the queue')
     // Its line replaces the varied line under a right answer: said once, not twice.
     show(result(true, { id: 500 }))
     expect(screen.queryByText(praiseFor(500, 0))).toBeNull()
@@ -114,7 +165,7 @@ describe('the study companion (#214)', () => {
     const show = panel({ allowed: false })
     show(result(true))
     expect(document.querySelector('[data-companion]')).toBeNull()
-    expect(screen.queryByText(/Want a study companion/)).toBeNull()
+    expect(prompt()).toBeNull()
     // Nor on a withheld mastery answer anywhere.
     show(result(true, { correct: null, withheld: true }))
     expect(document.querySelector('[data-companion]')).toBeNull()
@@ -130,6 +181,40 @@ describe('the study companion (#214)', () => {
     expect(screen.getByText(/Study companion off\./)).toBeVisible()
     await userEvent.click(screen.getByRole('button', { name: 'Undo' }))
     expect(storedCompanion()).toBe('juno')
+  })
+
+  it("is never on a question that decides an objective, such as a review path's fresh items", async () => {
+    localStorage.setItem(`ctrl-academy.${ada.id}.companion`, 'inka')
+    const fresh = {
+      id: 1202,
+      kind: 'multiple_choice',
+      title: 'Fresh question',
+      visible: true,
+      purpose: 'mastery',
+      config: {
+        prompt: 'Which structure does BFS use?',
+        options: [
+          { id: 'a', label: 'A stack' },
+          { id: 'b', label: 'A queue' },
+        ],
+      },
+    }
+    const right = { ...result(true), activityId: 1202, points: 10 }
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/activities/1202': () => Response.json(fresh),
+        'GET /api/activities/1202/hints': () => Response.json([]),
+        'POST /api/activities/1202/attempts': () => Response.json(right, { status: 201 }),
+      },
+    })
+    renderApp('/activities/1202')
+    await userEvent.click(await screen.findByRole('radio', { name: 'A queue' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
+    expect(await screen.findByText(/D joined the queue before E/)).toBeVisible()
+    expect(document.querySelector('[data-companion]')).toBeNull()
+    expect(document.querySelector('[data-companion-prompt]')).toBeNull()
+    expect(document.querySelector('[data-success-moment]')).toBeNull()
   })
 
   it('is chosen in the profile: the five by name, and Off', async () => {
@@ -148,9 +233,10 @@ describe('the study companion (#214)', () => {
 })
 
 describe('what the companion says', () => {
-  it('says why a right answer is right, from the explanation', () => {
-    expect(rightLine('Ama joined first. So she leaves first.')).toBe('Right: Ama joined first.')
-    expect(rightLine('Correct.')).toBe('Right.')
+  it('adds to a right answer instead of repeating its explanation', () => {
+    expect(rightLine(0)).toBe('Right, without a hint.')
+    expect(rightLine(2)).toBe('Right, with hint 2. Try the next one before opening a hint.')
+    expect(rightLine(4)).toBe('Right, after the worked steps. Try the next one with fewer hints.')
   })
 
   it('names what to check on a near miss, and the next hint otherwise', () => {
@@ -161,13 +247,20 @@ describe('what the companion says', () => {
     ]
     expect(wrongLine(parts, 0)).toBe('2 of 3 right. Check the one marked, the rest can stay.')
     expect(wrongLine([], 0)).toBe('Not yet. Hint 1 points at where to look.')
-    expect(wrongLine([], 2)).toBe('Hint 3 walks through it step by step, then try once more.')
+    // Never sends a student to hint 3 or 4 without saying it lowers what the answer earns.
+    expect(wrongLine([], 2)).toBe(
+      'Try once more first if you can. Hint 3 walks through it, but an answer after it counts for less.',
+    )
+    expect(wrongLine([], 3)).toMatch(
+      /^Hint 4 shows a worked answer, and an answer after it counts for less\./,
+    )
     expect(wrongLine([], 4)).toMatch(/last hint/)
   })
 
   it('never praises the person and never exclaims', () => {
     const lines = [
-      rightLine('Because the queue is first in, first out.'),
+      rightLine(0),
+      rightLine(3),
       wrongLine([], 0),
       wrongLine([], 3),
       quickCheckLine(2, 3, 4, [{ title: 'When BFS fits' }]).text,
@@ -187,13 +280,27 @@ describe('what the companion says', () => {
   })
 
   it('sums up a quick check and a finished module', () => {
-    expect(quickCheckLine(2, 4, 4, []).text).toBe('4 of 4. Module 2 is tested out.')
+    expect(quickCheckLine(2, 4, 4, []).text).toBe("4 of 4. You passed module 2's quick check.")
     expect(quickCheckLine(3, 3, 4, [{ title: 'When BFS fits' }]).text).toBe(
-      '3 of 4. Look again at the one on when BFS fits: it finds the fewest edges, not the cheapest route.',
+      '3 of 4. Look again at the one on when BFS fits: BFS follows connections, ring by ring, so look for the job with none to follow.',
     )
     expect(moduleDoneLine(2, ['Map Maker']).text).toBe('Module 2 done. Map Maker is now secure.')
     expect(moduleDoneLine(1, ['Word Smith', 'Map Maker']).text).toBe(
       'Module 1 done. Word Smith and Map Maker are now secure.',
     )
+    expect(moduleDoneLine(3, []).text).toBe('Module 3 done.')
+  })
+
+  it('has a fitting tip for every quick check item in modules 1 to 5', () => {
+    type Item = { title: string; purpose?: string }
+    const items = [module1, module2, module3, module4, module5].flatMap((m) =>
+      (m.activities as Item[]).filter((a) => a.purpose === 'test_out'),
+    )
+    expect(items.length).toBeGreaterThanOrEqual(15)
+    for (const item of items) {
+      const text = quickCheckLine(1, 3, 4, [item]).text ?? ''
+      // Named, so a missing tip says which item: "add_vertex: 3 of 4. Look again at “add_vertex”."
+      expect(`${item.title}: ${text}`).toMatch(/: 3 of 4\. Look again at the one on /)
+    }
   })
 })

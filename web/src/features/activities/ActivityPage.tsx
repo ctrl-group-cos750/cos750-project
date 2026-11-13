@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useContext, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 import { buttonVariants } from '@/components/ui/button-variants'
@@ -18,6 +18,7 @@ import {
   submitActivityAttempt,
 } from './activities.api.ts'
 import { ActivityRenderer } from './ActivityRenderer.tsx'
+import { CelebrationAllowed } from './celebration.ts'
 import type { AttemptResult, LastAttempt, Submission } from './activities.types.ts'
 
 type ActivityViewProps = {
@@ -52,6 +53,7 @@ export function ActivityView({
   const [submitError, setSubmitError] = useState('')
   const refreshRewards = useRefreshRewards()
   const queryClient = useQueryClient()
+  const allowed = useContext(CelebrationAllowed)
   const query = useQuery({
     queryKey: ['activities', activityId],
     queryFn: () => fetchActivity(activityId),
@@ -96,8 +98,10 @@ export function ActivityView({
     }
   }
 
+  // A question that decides an objective (module 6's, or a review path's fresh items, purpose
+  // "mastery") gets no companion, confetti or success moment, wherever it is opened (#222 review).
   return (
-    <>
+    <CelebrationAllowed.Provider value={allowed && query.data.purpose !== 'mastery'}>
       {submitError && (
         <Alert tone="danger" title="Try again">
           {submitError}
@@ -115,7 +119,7 @@ export function ActivityView({
         heading={heading}
         showTitle={showTitle}
       />
-    </>
+    </CelebrationAllowed.Provider>
   )
 }
 

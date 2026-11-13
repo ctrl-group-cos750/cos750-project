@@ -1321,6 +1321,12 @@ export interface components {
        */
       masteryCheck: boolean
       /**
+       * Purpose
+       * @default practice
+       * @enum {string}
+       */
+      purpose: 'practice' | 'diagnostic' | 'retrieval' | 'mastery' | 'review' | 'bonus' | 'test_out'
+      /**
        * Answered
        * @default false
        */
@@ -1481,8 +1487,8 @@ export interface components {
      * EarnedBadgeOut
      * @description A badge the student holds. `badge` is a catalogue id (web/src/components/achievements.ts);
      *     `ref` tells repeatable badges apart (the bonus quest's id), "" otherwise. An objective badge's
-     *     `tier` is its level: practised (secure in the modules' practice), bronze (met with support in
-     *     the mastery check) or gold (met independently); it only ever goes up. `seen` is false until
+     *     `tier` is its level: practised (secure in the modules' practice), bronze (met with support, on
+     *     a review path) or gold (met independently); it only ever goes up. `seen` is false until
      *     the app has announced it; going up a level makes it unseen again.
      */
     EarnedBadgeOut: {

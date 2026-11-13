@@ -304,6 +304,47 @@
           "activity_id": 1705
         }
       ]
+    },
+    {
+      "objective_id": 8,
+      "segments": [
+        {
+          "id": 1801,
+          "kind": "worked_example",
+          "title": "Review: worked example, the fewest edges and why BFS finds them",
+          "body": "**Worked example.** An undirected graph has the edges A–B, A–C, B–D, C–D, C–E, D–F and E–F. Find the fewest edges from A to F.\n\n**1. Run BFS from A** and write down who found each vertex:\n\n| Vertex | Found by | Edges from A |\n|---|---|---|\n| A | (the start) | 0 |\n| B | A | 1 |\n| C | A | 1 |\n| D | B | 2 |\n| E | C | 2 |\n| F | D | 3 |\n\nD is found by B, not C, because B leaves the queue first. F is found by D, because D leaves the queue before E.\n\n**2. Walk back from F:** D, then B, then A. The route is A → B → D → F: **3 edges**. (A → C → E → F is also 3 edges: there can be more than one shortest route, and BFS records one of them.)\n\n**3. Why nothing shorter exists.** BFS takes every vertex 1 edge away out of the queue before any vertex 2 away, and every vertex 2 away before any 3 away. If F were 2 edges from A, a vertex 1 edge away would be joined to F and would have put F in the queue during the 1-edge ring. None did, so 3 is the fewest.\n\nThis only holds when every edge counts the same. With lengths on the edges (kilometres, minutes), the route with the fewest edges may not be the shortest."
+        },
+        {
+          "id": 1802,
+          "kind": "activity",
+          "title": "Review practice: the fewest edges",
+          "activity_id": 1801
+        },
+        {
+          "id": 1803,
+          "kind": "activity",
+          "title": "Objective 8 · fresh item 1 of 4: the route BFS records",
+          "activity_id": 1802
+        },
+        {
+          "id": 1804,
+          "kind": "activity",
+          "title": "Objective 8 · fresh item 2 of 4: why it is the shortest",
+          "activity_id": 1803
+        },
+        {
+          "id": 1805,
+          "kind": "activity",
+          "title": "Objective 8 · fresh item 3 of 4: the fewest edges",
+          "activity_id": 1804
+        },
+        {
+          "id": 1806,
+          "kind": "activity",
+          "title": "Objective 8 · fresh item 4 of 4: when the guarantee holds",
+          "activity_id": 1805
+        }
+      ]
     }
   ],
   "activities": [
@@ -3423,6 +3464,257 @@
         {
           "level": 4,
           "body": "Answer: 1 = Edge Q–R, 2 = Vertex S, 3 = Edge P–Q."
+        }
+      ]
+    },
+    {
+      "id": 1801,
+      "kind": "multiple_choice",
+      "title": "Review practice: the fewest edges",
+      "module_id": null,
+      "purpose": "review",
+      "objective_id": 8,
+      "config": {
+        "prompt": "An undirected graph has the edges A–B, B–C, C–D, A–E and D–E. What is the fewest number of edges from A to D?",
+        "options": [
+          {
+            "id": "b",
+            "label": "3"
+          },
+          {
+            "id": "a",
+            "label": "2"
+          },
+          {
+            "id": "c",
+            "label": "4"
+          }
+        ]
+      },
+      "solution": {
+        "explanation": "BFS from A finds B and E (1 edge), then C and D (2 edges): E found D. The route A, E, D has 2 edges.",
+        "correct": "a",
+        "feedback": {
+          "b": "Not quite. A, B, C, D has 3 edges, but there is a shorter way round. Ask: which vertex is 1 edge from A and joined to D?",
+          "c": "Not quite. 4 is the number of vertices on the long way round. BFS from A finds D sooner: see which ring D is in."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Run BFS from A: which vertices are 1 edge away?"
+        },
+        {
+          "level": 2,
+          "body": "B and E are 1 edge away. Is either joined to D?"
+        },
+        {
+          "level": 3,
+          "body": "E is joined to D, so D is in the 2-edge ring."
+        },
+        {
+          "level": 4,
+          "body": "Answer: 2 edges, A, E, D."
+        }
+      ]
+    },
+    {
+      "id": 1802,
+      "kind": "multiple_choice",
+      "title": "Objective 8 · fresh item 1 of 4: the route BFS records",
+      "module_id": null,
+      "purpose": "mastery",
+      "objective_id": 8,
+      "config": {
+        "prompt": "An undirected graph has the edges W–X, W–Y, X–Z, Y–Z, Y–V, Z–U and V–U. BFS runs from W in alphabetical order and records who found each vertex. Following those records back from U, which route does it give?",
+        "options": [
+          {
+            "id": "a",
+            "label": "W, Y, V, U"
+          },
+          {
+            "id": "b",
+            "label": "W, X, Z, U"
+          },
+          {
+            "id": "c",
+            "label": "W, Y, Z, U"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "b",
+        "feedback": {
+          "a": "Not quite. W, Y, V, U also has 3 edges, but Z leaves the queue before V and finds U first. Ask: who took U into the queue?",
+          "c": "Not quite. Y doesn't find Z: X leaves the queue first and finds Z. Ask: who found Z?"
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Write the order BFS visits the vertices, and who found each one."
+        },
+        {
+          "level": 2,
+          "body": "X found Z. Which leaves the queue first, Z or V?"
+        },
+        {
+          "level": 3,
+          "body": "Z finds U first. Walk back from U through who found each vertex."
+        },
+        {
+          "level": 4,
+          "body": "Answer: W, X, Z, U."
+        }
+      ]
+    },
+    {
+      "id": 1803,
+      "kind": "multiple_choice",
+      "title": "Objective 8 · fresh item 2 of 4: why it is the shortest",
+      "module_id": null,
+      "purpose": "mastery",
+      "objective_id": 8,
+      "config": {
+        "prompt": "BFS from M first reaches N while taking a vertex 3 edges from M out of the queue. Why can't any route from M to N use only 2 edges?",
+        "options": [
+          {
+            "id": "a",
+            "label": "Because BFS lists every route of 2 edges from M before it moves on, and none of those routes ended at N."
+          },
+          {
+            "id": "b",
+            "label": "Because N comes after all of the vertices 2 edges from M in alphabetical order, so BFS reaches it later."
+          },
+          {
+            "id": "c",
+            "label": "A vertex 1 edge from M would then have found N earlier."
+          }
+        ]
+      },
+      "solution": {
+        "correct": "c",
+        "feedback": {
+          "a": "Not quite. BFS never lists routes. The guarantee comes from the order vertices leave the queue. Ask: which vertices does BFS finish before going further out?",
+          "b": "Not quite. Alphabetical order only breaks ties between neighbours of one vertex. Ask: which vertices does BFS finish before going further out?"
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "If N were 2 edges from M, which kind of vertex would be joined to N?"
+        },
+        {
+          "level": 2,
+          "body": "When does BFS take those vertices out of the queue?"
+        },
+        {
+          "level": 3,
+          "body": "Each of them would have put N in the queue during the 1-edge ring."
+        },
+        {
+          "level": 4,
+          "body": "Answer: a vertex 1 edge from M would then have found N earlier."
+        }
+      ]
+    },
+    {
+      "id": 1804,
+      "kind": "multiple_choice",
+      "title": "Objective 8 · fresh item 3 of 4: the fewest edges",
+      "module_id": null,
+      "purpose": "mastery",
+      "objective_id": 8,
+      "config": {
+        "prompt": "An undirected graph has the edges F–G, F–H, G–I, H–I, I–J, H–K and K–J. How many edges are on the shortest route from F to J?",
+        "options": [
+          {
+            "id": "a",
+            "label": "2 edges"
+          },
+          {
+            "id": "b",
+            "label": "3 edges"
+          },
+          {
+            "id": "c",
+            "label": "4 edges: F, H, K and J, then one more"
+          }
+        ]
+      },
+      "solution": {
+        "correct": "b",
+        "feedback": {
+          "a": "Not quite. J isn't joined to G or H, so it can't be 2 edges from F. Ask: which ring of BFS is J in?",
+          "c": "Not quite. Routes such as F, G, I, J have 3 edges. Count the steps between the vertices."
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "Run BFS from F: which vertices are 1 edge away, and which 2?"
+        },
+        {
+          "level": 2,
+          "body": "G and H are 1 edge away; I and K are 2. Which ring is J in?"
+        },
+        {
+          "level": 3,
+          "body": "I found J. Walk back: J, I, G, F."
+        },
+        {
+          "level": 4,
+          "body": "Answer: 3 edges."
+        }
+      ]
+    },
+    {
+      "id": 1805,
+      "kind": "multiple_choice",
+      "title": "Objective 8 · fresh item 4 of 4: when the guarantee holds",
+      "module_id": null,
+      "purpose": "mastery",
+      "objective_id": 8,
+      "config": {
+        "prompt": "A map app stores each road's length in kilometres. Does the route BFS records always have the fewest kilometres?",
+        "options": [
+          {
+            "id": "a",
+            "label": "Yes, because BFS always finds the shortest route in any graph it runs on."
+          },
+          {
+            "id": "b",
+            "label": "Yes, as long as every road is stored as an undirected edge."
+          },
+          {
+            "id": "c",
+            "label": "No: BFS counts edges, not kilometres."
+          }
+        ]
+      },
+      "solution": {
+        "correct": "c",
+        "feedback": {
+          "a": "Not quite. BFS's guarantee is about the number of edges. One long road can be more kilometres than three short ones. Ask: what does BFS count?",
+          "b": "Not quite. Direction isn't the issue: BFS still counts edges, whatever their length. Ask: what does BFS count?"
+        }
+      },
+      "hints": [
+        {
+          "level": 1,
+          "body": "What does BFS count as it moves out ring by ring?"
+        },
+        {
+          "level": 2,
+          "body": "Could one long road be more kilometres than three short roads?"
+        },
+        {
+          "level": 3,
+          "body": "BFS's guarantee is about edges, so lengths break it."
+        },
+        {
+          "level": 4,
+          "body": "Answer: No: BFS counts edges, not kilometres."
         }
       ]
     }

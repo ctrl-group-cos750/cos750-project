@@ -98,7 +98,7 @@ def test_a_new_student_cannot_read_answer_or_hint_any_mastery_item(
     items = db.scalars(
         select(Activity.id).where(Activity.module_id == 6, Activity.purpose == "mastery")
     ).all()
-    assert len(items) == 24
+    assert len(items) == 28  # 24, and objective 8's four (#70)
     for item in items:
         all_refused(client, db, item, 403, MODULE_LOCKED)
     # Nothing was recorded or revealed, and the student is no closer to "ready".

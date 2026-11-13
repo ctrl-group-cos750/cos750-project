@@ -38,7 +38,7 @@ function withRewards(rewards: Rewards) {
 describe('buildShelf', () => {
   it('shows every badge, earned or not, with how to earn the locked ones', () => {
     const shelf = buildShelf([badge('lo5', { tier: 'gold' }), badge('lo2', { tier: 'bronze' })])
-    expect(shelf.objective).toHaveLength(7)
+    expect(shelf.objective).toHaveLength(8)
     const states = Object.fromEntries(shelf.objective.map((i) => [i.achievement.id, i.state]))
     expect(states).toMatchObject({ lo5: 'gold', lo2: 'bronze', lo1: 'locked' })
     expect(shelf.objective.find((i) => i.achievement.id === 'lo1')?.next).toBe(
@@ -50,12 +50,12 @@ describe('buildShelf', () => {
     expect(shelf.milestone.map((i) => i.state)).toEqual(['locked', 'locked', 'locked', 'locked'])
   })
 
-  it('leaves off a badge the course cannot award yet, unless the student has it (#147)', () => {
-    const ids = (earned: Parameters<typeof buildShelf>[0]) =>
-      buildShelf(earned).objective.map((i) => i.achievement.id)
-    expect(ids([])).not.toContain('lo8')
-    expect(ids([])).toEqual(['lo1', 'lo2', 'lo3', 'lo4', 'lo5', 'lo6', 'lo7'])
-    expect(ids([badge('lo8', { tier: 'bronze' })])).toContain('lo8')
+  it('offers Shortcut Finder now that objective 8 is assessed (#70)', () => {
+    const ids = buildShelf([]).objective.map((i) => i.achievement.id)
+    expect(ids).toEqual(['lo1', 'lo2', 'lo3', 'lo4', 'lo5', 'lo6', 'lo7', 'lo8'])
+    expect(buildShelf([]).objective.find((i) => i.achievement.id === 'lo8')?.next).toBe(
+      'Meet learning objective 8.',
+    )
   })
 
   it('gives each finished quest its own badge', () => {

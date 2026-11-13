@@ -621,6 +621,32 @@ We use the first two levels of Kirkpatrick’s model: reaction (did students fin
 
 The lecture divides ADDIE's Evaluate phase into formative evaluation, done while the material is being built so that it can still change, and summative evaluation, done at the end to improve the next presentation [58, p. 31]. The team pilot (Section 8.2) is formative evaluation. A study with real COS212 students, with a separate post-test (Section 8.4), would be summative evaluation. Table 19 gives the Kirkpatrick level of each measure.
 
+## Formative evaluation so far
+
+Three kinds of formative evaluation have run while the application was built, and each changed it.
+
+**Accessibility, automatically.** The end-to-end tests run axe-core on every page and on every activity kind (unanswered, with hints, wrong and right), in the light and the dark theme, in Chromium, Firefox and WebKit, and check the keyboard path and visible focus through a module. They report no WCAG 2.1 AA violations; the failures they found while being written (focus rings, contrast in dark mode, a page caught mid-fade) were fixed before they merged (SE document §14.1).
+
+**The content, automatically.** Every answer in the content is checked by running it: traces through the BFS engine, code through the checkers. The mastery items are also checked for cues a student could use without the skill: dozens of surface strategies (always the longest option, the option that repeats the question's words, the one that echoes the hints, and combinations of them) must not meet any objective. Several items were rewritten when one did.
+
+**An expert review of the interface (12 November).** One member, with an AI assistant (Section 10), walked every page on staging as a visitor, as each demo student and as staff, at five screen widths from a phone to a 4K monitor, in both themes. Each finding is classed below by the usability heuristic it breaks [69]. Of 33 findings, 23 are fixed in pull requests opened the same night; the other ten stay open: most are in the staff portal or cosmetic, and two (a standalone activity page that sizes badly, and a finished module that reopens on its last question) affect students.
+
+| Heuristic | Findings | Examples, and what changed |
+|---|---|---|
+| Visibility of system status | 4 | Progress on the module map disagreed with the module page; every tab was titled "Ctrl Academy". Both fixed. |
+| Match with the real world | 2 | A review path showed raw Markdown (code fences, table pipes) to students. Fixed. |
+| User control and freedom | 3 | Badges could only be turned off deep in the profile; now from the badge note itself. After logging in, a student lost the page they had asked for. Fixed. |
+| Consistency and standards | 6 | Two button styles (square and rounded), mixed fonts, a 404 page outside the app's frame. Fixed. |
+| Recognition rather than recall | 3 | The report's verdict was small grey text, with no next step; it now has a tally and one button to the next step. |
+| Flexibility and efficiency | 5 | On a large monitor the page filled a third of the screen; it now scales and uses two columns. Staff content lists have no search (open). |
+| Aesthetic and minimalist design | 8 | A header of outlined buttons; the module goals repeated on every segment; a public visitor met a bare login form instead of a landing page. Fixed. |
+| Help users recover from errors | 1 | The hint button looked as important as "Check answer"; it is now quieter. |
+| Help and documentation | 1 | Locked badges' "how to earn" lines looked like links. Fixed. |
+
+Table: The expert review's findings by heuristic.
+
+An expert review finds problems a designer can see; it cannot show whether a novice learns, which is what the pilot and, later, a study with real students are for. The pilot planned for 10 and 11 November had not been run when this was written (13 November).
+
 ## Pilot
 
 The pilot is the Implement phase of ADDIE (Table 2). On 10 and 11 November, team members pilot the application on staging, as planned in the SE document (§14.7). Each member works through the modules they did not build, from a new account, and thinks aloud while another member takes notes. Afterwards each member completes a short survey with:
@@ -938,5 +964,7 @@ Marcelo Pias, Susan Reiser, Christian Servin, Rahul Simha, Titus Winters, and Qi
 [66]	O. Seppälä, L. Malmi, and A. Korhonen. Observations on student misconceptions: A case study of the Build-Heap algorithm. *Computer Science Education*, 16(3):241–255, 2006. https://doi.org/10.1080/08993400600913523
 
 [67]	A. Tilanterä et al. Investigating students' misconceptions of Dijkstra's algorithm: Exploration of algorithm simulation traces. 2025. https://doi.org/10.1145/3724363.3729081 (venue and full author list not verified)
+
+[69]	J. Nielsen. Enhancing the explanatory power of usability heuristics. In *Proceedings of the SIGCHI Conference on Human Factors in Computing Systems (CHI '94)*, pages 152–158. ACM, 1994.
 
 </div>

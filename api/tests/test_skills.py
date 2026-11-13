@@ -2,6 +2,7 @@
 an answer reports earning."""
 
 import json
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -10,7 +11,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import HintView, ModuleProgress
+from app.models import Attempt, HintView, ModuleProgress
 from app.seed import load
 from app.services.skills import level_for, medal_for
 
@@ -363,3 +364,41 @@ def test_a_module_finished_before_its_medal_set_changed_keeps_its_medal(
     complete(db, newcomer, 1)
     medal = profile(client)["modules"][0]
     assert (medal["medal"], medal["total"]) == ("silver", 4)
+
+
+def test_going_back_to_an_item_that_joined_a_finished_module_never_lowers_its_medal(
+    client: TestClient, db: Session, tmp_path: Path
+) -> None:
+    """A gold student who opens module 1 again and gets the new item (as 194) wrong keeps gold:
+    an activity first answered after the module was finished isn't one it was finished with, and
+    more work never lowers a medal (review of #223, new finding 2)."""
+    (tmp_path / "course.json").write_text(json.dumps(course()), encoding="utf-8")
+    load(db, tmp_path)
+    user = log_in(client)
+    for activity in (101, 102, 103, 104):
+        answer(client, activity)
+    # Finished an hour ago, a minute after these answers.
+    for attempt in db.scalars(select(Attempt).where(Attempt.user_id == user)):
+        attempt.created_at = datetime.now(tz=UTC) - timedelta(hours=1, minutes=1)
+    db.add(
+        ModuleProgress(
+            user_id=user,
+            module_id=1,
+            status="complete",
+            completed_at=datetime.now(tz=UTC) - timedelta(hours=1),
+        )
+    )
+    db.commit()
+    assert profile(client)["modules"][0]["medal"] == "gold"
+
+    data = course()
+    data["modules"][0]["segments"].insert(4, segment(1006, 106))
+    data["activities"].append(mcq(106, None, 1))
+    (tmp_path / "course.json").write_text(json.dumps(data), encoding="utf-8")
+    load(db, tmp_path)
+    db.expire_all()
+    answer(client, 106, WRONG)
+    medal = profile(client)["modules"][0]
+    assert (medal["medal"], medal["firstTime"], medal["total"]) == ("gold", 4, 4)
+    answer(client, 106)
+    assert profile(client)["modules"][0]["medal"] == "gold"

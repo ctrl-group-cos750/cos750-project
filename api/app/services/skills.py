@@ -40,7 +40,9 @@ way. An activity added to it afterwards isn't one they were asked, so it can't l
 finished with (review of #223, Must fix 2: module 1's warm-up question left the medal set and a
 graph-words item joined it, and every finished student's gold became bronze). Working through a
 module answers every activity it asks for, so for anyone who finished it since, that is all of
-them.
+them. An activity first answered after the module was finished doesn't join it either: going back
+to an item that joined later is more work, and more work never lowers a medal (review of #223, new
+finding 2: one wrong answer to the new item 194 turned a kept gold into bronze).
 
 A module whose quick check the student passed earns silver: the check showed the student can do
 it on their own, but not every activity was answered. That stays when the student works through
@@ -54,6 +56,7 @@ activities already answered.
 
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Literal
 
 from sqlalchemy import select
@@ -156,26 +159,35 @@ class _Answers:
     right: set[int]
     on_own: set[int]
     first_time: set[int]
+    first_at: dict[int, datetime]  # when each was first answered
+
+
+def _utc(moment: datetime) -> datetime:
+    """`moment` as an aware time: SQLite gives back naive UTC times, Postgres aware ones."""
+    return moment if moment.tzinfo is not None else moment.replace(tzinfo=UTC)
 
 
 def _answers(session: Session, user_id: int, ids: Collection[int]) -> _Answers:
     """Of these activities: those answered at all, right at some point, right without hint 3 or
     4, and right without them at the first answer."""
     if not ids:
-        return _Answers(set(), set(), set(), set())
+        return _Answers(set(), set(), set(), set(), {})
     rows = session.execute(
-        select(Attempt.activity_id, Attempt.correct, Attempt.hint_level)
+        select(Attempt.activity_id, Attempt.correct, Attempt.hint_level, Attempt.created_at)
         .where(Attempt.user_id == user_id, Attempt.activity_id.in_(ids))
         .order_by(Attempt.id)
     ).all()
     first: dict[int, bool] = {}
-    for activity, correct, hint in rows:
+    first_at: dict[int, datetime] = {}
+    for activity, correct, hint, at in rows:
         first.setdefault(activity, bool(correct) and hint < SUPPORT_LEVEL)
+        first_at.setdefault(activity, _utc(at))
     return _Answers(
         answered=set(first),
-        right={a for a, correct, _ in rows if correct},
-        on_own={a for a, correct, hint in rows if correct and hint < SUPPORT_LEVEL},
+        right={a for a, correct, _, _ in rows if correct},
+        on_own={a for a, correct, hint, _ in rows if correct and hint < SUPPORT_LEVEL},
         first_time={a for a, ok in first.items() if ok},
+        first_at=first_at,
     )
 
 
@@ -216,15 +228,17 @@ def module_medals(session: Session, user_id: int) -> list[ModuleMedal]:
             Segment.activity_id.is_not(None),
         )
     ).all()
-    statuses: dict[int, str] = {
-        row.module_id: row.status
-        for row in session.execute(
-            select(ModuleProgress.module_id, ModuleProgress.status).where(
-                ModuleProgress.user_id == user_id,
-                ModuleProgress.status.in_(("complete", "tested_out")),
-            )
+    statuses: dict[int, str] = {}
+    completed_at: dict[int, datetime] = {}
+    for row in session.execute(
+        select(ModuleProgress.module_id, ModuleProgress.status, ModuleProgress.completed_at).where(
+            ModuleProgress.user_id == user_id,
+            ModuleProgress.status.in_(("complete", "tested_out")),
         )
-    }
+    ):
+        statuses[row.module_id] = row.status
+        if row.completed_at is not None:
+            completed_at[row.module_id] = _utc(row.completed_at)
     complete = set(statuses)
     # A module passed through its quick check (FR-8.2) has a medal too (#214), and keeps it once
     # worked through (the status is then "complete"): the better of the two.
@@ -244,7 +258,11 @@ def module_medals(session: Session, user_id: int) -> list[ModuleMedal]:
         done = [a for a in mine if a in got.answered]
         finished = module.id in complete
         # Judged on what the student was asked when they worked through it (see the docstring).
-        asked = done if statuses.get(module.id) == "complete" and done else mine
+        asked = mine
+        if statuses.get(module.id) == "complete" and done:
+            asked = done
+            if (end := completed_at.get(module.id)) is not None:
+                asked = [a for a in done if got.first_at[a] <= end] or done
         first = sum(1 for a in asked if a in got.first_time)
         own = sum(1 for a in asked if a in got.on_own)
         so_far = medal_for(

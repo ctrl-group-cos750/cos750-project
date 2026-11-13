@@ -15,6 +15,22 @@ export type ObjectiveReport = {
   /** Set once module 6 marks the objective "not yet", which opens its review path (FR-7.5):
    * how many of the path's fresh questions are answered. When all are, they decide the result. */
   review: ReviewProgress | null
+  /** Its module 6 questions with the student's answer marked and why, once every question in the
+   * check is answered (review of 13 Nov); empty before, while the results are withheld. */
+  answers?: MasteryAnswer[]
+}
+
+/** One mastery check question and how the student's (first and only) answer was marked. */
+export type MasteryAnswer = {
+  activityId: number
+  title: string
+  correct: boolean
+  score: number
+  /** Why it is right (the question's explanation), or the summary of what was wrong. */
+  feedback: string
+  /** What each wrong part said, each message once. */
+  notes: string[]
+  hintLevel: number
 }
 
 export type ReviewProgress = { answered: number; total: number }
@@ -41,6 +57,8 @@ export type ReviewStep = {
   activityId: number | null
   purpose: 'review' | 'mastery' | null
   answered: boolean
+  /** A fresh question that opens once the path's practice is done (review of 13 Nov). */
+  locked?: boolean
 }
 
 export type ReviewPath = {

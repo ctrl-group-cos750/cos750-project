@@ -490,7 +490,7 @@ def test_the_reference_bfs_passes_every_hidden_test() -> None:
 
 def conventional(order: list[int], text: dict[int, str]) -> bool:
     """The import comes first, and the order gets the vertex straight after it leaves the queue:
-    the two orders that run but are marked wrong on purpose (see test_module_4.py)."""
+    the worked example's order. The others that run are accepted too (see test_module_4.py)."""
     lines = [text[i].strip() for i in order]
     after_dequeue = lines[next(n for n, t in enumerate(lines) if ".popleft()" in t) + 1]
     return lines[0].startswith("from ") and after_dequeue.startswith("order.append(")
@@ -499,11 +499,21 @@ def conventional(order: list[int], text: dict[int, str]) -> bool:
 ORDERED = [a for a in EVERY if a.kind in ("parsons", "fix_the_bug")]
 
 
+def test_order_append_after_the_neighbour_loop_is_a_correct_bfs_and_accepted() -> None:
+    """Review of 13 Nov, High 5: on 619, order.append(u) after the neighbour loop gives the right
+    order on every hidden test, and was marked wrong. Objective 6 needs every part right."""
+    parsons = ACTIVITIES[619]
+    order = [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 8, 13]
+    assert passes_hidden(lines_text(parsons, order))
+    result = check_activity(parsons.kind, parsons.config, parsons.solution, {"order": order})
+    assert result.correct
+
+
 @pytest.mark.parametrize("a", ORDERED, ids=lambda a: str(a.id))
 def test_an_ordered_item_accepts_exactly_the_working_orders(a: ActivityFixture) -> None:
     """Every order of the answer's lines Python can run is tried on the hidden tests: each the
-    checker accepts passes, and each that passes is accepted, but for the two conventions above
-    (FR-5.4, FR-5.5, #145). Objectives 6 and 7 need every part right, so a working order marked
+    checker accepts passes, and each that passes is accepted, order.append after the neighbour loop
+    and the import last included (FR-5.4, FR-5.5, #145; review of 13 Nov, High 5). Objectives 6 and 7 need every part right, so a working order marked
     wrong would decide the result. Distractors and corrections are covered by the tests below."""
     every = {x["id"]: x["text"] for x in a.config["lines"] + a.config.get("corrections", [])}
     text = {i: every[i] for i in first_order(a)}
@@ -513,9 +523,9 @@ def test_an_ordered_item_accepts_exactly_the_working_orders(a: ActivityFixture) 
             working.append(order)
         if check_activity(a.kind, a.config, a.solution, {"order": order}).correct:
             accepted.append(order)
-    assert accepted == [order for order in working if conventional(order, text)]
-    assert len(accepted) == 12
+    assert accepted == working
     assert len(working) == 48
+    assert sum(not conventional(order, text) for order in accepted) == 36
     shown = [x["id"] for x in a.config["lines"]]
     assert not check_activity(a.kind, a.config, a.solution, {"order": shown}).correct
 

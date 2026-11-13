@@ -240,8 +240,8 @@ def test_coming_back_shows_the_latest_answer_and_its_result(
     assert last["submitted"] == {"selected": "a"}
     # Exactly what the student was shown for it, but for the points it earned: those are said
     # once, when it is answered, so coming back doesn't celebrate them again (#214).
-    assert right["points"] == 10
-    assert last["result"] == right | {"points": 0}
+    assert right["points"] == 0  # right only after a wrong first attempt (FR-9.1)
+    assert last["result"] == right
     assert last["result"] != wrong
 
 

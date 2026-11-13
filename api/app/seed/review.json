@@ -2099,6 +2099,65 @@
           ],
           13
         ],
+        "alternatives": [
+          [
+            1,
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            7,
+            9,
+            20,
+            [
+              11,
+              12
+            ],
+            8,
+            13
+          ],
+          [
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            7,
+            8,
+            9,
+            20,
+            [
+              11,
+              12
+            ],
+            13,
+            1
+          ],
+          [
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            7,
+            9,
+            20,
+            [
+              11,
+              12
+            ],
+            8,
+            13,
+            1
+          ]
+        ],
         "feedback": {
           "10": "Not quite. order only holds vertices that have left the queue, not ones still waiting, so a waiting vertex can be added again. Check against the vertices found so far instead."
         }
@@ -2219,6 +2278,65 @@
             12
           ],
           13
+        ],
+        "alternatives": [
+          [
+            1,
+            2,
+            [
+              20,
+              4,
+              5
+            ],
+            6,
+            7,
+            9,
+            10,
+            [
+              11,
+              12
+            ],
+            8,
+            13
+          ],
+          [
+            2,
+            [
+              20,
+              4,
+              5
+            ],
+            6,
+            7,
+            8,
+            9,
+            10,
+            [
+              11,
+              12
+            ],
+            13,
+            1
+          ],
+          [
+            2,
+            [
+              20,
+              4,
+              5
+            ],
+            6,
+            7,
+            9,
+            10,
+            [
+              11,
+              12
+            ],
+            8,
+            13,
+            1
+          ]
         ],
         "feedback": {
           "3": "Not quite. The start vertex is in the queue but never added to the found set, the set of vertices found so far, so a neighbour can add it again. Start with the start vertex already in the found set."
@@ -2911,6 +3029,65 @@
             12
           ],
           13
+        ],
+        "alternatives": [
+          [
+            1,
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            7,
+            9,
+            10,
+            [
+              11,
+              12
+            ],
+            8,
+            13
+          ],
+          [
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            7,
+            8,
+            9,
+            10,
+            [
+              11,
+              12
+            ],
+            13,
+            1
+          ],
+          [
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            7,
+            9,
+            10,
+            [
+              11,
+              12
+            ],
+            8,
+            13,
+            1
+          ]
         ]
       },
       "hints": [
@@ -3030,6 +3207,65 @@
             12
           ],
           13
+        ],
+        "alternatives": [
+          [
+            1,
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            7,
+            9,
+            10,
+            [
+              11,
+              12
+            ],
+            8,
+            13
+          ],
+          [
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            7,
+            8,
+            9,
+            10,
+            [
+              11,
+              12
+            ],
+            13,
+            1
+          ],
+          [
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            7,
+            9,
+            10,
+            [
+              11,
+              12
+            ],
+            8,
+            13,
+            1
+          ]
         ]
       },
       "hints": [
@@ -3149,6 +3385,65 @@
             20
           ],
           13
+        ],
+        "alternatives": [
+          [
+            1,
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            7,
+            9,
+            10,
+            [
+              11,
+              20
+            ],
+            8,
+            13
+          ],
+          [
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            7,
+            8,
+            9,
+            10,
+            [
+              11,
+              20
+            ],
+            13,
+            1
+          ],
+          [
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            7,
+            9,
+            10,
+            [
+              11,
+              20
+            ],
+            8,
+            13,
+            1
+          ]
         ],
         "feedback": {
           "12": "Not quite. appendleft puts a new vertex at the front of the queue, where popleft takes it straight back out, so the newest vertex leaves next and BFS goes deep instead of wide. New vertices wait their turn at the back."

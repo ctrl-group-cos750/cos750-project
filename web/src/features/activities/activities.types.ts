@@ -146,8 +146,14 @@ export type TraceRow = {
 }
 
 /** A module 6 mastery item (#144): one answer only, its result shown only in the mastery report,
- * and hints 1 and 2 only. `answered` says this student has given that answer. */
-export type MasteryCheckFlags = { masteryCheck?: boolean; answered?: boolean }
+ * and hints 1 and 2 only. `answered` says this student has given that answer. `reviewCheck`: a
+ * fresh question on a review path, which decides the objective's result and gives hints 1 to 3
+ * only (hint 4 is the worked answer). */
+export type MasteryCheckFlags = {
+  masteryCheck?: boolean
+  answered?: boolean
+  reviewCheck?: boolean
+}
 
 /** The student's latest answer and the result for it, as marked now (#171): what each kind
  * sends, as in `Submission`, and the check's result (withheld on a mastery check item). */

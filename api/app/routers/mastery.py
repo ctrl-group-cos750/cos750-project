@@ -9,18 +9,65 @@ from app.models import Activity, Attempt, Segment
 from app.schemas.content import SegmentKind
 from app.schemas.ids import RowId
 from app.schemas.mastery import (
+    MasteryAnswerOut,
     MasteryReportOut,
     ObjectiveReportOut,
     ReviewPathOut,
     ReviewProgressOut,
     ReviewStepOut,
 )
-from app.services.mastery import Tally, evaluate, is_ready, review_items
+from app.services.access import review_practice_done
+from app.services.mastery import (
+    Outcome,
+    Tally,
+    check_finished,
+    evaluate,
+    is_ready,
+    review_items,
+)
 
 router = APIRouter(prefix="/api/me", tags=["mastery"])
 
 NO_PATH = "This objective has no review path."
 NOT_OPEN = "This review path opens when the mastery check marks the objective 'not yet'."
+
+
+def _answers(
+    session: DbSession, user_id: int, outcomes: list[Outcome]
+) -> dict[int, list[MasteryAnswerOut]]:
+    """Each objective's module 6 items with the student's first answer and its result, once the
+    check is finished (every module 6 item answered); none before, so nothing is given away
+    early (#144). The result is the one stored with the attempt, as marked (after a re-grade,
+    the new mark)."""
+    evidence = [i for o in outcomes for i in o.check.evidence]
+    if not evidence or not check_finished(session, user_id):
+        return {}
+    rows = session.execute(
+        select(Attempt, Activity)
+        .join(Activity, Activity.id == Attempt.activity_id)
+        .where(Attempt.id.in_(evidence))
+        .order_by(Activity.id)
+    ).all()
+    found: dict[int, list[MasteryAnswerOut]] = {}
+    for attempt, activity in rows:
+        detail = attempt.detail or {}
+        notes: list[str] = []
+        for part in detail.get("parts") or []:
+            message = part.get("message")
+            if not part.get("correct") and message and message not in notes:
+                notes.append(str(message))
+        found.setdefault(activity.objective_id or 0, []).append(
+            MasteryAnswerOut(
+                activity_id=activity.id,
+                title=activity.title,
+                correct=attempt.correct,
+                score=attempt.score,
+                feedback=str(detail.get("feedback", "")),
+                notes=[] if attempt.correct else notes,
+                hint_level=attempt.hint_level,
+            )
+        )
+    return found
 
 
 @router.get("/report")
@@ -31,8 +78,13 @@ def get_report(user: CurrentUser, session: DbSession) -> MasteryReportOut:
 
     Worked out from their attempts on every request (app/services/mastery.py), so it always follows
     the current rules (FR-7.6). Nothing a client sends can set a result: they change only through
-    attempts. Only ever the student's own."""
+    attempts. Only ever the student's own.
+
+    Once every module 6 item is answered, each objective lists its items with the student's
+    answer marked and why (`answers`; review of 13 Nov, High 9). Before that it is empty, as the
+    results are withheld until the end of the check (#144)."""
     outcomes = evaluate(session, user.id)
+    answers = _answers(session, user.id, outcomes)
     return MasteryReportOut(
         ready=is_ready(outcomes),
         objectives=[
@@ -48,6 +100,7 @@ def get_report(user: CurrentUser, session: DbSession) -> MasteryReportOut:
                     if o.review
                     else None
                 ),
+                answers=answers.get(o.objective.id, []),
             )
             for o in outcomes
         ],
@@ -58,7 +111,8 @@ def get_report(user: CurrentUser, session: DbSession) -> MasteryReportOut:
 def get_review_path(objective_id: RowId, user: CurrentUser, session: DbSession) -> ReviewPathOut:
     """The objective's review path: its steps in order, and which the student has answered
     (FR-7.5). 404 if the objective has no path; 403 until module 6 marks it "not yet", so the
-    fresh items stay unseen until the student needs them. Staff may always open it, to preview."""
+    fresh items stay unseen until the student needs them. A fresh item is `locked` until the
+    path's practice is done (review of 13 Nov). Staff may always open it, to preview."""
     segments = session.scalars(
         select(Segment)
         .where(Segment.review_objective_id == objective_id)
@@ -93,6 +147,8 @@ def get_review_path(objective_id: RowId, user: CurrentUser, session: DbSession) 
             )
         )
     )
+    # Fresh items open once the practice is done (app/services/access.py, review of 13 Nov).
+    practice_first = not user.is_staff and not review_practice_done(session, user.id, objective_id)
     return ReviewPathOut(
         objective_id=objective_id,
         objective_text=outcome.objective.text,
@@ -112,6 +168,7 @@ def get_review_path(objective_id: RowId, user: CurrentUser, session: DbSession) 
                     else None
                 ),
                 answered=s.activity_id in answered,
+                locked=practice_first and purposes.get(s.activity_id or 0) == "mastery",
             )
             for s in segments
         ],

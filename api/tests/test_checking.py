@@ -1,6 +1,8 @@
 """The code-activity checkers (app/services/checking.py). Pure comparison, no database, no code
 execution: these mirror the grading a student submission gets."""
 
+import json
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -20,6 +22,9 @@ from app.schemas.activities import (
     TraceSubmission,
 )
 from app.services import checking
+from app.services.mastery import Rule
+
+SEED = Path(__file__).resolve().parents[1] / "app" / "seed"
 
 # A small Parsons problem: three real lines (0, 1, 2) and one distractor (9).
 PARSONS = ParsonsConfig.model_validate(
@@ -421,6 +426,65 @@ def test_one_slip_carried_through_costs_one_step() -> None:
     result = checking.check_trace(TRACE, TraceSubmission.model_validate({"rows": rows}))
     assert [p.correct for p in result.parts] == [False, True, True, True]
     assert result.score == pytest.approx(3 / 4)
+
+
+def _seed_activity(file: str, activity_id: int) -> dict[str, Any]:
+    data = json.loads((SEED / file).read_text())
+    activity: dict[str, Any] = next(a for a in data["activities"] if a["id"] == activity_id)
+    return activity
+
+
+def _trace_marking_on_leaving(config: TraceConfig, *, skip_rows: bool) -> list[dict[str, Any]]:
+    """The trace a student writes who marks a vertex only when it leaves the queue: a neighbour
+    still waiting is added again. With `skip_rows`, a row too for each repeat taken off the queue
+    and skipped."""
+    adjacency: dict[str, set[str]] = {v: set() for v in config.vertices}
+    for edge in config.edges:
+        adjacency[edge.source].add(edge.target)
+        adjacency[edge.target].add(edge.source)
+    queue, visited, rows = [config.start_vertex], [], []
+    while queue:
+        u = queue.pop(0)
+        if u not in visited:
+            visited.append(u)
+            queue.extend(w for w in sorted(adjacency[u]) if w not in visited)
+        elif not skip_rows:
+            continue
+        rows.append(
+            {"visited_vertex": u, "queue": list(queue), "visited": visited[:], "order": visited[:]}
+        )
+    return rows
+
+
+@pytest.mark.parametrize("skip_rows", [False, True])
+def test_marking_on_leaving_the_queue_fails_objective_5_on_item_618(skip_rows: bool) -> None:
+    """Review of 13 Nov: on item 618, marking a vertex only when it leaves the queue put B and G
+    in the queue twice, and follow-through accepted every row after the first slip, so the trace
+    lost one step and met objective 5 ("at most one error") independently. Every row whose queue
+    holds a vertex twice, or one already visited, is wrong, and says why."""
+    config = TraceConfig.model_validate(_seed_activity("module-6.json", 618)["config"])
+    rows = _trace_marking_on_leaving(config, skip_rows=skip_rows)
+    result = checking.check_trace(config, TraceSubmission.model_validate({"rows": rows}))
+    wrong = [p for p in result.parts if not p.correct]
+    assert len(wrong) >= 3
+    assert any(p.message and checking.QUEUE_TWICE in p.message for p in wrong)
+    objective_5 = Rule(max_wrong=1)  # objectives.json: "at most one error"
+    right = sum(p.correct for p in result.parts)
+    assert not objective_5.met(right, len(result.parts))
+
+
+@pytest.mark.parametrize(
+    ("queue", "message"),
+    [(["C", "D", "D"], checking.QUEUE_TWICE), (["C", "A"], checking.QUEUE_AFTER_VISIT)],
+)
+def test_a_queue_no_bfs_can_hold_is_wrong_even_following_the_row_before(
+    queue: list[str], message: str
+) -> None:
+    rows = [dict(r) for r in CORRECT_ROWS]
+    rows[1] = {**rows[1], "queue": queue}
+    result = checking.check_trace(TRACE, TraceSubmission.model_validate({"rows": rows}))
+    assert not result.parts[1].correct
+    assert result.parts[1].message == f"{checking.WRONG_TRACE_STEP} {message}"
 
 
 def test_a_slip_carried_through_wrongly_is_still_wrong() -> None:

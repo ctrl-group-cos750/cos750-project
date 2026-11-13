@@ -502,7 +502,7 @@ describe('ModulePage — navigation and position saving', () => {
     // Said plainly: moving on earns nothing for it (#215 review).
     expect(
       screen.getByText(
-        'You can move on: this one is marked to look at again. Moving on earns no points for it; answer it right later and it does.',
+        'You can move on: this one is marked to look at again. It earns no points now that the first answer was wrong, but answer it right later and it counts towards your medal.',
       ),
     ).toBeInTheDocument()
   })

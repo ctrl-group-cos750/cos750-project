@@ -198,7 +198,8 @@ def test_an_answer_given_away_before_a_restart_earns_no_more_after_it(
     client: TestClient, db: Session, tmp_path: Path
 ) -> None:
     """Every hint opened and a wrong answer, then a restart and the answer the hints gave: that
-    is supported work, worth 4 points, not 10, and no module reward (13 Nov audit; FR-9.6)."""
+    is supported work after a wrong first answer: no points (FR-9.1) and no module reward (13 Nov
+    audit; FR-9.6)."""
     setup(client, db, tmp_path)
     for _ in range(4):
         assert client.post("/api/activities/101/hints").status_code == 201
@@ -209,7 +210,8 @@ def test_an_answer_given_away_before_a_restart_earns_no_more_after_it(
     assert points(db) == 0
     assert client.post("/api/modules/0/restart").status_code == 200
     client.post("/api/activities/101/attempts", json={"submitted": {"selected": "a"}})
-    assert points(db) == 4  # activity_correct_supported, and no module points
+    # Nothing: right only after a wrong first attempt (FR-9.1), and no module points.
+    assert points(db) == 0
     assert db.scalar(select(func.count()).select_from(UserBadge)) == 0
 
 

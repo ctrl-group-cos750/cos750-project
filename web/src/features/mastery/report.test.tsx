@@ -52,6 +52,58 @@ function row(n: number) {
 }
 
 describe('ReportPage', () => {
+  it('lists each mastery check answer with its result and why, once the check is finished', async () => {
+    withReport({
+      ready: false,
+      objectives: [
+        objective(5, {
+          state: 'not_yet',
+          answers: [
+            {
+              activityId: 618,
+              title: 'Objective 5 · trace BFS from A',
+              correct: false,
+              score: 4 / 7,
+              feedback: '4 of 7 correct.',
+              notes: ['This step does not match the traversal. A vertex joined the queue twice.'],
+              hintLevel: 0,
+            },
+          ],
+        }),
+        objective(1, {
+          answers: [
+            {
+              activityId: 601,
+              title: 'Objective 1 · item 1 of 5',
+              correct: true,
+              score: 1,
+              feedback: 'A queue is a data structure: it holds things.',
+              notes: [],
+              hintLevel: 0,
+            },
+          ],
+        }),
+        objective(2),
+      ],
+    })
+    renderApp('/report')
+    await screen.findByRole('heading', { name: 'Your mastery report' })
+    const answers = row(5).getByText(/Your answers: 0 of 1 right/)
+    await userEvent.click(answers)
+    expect(row(5).getByRole('link', { name: 'Objective 5 · trace BFS from A' })).toHaveAttribute(
+      'href',
+      '/activities/618',
+    )
+    expect(row(5).getByText('57% right')).toBeVisible()
+    expect(row(5).getByText('4 of 7 correct.')).toBeVisible()
+    expect(row(5).getByText(/A vertex joined the queue twice/)).toBeVisible()
+    await userEvent.click(row(1).getByText(/Your answers: 1 of 1 right/))
+    expect(row(1).getByText('Right')).toBeVisible()
+    expect(row(1).getByText(/it holds things/)).toBeVisible()
+    // Before the check is finished there are none, so no list.
+    expect(row(2).queryByText(/Your answers/)).toBeNull()
+  })
+
   it('shows each objective in plain words and says the student is ready', async () => {
     withReport({
       ready: true,
@@ -63,7 +115,7 @@ describe('ReportPage', () => {
     expect(row(1).getByText('Met independently')).toBeVisible()
     expect(row(1).getByText('You met this on your own.')).toBeVisible()
     expect(row(2).getByText('Met with support')).toBeVisible()
-    expect(row(2).getByText('You met this after using hint 3 or 4.')).toBeVisible()
+    expect(row(2).getByText('You met this after using hint 3.')).toBeVisible()
     expect(row(1).getByText('To meet it: At least 4 of 5 items correct.')).toBeVisible()
     expect(screen.getByText(/is fine for the lecture/)).toBeVisible()
   })
@@ -196,7 +248,7 @@ describe('ReportPage', () => {
     expect(row(3).getByText('Review path: 1 of 2 fresh questions answered.')).toBeVisible()
     expect(row(5).getByText(/Still not yet after the review path/)).toBeVisible()
     expect(row(5).getByRole('link', { name: /Look back at the review path/ })).toBeVisible()
-    expect(row(6).getByText('You met this after the review path, using hint 3 or 4.')).toBeVisible()
+    expect(row(6).getByText('You met this after the review path, using hint 3.')).toBeVisible()
     expect(row(7).getByText('You met this on your own after the review path.')).toBeVisible()
   })
 

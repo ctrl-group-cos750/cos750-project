@@ -422,6 +422,65 @@
           ],
           113
         ],
+        "alternatives": [
+          [
+            101,
+            102,
+            [
+              120,
+              104,
+              105
+            ],
+            106,
+            107,
+            110,
+            111,
+            [
+              121,
+              112
+            ],
+            109,
+            113
+          ],
+          [
+            102,
+            [
+              120,
+              104,
+              105
+            ],
+            106,
+            107,
+            109,
+            110,
+            111,
+            [
+              121,
+              112
+            ],
+            113,
+            101
+          ],
+          [
+            102,
+            [
+              120,
+              104,
+              105
+            ],
+            106,
+            107,
+            110,
+            111,
+            [
+              121,
+              112
+            ],
+            109,
+            113,
+            101
+          ]
+        ],
         "explanation": "Marking a vertex found when it joins the queue, not when it leaves, means a vertex that is still waiting can't be added again: on the diamond, B and C both find D, but only B adds it. Starting with found = {start} does the same for the start vertex, which is in the queue from the beginning.",
         "feedback": {
           "103": "Not quite. The start vertex is in the queue but not in the found set. A neighbour can find it again and add it to the queue a second time. Start with the start vertex already in the found set.",
@@ -552,6 +611,65 @@
             162
           ],
           166
+        ],
+        "alternatives": [
+          [
+            151,
+            152,
+            [
+              153,
+              154,
+              155
+            ],
+            156,
+            157,
+            159,
+            160,
+            [
+              161,
+              162
+            ],
+            158,
+            166
+          ],
+          [
+            152,
+            [
+              153,
+              154,
+              155
+            ],
+            156,
+            157,
+            158,
+            159,
+            160,
+            [
+              161,
+              162
+            ],
+            166,
+            151
+          ],
+          [
+            152,
+            [
+              153,
+              154,
+              155
+            ],
+            156,
+            157,
+            159,
+            160,
+            [
+              161,
+              162
+            ],
+            158,
+            166,
+            151
+          ]
         ],
         "explanation": "BFS only visits the vertices it can reach by following edges from the start, so on the two islands it returns A, B, C. The extra loop added every vertex the search never reached, D and E, so without it the program is plain BFS.",
         "feedback": {

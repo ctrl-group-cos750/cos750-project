@@ -605,7 +605,7 @@
       "purpose": "practice",
       "objective_id": 2,
       "config": {
-        "prompt": "Classify each graph as directed or undirected. An edge written A → B is an arrow that only goes from A to B. An edge written A–B is a plain line that goes both ways.",
+        "prompt": "Classify each graph as directed or undirected. An edge written A → B is an arrow that only goes from A to B. An edge written A–B is a plain line that goes both ways. The last graph has no edge list: decide from what its connection means.",
         "left": [
           {
             "id": "friends",
@@ -622,6 +622,10 @@
           {
             "id": "roads",
             "label": "Roads between towns. Vertices: Johannesburg (J), Pretoria (P), Soweto (S). Edges: J–P, J–S."
+          },
+          {
+            "id": "older",
+            "label": "Who is older than whom among three children: Lebo, Mandla and Nandi."
           }
         ],
         "right": [
@@ -636,24 +640,26 @@
         ]
       },
       "solution": {
-        "explanation": "A graph is directed when its edges are one-way arrows, like following someone or a delivery route. Friendships, and roads you can drive both ways, are undirected.",
+        "explanation": "A graph is directed when its edges are one-way arrows, like following someone, a delivery route or being older than someone. Friendships, and roads you can drive both ways, are undirected.",
         "pairs": {
           "friends": "undirected",
           "follows": "directed",
           "route": "directed",
-          "roads": "undirected"
+          "roads": "undirected",
+          "older": "directed"
         },
         "feedback": {
           "friends": "Check the friendships graph. Friendship goes both ways: if Thandi is Sipho's friend, Sipho is Thandi's friend. The edges have no arrows. Look at how the edges are written. No arrows means undirected.",
           "follows": "Check the follows graph. Ana and Ben follow each other, but that's two separate arrows. Ben follows Cara without Cara following back. Any arrow makes a graph directed. Look closely: the edges are arrows (→).",
           "route": "Check the delivery route. The van drives Warehouse → Shop X → Shop Y → Warehouse, one way only. The edges are arrows. Ask: can you travel each edge in both directions?",
-          "roads": "Check the roads graph. Roads between towns can be driven both ways, so the edges are plain lines. No arrows means undirected."
+          "roads": "Check the roads graph. Roads between towns can be driven both ways, so the edges are plain lines. No arrows means undirected.",
+          "older": "Not quite. Being older goes one way: if Lebo is older than Mandla, Mandla isn't older than Lebo. With no edge list, decide from the meaning. Ask: if this connection exists, must the reverse one exist too?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Look at the edges: are they arrows (→) or plain lines (–)?"
+          "body": "Look at the edges: are they arrows (→) or plain lines (–)? Where there is no edge list, ask what the connection means."
         },
         {
           "level": 2,
@@ -665,7 +671,7 @@
         },
         {
           "level": 4,
-          "body": "Answer: friendships = undirected, follows = directed, delivery route = directed, roads = undirected."
+          "body": "Answer: friendships = undirected, follows = directed, delivery route = directed, roads = undirected, older than = directed."
         }
       ]
     },
@@ -947,7 +953,7 @@
       "purpose": "practice",
       "objective_id": 2,
       "config": {
-        "prompt": "Look at how each graph's edges are written. An arrow, like K → M, goes one way only; a plain line, like K–M, goes both ways. Sort the four graphs below into directed and undirected.",
+        "prompt": "Sort the four graphs into directed and undirected. Two have their edges written out: an arrow, like K → M, goes one way only, and a plain line, like K–M, goes both ways. The other two have no edge list, so decide from what each connection means.",
         "left": [
           {
             "id": "cousins",
@@ -955,11 +961,11 @@
           },
           {
             "id": "lend",
-            "label": "Who has lent a book to whom. Vertices: Kabelo (K), Mpho (M), Naledi (N). Edges: K → M, N → M."
+            "label": "Who has lent a book to whom. Kabelo lent one to Mpho, and Naledi lent one to Mpho."
           },
           {
             "id": "borders",
-            "label": "Countries that share a border. Vertices: Botswana (B), Namibia (N), Zambia (Z). Edges: B–N, B–Z, N–Z."
+            "label": "Countries that share a border. Botswana, Namibia and Zambia each share a border with the other two."
           },
           {
             "id": "dams",
@@ -986,19 +992,19 @@
         },
         "feedback": {
           "cousins": "Not quite. Being cousins goes both ways: if Sizwe is Tumi's cousin, Tumi is Sizwe's cousin, so the edges are plain lines with no arrows. Check how each edge is written before you choose.",
-          "lend": "Not quite. Lending goes one way: Kabelo lent a book to Mpho, but Mpho didn't lend one back, so the edges are arrows. Look at how each edge is written: any arrow makes the graph directed.",
-          "borders": "Not quite. A shared border belongs to both countries, so it goes both ways and the edges are plain lines. Check how each edge is written: no arrows means undirected.",
+          "lend": "Not quite. Lending goes one way: Kabelo lent a book to Mpho, but Mpho didn't lend one back. Ask: if this connection exists, must the reverse one exist too?",
+          "borders": "Not quite. A shared border belongs to both countries: if Botswana shares a border with Namibia, Namibia shares it with Botswana. Ask: could this connection exist one way only?",
           "dams": "Not quite. Water only flows downhill, from the upper dam to the middle dam and on to the lower dam, so the edges are arrows. Ask: can you travel each edge both ways?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Look at how each edge is written: an arrow (→) or a plain line (–)?"
+          "body": "Where the edges are written out, look for arrows (→) or plain lines (–). Where they aren't, ask what each connection means."
         },
         {
           "level": 2,
-          "body": "An arrow means the connection only goes one way. One arrow is enough to make a graph directed."
+          "body": "An arrow means the connection only goes one way, and one arrow is enough to make a graph directed. With no edge list, ask: if X is joined to Y, must Y be joined to X?"
         },
         {
           "level": 3,

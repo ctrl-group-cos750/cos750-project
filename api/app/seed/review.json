@@ -984,23 +984,23 @@
       "purpose": "mastery",
       "objective_id": 2,
       "config": {
-        "prompt": "Classify each graph as directed or undirected. An edge written A → B is an arrow that only goes from A to B. An edge written A–B is a plain line that goes both ways.",
+        "prompt": "Is each graph directed or undirected? Decide from what each connection means.",
         "left": [
           {
-            "id": "emails",
-            "label": "Emails (who sent to whom). Vertices: Dineo (D), Ethan (E), Fatima (F). Edges: D → E, E → F, F → D."
+            "id": "results",
+            "label": "A university tournament: who beat whom. Wits beat UJ, Tuks beat Wits, and Tuks beat UJ."
           },
           {
-            "id": "train-tracks-between-stations",
-            "label": "Train tracks between stations. Vertices: Kempton (K), Marlboro (M), Sandton (S). Edges: K–M, M–S."
+            "id": "teammates",
+            "label": "A project: which learners have worked together. Lindi has worked with Neo, and Neo with Omar."
           },
           {
-            "id": "teammates-in-a-project",
-            "label": "Teammates in a project. Vertices: Lindi (L), Neo (N), Omar (O). Edges: L–N, N–O, L–O."
+            "id": "mail",
+            "label": "Emails between Dineo, Ethan and Fatima. Each of them has emailed both of the others, and each email is sent by one person."
           },
           {
-            "id": "a-tournament",
-            "label": "A tournament (who beat whom). Vertices: Wits (W), Tuks (X), UJ (Y). Edges: X → W, W → Y, X → Y."
+            "id": "bluetooth",
+            "label": "A phone, a speaker and a pair of earbuds, and which devices are paired with which by Bluetooth."
           }
         ],
         "right": [
@@ -1016,34 +1016,34 @@
       },
       "solution": {
         "pairs": {
-          "emails": "directed",
-          "train-tracks-between-stations": "undirected",
-          "teammates-in-a-project": "undirected",
-          "a-tournament": "directed"
+          "results": "directed",
+          "teammates": "undirected",
+          "mail": "directed",
+          "bluetooth": "undirected"
         },
         "feedback": {
-          "emails": "Check “Emails (who sent to whom)”. Its edges are arrows (→): each connection goes one way, so it's directed. Look at how the edges are written.",
-          "train-tracks-between-stations": "Check “Train tracks between stations”. Its edges are plain lines (–): each connection works both ways, so it's undirected. Look at how the edges are written.",
-          "teammates-in-a-project": "Check “Teammates in a project”. Its edges are plain lines (–): each connection works both ways, so it's undirected. Look at how the edges are written.",
-          "a-tournament": "Check “A tournament (who beat whom)”. Its edges are arrows (→): each connection goes one way, so it's directed. Look at how the edges are written."
+          "results": "Not quite. Beating someone goes one way: Tuks beat Wits, and Wits didn't beat Tuks in that game. Ask: if this connection exists, must the reverse one exist too?",
+          "teammates": "Not quite. If Lindi has worked with Neo, Neo has worked with Lindi. Ask: could this connection exist one way only?",
+          "mail": "Not quite. Each email goes one way, from the sender, even when it's answered, so Dineo → Ethan and Ethan → Dineo are two separate arrows. A graph of one-way links is directed. Ask: is each single connection one-way?",
+          "bluetooth": "Not quite. If the phone is paired with the speaker, the speaker is paired with the phone. Ask: could this connection exist one way only?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Look at how each graph's edges are written."
+          "body": "Ask of each connection: if it joins X to Y, must it also join Y to X?"
         },
         {
           "level": 2,
-          "body": "An edge written A → B is an arrow: it only goes one way. A–B is a plain line."
+          "body": "If the reverse must always exist, the graph is undirected. If one can exist without the other, it is directed."
         },
         {
           "level": 3,
-          "body": "Two arrows between the same pair still make a graph directed."
+          "body": "Watch the emails: every pair has emailed each other, but each email still goes one way."
         },
         {
           "level": 4,
-          "body": "Answer: Emails (who sent to whom) = directed; Train tracks between stations = undirected; Teammates in a project = undirected; A tournament (who beat whom) = directed."
+          "body": "Answer: who beat whom = directed; worked together = undirected; emails = directed; Bluetooth pairing = undirected."
         }
       ]
     },
@@ -1106,32 +1106,32 @@
       "purpose": "mastery",
       "objective_id": 3,
       "config": {
-        "prompt": "A water board maps how its dams are joined. A canal runs downhill from Dam P to Dam Q, so water flows along it from P into Q. Which graph models where water can flow?",
+        "prompt": "A school pairs Grade 12 mentors with Grade 9 learners, and some Grade 12s mentor two. Thabo, in Grade 12, mentors Sam, in Grade 9. Which graph models who mentors whom?",
         "options": [
           {
             "id": "e",
-            "label": "Vertices: dams. Edges: canals. Undirected, because each canal has a dam at both of its ends."
+            "label": "Vertices: learners. Edges: mentoring links. Undirected, since Sam and Thabo meet up each week."
           },
           {
             "id": "g",
-            "label": "Vertices: canals. Edges: the dams they join. Directed, because the water flows down the canal."
+            "label": "Vertices: mentoring sessions. Edges: the learners at each. Directed, as a session is given by one."
           },
           {
             "id": "f",
-            "label": "Vertices: dams. Edges: canals. Directed, since water can't flow back uphill along a canal."
+            "label": "Vertices: learners. Edges: mentoring links. Directed: Thabo mentors Sam, but Sam doesn't mentor Thabo."
           },
           {
             "id": "h",
-            "label": "Vertices: dams. Edges: the litres of water each dam holds. Directed, because water flows."
+            "label": "Vertices: grades. Edges: the learners in each grade. Directed, from the older grade to the younger."
           }
         ]
       },
       "solution": {
         "correct": "f",
         "feedback": {
-          "e": "Not quite. A canal touches both dams, but the water in it only flows downhill, from P into Q. Ask: can water flow along this canal from Q back into P?",
-          "g": "Not quite. That swaps them. A canal joins two dams, so the canal is the edge and the dams are the vertices. Ask: which one joins the other two?",
-          "h": "Not quite. The litres a dam holds belong to that one dam: they don't join two dams, so they can't be an edge. An edge always has two ends. Ask: what joins two dams?"
+          "e": "Not quite. Sam and Thabo both go to the meetings, but meeting up doesn't make mentoring two-way: Thabo mentors Sam, and Sam doesn't mentor Thabo. Ask: if this edge exists, must the reverse one exist too?",
+          "g": "Not quite. A session isn't joined to another session: each mentoring link joins two learners. The learners are the things in this graph. Ask: what does each mentoring link connect?",
+          "h": "Not quite. A grade is a group of learners, and a learner doesn't join two grades. The question is about which learner mentors which. Ask: what are the things each mentoring link joins?"
         }
       },
       "hints": [
@@ -1141,15 +1141,15 @@
         },
         {
           "level": 2,
-          "body": "Each canal joins two dams."
+          "body": "Each mentoring link joins two learners: the mentor and the learner they mentor."
         },
         {
           "level": 3,
-          "body": "Dams are the vertices and canals are the edges. Can water flow along the canal from Q back into P?"
+          "body": "Learners are the vertices and mentoring links are the edges. Does Sam mentor Thabo?"
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: dams. Edges: canals. Directed, since water can't flow back uphill along a canal."
+          "body": "Answer: Vertices: learners. Edges: mentoring links. Directed: Thabo mentors Sam, but Sam doesn't mentor Thabo."
         }
       ]
     },
@@ -1177,7 +1177,7 @@
           },
           {
             "id": "h",
-            "label": "Vertices: the people at home. Edges: the devices they use. Undirected, as people share devices."
+            "label": "Vertices: the people at home. Edges: the devices they use. Undirected, as people share the devices."
           }
         ]
       },
@@ -1271,32 +1271,32 @@
       "purpose": "mastery",
       "objective_id": 3,
       "config": {
-        "prompt": "An atlas has a table of which countries share a border. Botswana shares a border with Namibia, and Namibia with Angola. Which graph models the table?",
+        "prompt": "A science teacher records which learners have done a practical together as lab partners. Ayo did the titration with Busi, and Busi did the next practical with Chloé. Which graph models the lab partnerships?",
         "options": [
           {
             "id": "g",
-            "label": "Vertices: borders. Edges: the countries on each side. Undirected, because a border has two sides."
+            "label": "Vertices: practicals. Edges: the learners who did them. Undirected, as each one needs two learners."
           },
           {
             "id": "f",
-            "label": "Vertices: countries. Edges: shared borders. Undirected, as a border belongs to both countries."
+            "label": "Vertices: learners. Edges: lab partnerships. Undirected: if Ayo worked with Busi, Busi worked with Ayo."
           },
           {
             "id": "h",
-            "label": "Vertices: border posts. Edges: the travellers who cross them. Directed, from one side to the other."
+            "label": "Vertices: learners. Edges: the marks each learner got. Undirected, because both partners get a mark."
           },
           {
             "id": "e",
-            "label": "Vertices: countries. Edges: shared borders. Directed, because you cross a border into a country."
+            "label": "Vertices: learners. Edges: lab partnerships. Directed, as the results pass from one partner to the other."
           }
         ]
       },
       "solution": {
         "correct": "f",
         "feedback": {
-          "g": "Not quite. That swaps them. A border joins two countries, so the border is the edge and the countries are the vertices. Ask: which one joins the other two?",
-          "h": "Not quite. The travellers cross borders, but the table is about which countries share one. Ask: what are the things each shared border joins?",
-          "e": "Not quite. You can cross a border either way, and if Botswana shares a border with Namibia, Namibia shares it with Botswana. Something moving across an edge doesn't give it an arrow. Ask: could this connection exist one way only?"
+          "g": "Not quite. That swaps them. A partnership joins two learners, so the partnership is the edge and the learners are the vertices. Ask: which one joins the other two?",
+          "h": "Not quite. A mark belongs to one learner: it doesn't join two learners, so it can't be an edge. An edge always has two ends. Ask: what joins two learners?",
+          "e": "Not quite. Results may be passed on, but being lab partners is shared: if Ayo worked with Busi, Busi worked with Ayo. Something moving along an edge doesn't give it an arrow. Ask: could this connection exist one way only?"
         }
       },
       "hints": [
@@ -1306,15 +1306,15 @@
         },
         {
           "level": 2,
-          "body": "Each shared border joins two countries."
+          "body": "Each lab partnership joins two learners."
         },
         {
           "level": 3,
-          "body": "Countries are the vertices and shared borders are the edges. If Botswana shares a border with Namibia, does Namibia share one with Botswana?"
+          "body": "Learners are the vertices and partnerships are the edges. If Ayo worked with Busi, did Busi work with Ayo?"
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: countries. Edges: shared borders. Undirected, as a border belongs to both countries."
+          "body": "Answer: Vertices: learners. Edges: lab partnerships. Undirected: if Ayo worked with Busi, Busi worked with Ayo."
         }
       ]
     },

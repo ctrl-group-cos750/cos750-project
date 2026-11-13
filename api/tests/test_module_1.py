@@ -147,7 +147,13 @@ def test_the_built_graph_is_the_campus() -> None:
 
 def test_a_graph_is_directed_exactly_when_its_edges_are_arrows() -> None:
     a = activity(106)
+    # One graph has no edge list, so the step from the symbol to the meaning starts here (#214 C4).
+    unlisted = [item for item in a.config["left"] if not edges_in(item["label"])]
+    assert [item["id"] for item in unlisted] == ["older"]
+    assert right_label(a, "older") == "Directed"
     for item in a.config["left"]:
+        if item in unlisted:
+            continue
         edges = edges_in(item["label"])
         directed = all(isinstance(e, tuple) for e in edges)
         assert directed or all(isinstance(e, frozenset) for e in edges)

@@ -718,23 +718,23 @@
       "purpose": "mastery",
       "objective_id": 2,
       "config": {
-        "prompt": "Classify each graph as directed or undirected. An edge written A → B is an arrow that only goes from A to B. An edge written A–B is a plain line that goes both ways.",
+        "prompt": "Is each graph directed or undirected? Decide from what each connection means.",
         "left": [
           {
-            "id": "phone-calls",
-            "label": "Phone calls (who called whom). Vertices: Amo (A), Bongi (B), Chris (C). Edges: A → B, C → B."
+            "id": "owes",
+            "label": "A flat's money: who owes money to whom. Amo owes Bongi, and Chris owes Bongi."
           },
           {
-            "id": "shared-walls-between-houses",
-            "label": "Shared walls between houses. Vertices: House 1 (H), House 2 (I), House 3 (J). Edges: H–I, I–J."
+            "id": "walls",
+            "label": "Houses on a street, and which houses share a wall. House 1 shares a wall with House 2, and House 2 with House 3."
           },
           {
-            "id": "module-prerequisites",
-            "label": "Module prerequisites. Vertices: COS132 (P), COS110 (Q), COS212 (R). Edges: P → Q, Q → R."
+            "id": "mutual",
+            "label": "TikTok follows between Dudu, Ewan and Fezi. Every one of them follows the other two, and each follow is its own link."
           },
           {
-            "id": "two-way-radio-links",
-            "label": "Two-way radio links. Vertices: Tower (T), Unit 1 (U), Unit 2 (V). Edges: T–U, T–V, U–V."
+            "id": "seats",
+            "label": "Learners in an exam, and who sat next to whom."
           }
         ],
         "right": [
@@ -750,34 +750,34 @@
       },
       "solution": {
         "pairs": {
-          "phone-calls": "directed",
-          "shared-walls-between-houses": "undirected",
-          "module-prerequisites": "directed",
-          "two-way-radio-links": "undirected"
+          "owes": "directed",
+          "walls": "undirected",
+          "mutual": "directed",
+          "seats": "undirected"
         },
         "feedback": {
-          "phone-calls": "Check “Phone calls (who called whom)”. Its edges are arrows (→): each connection goes one way, so it's directed. Look at how the edges are written.",
-          "shared-walls-between-houses": "Check “Shared walls between houses”. Its edges are plain lines (–): each connection works both ways, so it's undirected. Look at how the edges are written.",
-          "module-prerequisites": "Check “Module prerequisites”. Its edges are arrows (→): each connection goes one way, so it's directed. Look at how the edges are written.",
-          "two-way-radio-links": "Check “Two-way radio links”. Its edges are plain lines (–): each connection works both ways, so it's undirected. Look at how the edges are written."
+          "owes": "Not quite. Owing money goes one way: Amo owes Bongi, but Bongi doesn't owe Amo. Ask: if this connection exists, must the reverse one exist too?",
+          "walls": "Not quite. A shared wall belongs to both houses: if House 1 shares a wall with House 2, House 2 shares it with House 1. Ask: could this connection exist one way only?",
+          "mutual": "Not quite. Each follow is a one-way link, even when it's returned, so Dudu → Ewan and Ewan → Dudu are two separate arrows. A graph of one-way links is directed. Ask: is each single connection one-way?",
+          "seats": "Not quite. If Thabo sat next to Lindiwe, Lindiwe sat next to Thabo. Ask: could this connection exist one way only?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Look at how each graph's edges are written."
+          "body": "Ask of each connection: if it joins X to Y, must it also join Y to X?"
         },
         {
           "level": 2,
-          "body": "An edge written A → B is an arrow: it only goes one way. A–B is a plain line."
+          "body": "If the reverse must always exist, the graph is undirected. If one can exist without the other, it is directed."
         },
         {
           "level": 3,
-          "body": "Two arrows between the same pair still make a graph directed."
+          "body": "Watch the follows: every pair follows each other, but each follow is still one arrow."
         },
         {
           "level": 4,
-          "body": "Answer: Phone calls (who called whom) = directed; Shared walls between houses = undirected; Module prerequisites = directed; Two-way radio links = undirected."
+          "body": "Answer: owing money = directed; shared walls = undirected; TikTok follows = directed; sitting next to = undirected."
         }
       ]
     },

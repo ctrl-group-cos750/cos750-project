@@ -788,6 +788,19 @@ WORDING_ONLY = {
     "matching_left": {(a, m) for a in (606, 607, 608, 1202, 1203, 1204) for m in ("1", "2", "3")},
     "matching_right": set(),
 }
+# Matching items that left an item: 609 and 1205 classify new situations by meaning (#214 C4).
+GONE_LEFT = {
+    (609, i)
+    for i in (
+        "phone-calls",
+        "shared-walls-between-houses",
+        "module-prerequisites",
+        "two-way-radio-links",
+    )
+} | {
+    (1205, i)
+    for i in ("emails", "train-tracks-between-stations", "teammates-in-a-project", "a-tournament")
+}
 # Fix-the-bug corrections that left an item: 621 is a new bug (#214 C2), so all its corrections are.
 RETIRED_CORRECTIONS = {621: {20, 21, 22, 23}, 1703: {22}}
 # Ids that left an item; they must never come back (RETIRED, plus the retired corrections).
@@ -817,7 +830,7 @@ def test_an_id_from_staging_keeps_its_text_unless_retired_or_listed(kind: str) -
                 changed.add((int(activity_id), item_id))
     assert sorted(changed - WORDING_ONLY[kind]) == []
     assert sorted(WORDING_ONLY[kind] - changed) == []  # the list says only what is true
-    assert gone == (GONE if kind == "options" else set())
+    assert gone == {"options": GONE, "matching_left": GONE_LEFT, "matching_right": set()}[kind]
 
 
 def test_counting_the_places_a_marker_names_does_not_meet_objective_2() -> None:

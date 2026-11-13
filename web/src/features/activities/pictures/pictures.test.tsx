@@ -284,12 +284,13 @@ describe('directed or undirected', () => {
         'Roads join Johannesburg to Pretoria and Johannesburg to Soweto. Cars drive both ways.',
       ],
     )
-    const chosen = ['directed', 'directed', 'undirected', 'undirected']
+    // The fifth row (#214 C4) has no edge list and no picture: it is decided from its meaning.
+    const chosen = ['directed', 'directed', 'undirected', 'undirected', 'directed']
     for (const [index, select] of screen.getAllByRole('combobox').entries())
       // oxlint-disable-next-line no-await-in-loop
       await user.selectOptions(select, chosen[index])
     await user.click(screen.getByRole('button', { name: 'Check answer' }))
-    const correctRows = [false, true, false, true]
+    const correctRows = [false, true, false, true, true]
     view.rerender(
       <ActivityRenderer
         {...props}
@@ -297,9 +298,9 @@ describe('directed or undirected', () => {
           id: 9,
           activityId: 106,
           correct: false,
-          score: 0.5,
+          score: 0.6,
           parts: correctRows.map((correct, ref) => ({ ref, correct, message: null })),
-          feedback: '2 of 4 correct.',
+          feedback: '3 of 5 correct.',
           hintLevel: 0,
         }}
       />,

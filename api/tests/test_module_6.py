@@ -424,12 +424,19 @@ def test_each_marker_names_the_part_its_answer_names(a: ActivityFixture) -> None
 
 
 @pytest.mark.parametrize("a", CLASSIFYING, ids=lambda a: str(a.id))
-def test_each_graph_is_classified_by_how_its_edges_are_written(a: ActivityFixture) -> None:
-    for item in a.config["left"]:
-        arrows = {arrow for _, arrow, _ in EDGE.findall(item["label"])}
-        want = "Directed" if arrows == {"→"} else "Undirected"
-        assert arrows in ({"→"}, {DASH})
-        assert right_label(a, item["id"]) == want, item["id"]
+def test_each_graph_is_classified_by_what_its_connections_mean(a: ActivityFixture) -> None:
+    """609 and 1205 printed each graph's edges as arrows or plain lines, so spotting a "→" answered
+    them (#214 C4). Now no edge is written out: the student decides from what each connection
+    means, and one directed graph has every connection returned (two arrows are still directed)."""
+    for text in [a.config["prompt"]] + [item["label"] for item in a.config["left"]]:
+        assert not EDGE.search(text), text
+        assert "→" not in text
+    answers = [right_label(a, item["id"]) for item in a.config["left"]]
+    assert sorted(set(answers)) == ["Directed", "Undirected"]
+    for message in a.solution["feedback"].values():
+        assert "how the edges are written" not in message
+        assert message.startswith("Not quite.")
+    assert "each other" in a.hints[2].body or "every pair" in a.hints[2].body
 
 
 # --- Objective 5: tracing ---------------------------------------------------------------------------

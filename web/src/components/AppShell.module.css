@@ -79,9 +79,11 @@
 }
 
 @media (max-width: 40rem) {
+  /* The same side padding as .main below, so the brand lines up with the page. */
   .bar {
     flex-wrap: wrap;
     gap: var(--space-3);
+    padding-inline: var(--space-4);
   }
 
   .nav {

@@ -74,8 +74,8 @@ def log_in(client: TestClient, email: str) -> None:
 # --- The committed accounts, against the committed content --------------------------------------
 
 
-def test_the_committed_demo_accounts_are_the_four_stages() -> None:
-    assert [a.key for a in read_demo_accounts()] == ["new", "mid", "not-yet", "ready"]
+def test_the_committed_demo_accounts_are_the_five_stages() -> None:
+    assert [a.key for a in read_demo_accounts()] == ["new", "mid", "not-yet", "ready", "bronze"]
 
 
 def test_each_committed_account_reaches_its_stage(db: Session) -> None:
@@ -87,6 +87,12 @@ def test_each_committed_account_reaches_its_stage(db: Session) -> None:
     assert report(db, "mid@demo.example.com") == (False, [])
     assert report(db, "not-yet@demo.example.com") == (False, [6])
     assert report(db, "ready@demo.example.com") == (True, [])
+    assert report(db, "bronze@demo.example.com") == (True, [])
+    # Bronze on objectives 2 and 7 (met with support, after hint 3), gold on the rest (#214).
+    bronze = db.scalars(select(User).where(User.email == "bronze@demo.example.com")).one()
+    states = {o.objective.id: o.state for o in evaluate(db, bronze.id)}
+    assert {o for o, s in states.items() if s == "met_with_support"} == {2, 7}
+    assert {s for o, s in states.items() if o not in (2, 7)} == {"met_independently"}
 
 
 def test_demo_progress_records_retrieval_attempts_before_advancing(db: Session) -> None:
@@ -244,7 +250,7 @@ def test_once_every_module_has_segments_each_map_matches_its_stage(tmp_path: Pat
             5: "open",
             6: "locked",
         }
-        for key in ("not-yet", "ready"):
+        for key in ("not-yet", "ready", "bronze"):
             assert set(statuses(session, f"{key}@demo.example.com").values()) == {"complete"}
         mid = session.scalars(select(User).where(User.email == "mid@demo.example.com")).one()
         module_3 = session.scalars(

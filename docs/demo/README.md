@@ -20,7 +20,7 @@ The story is one student's journey, from never having heard of a graph to "ready
   | 4 | `ready@demo.example.com` | the badges page |
   | 5 | a team staff account (optional step) | Staff portal → Before the lecture |
 
-  The four demo accounts share the `DEMO_PASSWORD` set on Coolify. None of them is staff, so window 5 uses one of the team's own staff accounts: no seed change is needed.
+  The demo accounts (a fifth, `bronze@`, shows objectives met with support) share the `DEMO_PASSWORD` set on Coolify. None of them is staff, so window 5 uses one of the team's own staff accounts: no seed change is needed.
 - [ ] **Screen:** browser zoom at 125%, light mode, notifications off, and the presenter's notes on a second screen.
 - [ ] **Fallbacks ready:** staging, with the same accounts, in a sixth window, and the screen recording from rehearsal 1 on the laptop's desktop. See [If something fails](#if-something-fails).
 - [ ] **Check which features are deployed.** Some steps depend on open PRs; the script marks them **(if deployed)**:

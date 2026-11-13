@@ -120,7 +120,14 @@ function PanelBody({ moduleId, moduleNumber, place, lookAgain }: ProgressPanelPr
       )}
       {!hidden && recent.length > 0 && (
         <section className={styles.block} aria-label="Recent badges">
-          <h3 className={styles.blockTitle}>Recent badges</h3>
+          {/* The link beside the heading, not under the list: at the foot of the panel it was cut
+              off on a 1366 × 900 screen (#215 review). */}
+          <div className={styles.blockHead}>
+            <h3 className={styles.blockTitle}>Recent badges</h3>
+            <Link to="/badges" className={styles.link}>
+              See your badges
+            </Link>
+          </div>
           <ul className={styles.recent}>
             {recent.map((item) => (
               <li key={item.key}>
@@ -129,9 +136,6 @@ function PanelBody({ moduleId, moduleNumber, place, lookAgain }: ProgressPanelPr
               </li>
             ))}
           </ul>
-          <Link to="/badges" className={styles.link}>
-            See your badges
-          </Link>
         </section>
       )}
     </div>

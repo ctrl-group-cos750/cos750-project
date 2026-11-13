@@ -769,7 +769,7 @@ describe('ModulePage — refused and switched', () => {
     ).toBeInTheDocument()
     const note = await screen.findByText(/Still to do/)
     expect(note).toHaveTextContent(
-      'Opens once modules 1 to 5 are each finished or tested out with their quick check. Still to do: module 1, module 3, module 4, module 5.',
+      'Opens once each of modules 1 to 5 is finished or you passed its quick check. Still to do: module 1, module 3, module 4, module 5.',
     )
     expect(within(note).getByRole('link', { name: 'module 3' })).toHaveAttribute(
       'href',

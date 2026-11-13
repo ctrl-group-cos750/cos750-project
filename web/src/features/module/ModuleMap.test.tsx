@@ -176,10 +176,10 @@ describe('ModuleMap — the locked mastery check says how to open it', () => {
     moduleListApi(course({ 1: 'complete', 2: 'tested_out', 4: 'complete' }))
     renderApp('/')
     const note = await screen.findByText(
-      /Opens once modules 1 to 5 are each finished or tested out/,
+      /Opens once each of modules 1 to 5 is finished or you passed its quick check/,
     )
     expect(note).toHaveTextContent(
-      'Opens once modules 1 to 5 are each finished or tested out with their quick check. Still to do: module 3, module 5.',
+      'Opens once each of modules 1 to 5 is finished or you passed its quick check. Still to do: module 3, module 5.',
     )
     const links = within(note).getAllByRole('link')
     expect(links.map((l) => [l.textContent, l.getAttribute('href')])).toEqual([
@@ -204,7 +204,7 @@ describe('ModuleMap — the locked mastery check says how to open it', () => {
     modules[5] = { ...modules[5]!, segmentCount: 0 } // module 5: coming soon
     moduleListApi(modules)
     renderApp('/')
-    const note = await screen.findByText(/Opens once modules 1 to 4/)
+    const note = await screen.findByText(/Opens once each of modules 1 to 4/)
     expect(note).not.toHaveTextContent('Still to do')
   })
 
@@ -214,7 +214,7 @@ describe('ModuleMap — the locked mastery check says how to open it', () => {
     const card = await screen.findByRole('link', { name: /Mastery check/ })
     expect(card).toHaveAttribute('href', '/modules/7')
     expect(card).toHaveAccessibleDescription(
-      /^Opens once modules 1 to 5 are each finished or tested out with their quick check\. Still to do: module 1/,
+      /^Opens once each of modules 1 to 5 is finished or you passed its quick check\. Still to do: module 1/,
     )
   })
 

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -16,6 +16,7 @@ import {
   setConfettiEnabled,
   stopConfetti,
 } from './confetti.ts'
+import { HiddenNote, UNDO_MS } from './HiddenNote.tsx'
 import { PRAISE_LINES, praiseFor, progressRemark } from './praise.ts'
 import { setPreference, setPreferenceOwner } from './preferences.ts'
 import { skillsKey } from './hooks.ts'
@@ -702,5 +703,32 @@ describe('the progress panel: minimised, hidden or off (#214)', () => {
     await userEvent.click(within(strip).getByRole('button', { name: 'Hide progress panel' }))
     expect(screen.queryByRole('group', { name: /Your progress/ })).toBeNull()
     expect(screen.getByText(/Progress panel hidden/).closest('output')).toHaveFocus()
+  })
+})
+
+describe('the note left where something was hidden', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('keeps Undo while the pointer is over it or focus is on Undo, and drops it after', () => {
+    vi.useFakeTimers()
+    render(
+      <MemoryRouter>
+        <HiddenNote text="Confetti is off." onUndo={() => {}} />
+      </MemoryRouter>,
+    )
+    const note = document.querySelector('[data-hidden-note]') as HTMLElement
+    const undo = screen.getByRole('button', { name: 'Undo' })
+    fireEvent.pointerEnter(note)
+    act(() => void vi.advanceTimersByTime(UNDO_MS * 2))
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument()
+    fireEvent.pointerLeave(note)
+    act(() => undo.focus())
+    act(() => void vi.advanceTimersByTime(UNDO_MS * 2))
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument()
+    act(() => undo.blur())
+    act(() => void vi.advanceTimersByTime(UNDO_MS))
+    expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull()
   })
 })

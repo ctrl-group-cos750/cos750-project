@@ -19,7 +19,7 @@ export function LockedNote({
   const { from, to, remaining } = needs
   return (
     <p id={id} className={className}>
-      Opens once modules {from} to {to} are each finished or tested out with their quick check.
+      Opens once each of modules {from} to {to} is finished or you passed its quick check.
       {remaining.length > 0 && (
         <>
           {' '}

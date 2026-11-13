@@ -510,6 +510,8 @@ Pilot testers said the course felt "like doing a test, with no motivating boosts
 
 Both the confetti and the encouraging comments can be switched off on the profile page, and the confetti beside the success moment too, because the same reward that pleases one student patronises another (autonomy [43]). None of these counts speed, and none is shown to anyone else. Whether they change the ARCS ratings is a question for the pilot (Section 8).
 
+The page background is a soft glow of the brand's blue and a warm honey in the corners by default (#214): pleasant colours in learning materials improved learners' affect and, modestly, their learning in a meta-analysis of emotional design [76]. A student who finds it distracting can choose a plain page, or a wallpaper of doodles from the course, in the profile or the header. Decoration that has nothing to do with the content is a seductive detail and can draw attention from learning [77], so it stays on the overview pages: lessons, activities and the quick check keep solid cards behind every line of reading.
+
 We leave out a public leaderboard. A classroom study found that a course with leaderboards and badges led to lower motivation and lower exam scores than the same course without them [35]. Public ranking also discourages students who are motivated by avoiding failure [41], and these are often the students who most need the application. Points and badges are therefore private to each student.
 
 ## Assessment
@@ -1001,5 +1003,9 @@ Marcelo Pias, Susan Reiser, Christian Servin, Rahul Simha, Titus Winters, and Qi
 [74]	J. Dunlosky and K. A. Rawson. Overconfidence produces underachievement: Inaccurate self evaluations undermine students' learning and retention. *Learning and Instruction*, 22:271–280, 2012.
 
 [75]	G. Corbalan, L. Kester, and J. J. G. van Merriënboer. Selecting learning tasks: Effects of adaptation and shared control on learning efficiency and task involvement. *Contemporary Educational Psychology*, 33(4):733–756, 2008. https://doi.org/10.1016/j.cedpsych.2008.02.003
+
+[76]	C. Brom, T. Stárková, and S. K. D'Mello. How effective is emotional design? A meta-analysis on facial anthropomorphisms and pleasant colors during multimedia learning. *Educational Research Review*, 25:100–119, 2018. https://doi.org/10.1016/j.edurev.2018.09.004
+
+[77]	G. D. Rey. A review of research and a meta-analysis of the seductive detail effect. *Educational Research Review*, 7(3):216–237, 2012. https://doi.org/10.1016/j.edurev.2012.05.003
 
 </div>

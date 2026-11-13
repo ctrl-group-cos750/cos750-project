@@ -84,7 +84,7 @@ def activity_round(session: Session, user_id: int, activity: Activity) -> Round:
 
 def restart_module(session: Session, user_id: int, module_id: int) -> ModuleProgress:
     """Start the module again for this student (not committed). Raises `CannotRestart` for the
-    mastery check or a module they haven't started. Takes the student's write lock, so an answer
+    mastery check or a module they haven't finished. Takes the student's write lock, so an answer
     in flight lands either before the restart or after it, never half in each."""
     if module_id == MASTERY_MODULE:
         raise CannotRestart(module_id)
@@ -94,7 +94,9 @@ def restart_module(session: Session, user_id: int, module_id: int) -> ModuleProg
         .where(ModuleProgress.user_id == user_id, ModuleProgress.module_id == module_id)
         .with_for_update()
     )
-    if row is None:
+    if row is None or row.status != "complete":
+        # Only a finished module: restarting one part-way through would lose the student's place
+        # and its progress on the map (13 Nov audit).
         raise CannotRestart(module_id)
     row.restarted_at = datetime.now(tz=UTC)
     row.restarted_after_attempt = session.scalar(select(func.max(Attempt.id))) or 0

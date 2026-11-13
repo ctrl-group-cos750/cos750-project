@@ -17,7 +17,13 @@ from app.services.locks import hold_activity, lock_student
 from app.services.mastery import counts, in_check, recompute
 from app.services.modules import reward_completed_modules
 from app.services.restart import activity_round
-from app.services.rewards import SUPPORT_LEVEL, on_attempt, on_bonus_quest
+from app.services.rewards import (
+    SUPPORT_LEVEL,
+    answer_given_away,
+    on_attempt,
+    on_bonus_quest,
+    real_work,
+)
 
 
 def hint_level_seen(session: Session, user_id: int, activity_id: int, round: int = 0) -> int:
@@ -76,7 +82,7 @@ def reward_bonus_quest(session: Session, user_id: int, activity: Activity) -> No
                 Attempt.user_id == user_id,
                 Attempt.activity_id.in_(quests),
                 Attempt.correct.is_(True),
-                Attempt.hint_level < SUPPORT_LEVEL,
+                real_work(),
             )
         )
     )
@@ -130,15 +136,19 @@ def record_attempt(
     )
     session.add(attempt)
     session.flush()
+    # Rewards go by every round: hint 3 or 4 before a restart still gave the answer away.
+    real = attempt.hint_level < SUPPORT_LEVEL and not answer_given_away(
+        session, user_id, activity.id
+    )
     if activity.purpose == "bonus":
         # A bonus quest earns its own points and badge instead of an activity's (FR-8.3, #87),
         # and only for real work: hints 3 and 4 give the answer away, so after them it earns
         # nothing (ID doc: badges mark real progress).
-        if result.correct and attempt.hint_level < SUPPORT_LEVEL:
+        if result.correct and real:
             reward_bonus_quest(session, user_id, activity)
     elif not in_check(activity):  # a module 6 item's points wait for the end of the check (#144)
         on_attempt(session, attempt)  # points for a first correct answer (FR-9.1, FR-9.2)
-    if result.correct and attempt.hint_level < SUPPORT_LEVEL and activity.purpose != "bonus":
+    if result.correct and real and activity.purpose != "bonus":
         # Real work in a module already complete earns its reward now (#166 review). An optional
         # bonus quest isn't the module's work: it earns its own reward.
         reward_completed_modules(session, user_id, activity)

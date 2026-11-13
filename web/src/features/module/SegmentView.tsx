@@ -58,12 +58,13 @@ export function SegmentView({ segment, onAnswered, intro }: SegmentViewProps) {
             // and staying in view; stacked on a phone. data-two-column lets the module page widen.
             <div
               data-two-column
-              className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
+              className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,var(--reading-width))]"
             >
               <div className="lg:sticky lg:top-24">
                 <PicturePanel tabs={[{ name: pictureName(picture), picture }]} />
               </div>
-              <div className="min-w-0">
+              {/* The text keeps a readable line length (--reading-width); the picture takes the rest. */}
+              <div className="min-w-0 max-w-[var(--reading-width)]">
                 {segment.body ? (
                   <Markdown>{segment.body}</Markdown>
                 ) : (

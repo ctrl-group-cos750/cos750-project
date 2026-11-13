@@ -180,7 +180,7 @@ def _summary(
         shown_segment_count=segment_count - len(hidden_positions),
         shown_segments_passed=position - sum(1 for p in hidden_positions if p < position),
         restarted=row is not None and row.restarted_after_attempt is not None,
-        can_restart=row is not None and module.id != MASTERY_MODULE,
+        can_restart=row is not None and row.status == "complete" and module.id != MASTERY_MODULE,
     )
 
 
@@ -567,7 +567,7 @@ def reward_module(session: Session, user_id: int, module_id: int) -> bool:
                 Attempt.user_id == user_id,
                 Attempt.activity_id.in_(activities),
                 Attempt.correct.is_(True),
-                Attempt.hint_level < rewards.SUPPORT_LEVEL,
+                rewards.real_work(),
             )
             .limit(1)
         )

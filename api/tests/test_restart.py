@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Attempt, HintView, PointsEntry
+from app.models import Attempt, HintView, PointsEntry, UserBadge
 from app.seed import load
 
 PASSWORD = "Correct horse 1"  # noqa: S105 (a test account)
@@ -160,9 +160,33 @@ def test_the_mastery_check_and_a_module_not_started_cant_be_restarted(
 ) -> None:
     setup(client, db, tmp_path)
     assert client.post("/api/modules/0/restart").status_code == 409  # not started yet
+    # Started but not finished: restarting would lose the student's place (13 Nov audit).
+    assert client.post("/api/modules/0/position", json={"segmentPosition": 0}).status_code == 200
+    assert client.get("/api/modules/0").json()["status"] == "in_progress"
+    assert client.get("/api/modules/0").json()["canRestart"] is False
+    assert client.post("/api/modules/0/restart").status_code == 409
     finish_module_0(client)
     assert client.get("/api/modules/0").json()["canRestart"] is True
     assert client.post("/api/modules/6/restart").status_code in (403, 409)
     assert client.post("/api/modules/99/restart").status_code == 404
     client.cookies.clear()
     assert client.post("/api/modules/0/restart").status_code == 401
+
+
+def test_an_answer_given_away_before_a_restart_earns_no_more_after_it(
+    client: TestClient, db: Session, tmp_path: Path
+) -> None:
+    """Every hint opened and a wrong answer, then a restart and the answer the hints gave: that
+    is supported work, worth 4 points, not 10, and no module reward (13 Nov audit; FR-9.6)."""
+    setup(client, db, tmp_path)
+    for _ in range(4):
+        assert client.post("/api/activities/101/hints").status_code == 201
+    client.post("/api/activities/101/attempts", json={"submitted": {"selected": "b"}})
+    assert client.post("/api/modules/0/position", json={"segmentPosition": 1}).status_code == 200
+    detail = client.post("/api/modules/0/position", json={"segmentPosition": 1}).json()
+    assert detail["status"] == "complete"
+    assert points(db) == 0
+    assert client.post("/api/modules/0/restart").status_code == 200
+    client.post("/api/activities/101/attempts", json={"submitted": {"selected": "a"}})
+    assert points(db) == 4  # activity_correct_supported, and no module points
+    assert db.scalar(select(func.count()).select_from(UserBadge)) == 0

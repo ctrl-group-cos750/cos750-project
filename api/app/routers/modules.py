@@ -46,9 +46,9 @@ _TOO_FAR = "Work through the module one segment at a time."
 _RETRIEVAL_INCOMPLETE = "Answer the retrieval questions before starting this module."
 _NOT_DONE = "Answer this segment's activity, or the video's checkpoints, before moving on."
 _CANNOT_RESTART = (
-    "This module can't be restarted: open it first. The mastery check can't be restarted either, "
-    "because only your first answer counts there; your report's review paths are the way to "
-    "practise again."
+    "This module can't be restarted until you have finished it. The mastery check can't be "
+    "restarted either, because only your first answer counts there; your report's review paths "
+    "are the way to practise again."
 )
 
 

@@ -427,28 +427,56 @@ function RestartModule({
   onRestart: () => void
 }) {
   const [asking, setAsking] = useState(false)
+  const box = useRef<HTMLDivElement>(null)
+  // Keyboard focus follows the question (WCAG 2.4.3): into it when it opens, onto Cancel (the
+  // safe choice), and back to the button that opened it when it closes.
+  const reopened = useRef(false)
+  useEffect(() => {
+    const buttons = box.current?.querySelectorAll('button')
+    if (asking) buttons?.[1]?.focus()
+    else if (reopened.current) buttons?.[0]?.focus()
+  }, [asking])
+  const close = () => {
+    reopened.current = true
+    setAsking(false)
+  }
+  // Escape closes the question, as it would a dialog, unless the restart is already on its way.
+  useEffect(() => {
+    if (!asking || pending) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      reopened.current = true
+      setAsking(false)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [asking, pending])
   if (!asking)
     return (
-      <Button variant="ghost" size="sm" onClick={() => setAsking(true)}>
-        Restart module
-      </Button>
-    )
-  return (
-    <fieldset className="grid w-full gap-2 rounded-lg border border-border bg-card p-4 m-0 min-w-0">
-      <legend className="float-left mb-1 w-full p-0 font-semibold">Restart this module?</legend>
-      <p className="m-0 text-sm text-muted-foreground">
-        Its questions will show unanswered, with their hints from the first again, so you can try
-        them afresh. You keep your points and badges, and the module stays complete.
-      </p>
-      {error && <Alert tone="danger">{error}</Alert>}
-      <div className="flex flex-wrap gap-2">
-        <Button size="sm" loading={pending} onClick={onRestart}>
+      <div ref={box}>
+        <Button variant="ghost" size="sm" onClick={() => setAsking(true)}>
           Restart module
         </Button>
-        <Button variant="ghost" size="sm" disabled={pending} onClick={() => setAsking(false)}>
-          Cancel
-        </Button>
       </div>
-    </fieldset>
+    )
+  return (
+    <div ref={box} className="w-full">
+      <fieldset className="grid w-full gap-2 rounded-lg border border-border bg-card p-4 m-0 min-w-0">
+        <legend className="float-left mb-1 w-full p-0 font-semibold">Restart this module?</legend>
+        <p className="m-0 text-sm text-muted-foreground">
+          Its questions will show unanswered, with their hints from the first again, so you can try
+          them afresh. You keep your points and badges, and the module stays complete.
+        </p>
+        {error && <Alert tone="danger">{error}</Alert>}
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" loading={pending} onClick={onRestart}>
+            Restart module
+          </Button>
+          <Button variant="ghost" size="sm" disabled={pending} onClick={close}>
+            Cancel
+          </Button>
+        </div>
+      </fieldset>
+    </div>
   )
 }

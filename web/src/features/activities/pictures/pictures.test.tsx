@@ -188,7 +188,8 @@ describe('your graph, judged against the map', () => {
 })
 
 describe('the picture beside the question', () => {
-  const wrongPairs = { DE: 'DE', BG: 'FG', AC: 'AC', EF: 'EF', CF: 'CF', AE: 'CE', BC: 'DF' }
+  // Wrong answers from 105's spare edges, which are near misses (#214 C15).
+  const wrongPairs = { DE: 'DE', BG: 'CG', AC: 'AC', EF: 'EF', CF: 'CF', AE: 'CE', BC: 'BF' }
   const result = (correct: boolean, hintLevel = 0): AttemptResult => ({
     id: correct ? 2 : 1,
     activityId: 105,
@@ -230,7 +231,7 @@ describe('the picture beside the question', () => {
     expect(tabs.map((t) => t.textContent)).toEqual(['Your graph', 'Campus map'])
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true')
     const graph = screen.getByRole('img', { name: /your graph/i })
-    expect(graph).toHaveAccessibleDescription(/Not on the map: F–G, C–E and D–F\./)
+    expect(graph).toHaveAccessibleDescription(/Not on the map: C–G, C–E and B–F\./)
     for (const missing of ['A–E', 'B–C', 'B–G']) {
       expect(graph).not.toHaveAccessibleDescription(new RegExp(missing))
     }

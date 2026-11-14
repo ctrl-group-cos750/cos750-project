@@ -2357,7 +2357,7 @@
         },
         {
           "level": 2,
-          "body": "On the triangle A–B, B–C, C–A from A, it gives A, B, C, A: A comes out again after its neighbours. When C looks at A, A has already left the queue: why does it join again?"
+          "body": "On the triangle A–B, B–C, C–A from A, it gives A, B, C, A: A comes out again after its neighbours. When B looks at A, A has already left the queue: why does it join again?"
         },
         {
           "level": 3,

@@ -35,6 +35,7 @@ def get_skills(user: CurrentUser, session: DbSession) -> SkillsOut:
                     module_id=s.improve.module_id,
                     segment=s.improve.segment,
                     objective_id=s.improve.objective_id,
+                    locked=s.improve.locked,
                 ),
                 modules=list(s.modules),
             )

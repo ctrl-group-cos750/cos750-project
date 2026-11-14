@@ -47,15 +47,20 @@ export function SkillProfile({
         const status = skillStatus(skill)
         const here = highlight.includes(skill.id)
         const link = improveLink(skill)
-        const improve = link && (
-          <Link
-            to={link.to}
-            aria-label={link.label}
-            className={`${styles.improve} ${link.quiet ? styles.quiet : ''}`}
-          >
-            {link.text}
-          </Link>
-        )
+        const improve =
+          link &&
+          (link.to === null ? (
+            // Not open yet (the mastery check before modules 1 to 5): said, not linked.
+            <span className={`${styles.improve} ${styles.quiet}`}>{link.text}</span>
+          ) : (
+            <Link
+              to={link.to}
+              aria-label={link.label}
+              className={`${styles.improve} ${link.quiet ? styles.quiet : ''}`}
+            >
+              {link.text}
+            </Link>
+          ))
         return (
           <li
             key={skill.id}

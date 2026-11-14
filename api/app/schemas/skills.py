@@ -11,12 +11,15 @@ class ImproveOut(ApiModel):
     0-based, when they can open it there), `revisit` a module (secure in practice, or met with
     support), its `review` path once module 6 has said "not yet" (FR-7.5), or the mastery `check`
     (module 6) once practice can no longer make it secure: too many first answers weren't on your
-    own, and only a first attempt counts (FR-9.6). Never module 6 to practise."""
+    own, and only a first attempt counts (FR-9.6). Never module 6 to practise. `locked`: the
+    module isn't open to the student yet (the mastery check, before modules 1 to 5 are done), so
+    the profile says where it will be shown rather than linking to a locked page."""
 
     kind: Literal["practise", "revisit", "review", "check"]
     module_id: int | None
     segment: int | None
     objective_id: int | None
+    locked: bool = False
 
 
 class SkillOut(ApiModel):

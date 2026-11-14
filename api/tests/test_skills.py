@@ -201,7 +201,13 @@ def test_practice_progress_counts_right_answers_per_objective(
         "level": "practising",
         "result": None,
         # 102's wrong first attempt leaves at most 2 of 3 on your own: the mastery check (N1).
-        "improve": {"kind": "check", "moduleId": 6, "segment": None, "objectiveId": None},
+        "improve": {
+            "kind": "check",
+            "moduleId": 6,
+            "segment": None,
+            "objectiveId": None,
+            "locked": False,
+        },
         "modules": [1],
     }
     assert (skills[2]["level"], skills[2]["total"]) == ("not_started", 1)
@@ -388,8 +394,20 @@ def test_each_objective_says_where_to_practise_it(
     the student has reached it; never a segment further on, which can't be opened yet (#214)."""
     user = log_in(client)
     first = improve(client)
-    assert first[1] == {"kind": "practise", "moduleId": 1, "segment": 0, "objectiveId": None}
-    assert first[2] == {"kind": "practise", "moduleId": 1, "segment": None, "objectiveId": None}
+    assert first[1] == {
+        "kind": "practise",
+        "moduleId": 1,
+        "segment": 0,
+        "objectiveId": None,
+        "locked": False,
+    }
+    assert first[2] == {
+        "kind": "practise",
+        "moduleId": 1,
+        "segment": None,
+        "objectiveId": None,
+        "locked": False,
+    }
     reach(db, user, 1, 3)
     answer(client, 101)
     # 102 (segment 1) is next for objective 1; 104 (segment 3) is reached for objective 2.
@@ -399,7 +417,7 @@ def test_each_objective_says_where_to_practise_it(
     # practice can't make objective 1 secure. Not "practise in module 1" (it never could help),
     # but the mastery check, where it is still decided in full (#222 re-review, N1).
     answer(client, 102, WRONG)
-    check = {"kind": "check", "moduleId": 6, "segment": None, "objectiveId": None}
+    check = {"kind": "check", "moduleId": 6, "segment": None, "objectiveId": None, "locked": False}
     assert improve(client)[1] == check
     answer(client, 102)  # right after wrong, and 103 still to do: still the check
     assert improve(client)[1] == check
@@ -432,6 +450,7 @@ def test_practise_is_offered_while_secure_is_still_in_reach(
         "moduleId": 1,
         "segment": 1,
         "objectiveId": None,
+        "locked": False,
     }
     answer(client, 102, WRONG)  # two of five missed: 3 of 5 can't be 80%
     assert improve(client)[1]["kind"] == "check"
@@ -447,6 +466,7 @@ def test_secure_offers_a_revisit_and_gold_nothing(
         "moduleId": 1,
         "segment": None,
         "objectiveId": None,
+        "locked": False,
     }
     complete(db, user, 1)
     answer(client, 601)
@@ -454,7 +474,13 @@ def test_secure_offers_a_revisit_and_gold_nothing(
     after = improve(client)
     assert after[1] is None  # gold: met on your own
     # Not yet: its review path, the route after the mastery check (FR-7.5), never module 6.
-    assert after[2] == {"kind": "review", "moduleId": None, "segment": None, "objectiveId": 2}
+    assert after[2] == {
+        "kind": "review",
+        "moduleId": None,
+        "segment": None,
+        "objectiveId": 2,
+        "locked": False,
+    }
 
 
 def test_met_with_support_offers_a_revisit_not_a_review(
@@ -472,6 +498,7 @@ def test_met_with_support_offers_a_revisit_not_a_review(
         "moduleId": 1,
         "segment": None,
         "objectiveId": None,
+        "locked": False,
     }
 
 
@@ -650,3 +677,39 @@ def test_following_the_practise_it_in_list_earns_practised_on_the_real_content(
     db.flush()
     with_items = {s.objective_id for s in profile_now if s.total > 0}
     assert skill_service.secure_objectives(db, user.id) == with_items
+
+
+def test_the_mastery_check_is_named_not_linked_while_it_is_locked(
+    client: TestClient, db: Session, tmp_path: Path
+) -> None:
+    """With a module between module 1 and the mastery check still to do, module 6 is locked, so
+    the check is offered as where the objective will be shown, not as a link to a page that says
+    it isn't open yet (#222 re-review, nit 3). Once the modules before it are done, it opens."""
+    data = course()
+    data["modules"].insert(
+        1,
+        {
+            "id": 2,
+            "slug": "m2",
+            "title": "M2",
+            "goals": ["g"],
+            "estimated_minutes": 5,
+            "segments": [segment(2001, 201)],
+        },
+    )
+    data["activities"].append(mcq(201, 2, 2))
+    (tmp_path / "course.json").write_text(json.dumps(data), encoding="utf-8")
+    load(db, tmp_path)
+    user = log_in(client)
+    answer(client, 101)
+    answer(client, 102, WRONG)  # objective 1 can no longer be secure: the check decides it
+    assert improve(client)[1] == {
+        "kind": "check",
+        "moduleId": 6,
+        "segment": None,
+        "objectiveId": None,
+        "locked": True,
+    }
+    complete(db, user, 1)
+    complete(db, user, 2)
+    assert improve(client)[1]["locked"] is False

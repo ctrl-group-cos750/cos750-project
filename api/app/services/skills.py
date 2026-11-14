@@ -95,6 +95,7 @@ from app.models import (
 )
 from app.services import quick_check, rewards
 from app.services.mastery import MASTERY_MODULE, State, evaluate
+from app.services.modules import module_locked
 from app.services.rewards import SUPPORT_LEVEL
 
 # "finished", not "bronze": bronze is an objective badge's level (met with support), so the
@@ -122,6 +123,9 @@ class Improve:
     module_id: int | None = None  # the module (its id is its number): practise, revisit, check
     segment: int | None = None  # the segment to open at, 0-based, when the student can open it
     objective_id: int | None = None  # the review path's objective, for review
+    # The module isn't open to this student yet: the mastery check, before modules 1 to 5 are done.
+    # The profile then says where it will be shown instead of linking to a locked page.
+    locked: bool = False
 
 
 @dataclass(frozen=True)
@@ -307,6 +311,7 @@ def _improve(
     places: dict[int, tuple[int, int, int | None]],
     got: _Answers,
     reached: dict[int, int | None],
+    check_locked: bool = False,
 ) -> Improve | None:
     """Where to work on one objective (see the docstring). `reached` is each module's furthest
     segment for this student, or None where every segment can be opened (worked through)."""
@@ -326,7 +331,7 @@ def _improve(
     # with too many of those, practice can't make it secure, so the check is where it is decided.
     missed = sum(1 for a in mine if a in got.answered and a not in got.on_own)
     if len(mine) - missed < SECURE_SHARE * len(mine):
-        return Improve("check", module_id=MASTERY_MODULE)
+        return Improve("check", module_id=MASTERY_MODULE, locked=check_locked)
     todo = [a for a in ordered if a not in got.answered]
     _, module_id, segment = places[(todo or ordered)[0]]
     furthest = reached.get(module_id, 0)
@@ -350,6 +355,7 @@ def skills(session: Session, user_id: int) -> list[Skill]:
     got = _answers(session, user_id, items)
     places = _places(session, items)
     reached = _reached(session, user_id)
+    check_locked = module_locked(session, user_id, MASTERY_MODULE)
     out = []
     for outcome in evaluate(session, user_id):
         mine = [a.id for a in items if a.objective_id == outcome.objective.id]
@@ -386,6 +392,7 @@ def skills(session: Session, user_id: int) -> list[Skill]:
                     places,
                     got,
                     reached,
+                    check_locked,
                 ),
                 modules=tuple(module_id for _, module_id in practised_in),
             )

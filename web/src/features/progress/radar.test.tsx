@@ -287,6 +287,10 @@ describe('the way to improve each objective (#214)', () => {
       level: 'practising',
       improve: { kind: 'check', moduleId: 6, segment: null, objectiveId: null },
     }),
+    skill(8, {
+      level: 'practising',
+      improve: { kind: 'check', moduleId: 6, segment: null, objectiveId: null, locked: true },
+    }),
   ]
 
   it('links each level to the right place, as a real link named from the objective', async () => {
@@ -317,6 +321,12 @@ describe('the way to improve each objective (#214)', () => {
     // Gold: nothing to improve.
     const gold = region.querySelector('li[data-objective="6"]')!
     expect(within(gold as HTMLElement).queryByRole('link')).toBeNull()
+    // The mastery check while it is locked: said, not linked to a page that isn't open (nit 3).
+    const locked = region.querySelector('li[data-objective="8"]') as HTMLElement
+    expect(within(locked).queryByRole('link')).toBeNull()
+    expect(
+      within(locked).getByText('Shown in the mastery check, once modules 1 to 5 are done'),
+    ).toBeInTheDocument()
   })
 
   it('shows the same links in the progress panel’s list, in the opened row', async () => {

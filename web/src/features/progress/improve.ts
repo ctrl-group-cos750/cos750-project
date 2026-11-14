@@ -2,7 +2,8 @@ import { objectiveLabel } from './objectiveLabels.ts'
 import type { Skill } from './skills.api.ts'
 
 export type ImproveLink = {
-  to: string
+  /** Where it goes; null when it can't be opened yet, so the text is shown without a link. */
+  to: string | null
   /** What the link says. */
   text: string
   /** Its full name, starting from the objective, with `text` in it (WCAG 2.5.3). */
@@ -16,7 +17,9 @@ export type ImproveLink = {
  * in a module (at the segment, when the student can open it there), revisit a module (secure, or
  * met with support: the result stands), the review path after a "not yet" in the mastery check,
  * or the mastery check itself once practice can no longer make it secure (#222 re-review, N1).
- * Nothing for gold. The API decides where (`improve`); this only words it.
+ * While the mastery check is still locked, that says when it will be shown instead of linking to a
+ * page that isn't open (#222 re-review, nit 3). Nothing for gold. The API decides where
+ * (`improve`); this only words it.
  */
 export function improveLink(skill: Skill): ImproveLink | null {
   const improve = skill.improve
@@ -30,6 +33,13 @@ export function improveLink(skill: Skill): ImproveLink | null {
       quiet: false,
     }
   if (improve.moduleId === null) return null
+  if (improve.kind === 'check' && improve.locked === true)
+    return {
+      to: null,
+      text: 'Shown in the mastery check, once modules 1 to 5 are done',
+      label: `${name}: shown in the mastery check, once modules 1 to 5 are done`,
+      quiet: false,
+    }
   if (improve.kind === 'check')
     return {
       to: `/modules/${improve.moduleId}`,

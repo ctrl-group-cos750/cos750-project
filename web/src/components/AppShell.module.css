@@ -96,6 +96,10 @@
    * BadgeAnnouncer), so the note never covers the page's heading (#222 re-review). */
   .main {
     padding: calc(var(--space-5) + var(--note-space, 0px)) var(--space-4) var(--space-7);
+    /* Never animated: with reduced motion, base.css gives every element a 0.01 ms transition on
+     * every property, which held the old padding for a frame, so the page was scrolled back
+     * before it had moved and then jumped anyway (#222 re-review, new finding 1). */
+    transition-property: none;
   }
 }
 

@@ -1,5 +1,13 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type MouseEvent } from 'react'
-import { Link } from 'react-router'
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+} from 'react'
+import { Link, useLocation } from 'react-router'
 import { AchievementBadge, Button } from '../../components'
 import { focusedElement, focusSafely } from '../../lib/focus.ts'
 import { PHONE, useMediaQuery } from '../activities/pictures/useMediaQuery.ts'
@@ -186,18 +194,71 @@ export function BadgeAnnouncer() {
   // on <main>, AppShell.module.css), but only when the note arrives near the top: further down,
   // pushing the page would move the text being read, so the note sits over it as before, and goes
   // by itself. After every render, so the space follows the notes as they come and go.
-  const reserved = useRef(false)
+  //
+  // The space is measured from the note's laid-out height (`offsetHeight`), not its on-screen box,
+  // which includes the slide-in transform and came out about 60 px too tall (#222 re-review, nit 2).
+  //
+  // When the note goes while the page is scrolled, taking the space away would move everything up
+  // by its height, and a focused control could end up under the header (WCAG 2.4.11; #222
+  // re-review, new finding 1). So only as much is taken away as scrolling back by the same amount
+  // makes up for, and nothing on screen moves. The rest goes in one step once the student has
+  // scrolled down at least that far, so it can be made up for too, or on the next page. At the top
+  // of the page it all goes at once: nothing can end up under the header from there. The page is
+  // scrolled back by the space taken away at once, then on the next frame by whatever drift is
+  // left against where the content was: the new layout isn't always readable straight away, and
+  // a browser that anchors the scroll itself mustn't be corrected twice.
+  const reserved = useRef(0) // the space set on <main>
+  const forNote = useRef(false) // whether a note showing has room made for it
+  const { pathname } = useLocation()
+  const page = useRef(pathname) // the page the space was made on
+  const shrink = useCallback((main: HTMLElement, wanted: number) => {
+    const old = reserved.current
+    if (wanted === old) return
+    const scrolled = window.scrollY
+    const space = wanted > old || scrolled <= 0 ? wanted : Math.max(wanted, old - scrolled)
+    if (space === old) return
+    const anchor = main.firstElementChild
+    const before = anchor?.getBoundingClientRect().top
+    if (space > 0) main.style.setProperty('--note-space', `${space}px`)
+    else main.style.removeProperty('--note-space')
+    reserved.current = space
+    if (space < old && scrolled > 0) {
+      window.scrollBy(0, space - old)
+      requestAnimationFrame(() => {
+        if (!anchor || before === undefined) return
+        const drift = anchor.getBoundingClientRect().top - before
+        if (Math.abs(drift) >= 1) window.scrollBy(0, drift)
+      })
+    }
+  }, [])
   useLayoutEffect(() => {
     const element = region.current
     const main = element?.closest('main')
     if (!element || !main) return
-    const box = element.getBoundingClientRect()
-    const room = phone && box.height > 0 && (reserved.current || window.scrollY < box.bottom)
+    // A new page starts without what was left over from a note that has gone.
+    if (page.current !== pathname) {
+      page.current = pathname
+      if (!forNote.current && reserved.current > 0) {
+        main.style.removeProperty('--note-space')
+        reserved.current = 0
+      }
+    }
+    const height = element.offsetHeight
+    const bottom = element.getBoundingClientRect().top + height
+    forNote.current = phone && height > 0 && (forNote.current || window.scrollY < bottom)
     // How far the note reaches below the top of <main> (under the header), whatever the scroll.
-    if (room) main.style.setProperty('--note-space', `${Math.ceil(box.bottom - main.offsetTop)}px`)
-    else main.style.removeProperty('--note-space')
-    reserved.current = room
+    shrink(main, forNote.current ? Math.max(0, Math.ceil(bottom - main.offsetTop)) : 0)
   })
+  // Space left over from a note that has gone: taken away once scrolled past it (above).
+  useEffect(() => {
+    const onScroll = () => {
+      const main = region.current?.closest('main')
+      const left = reserved.current
+      if (main && !forNote.current && left > 0 && window.scrollY >= left) shrink(main, 0)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [shrink])
   useEffect(
     () => () => {
       region.current?.closest('main')?.style.removeProperty('--note-space')

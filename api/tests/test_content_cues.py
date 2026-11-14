@@ -342,11 +342,17 @@ def test_no_graph_scenario_is_a_placeholder() -> None:
         assert "placeholder" not in g.name.lower(), g.name
 
 
-def test_module_0_promises_no_skip_the_app_does_not_make() -> None:
-    """The diagnostic does not choose the refreshers yet (FR-8.1, #31): every one is shown."""
+def test_module_0_promises_only_the_skip_the_app_makes() -> None:
+    """The diagnostic chooses the refreshers (FR-8.1, #224): every refresher has its question as
+    its skip check, and the opening says a right first answer skips it, which is what the app
+    does (`support.skip_check_passed`)."""
     module = next(m for m in CONTENT.modules if m.id == 0)
+    refreshers = [s for s in module.segments if s.kind == "refresher"]
+    assert refreshers
+    assert all(s.skip_check_activity_id is not None for s in refreshers)
+    opening = (module.segments[0].body or "").lower()
+    assert "right at your first try and its refresher is skipped" in opening
     for s in module.segments:
-        assert "skip" not in (s.body or "").lower(), s.id
         # Its answers are marked right or wrong and earn points: they just count for no result.
         assert "nothing here is marked" not in (s.body or "").lower(), s.id
 

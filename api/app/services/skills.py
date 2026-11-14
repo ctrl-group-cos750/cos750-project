@@ -11,9 +11,10 @@ shows practice progress as one of three coarse levels, not a percentage of a han
   same line as the ID document's typical criterion, "at least 4 of 5").
 
 **On your own** is real work under the evidence rule every reward shares (FR-9.6,
-`rewards.real_work_on`, the same call module points use, so the two can't drift apart): the
-student's first attempt ever at the question was right, before hint 3 or 4 in any round. A right
-answer after a wrong one never counts, and a restart doesn't make a new first attempt.
+`rewards.first_answers`, the query module points use through `real_work_on`, so the two can't
+drift apart): the student's first attempt ever at the question was right, before hint 3 or 4 in
+any round. A right answer after a wrong one never counts, and a restart doesn't make a new first
+attempt.
 
 The counts behind the level are sent too, for the profile to show on request. Practice items are
 the module activities tagged with the objective whose purpose is practice or retrieval, that every
@@ -73,7 +74,7 @@ from sqlalchemy.orm import Session
 from app.models import Activity, Attempt, Checkpoint, Module, ModuleProgress, Segment
 from app.services import quick_check
 from app.services.mastery import MASTERY_MODULE, State, evaluate
-from app.services.rewards import answer_given_away, first_tries, real_work_on
+from app.services.rewards import first_answers
 
 Medal = Literal["gold", "silver", "bronze"]
 
@@ -177,8 +178,9 @@ def _utc(moment: datetime) -> datetime:
 
 def _answers(session: Session, user_id: int, ids: Collection[int]) -> _Answers:
     """Of these activities: those answered at all, right at some point, right on your own (real
-    work, `rewards.real_work_on`: the first attempt ever, right, before hint 3 or 4 in any round,
-    the line module points use), and right first time (that, before any hint)."""
+    work, `rewards.first_answers`: the first attempt ever, right, before hint 3 or 4 in any round,
+    the line module points use), and right first time (that, before any hint). Two queries,
+    whatever the number of activities."""
     if not ids:
         return _Answers(set(), set(), set(), set(), {})
     rows = session.execute(
@@ -189,21 +191,12 @@ def _answers(session: Session, user_id: int, ids: Collection[int]) -> _Answers:
     first_at: dict[int, datetime] = {}
     for activity, _, at in rows:
         first_at.setdefault(activity, _utc(at))
-    on_own = real_work_on(session, user_id, ids)
-    firsts = session.scalars(
-        select(Attempt).where(Attempt.id.in_(first_tries(session, user_id, list(on_own))))
-    )
-    first_time = {
-        a.activity_id
-        for a in firsts
-        if a.hint_level == 0
-        and not answer_given_away(session, user_id, a.activity_id, before=a.id, level=1)
-    }
+    firsts = first_answers(session, user_id, ids)
     return _Answers(
         answered={a for a, _, _ in rows},
         right={a for a, correct, _ in rows if correct},
-        on_own=on_own,
-        first_time=first_time,
+        on_own=firsts.on_own,
+        first_time=firsts.first_time,
         first_at=first_at,
     )
 

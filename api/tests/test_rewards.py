@@ -1,11 +1,12 @@
 """Private points and badges (FR-9): the rules in app/services/rewards.py, and the API that shows a
 student their own."""
 
+import random
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import event, func, select
 from sqlalchemy.orm import Session
 from support import open_module
 
@@ -312,3 +313,92 @@ def test_rows_are_never_negative_or_duplicated(db: Session, user: User) -> None:
     assert len({e.ref for e in entries}) == len(entries)
     held = db.scalars(select(UserBadge).where(UserBadge.user_id == user.id)).all()
     assert len({(b.badge, b.ref) for b in held}) == len(held)
+
+
+# --- The evidence rule over many activities (#221 re-review) -------------------------------------
+
+
+def _random_history(db: Session, user_id: int, ids: list[int], rng: random.Random) -> None:
+    """Hints in rounds and wrong and right answers, in a random order, on both activities."""
+    last = db.scalar(select(func.max(Attempt.id))) or 0
+    shown: set[tuple[int, int, int]] = set()  # (activity, level, round)
+    for _ in range(rng.randint(0, 7)):
+        activity = rng.choice(ids)
+        if rng.random() < 0.5:
+            level, round_ = rng.randint(1, 4), rng.randint(0, 1)
+            if (activity, level, round_) in shown:
+                continue
+            shown.add((activity, level, round_))
+            db.add(
+                HintView(
+                    user_id=user_id,
+                    activity_id=activity,
+                    level=level,
+                    round=round_,
+                    after_attempt=last,
+                )
+            )
+        else:
+            correct = rng.random() < 0.6
+            row = Attempt(
+                user_id=user_id,
+                activity_id=activity,
+                submitted={},
+                correct=correct,
+                score=1.0 if correct else 0.0,
+                detail={},
+                hint_level=rng.choice((0, 0, 1, 2, 3, 4)),
+            )
+            db.add(row)
+            db.flush()
+            last = row.id
+    db.flush()
+
+
+def test_the_one_query_rule_matches_real_work_on_every_history(db: Session, user: User) -> None:
+    """`first_answers` must give the same sets as `real_work` applied to each first attempt, and
+    "first time" must be that before any hint: so points and the skill profile can't drift."""
+    rng = random.Random(221)  # noqa: S311 - a reproducible draw, not security
+    uid = user.id
+    ids = [activity_id(db, 1), activity_id(db, 2)]
+    for _ in range(200):
+        nested = db.begin_nested()
+        _random_history(db, uid, ids, rng)
+        firsts = db.scalars(
+            select(Attempt).where(Attempt.id.in_(rewards.first_tries(db, uid, ids)))
+        ).all()
+        own = {a.activity_id for a in firsts if rewards.real_work(db, a)}
+        first_time = {
+            a.activity_id
+            for a in firsts
+            if a.activity_id in own
+            and a.hint_level == 0
+            and not rewards.answer_given_away(db, uid, a.activity_id, before=a.id, level=1)
+        }
+        got = rewards.first_answers(db, uid, ids)
+        assert got.on_own == own
+        assert got.first_time == first_time
+        assert rewards.real_work_on(db, uid, ids) == own
+        nested.rollback()
+        # SQLite hands the rolled-back ids out again: forget the objects that held them.
+        db.expunge_all()
+
+
+def test_real_work_on_is_one_query_however_many_activities(db: Session, user: User) -> None:
+    for n in (1, 2):
+        attempt(db, user, correct=True, activity=n)
+    statements: list[str] = []
+    listen = event.listens_for(db.get_bind(), "before_cursor_execute")
+
+    @listen
+    def count(*args: Any) -> None:
+        statements.append(args[2])
+
+    try:
+        rewards.real_work_on(db, user.id, [activity_id(db, 1), activity_id(db, 2)])
+        # activity_id() above runs its own query; count only the call itself.
+        statements.clear()
+        rewards.real_work_on(db, user.id, [1, 2, 3, 4, 5, 6, 7, 8])
+    finally:
+        event.remove(db.get_bind(), "before_cursor_execute", count)
+    assert len(statements) == 1

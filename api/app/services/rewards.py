@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Literal
 
-from sqlalchemy import func, select
+from sqlalchemy import Exists, exists, func, select
 from sqlalchemy.orm import Session
 
 from app.models import Attempt, HintView, PointsEntry, PointsRule, User, UserBadge
@@ -118,15 +118,59 @@ def real_work(session: Session, attempt: Attempt) -> bool:
     return counts_as_evidence(session, attempt) and not supported(session, attempt)
 
 
-def real_work_on(session: Session, user_id: int, activity_ids: Collection[int]) -> set[int]:
-    """The activities among these on which this student has done real work (`real_work`)."""
-    firsts = first_tries(session, user_id, activity_ids)
-    if not firsts:
-        return set()
-    right = session.scalars(
-        select(Attempt).where(Attempt.id.in_(firsts), Attempt.correct.is_(True))
+def _hint_before(level: int) -> Exists:
+    """SQL: the student had been shown hint `level` or higher on the attempt's activity before
+    the attempt, in any round (the same test as `answer_given_away`, as a column)."""
+    return exists().where(
+        HintView.user_id == Attempt.user_id,
+        HintView.activity_id == Attempt.activity_id,
+        HintView.level >= level,
+        HintView.after_attempt < Attempt.id,
     )
-    return {a.activity_id for a in right if real_work(session, a)}
+
+
+@dataclass(frozen=True)
+class FirstAnswers:
+    """What a student's first attempts at some activities count for (the evidence rule)."""
+
+    # Real work (`real_work`): the first attempt was right, before hint 3 or 4 in any round.
+    on_own: set[int]
+    # Real work given before any hint at all.
+    first_time: set[int]
+
+
+def first_answers(session: Session, user_id: int, activity_ids: Collection[int]) -> FirstAnswers:
+    """The evidence rule over many activities in one query: the same answer as `real_work` on
+    each first attempt, without a query per activity (#221 re-review: the skill profile ran 369
+    queries). Not after hint 3 or 4 implies not after the worked answer, so rule 2 holds too."""
+    if not activity_ids:
+        return FirstAnswers(set(), set())
+    firsts = (
+        select(func.min(Attempt.id))
+        .where(Attempt.user_id == user_id, Attempt.activity_id.in_(activity_ids))
+        .group_by(Attempt.activity_id)
+    )
+    rows = session.execute(
+        select(
+            Attempt.activity_id,
+            (Attempt.hint_level == 0) & ~_hint_before(1),
+        ).where(
+            Attempt.id.in_(firsts),
+            Attempt.correct.is_(True),
+            Attempt.hint_level < SUPPORT_LEVEL,
+            ~_hint_before(SUPPORT_LEVEL),
+        )
+    ).all()
+    return FirstAnswers(
+        on_own={activity for activity, _ in rows},
+        first_time={activity for activity, unhinted in rows if unhinted},
+    )
+
+
+def real_work_on(session: Session, user_id: int, activity_ids: Collection[int]) -> set[int]:
+    """The activities among these on which this student has done real work (`real_work`), in
+    one query (`first_answers`)."""
+    return first_answers(session, user_id, activity_ids).on_own
 
 
 # Used when a rule's row is missing, so a deleted row never breaks submitting an answer.

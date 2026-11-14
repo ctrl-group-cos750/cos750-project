@@ -51,7 +51,7 @@ from app.services.mastery import MASTERY_MODULE
 from app.services.quick_check import DONE
 from app.services.quick_check import scores as quick_check_scores
 from app.services.quick_check import states as quick_check_states
-from app.services.support import hidden_segments, record_shown
+from app.services.support import hidden_segments, record_shown, skip_check_passed
 
 # Activity kinds the web can't show a student yet: it says "This activity kind is not available
 # yet" instead (SUPPORTED in web/src/features/activities/ActivityRenderer.tsx is the mirror of
@@ -452,24 +452,41 @@ def course_minutes(session: Session) -> int:
     return int(session.scalar(select(func.coalesce(func.sum(Module.estimated_minutes), 0))) or 0)
 
 
+def quest_open(session: Session, user_id: int, activity: Activity) -> bool:
+    """Whether this student may open a bonus quest (FR-8.3): once they have reached the segment
+    that offers it in its module, or finished the module. A quest is a module's last segment
+    (380 in module 3, 480 in module 4), which a student reaches before the module is complete, so
+    finishing alone would shut it exactly where it is offered (#224 review). A quest no segment
+    places opens with its module's completion."""
+    if activity.module_id is None:
+        return False
+    row = _progress(session, user_id).get(activity.module_id)
+    if row is None:
+        return False
+    if row.status == "complete":
+        return True
+    index = next(
+        (
+            i
+            for i, s in enumerate(_segments(session, activity.module_id))
+            if s.activity_id == activity.id
+        ),
+        None,
+    )
+    return index is not None and row.current_segment_position >= index
+
+
 def skip_check_state(
     session: Session, user_id: int, activity_id: int | None
 ) -> SkipCheckState | None:
     """Where a student stands on a segment's skip check (FR-8.1, FR-8.2): not taken, passed or
-    not passed. A pass must be the first attempt, correct and made before hint 3 or 4."""
+    not passed (`support.skip_check_passed`, the rule that also hides the segment)."""
     if activity_id is None:
         return None
-    first = session.scalar(
-        select(Attempt)
-        .where(Attempt.user_id == user_id, Attempt.activity_id == activity_id)
-        .order_by(Attempt.id)
-        .limit(1)
-    )
-    if first is None:
+    passed = skip_check_passed(session, user_id, activity_id)
+    if passed is None:
         return "not_taken"
-    if first.correct and first.hint_level < rewards.SUPPORT_LEVEL:
-        return "passed"
-    return "not_passed"
+    return "passed" if passed else "not_passed"
 
 
 def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleDetailOut:

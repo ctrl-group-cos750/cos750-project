@@ -639,9 +639,9 @@ export interface paths {
     }
     /**
      * List Quests
-     * @description The bonus quests offered to the logged-in student: those after a module they have
-     *     completed, in module order, each with whether they have finished it. Empty until a module
-     *     with a quest is complete. Only ever the student's own (NFR-S2).
+     * @description The bonus quests offered to the logged-in student: those they may open now (they have
+     *     reached the quest's segment at the end of its module, or finished the module), in module
+     *     order, each with whether they have finished it. Only ever the student's own (NFR-S2).
      */
     get: operations['list_quests_api_quests_get']
     put?: never

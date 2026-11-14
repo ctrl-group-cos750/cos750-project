@@ -6,9 +6,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Activity, Module, ModuleProgress, ObjectiveResult, PointsEntry, Segment
+from app.routers.activities import QUEST_CLOSED
 from app.seed import load
 
 STUDENT = {"email": "ada@example.com", "password": "Correct horse 1", "displayName": "Ada"}
+RIGHT = {"submitted": {"selected": "a"}}
 QUESTS = (380, 480)  # module 3's and module 4's, in the course's order
 
 
@@ -44,20 +46,94 @@ def test_a_bonus_quest_is_optional_and_never_holds_next_back(
     assert (segment["optional"], segment["done"], segment["attempted"]) == (True, True, False)
 
 
-def test_a_bonus_quest_opens_after_its_module_is_complete(client: TestClient, db: Session) -> None:
+def reach(
+    db: Session, user_id: int, module: int, position: int, status: str = "in_progress"
+) -> None:
+    """The student's furthest segment in `module` (0-based), as the module page saves it."""
+    row = db.scalar(
+        select(ModuleProgress).where(
+            ModuleProgress.user_id == user_id, ModuleProgress.module_id == module
+        )
+    )
+    if row is None:
+        row = ModuleProgress(user_id=user_id, module_id=module)
+        db.add(row)
+    row.status, row.current_segment_position = status, position
+    db.commit()
+
+
+def quest_index(db: Session, module: int, quest: int) -> int:
+    segments = db.scalars(
+        select(Segment).where(Segment.module_id == module).order_by(Segment.position)
+    ).all()
+    return next(i for i, s in enumerate(segments) if s.activity_id == quest)
+
+
+def test_a_bonus_quest_opens_where_its_module_offers_it(client: TestClient, db: Session) -> None:
+    """The quest is the module's last segment, reached before the module is complete: it opens
+    there, not only once the module is finished, or the module would offer a shut quest (#224
+    review). Before then it is shut, so it can't be done ahead of the module."""
     load(db)
     user_id = log_in(client)
     open_through(db, user_id, 3)
+    index = quest_index(db, 3, 380)
+    assert index == len(client.get("/api/modules/3").json()["segments"]) - 1  # the last one
 
     response = client.get("/api/activities/380")
-    assert (response.status_code, response.json()["detail"]) == (
-        403,
-        "This bonus quest opens when you finish the module it follows.",
-    )
+    assert (response.status_code, response.json()["detail"]) == (403, QUEST_CLOSED)
+    reach(db, user_id, 3, index - 1)
+    assert client.get("/api/activities/380").status_code == 403
+    assert client.post("/api/activities/380/attempts", json=RIGHT).status_code == 403
 
-    db.add(ModuleProgress(user_id=user_id, module_id=3, status="complete"))
-    db.commit()
+    reach(db, user_id, 3, index)  # at its segment, the module not finished yet
     assert client.get("/api/activities/380").status_code == 200
+    answer(client, 380, "a")
+    assert badges(client) == [("quest", "380")]
+
+
+def test_a_bonus_quest_stays_open_once_its_module_is_finished(
+    client: TestClient, db: Session
+) -> None:
+    """Finished, and restarted (which starts the module again at its first segment, but keeps it
+    complete): the quest stays open."""
+    load(db)
+    user_id = log_in(client)
+    open_through(db, user_id, 4)  # module 3 complete
+    reach(db, user_id, 3, 0, status="complete")
+    assert client.get("/api/activities/380").status_code == 200
+    assert client.get("/api/activities/480").status_code == 403  # module 4 not reached
+
+
+def test_the_offer_lists_open_quests_in_module_order(client: TestClient, db: Session) -> None:
+    load(db)
+    user_id = log_in(client)
+    assert client.get("/api/quests").json() == []
+    open_through(db, user_id, 5)  # modules 3 and 4 complete
+    offer = client.get("/api/quests").json()
+    assert [(q["id"], q["moduleId"], q["moduleNumber"], q["completed"]) for q in offer] == [
+        (380, 3, 3, False),
+        (480, 4, 4, False),
+    ]
+    assert offer[0]["title"]
+    assert offer[0]["moduleTitle"]
+    answer(client, 480, "b")  # wrong: the offer stays, not completed
+    answer(client, 380, "a")
+    assert [(q["id"], q["completed"]) for q in client.get("/api/quests").json()] == [
+        (380, True),
+        (480, False),
+    ]
+
+
+def test_the_offer_needs_a_login_and_is_the_students_own(client: TestClient, db: Session) -> None:
+    load(db)
+    assert client.get("/api/quests").status_code == 401
+    user_id = log_in(client)
+    open_through(db, user_id, 4)
+    answer(client, 380, "a")
+    client.post("/api/auth/logout")
+    other = {"email": "bob@example.com", "password": "Correct horse 2", "displayName": "Bob"}
+    assert client.post("/api/auth/register", json=other).status_code == 201
+    assert client.get("/api/quests").json() == []  # Bob has finished nothing
 
 
 def test_a_right_answer_earns_the_quest_and_both_earn_all_quests(

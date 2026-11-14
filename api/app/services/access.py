@@ -52,6 +52,7 @@ from app.services.modules import (
     _segments,
     _statuses,
     answer_states,
+    quest_open,
 )
 from app.services.support import hidden_segments
 
@@ -187,12 +188,9 @@ def activity_refusal(session: Session, user: User, activity: Activity) -> Refusa
     """None if this student may open the activity, else why not (see the module docstring)."""
     if user.is_staff:
         return None
-    if activity.purpose == "bonus" and activity.module_id is not None:
-        status = _statuses(
-            _modules(session), _progress(session, user.id), _segment_counts(session)
-        ).get(activity.module_id)
-        if status != "complete":
-            return "quest_closed"
+    if activity.purpose == "bonus" and not quest_open(session, user.id, activity):
+        # Opens at its segment, or once its module is finished (FR-8.3; #224 review).
+        return "quest_closed"
     if activity.purpose == "test_out":
         # A quick check question is answered only in the quick check, all at once, with no hints
         # or feedback before the end (FR-8.2, #214): never one by one here.

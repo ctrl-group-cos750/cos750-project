@@ -20,7 +20,7 @@ router = APIRouter(prefix="/api/quests", tags=["quests"])
 
 @router.get("")
 def list_quests(user: CurrentUser, session: DbSession) -> list[QuestOut]:
-    """The bonus quests offered to the logged-in student: those after a module they have
-    completed, in module order, each with whether they have finished it. Empty until a module
-    with a quest is complete. Only ever the student's own (NFR-S2)."""
+    """The bonus quests offered to the logged-in student: those they may open now (they have
+    reached the quest's segment at the end of its module, or finished the module), in module
+    order, each with whether they have finished it. Only ever the student's own (NFR-S2)."""
     return offered_quests(session, user.id)

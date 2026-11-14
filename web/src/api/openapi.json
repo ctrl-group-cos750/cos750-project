@@ -1657,7 +1657,7 @@
           "quests"
         ],
         "summary": "List Quests",
-        "description": "The bonus quests offered to the logged-in student: those after a module they have\ncompleted, in module order, each with whether they have finished it. Empty until a module\nwith a quest is complete. Only ever the student's own (NFR-S2).",
+        "description": "The bonus quests offered to the logged-in student: those they may open now (they have\nreached the quest's segment at the end of its module, or finished the module), in module\norder, each with whether they have finished it. Only ever the student's own (NFR-S2).",
         "operationId": "list_quests_api_quests_get",
         "parameters": [
           {

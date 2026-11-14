@@ -83,7 +83,7 @@ RECORDED = (
     "is answered."
 )
 NOT_SHOWN = "This activity is extra help that isn't part of your way through the module."
-QUEST_CLOSED = "This bonus quest opens when you finish the module it follows."
+QUEST_CLOSED = "This bonus quest opens when you reach it at the end of its module."
 SUPPORT_LEVEL = 3  # hint levels 3 and 4 make a correct answer count as "with support" (FR-7.2)
 # The highest hint a mastery check item gives (#144): hints 3 and 4 give the answer away, so a
 # student who needs them goes to the review path instead (FR-7.5).

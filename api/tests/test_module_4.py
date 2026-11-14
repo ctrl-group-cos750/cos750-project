@@ -231,10 +231,10 @@ def test_the_parsons_answer_is_the_worked_examples_code() -> None:
 
 def test_the_parsons_problem_accepts_exactly_the_orders_that_work() -> None:
     """Every order of the lines Python can run is tried on the design's tests: each the checker
-    accepts passes, and each that passes is accepted (FR-5.4, #145), with two deliberate
-    exceptions that also run. The import after the function: the lessons and PEP 8 put imports
-    first. order.append(v) after the neighbour loop: module 3 says a vertex joins the order when
-    it leaves the queue, and the worked example writes it straight after popleft()."""
+    accepts passes, and each that passes is accepted (FR-5.4, #145). That includes the import
+    after the function and order.append(v) after the neighbour loop: both give the right BFS, so
+    marking them wrong marked a correct BFS wrong (review of 13 Nov, High 5). The solution lists
+    them as alternatives; this test, which runs every order, is what keeps that list complete."""
     a = activity(404)
     text = {line["id"]: line["text"] for line in a.config["lines"]}
     working, accepted = [], []
@@ -243,15 +243,17 @@ def test_the_parsons_problem_accepts_exactly_the_orders_that_work() -> None:
             working.append(order)
         if check_activity("parsons", a.config, a.solution, {"order": order}).correct:
             accepted.append(order)
-    assert accepted == [order for order in working if conventional(order, text)]
-    # The three starting values (3! orders) x visited.add/queue.append (2); the exceptions double
-    # it twice: the import first or last, order.append(v) before or after the neighbour loop.
-    assert len(accepted) == 12
+    assert accepted == working
+    # The three starting values (3! orders) x visited.add/queue.append (2), doubled twice: the
+    # import first or last, order.append(v) before or after the neighbour loop.
     assert len(working) == 48
+    after_loop = [o for o in accepted if not conventional(o, text)]
+    assert len(after_loop) == 36
 
 
 def conventional(order: list[int], text: dict[int, str]) -> bool:
-    """The import comes first, and order.append(v) straight after the vertex leaves the queue."""
+    """The import comes first, and order.append(v) straight after the vertex leaves the queue: the
+    order the worked example writes. The others are accepted too."""
     lines = [text[i].strip() for i in order]
     after_dequeue = lines[next(n for n, t in enumerate(lines) if ".popleft()" in t) + 1]
     return lines[0].startswith("from ") and after_dequeue.startswith("order.append(")

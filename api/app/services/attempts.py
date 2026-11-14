@@ -17,13 +17,7 @@ from app.services.locks import hold_activity, lock_student
 from app.services.mastery import counts, in_check, recompute
 from app.services.modules import reward_completed_modules
 from app.services.restart import activity_round
-from app.services.rewards import (
-    SUPPORT_LEVEL,
-    answer_given_away,
-    on_attempt,
-    on_bonus_quest,
-    real_work,
-)
+from app.services.rewards import on_attempt, on_bonus_quest, real_work, real_work_on
 from app.services.skills import PRACTICE_PURPOSES, award_practised
 
 
@@ -69,7 +63,8 @@ def bonus_quests(session: Session) -> list[int]:
 
 
 def reward_bonus_quest(session: Session, user_id: int, activity: Activity) -> None:
-    """A bonus quest answered correctly before the hints gave it away (FR-8.3, FR-9.3; #87): its
+    """A bonus quest answered right at the first attempt, before the hints gave it
+    away (`rewards.real_work`: the evidence rule, FR-8.3, FR-9.3, FR-9.6; #87): its
     20 points and its Quest badge, once, and All Quests once every quest in the course is earned.
     The badge's ref is the quest's activity id, so it keeps pointing at the same quest if another
     is retired; the badge shelf numbers them for display. Never touches mastery: a bonus item
@@ -77,16 +72,9 @@ def reward_bonus_quest(session: Session, user_id: int, activity: Activity) -> No
     quests = bonus_quests(session)
     if activity.id not in quests:  # hidden or unplaced: only staff can answer it, as a preview
         return
-    earned = set(
-        session.scalars(
-            select(Attempt.activity_id).where(
-                Attempt.user_id == user_id,
-                Attempt.activity_id.in_(quests),
-                Attempt.correct.is_(True),
-                real_work(),
-            )
-        )
-    )
+    earned = real_work_on(session, user_id, quests)
+    if activity.id not in earned:  # wrong first, or after hint 3 or 4: no quest (review of 13 Nov)
+        return
     on_bonus_quest(
         session,
         user_id,
@@ -137,19 +125,18 @@ def record_attempt(
     )
     session.add(attempt)
     session.flush()
-    # Rewards go by every round: hint 3 or 4 before a restart still gave the answer away.
-    real = attempt.hint_level < SUPPORT_LEVEL and not answer_given_away(
-        session, user_id, activity.id, before=attempt.id
-    )
+    # Every reward follows one rule (rewards.counts_as_evidence, FR-9.6): only a right first
+    # attempt counts, in any round, never one after the worked answer. Hint 3 or 4 before it, in
+    # any round, still gave the answer away, so it isn't real work either.
+    real = real_work(session, attempt)
     if activity.purpose == "bonus":
         # A bonus quest earns its own points and badge instead of an activity's (FR-8.3, #87),
-        # and only for real work: hints 3 and 4 give the answer away, so after them it earns
-        # nothing (ID doc: badges mark real progress).
-        if result.correct and real:
+        # and only for real work (ID doc: badges mark real progress).
+        if real:
             reward_bonus_quest(session, user_id, activity)
     elif not in_check(activity):  # a module 6 item's points wait for the end of the check (#144)
-        on_attempt(session, attempt)  # points for a first correct answer (FR-9.1, FR-9.2)
-    if result.correct and real and activity.purpose != "bonus":
+        on_attempt(session, attempt)  # points for a right first attempt (FR-9.1, FR-9.2)
+    if real and activity.purpose != "bonus":
         # Real work in a module already complete earns its reward now (#166 review). An optional
         # bonus quest isn't the module's work: it earns its own reward.
         reward_completed_modules(session, user_id, activity)

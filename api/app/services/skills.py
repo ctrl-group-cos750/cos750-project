@@ -10,12 +10,13 @@ shows practice progress as one of three coarse levels, not a percentage of a han
 - **secure**: every one answered, and at least 80% of them right on your own (the same line as
   the ID document's typical criterion, "at least 4 of 5").
 
-**On your own** follows the evidence rule every reward shares (FR-9.6, `counts_as_evidence` in
-#221): only a student's first attempt at a question counts, so a right answer after a wrong one
-is not real work; a restart starts a new round but not a new first attempt; and an answer after
-the worked answer never counts. The skill profile and medals go one step further, as module points
-do: the first attempt must also come before hint 3 or 4, in any round. Worked out here from the
-attempts and hint views, so this file needs nothing from rewards.py's helpers.
+**On your own** follows the evidence rule every reward shares (FR-9.6, `rewards.counts_as_evidence`):
+only a student's first attempt at a question counts, so a right answer after a wrong one is not
+real work; and an answer after the worked answer never counts. The skill profile and medals go one
+step further, as module points do: the first attempt must also come before hint 3 or 4, in any
+round. Worked out here in one query (`_answers`), because the profile also needs it per round
+(below); for medals it gives exactly `rewards.first_answers`, the query module points use, and a
+test holds the two together.
 
 **Where the student stands now.** The skill profile's level and the Practised badge count, for
 each practice item, the first answer in the latest round of its module in which the student
@@ -25,6 +26,12 @@ redone yet keeps the result it had (#222 review by Koos: the profile shows where
 now, ID document §7.2 and ARCS confidence, and practice is where mistakes are expected). Hint 3 or
 4 seen in an earlier round still counts against a later answer, as everywhere (FR-2.8). Points and
 medals keep the first attempt ever, so a restart can't win back what guessing lost there (FR-9.6).
+
+**On your own** is real work under the evidence rule every reward shares (FR-9.6,
+`rewards.first_answers`, the query module points use through `real_work_on`, so the two can't
+drift apart): the student's first attempt ever at the question was right, before hint 3 or 4 in
+any round. A right answer after a wrong one never counts, and a restart doesn't make a new first
+attempt.
 
 The counts behind the level are sent too, for the profile to show on request. Practice items are
 the module activities tagged with the objective whose purpose is practice or retrieval, that every

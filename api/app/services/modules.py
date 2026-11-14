@@ -703,36 +703,25 @@ def _module_activities(session: Session, module_id: int) -> set[int]:
 def reward_module(session: Session, user_id: int, module_id: int) -> bool:
     """Give a complete module's 25 points, and the First Module badge with the first, once
     (FR-9.1, FR-9.3), if the student has done real work in it: at least one of its activities,
-    other than a diagnostic question, answered correctly without hint 3 or 4. A module walked
-    through by opening every hint and sending anything earns nothing (FR-9.6, ID document §7.2:
-    badges mark real progress, not clicks; #166 review). Called when the module completes, when such a right answer comes later,
-    and by the seed for modules completed before this rule. Returns whether it was earned."""
+    other than a diagnostic question, answered right at the first attempt without hint 3 or 4 (`rewards.real_work`, the evidence rule every reward follows). A module walked
+    through by opening every hint and sending anything, or by guessing until right, earns
+    nothing (FR-9.6, ID document §7.2: badges mark real progress, not clicks; #166 review, review
+    of 13 Nov). Called when the module completes, when such a right answer comes later, and by
+    the seed for modules completed before this rule. Returns whether it was earned."""
     # The diagnostic finds gaps, it doesn't teach (FR-8.1): answering it isn't the work a module's
     # reward is for. So module 0, the warm-up, which asks only diagnostic questions, earns none,
     # and the First Module badge comes with the first module that teaches (Matthew, 13 Nov: it
     # came after module 0 and read as if module 1's first answer had earned it).
     diagnostic = set(session.scalars(select(Activity.id).where(Activity.purpose == "diagnostic")))
     activities = _module_activities(session, module_id) - diagnostic
-    earned = (
-        session.scalar(
-            select(Attempt.id)
-            .where(
-                Attempt.user_id == user_id,
-                Attempt.activity_id.in_(activities),
-                Attempt.correct.is_(True),
-                rewards.real_work(),
-            )
-            .limit(1)
-        )
-        is not None
-    )
+    earned = bool(rewards.real_work_on(session, user_id, activities))
     if earned:
         rewards.on_module_completed(session, user_id, module_id)  # points and badge once each
     return earned
 
 
 def reward_completed_modules(session: Session, user_id: int, activity: Activity) -> None:
-    """After a right answer without hint 3 or 4: a complete module of this activity's that hadn't
+    """After real work (`rewards.real_work`): a complete module of this activity's that hadn't
     earned its reward yet earns it now."""
     homes = set(
         session.scalars(

@@ -436,6 +436,9 @@ class ActivityOut(ApiModel):
     purpose: Purpose = "practice"
     # This student has answered this mastery check item, so it takes no more answers or hints.
     answered: bool = False
+    # A fresh item on a review path: it decides the objective's result, and its hints stop at
+    # hint 3 (the fourth is the worked answer; review of 13 Nov). False for staff, who see all.
+    review_check: bool = False
     # This student's latest answer and the result for it, as marked now (after a regrade, #202,
     # the new mark), so coming back to an activity shows it instead of a blank form (#171). None
     # before they answer, and on a response that isn't about one student (a video's checkpoints).
@@ -488,12 +491,15 @@ ActivityOut.model_rebuild()
 
 class HintOut(ApiModel):
     """The hint just revealed. `next_counts_as_support` is true when the *next* hint would be level
-    3 or 4: show the "this counts as met with support" warning before asking for it (ID doc §7.4)."""
+    3 or 4: warn before asking for it (ID doc §7.4). On an item that decides an objective an
+    answer after it counts as "met with support"; on practice it earns fewer points, and after
+    hint 4, the worked answer, none (FR-9.2)."""
 
     level: int
     body: str
     has_more: bool
     next_counts_as_support: bool
-    # The mastery check's hint limit is reached and the activity has more hints it won't give
-    # (#144): a student who needs them gets them on the objective's review path.
+    # The hint limit is reached and the activity has more hints it won't give: the mastery
+    # check's (#144; a student who needs them gets them on the objective's review path), or a
+    # review path fresh item's (hint 4, the worked answer, is not given on an item that decides).
     limit_reached: bool = False

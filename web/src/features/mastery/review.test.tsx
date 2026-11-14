@@ -112,6 +112,17 @@ describe('ReviewPage', () => {
     expect(step('Fresh trace').getByRole('link', { name: /See it again/ })).toBeVisible()
   })
 
+  it('keeps a fresh question shut until the practice is done (review of 13 Nov)', async () => {
+    const steps = structuredClone(PATH.steps)
+    steps[1].answered = false
+    steps[2].locked = true
+    withPath(() => Response.json({ ...PATH, steps }))
+    renderApp('/review/5')
+    expect(await screen.findByText(/Opens once you have done the practice/)).toBeVisible()
+    expect(step('Fresh trace').queryByRole('link')).toBeNull()
+    expect(step('Practice trace').getByRole('link', { name: /Practise/ })).toBeVisible()
+  })
+
   it('explains a path that is not open yet', async () => {
     withPath(() =>
       Response.json(

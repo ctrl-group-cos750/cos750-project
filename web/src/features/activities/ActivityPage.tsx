@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useContext, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 import { buttonVariants } from '@/components/ui/button-variants'
@@ -6,7 +6,9 @@ import { ApiError } from '../../api/client.ts'
 import { retryUnlessRefused } from '../../api/retry.ts'
 import { Alert, Spinner } from '../../components'
 import { BackLink } from '../../components/BackLink.tsx'
+import { lessonGrid } from '../progress/lessonGrid.ts'
 import { ProgressPanel } from '../progress/ProgressPanel.tsx'
+import { usePanelMinimised, usePreference } from '../progress/preferences.ts'
 import { usePageTitle } from '../../pages/usePageTitle.ts'
 import { useRefreshRewards } from '../rewards/hooks.ts'
 import {
@@ -16,6 +18,7 @@ import {
   submitActivityAttempt,
 } from './activities.api.ts'
 import { ActivityRenderer } from './ActivityRenderer.tsx'
+import { CelebrationAllowed } from './celebration.ts'
 import type { AttemptResult, LastAttempt, Submission } from './activities.types.ts'
 
 type ActivityViewProps = {
@@ -50,6 +53,7 @@ export function ActivityView({
   const [submitError, setSubmitError] = useState('')
   const refreshRewards = useRefreshRewards()
   const queryClient = useQueryClient()
+  const allowed = useContext(CelebrationAllowed)
   const query = useQuery({
     queryKey: ['activities', activityId],
     queryFn: () => fetchActivity(activityId),
@@ -94,8 +98,10 @@ export function ActivityView({
     }
   }
 
+  // A question that decides an objective (module 6's, or a review path's fresh items, purpose
+  // "mastery") gets no companion, confetti or success moment, wherever it is opened (#222 review).
   return (
-    <>
+    <CelebrationAllowed.Provider value={allowed && query.data.purpose !== 'mastery'}>
       {submitError && (
         <Alert tone="danger" title="Try again">
           {submitError}
@@ -113,7 +119,7 @@ export function ActivityView({
         heading={heading}
         showTitle={showTitle}
       />
-    </>
+    </CelebrationAllowed.Provider>
   )
 }
 
@@ -156,6 +162,8 @@ export function ActivityPage() {
     enabled: validActivityId,
   })
   usePageTitle(data?.title)
+  const [panelOn] = usePreference('progressPanel')
+  const [panelRail] = usePanelMinimised('progressPanel')
 
   if (!validActivityId)
     return <Alert tone="danger">The activity identifier must be a positive number.</Alert>
@@ -163,9 +171,12 @@ export function ActivityPage() {
   // Opened from a review path's step: the way back to the path (#146); from anywhere else (a
   // bookmark, a link in a module's text), back to the modules. At the top, where a back link is
   // looked for, in the same centred column as a module.
-  // The progress panel (#214) beside it on wide screens, under it on narrow ones.
+  // The progress panel (#214) beside it on wide screens, under it on narrow ones; switched off,
+  // neither, and the activity has the width.
   return (
-    <div className="grid w-full items-start gap-6 lg:grid-cols-[minmax(0,1fr)_19rem] lg:gap-8">
+    <div
+      className={`grid w-full items-start gap-6 lg:gap-8 ${lessonGrid(panelOn, panelRail, false)}`}
+    >
       <div className="mx-auto grid w-full max-w-3xl justify-items-start gap-4">
         <BackLink fallback={{ backTo: '/', backLabel: 'Your modules' }} />
         <div className="w-full">

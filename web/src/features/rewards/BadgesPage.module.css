@@ -94,3 +94,32 @@
   /* How to earn a locked badge: muted text, not link blue, since it isn't a link. */
   font-style: italic;
 }
+
+/* An objective badge's levels (#214): practised, bronze, gold. */
+.levels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  color: var(--color-text-muted);
+}
+
+.levels [data-reached='yes'] {
+  color: var(--color-text);
+}
+
+.levels [aria-current='step'] {
+  font-weight: 600;
+}
+
+.review {
+  display: inline-block;
+  margin-top: var(--space-1);
+  color: var(--color-accent-text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}

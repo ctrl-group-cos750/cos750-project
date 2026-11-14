@@ -888,7 +888,7 @@
           "skills"
         ],
         "summary": "Get Skills",
-        "description": "The logged-in student's skill profile and module medals (FR-9.7, FR-9.8; #214).\n\nFor each learning objective: how many of its practice items they have answered correctly, of\nhow many, and its mastery result once the mastery check (or a review path) has decided it.\nFor each module with activities to mark: its medal once complete, and the medal the answers so\nfar are heading for. Worked out from attempts on each request (app/services/skills.py), so it\nfollows the current content and rules. Only ever the student's own.",
+        "description": "The logged-in student's skill profile and module medals (FR-9.7, FR-9.8; #214).\n\nFor each learning objective: how many of its practice items they have answered correctly, of\nhow many, where to work on it next (`improve`), and its mastery result once the mastery check (or a review path) has decided it.\nFor each module with activities to mark: its medal once complete, and the medal the answers so\nfar are heading for. Worked out from attempts on each request (app/services/skills.py), so it\nfollows the current content and rules. Only ever the student's own.",
         "operationId": "get_skills_api_me_skills_get",
         "parameters": [
           {
@@ -4023,6 +4023,20 @@
             "title": "Masterycheck",
             "default": false
           },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "practice",
+              "diagnostic",
+              "retrieval",
+              "mastery",
+              "review",
+              "bonus",
+              "test_out"
+            ],
+            "title": "Purpose",
+            "default": "practice"
+          },
           "answered": {
             "type": "boolean",
             "title": "Answered",
@@ -4133,6 +4147,11 @@
             "type": "integer",
             "title": "Points",
             "default": 0
+          },
+          "afterWrongFirst": {
+            "type": "boolean",
+            "title": "Afterwrongfirst",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -4442,6 +4461,7 @@
               {
                 "type": "string",
                 "enum": [
+                  "practised",
                   "bronze",
                   "gold"
                 ]
@@ -4496,7 +4516,7 @@
           "seen"
         ],
         "title": "EarnedBadgeOut",
-        "description": "A badge the student holds. `badge` is a catalogue id (web/src/components/achievements.ts);\n`ref` tells repeatable badges apart (the bonus quest's id), \"\" otherwise. `seen` is false until\nthe app has announced it; an upgrade from bronze to gold makes it unseen again."
+        "description": "A badge the student holds. `badge` is a catalogue id (web/src/components/achievements.ts);\n`ref` tells repeatable badges apart (the bonus quest's id), \"\" otherwise. An objective badge's\n`tier` is its level: practised (secure in the modules' practice), bronze (met with support, on\na review path) or gold (met independently); it only ever goes up. `seen` is false until\nthe app has announced it; going up a level makes it unseen again."
       },
       "EditorActivityIn": {
         "properties": {
@@ -5698,6 +5718,69 @@
         "title": "HintOut",
         "description": "The hint just revealed. `next_counts_as_support` is true when the *next* hint would be level\n3 or 4: warn before asking for it (ID doc §7.4). On an item that decides an objective an\nanswer after it counts as \"met with support\"; on practice it earns fewer points, and after\nhint 4, the worked answer, none (FR-9.2)."
       },
+      "ImproveOut": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "practise",
+              "revisit",
+              "review",
+              "check",
+              "restart"
+            ],
+            "title": "Kind"
+          },
+          "moduleId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moduleid"
+          },
+          "segment": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segment"
+          },
+          "objectiveId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objectiveid"
+          },
+          "locked": {
+            "type": "boolean",
+            "title": "Locked",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "moduleId",
+          "segment",
+          "objectiveId"
+        ],
+        "title": "ImproveOut",
+        "description": "Where the student can work on an objective (#214): `practise` in a module (at `segment`,\n0-based, when they can open it there), `revisit` a module (secure in practice, or met with\nsupport), its `review` path once module 6 has said \"not yet\" (FR-7.5), or the mastery `check`\n(module 6) once practice this round can no longer make it secure: too many first answers\nweren't on your own, and only a first attempt counts (FR-9.6); or `restart` that module once\nit is finished, which gives its questions a new first answer for the profile. Never module 6 to practise. `locked`: the\nmodule isn't open to the student yet (the mastery check, before modules 1 to 5 are done), so\nthe profile says where it will be shown rather than linking to a locked page."
+      },
       "Insights": {
         "properties": {
           "students": {
@@ -6040,7 +6123,7 @@
                 "enum": [
                   "gold",
                   "silver",
-                  "bronze"
+                  "finished"
                 ]
               },
               {
@@ -6056,7 +6139,7 @@
                 "enum": [
                   "gold",
                   "silver",
-                  "bronze"
+                  "finished"
                 ]
               },
               {
@@ -6087,7 +6170,7 @@
           "objectives"
         ],
         "title": "ModuleMedalOut",
-        "description": "A module's medal (FR-9.8): `medal` once the module is complete (gold, every first answer\nright without a hint; silver, every first answer right without hint 3 or 4; bronze, finished),\nand `headingFor`, what the answers so far are on course for. Never counts time or speed.\n`objectives` are the learning objectives its activities practise. `answered` and `total` count\nthe same activities: on a finished module, those it was judged on (the ones answered before it\nwas finished), so `answered` is never more than `total`."
+        "description": "A module's medal (FR-9.8): `medal` once the module is complete (gold, every activity right\nat the first attempt without a hint; silver, right at the first attempt without hint 3 or 4;\nfinished, the module finished with at least one right at the first attempt without hint 3 or\n4: not \"bronze\", which is an objective badge's level),\nand `headingFor`, what the answers so far are on course for. Never counts time or speed.\n`objectives` are the learning objectives its activities practise. `answered` and `total` count\nthe same activities: on a finished module, those it was judged on (the ones answered before it\nwas finished), so `answered` is never more than `total`."
       },
       "ModuleOut": {
         "properties": {
@@ -7086,6 +7169,23 @@
               }
             ],
             "title": "Result"
+          },
+          "improve": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImproveOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "modules": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Modules"
           }
         },
         "additionalProperties": false,
@@ -7098,10 +7198,12 @@
           "onYourOwn",
           "total",
           "level",
-          "result"
+          "result",
+          "improve",
+          "modules"
         ],
         "title": "SkillOut",
-        "description": "One objective on the skill profile (FR-9.7). `level` is practice progress in three coarse\nsteps (not started, practising, secure: every practice item answered and at least 80% right\non your own, the first answer right before hint 3 or 4); the counts are the evidence behind\nit, of `total` practice items.\n`result` is the mastery result once the mastery check (or a review path) has decided it."
+        "description": "One objective on the skill profile (FR-9.7). `level` is practice progress in three coarse\nsteps (not started, practising, secure: every practice item answered and at least 80% right\nwithout hint 3 or 4); the counts are the evidence behind it, of `total` practice items.\n`result` is the mastery result once the mastery check (or a review path) has decided it;\n`improve`, where to work on it next (none once met on your own). `modules` are the modules, in\ncourse order, whose segments hold its practice questions: where its badge's first level,\nPractised, is earned."
       },
       "SkillsOut": {
         "properties": {

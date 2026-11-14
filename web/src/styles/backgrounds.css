@@ -1,0 +1,104 @@
+/*
+ * The page background (#214), chosen per student on this device and set as <html data-bg>:
+ *   glow     the default: soft glows in the corners, Ctrl blue top left, honey bottom right and a
+ *            faint blue top right
+ *   doodles  a wallpaper of small line doodles from the course, with gentler glows behind it
+ *   plain    the flat page, no decoration (also what forced colours and print always get)
+ * No attribute is the same as plain.
+ *
+ * The decoration is painted on pseudo-elements of <body>, fixed to the viewport behind
+ * everything (z-index -1, no pointer events). Nothing moves: no animation or transition.
+ *
+ * Cards: where <main data-surfaces="tinted"> (the module map, badges and the report) the cards
+ * are slightly see-through (88% light, 86% dark) so the colour shows through; everywhere else
+ * (lessons, activities, the quick check, staff pages) they stay solid, so nothing sits behind
+ * reading. The header is outside <main> and stays opaque. Popups and notes use
+ * --color-surface-solid.
+ *
+ * Contrast (styles/contrast.test.ts): text that sits on the page or on a tinted card keeps 4.5:1
+ * at the strongest point of every glow. So, with a background on, light muted text is darker
+ * (rgb 84 84 84) and links use --accent-foreground; dark muted text is lighter (rgb 176 176 176).
+ */
+
+:root {
+  --bg-glow-blue: rgb(36 112 201 / 28%);
+  --bg-glow-gold: rgb(246 193 85 / 42%);
+  --bg-glow-blue-faint: rgb(36 112 201 / 14%);
+  --bg-glow-soft-blue: rgb(36 112 201 / 10%);
+  --bg-glow-soft-gold: rgb(246 193 85 / 24%);
+  --doodle-ink: rgb(36 112 201 / 16%);
+  --surface-tinted: rgb(255 255 255 / 88%);
+}
+
+:root[data-theme='dark'],
+.dark {
+  /* Deeper than the dark page (rgb 31 31 31), never a lighter grey haze. */
+  --bg-glow-blue: rgb(0 62 150 / 70%);
+  --bg-glow-gold: rgb(120 78 8 / 60%);
+  --bg-glow-blue-faint: rgb(0 62 150 / 40%);
+  --bg-glow-soft-blue: rgb(0 48 110 / 55%);
+  --bg-glow-soft-gold: rgb(90 62 10 / 45%);
+  --doodle-ink: rgb(128 187 255 / 11%);
+  --surface-tinted: rgb(38 38 38 / 86%);
+}
+
+/* Text on a decorated page: darker muted text and links in light, lighter muted text in dark. */
+:root:is([data-bg='glow'], [data-bg='doodles']) {
+  --muted-foreground: rgb(84, 84, 84);
+  --color-accent-text: var(--accent-foreground);
+}
+
+:root:is([data-bg='glow'], [data-bg='doodles'])[data-theme='dark'] {
+  --muted-foreground: rgb(176, 176, 176);
+  --color-accent-text: rgb(179, 214, 255);
+}
+
+/* See-through cards on the overview pages only. --color-surface and --card are both set here:
+ * --color-surface was resolved on :root, so changing --card alone would not reach it. */
+:root:is([data-bg='glow'], [data-bg='doodles']) main[data-surfaces='tinted'] {
+  --card: var(--surface-tinted);
+  --color-surface: var(--surface-tinted);
+}
+
+:root:is([data-bg='glow'], [data-bg='doodles']) body::before,
+:root[data-bg='doodles'] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+:root[data-bg='glow'] body::before {
+  background:
+    radial-gradient(64rem 46rem at 0% 4rem, var(--bg-glow-blue), transparent 70%),
+    radial-gradient(60rem 44rem at 100% 100%, var(--bg-glow-gold), transparent 70%),
+    radial-gradient(44rem 32rem at 100% 0%, var(--bg-glow-blue-faint), transparent 70%);
+}
+
+:root[data-bg='doodles'] body::before {
+  background:
+    radial-gradient(60rem 42rem at 0% 4rem, var(--bg-glow-soft-blue), transparent 70%),
+    radial-gradient(56rem 40rem at 100% 100%, var(--bg-glow-soft-gold), transparent 70%);
+}
+
+/* The 360 px tile is a mask, so its colour is --doodle-ink and follows the theme. */
+:root[data-bg='doodles'] body::after {
+  background-color: var(--doodle-ink);
+  mask-image: url('../assets/doodles.svg');
+  mask-repeat: repeat;
+  mask-size: 360px 360px;
+}
+
+/* High contrast or print: the plain page, solid cards and the usual text colours. */
+@media (forced-colors: active), print {
+  :root:is([data-bg='glow'], [data-bg='doodles']) body::before,
+  :root:is([data-bg='glow'], [data-bg='doodles']) body::after {
+    display: none;
+  }
+
+  :root:is([data-bg='glow'], [data-bg='doodles']) main[data-surfaces='tinted'] {
+    --card: var(--color-surface-solid);
+    --color-surface: var(--color-surface-solid);
+  }
+}

@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from support import open_module
 
 from app.models import Activity, Attempt, HintView, PointsEntry, PointsRule, User, UserBadge
-from app.services import rewards
+from app.services import rewards, skills
 from app.services.rewards import Mastery
 
 STUDENT = {"email": "ada@example.com", "password": "Correct horse 1", "displayName": "Ada"}
@@ -154,6 +154,52 @@ def test_a_badge_never_goes_down_or_away(db: Session, user: User) -> None:
     assert rewards.on_objective_result(db, user.id, 5, "supported", {}) == rewards.Earned()
     assert badges(db, user.id) == {("lo5", ""): "gold"}
     assert rewards.total_points(db, user.id) == 30
+
+
+# --- Badge levels: practised, bronze, gold (#214) ----------------------------------------------
+
+
+def test_practised_is_the_first_level_and_earns_no_points(db: Session, user: User) -> None:
+    earned = rewards.on_practised(db, user.id, 5)
+    assert earned.points == 0
+    assert [(b.badge, b.tier) for b in earned.badges] == [("lo5", "practised")]
+    assert rewards.on_practised(db, user.id, 5) == rewards.Earned()  # once
+    assert rewards.total_points(db, user.id) == 0
+
+
+@pytest.mark.parametrize(
+    ("result", "tier", "points"), [("supported", "bronze", 15), ("independent", "gold", 30)]
+)
+def test_the_mastery_check_raises_practised(
+    db: Session, user: User, result: Mastery, tier: str, points: int
+) -> None:
+    rewards.on_practised(db, user.id, 5)
+    rewards.mark_seen(db, user.id)
+    earned = rewards.on_objective_result(db, user.id, 5, result, {})
+    assert earned.points == points  # the objective's points in full: nothing lost on the way up
+    (badge,) = earned.badges
+    assert (badge.tier, badge.seen_at) == (tier, None)  # announced again, at its new level
+    assert badge.upgraded_at is not None
+    assert badges(db, user.id) == {("lo5", ""): tier}
+
+
+@pytest.mark.parametrize("held", ["supported", "independent"])
+def test_practised_never_lowers_a_badge(db: Session, user: User, held: Mastery) -> None:
+    rewards.on_objective_result(db, user.id, 5, held, {})
+    before = badges(db, user.id)
+    assert rewards.on_practised(db, user.id, 5) == rewards.Earned()
+    assert badges(db, user.id) == before
+
+
+def test_not_yet_keeps_practised(db: Session, user: User) -> None:
+    rewards.on_practised(db, user.id, 5)
+    assert rewards.on_objective_result(db, user.id, 5, "not_yet", {}) == rewards.Earned()
+    assert badges(db, user.id) == {("lo5", ""): "practised"}
+
+
+def test_practised_needs_a_real_objective(db: Session, user: User) -> None:
+    with pytest.raises(ValueError, match="objective 9"):
+        rewards.on_practised(db, user.id, 9)
 
 
 def test_not_yet_earns_nothing(db: Session, user: User) -> None:
@@ -402,3 +448,22 @@ def test_real_work_on_is_one_query_however_many_activities(db: Session, user: Us
     finally:
         event.remove(db.get_bind(), "before_cursor_execute", count)
     assert len(statements) == 1
+
+
+def test_the_skill_profiles_query_gives_the_same_rule_for_medals(db: Session, user: User) -> None:
+    """Medals use the skill profile's own query (`skills._answers`, which can also work per round);
+    with the first attempt ever it must give exactly `first_answers`, which points use, so medals
+    and points can't drift apart (#222 merge with #221)."""
+    rng = random.Random(222)  # noqa: S311 - a reproducible draw, not security
+    uid = user.id
+    activities = list(db.scalars(select(Activity).order_by(Activity.id)))
+    ids = [a.id for a in activities]
+    for _ in range(200):
+        nested = db.begin_nested()
+        _random_history(db, uid, ids, rng)
+        theirs = rewards.first_answers(db, uid, ids)
+        ours = skills._answers(db, uid, activities)
+        assert (ours.on_own, ours.first_time) == (theirs.on_own, theirs.first_time)
+        nested.rollback()
+        db.expunge_all()
+        activities = list(db.scalars(select(Activity).order_by(Activity.id)))

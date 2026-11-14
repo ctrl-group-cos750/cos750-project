@@ -380,7 +380,7 @@ export interface paths {
      * @description The logged-in student's skill profile and module medals (FR-9.7, FR-9.8; #214).
      *
      *     For each learning objective: how many of its practice items they have answered correctly, of
-     *     how many, and its mastery result once the mastery check (or a review path) has decided it.
+     *     how many, where to work on it next (`improve`), and its mastery result once the mastery check (or a review path) has decided it.
      *     For each module with activities to mark: its medal once complete, and the medal the answers so
      *     far are heading for. Worked out from attempts on each request (app/services/skills.py), so it
      *     follows the current content and rules. Only ever the student's own.
@@ -1329,6 +1329,12 @@ export interface components {
        */
       masteryCheck: boolean
       /**
+       * Purpose
+       * @default practice
+       * @enum {string}
+       */
+      purpose: 'practice' | 'diagnostic' | 'retrieval' | 'mastery' | 'review' | 'bonus' | 'test_out'
+      /**
        * Answered
        * @default false
        */
@@ -1389,6 +1395,11 @@ export interface components {
        * @default 0
        */
       points: number
+      /**
+       * Afterwrongfirst
+       * @default false
+       */
+      afterWrongFirst: boolean
     }
     /**
      * AvatarIn
@@ -1498,8 +1509,10 @@ export interface components {
     /**
      * EarnedBadgeOut
      * @description A badge the student holds. `badge` is a catalogue id (web/src/components/achievements.ts);
-     *     `ref` tells repeatable badges apart (the bonus quest's id), "" otherwise. `seen` is false until
-     *     the app has announced it; an upgrade from bronze to gold makes it unseen again.
+     *     `ref` tells repeatable badges apart (the bonus quest's id), "" otherwise. An objective badge's
+     *     `tier` is its level: practised (secure in the modules' practice), bronze (met with support, on
+     *     a review path) or gold (met independently); it only ever goes up. `seen` is false until
+     *     the app has announced it; going up a level makes it unseen again.
      */
     EarnedBadgeOut: {
       /** Badge */
@@ -1507,7 +1520,7 @@ export interface components {
       /** Ref */
       ref: string
       /** Tier */
-      tier: ('bronze' | 'gold') | null
+      tier: ('practised' | 'bronze' | 'gold') | null
       /**
        * Awardedat
        * Format: date-time
@@ -1990,6 +2003,35 @@ export interface components {
        */
       limitReached: boolean
     }
+    /**
+     * ImproveOut
+     * @description Where the student can work on an objective (#214): `practise` in a module (at `segment`,
+     *     0-based, when they can open it there), `revisit` a module (secure in practice, or met with
+     *     support), its `review` path once module 6 has said "not yet" (FR-7.5), or the mastery `check`
+     *     (module 6) once practice this round can no longer make it secure: too many first answers
+     *     weren't on your own, and only a first attempt counts (FR-9.6); or `restart` that module once
+     *     it is finished, which gives its questions a new first answer for the profile. Never module 6 to practise. `locked`: the
+     *     module isn't open to the student yet (the mastery check, before modules 1 to 5 are done), so
+     *     the profile says where it will be shown rather than linking to a locked page.
+     */
+    ImproveOut: {
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: 'practise' | 'revisit' | 'review' | 'check' | 'restart'
+      /** Moduleid */
+      moduleId: number | null
+      /** Segment */
+      segment: number | null
+      /** Objectiveid */
+      objectiveId: number | null
+      /**
+       * Locked
+       * @default false
+       */
+      locked: boolean
+    }
     /** Insights */
     Insights: {
       /** Students */
@@ -2131,8 +2173,10 @@ export interface components {
     }
     /**
      * ModuleMedalOut
-     * @description A module's medal (FR-9.8): `medal` once the module is complete (gold, every first answer
-     *     right without a hint; silver, every first answer right without hint 3 or 4; bronze, finished),
+     * @description A module's medal (FR-9.8): `medal` once the module is complete (gold, every activity right
+     *     at the first attempt without a hint; silver, right at the first attempt without hint 3 or 4;
+     *     finished, the module finished with at least one right at the first attempt without hint 3 or
+     *     4: not "bronze", which is an objective badge's level),
      *     and `headingFor`, what the answers so far are on course for. Never counts time or speed.
      *     `objectives` are the learning objectives its activities practise. `answered` and `total` count
      *     the same activities: on a finished module, those it was judged on (the ones answered before it
@@ -2152,9 +2196,9 @@ export interface components {
       /** Total */
       total: number
       /** Medal */
-      medal: ('gold' | 'silver' | 'bronze') | null
+      medal: ('gold' | 'silver' | 'finished') | null
       /** Headingfor */
-      headingFor: ('gold' | 'silver' | 'bronze') | null
+      headingFor: ('gold' | 'silver' | 'finished') | null
       /** Objectives */
       objectives: number[]
     }
@@ -2599,9 +2643,11 @@ export interface components {
      * SkillOut
      * @description One objective on the skill profile (FR-9.7). `level` is practice progress in three coarse
      *     steps (not started, practising, secure: every practice item answered and at least 80% right
-     *     on your own, the first answer right before hint 3 or 4); the counts are the evidence behind
-     *     it, of `total` practice items.
-     *     `result` is the mastery result once the mastery check (or a review path) has decided it.
+     *     without hint 3 or 4); the counts are the evidence behind it, of `total` practice items.
+     *     `result` is the mastery result once the mastery check (or a review path) has decided it;
+     *     `improve`, where to work on it next (none once met on your own). `modules` are the modules, in
+     *     course order, whose segments hold its practice questions: where its badge's first level,
+     *     Practised, is earned.
      */
     SkillOut: {
       /** Id */
@@ -2623,6 +2669,9 @@ export interface components {
       level: 'not_started' | 'practising' | 'secure'
       /** Result */
       result: ('not_attempted' | 'met_independently' | 'met_with_support' | 'not_yet') | null
+      improve: components['schemas']['ImproveOut'] | null
+      /** Modules */
+      modules: number[]
     }
     /**
      * SkillsOut

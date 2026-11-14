@@ -21,6 +21,9 @@ export type AttemptResult = {
   withheld?: boolean
   /** The points this answer earned (10, 4 after hint 3, 0 after hint 4 or a wrong first answer); 0 when shown again (#214). */
   points?: number
+  /** The student's first answer to this activity was wrong, and this is a later one: it counts
+   * for no medal (FR-9.6). The companion says so (#222 re-review). */
+  afterWrongFirst?: boolean
 }
 
 export type Hint = {
@@ -156,6 +159,9 @@ export type MasteryCheckFlags = {
   answered?: boolean
   answeredEarlierVersion?: boolean
   reviewCheck?: boolean
+  /** What it is for. "mastery" on a review path's fresh items too, which decide an objective, so
+   * they stay as calm as the mastery check: no companion or success moment (#222 review). */
+  purpose?: 'practice' | 'diagnostic' | 'retrieval' | 'mastery' | 'review' | 'bonus' | 'test_out'
 }
 
 /** The student's latest answer and the result for it, as marked now (#171): what each kind

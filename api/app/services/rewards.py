@@ -5,8 +5,9 @@ What the rules follow (research: the ID document §7.2 and the #32 research note
 - Points are never taken away, and each thing is rewarded once: answering an activity again, or
   failing it, changes nothing.
 - A badge, once earned, is never removed. Recomputing results (FR-7.6) may add badges, never take
-  them; an objective badge only ever goes up, from bronze (met with support) to gold (met
-  independently).
+  them; an objective badge only ever goes up a level: practised (secure in the modules' practice,
+  app/services/skills.py), then bronze (met with support in the mastery check), then gold (met
+  independently). It can start at any level and skip one; it never goes down.
 - Badges name a skill. None counts hints, attempts, days or speed, so none can be earned by
   clicking through hints or guessing.
 
@@ -28,7 +29,10 @@ from app.models import Attempt, HintView, PointsEntry, PointsRule, User, UserBad
 from app.services.locks import lock_student
 
 Mastery = Literal["independent", "supported", "not_yet"]
-Tier = Literal["bronze", "gold"]
+Tier = Literal["practised", "bronze", "gold"]
+
+# An objective badge's levels, lowest first: a badge only ever moves up this list.
+TIERS: tuple[Tier, ...] = ("practised", "bronze", "gold")
 
 # The learning objectives (ID document §3.1). LO8 waits on #70; drop it here if it is cut.
 OBJECTIVES: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7, 8)
@@ -238,7 +242,8 @@ def _add_points(
 def _award(
     session: Session, user_id: int, badge: str, ref: str = "", tier: Tier | None = None
 ) -> Earned:
-    """Give a badge, or raise an objective badge from bronze to gold. Never lowers or removes."""
+    """Give a badge, or raise an objective badge to a higher level (practised, bronze, gold).
+    Never lowers or removes one."""
     if badge not in BADGES:
         raise ValueError(f"No badge {badge!r} in the catalogue.")
     held = session.scalar(
@@ -249,8 +254,8 @@ def _award(
     if held is None:
         held = UserBadge(user_id=user_id, badge=badge, ref=ref, tier=tier)
         session.add(held)
-    elif held.tier == "bronze" and tier == "gold":
-        held.tier = "gold"
+    elif tier is not None and held.tier in TIERS and TIERS.index(tier) > TIERS.index(held.tier):
+        held.tier = tier
         held.upgraded_at = datetime.now(UTC)
         held.seen_at = None  # announce the upgrade
     else:
@@ -271,6 +276,16 @@ def on_attempt(session: Session, attempt: Attempt) -> Earned:
         return Earned()
     event = "activity_correct_supported" if supported(session, attempt) else "activity_correct"
     return _add_points(session, attempt.user_id, event, f"activity:{attempt.activity_id}")
+
+
+def on_practised(session: Session, user_id: int, objective: int) -> Earned:
+    """An objective is secure in practice (app/services/skills.py `level_for`): its badge at the
+    first level, Practised, unless the student already holds it at any level. Earns no points:
+    the practice answers already earned theirs (FR-9.1), and the mastery check's bronze or gold
+    gives the objective's points in full when it comes, so nothing is lost on the way up."""
+    if objective not in OBJECTIVES:
+        raise ValueError(f"No learning objective {objective}.")
+    return _award(session, user_id, OBJECTIVE_BADGES[objective], tier="practised")
 
 
 def on_module_completed(session: Session, user_id: int, module_id: int) -> Earned:

@@ -74,8 +74,8 @@ def log_in(client: TestClient, email: str) -> None:
 # --- The committed accounts, against the committed content --------------------------------------
 
 
-def test_the_committed_demo_accounts_are_the_four_stages() -> None:
-    assert [a.key for a in read_demo_accounts()] == ["new", "mid", "not-yet", "ready"]
+def test_the_committed_demo_accounts_are_the_five_stages() -> None:
+    assert [a.key for a in read_demo_accounts()] == ["new", "mid", "not-yet", "ready", "bronze"]
 
 
 def test_each_committed_account_reaches_its_stage(db: Session) -> None:
@@ -87,6 +87,20 @@ def test_each_committed_account_reaches_its_stage(db: Session) -> None:
     assert report(db, "mid@demo.example.com") == (False, [])
     assert report(db, "not-yet@demo.example.com") == (False, [6])
     assert report(db, "ready@demo.example.com") == (True, [])
+    assert report(db, "bronze@demo.example.com") == (True, [])
+    # Bronze on objectives 2 and 7 (met with support, after hint 3), gold on the rest (#214),
+    # and the bronze came from their review paths: the mastery check stops at hint 2, so it can
+    # only give gold or "not yet" (#222 review, A2).
+    bronze = db.scalars(select(User).where(User.email == "bronze@demo.example.com")).one()
+    outcomes = evaluate(db, bronze.id)
+    states = {o.objective.id: o.state for o in outcomes}
+    assert {o for o, s in states.items() if s == "met_with_support"} == {2, 7}
+    assert {s for o, s in states.items() if o not in (2, 7)} == {"met_independently"}
+    assert {o.objective.id for o in outcomes if o.via_review} == {2, 7}
+    assert {o.objective.id: o.check.state for o in outcomes if o.via_review} == {
+        2: "not_yet",
+        7: "not_yet",
+    }
 
 
 def test_demo_progress_records_retrieval_attempts_before_advancing(db: Session) -> None:
@@ -244,7 +258,7 @@ def test_once_every_module_has_segments_each_map_matches_its_stage(tmp_path: Pat
             5: "open",
             6: "locked",
         }
-        for key in ("not-yet", "ready"):
+        for key in ("not-yet", "ready", "bronze"):
             assert set(statuses(session, f"{key}@demo.example.com").values()) == {"complete"}
         mid = session.scalars(select(User).where(User.email == "mid@demo.example.com")).one()
         module_3 = session.scalars(
@@ -322,7 +336,7 @@ def test_a_weak_password_is_refused(tmp_path: Path, db: Session) -> None:
         ([{k: v for k, v in account().items() if k != "expect"}], "expect"),
         ([account(steps=[{"module": 3, "answer": "maybe"}])], "answer"),
         ([account(steps=[{"module": 3, "answer": "right", "hints": 5}])], "hints"),
-        ([account(steps=[{"activity": 301, "answer": "right"}])], "module"),
+        ([account(steps=[{"activity": 301, "answer": "right"}])], "activity"),  # by id: refused
         ([account(progress=[{"module": 3, "through": 0}])], "through"),
         ([account(progress=[{"module": 3, "through": "half"}])], "through"),
     ],
@@ -332,6 +346,25 @@ def test_invalid_demo_files_are_refused(
 ) -> None:
     with pytest.raises(ValueError, match=problem):
         read_demo_accounts(write(tmp_path, accounts))
+
+
+def test_a_step_can_t_ask_for_more_hints_than_a_student_sees(tmp_path: Path, db: Session) -> None:
+    """Module 6 gives hint 2 at most (the hints route's limit), so a demo step asking for hint 3
+    there is refused instead of seeding a state no student can reach (#222 review, A2)."""
+    load(db)
+    step = {"module": 6, "purposes": ["mastery"], "answer": "right", "hints": 3}
+    over = account(key="b", steps=[step], expect={"ready": True})
+    with pytest.raises(
+        ValueError, match=r"asks for hint 3, but a student sees no more than hint 2"
+    ):
+        load_demo_accounts(db, PASSWORD, write(tmp_path, [over]))
+    assert db.scalars(select(User)).all() == []
+
+
+def test_a_step_names_a_module_or_a_review_path(tmp_path: Path) -> None:
+    for step in ({"answer": "right"}, {"module": 1, "review": 2, "answer": "right"}):
+        with pytest.raises(ValueError, match="exactly one of module and review"):
+            read_demo_accounts(write(tmp_path, [account(steps=[step])]))
 
 
 def test_an_account_that_misses_its_expected_stage_writes_nothing(

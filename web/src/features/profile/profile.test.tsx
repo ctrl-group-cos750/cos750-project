@@ -136,7 +136,18 @@ describe('profile page', () => {
     expect(await within(stats).findByText('2 of 3')).toBeVisible()
     expect(within(stats).queryByText('Points')).toBeNull()
     expect(within(stats).queryByRole('link', { name: 'See your badges' })).toBeNull()
-    expect(screen.getByRole('checkbox', { name: 'Hide points and badges' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Points and badges' })).not.toBeChecked()
+  })
+
+  it('turns points and badges off with their switch, kept on the account (FR-9.5, #214)', async () => {
+    const api = setup()
+    renderApp('/profile')
+    const box = await screen.findByRole('checkbox', { name: 'Points and badges' })
+    await waitFor(() => expect(box).toBeChecked())
+    expect(box).toHaveAccessibleDescription(/module medals/)
+    await userEvent.click(box)
+    await waitFor(() => expect(api.callsTo('PUT /api/rewards/settings')).toHaveLength(1))
+    expect(api.callsTo('PUT /api/rewards/settings')[0]!.body).toEqual({ hideRewards: true })
   })
 
   it('says when the student is ready for the lecture', async () => {

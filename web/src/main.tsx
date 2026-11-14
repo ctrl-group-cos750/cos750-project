@@ -6,10 +6,15 @@ import { retryUnlessRefused } from './api/retry.ts'
 import './styles/tokens.css'
 import './styles/global.css'
 import './styles/base.css'
+import './styles/backgrounds.css'
 import App from './App.tsx'
+import { storedBackground } from './features/progress/preferences.ts'
+import { applyBackground } from './theme/background.ts'
 import { applyTheme, initialTheme } from './theme/theme.ts'
 
 applyTheme({ theme: initialTheme() })
+// The default page background until a student signs in (then theirs: SignedInLayout).
+applyBackground({ background: storedBackground() })
 
 // Every query: a 4xx (403 locked, 404 missing) isn't asked again, so a page says why at once
 // instead of spinning for 7-10 s through React Query's three retries (#146).

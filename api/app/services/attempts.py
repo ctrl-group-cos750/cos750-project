@@ -18,6 +18,7 @@ from app.services.mastery import check_answered, counts, in_check, recompute
 from app.services.modules import reward_completed_modules
 from app.services.restart import activity_round
 from app.services.rewards import on_attempt, on_bonus_quest, real_work, real_work_on
+from app.services.skills import PRACTICE_PURPOSES, award_practised
 
 
 def hint_level_seen(session: Session, user_id: int, activity_id: int, round: int = 0) -> int:
@@ -140,6 +141,15 @@ def record_attempt(
         # Real work in a module already complete earns its reward now (#166 review). An optional
         # bonus quest isn't the module's work: it earns its own reward.
         reward_completed_modules(session, user_id, activity)
+    if (
+        activity.objective_id is not None
+        and activity.module_id is not None
+        and activity.purpose in PRACTICE_PURPOSES
+    ):
+        # Secure in practice now (every practice item answered, 80% on your own): the objective's
+        # badge at its first level, Practised (#214). Any answer can do it, a wrong one too, once
+        # the rest are right on the student's own.
+        award_practised(session, user_id, [activity.objective_id])
     if counts(activity):
         recompute(session, user_id)  # the objective results, and what they earn (FR-7)
     return attempt, result

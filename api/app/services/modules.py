@@ -182,6 +182,12 @@ def _locked(session: Session, user_id: int, module_ids: set[int]) -> bool:
     return all(statuses.get(module_id, "locked") == "locked" for module_id in module_ids)
 
 
+def module_locked(session: Session, user_id: int, module_id: int) -> bool:
+    """Whether this module is still locked for this student (FR-2.1): only the mastery check ever
+    is, until every module before it is done."""
+    return _locked(session, user_id, {module_id})
+
+
 def segment_locked(session: Session, user_id: int, segment_id: int) -> bool:
     """Whether this segment is in a module still locked for this student."""
     module_id = session.scalar(select(Segment.module_id).where(Segment.id == segment_id))

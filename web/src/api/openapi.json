@@ -1651,6 +1651,60 @@
         }
       }
     },
+    "/api/quests": {
+      "get": {
+        "tags": [
+          "quests"
+        ],
+        "summary": "List Quests",
+        "description": "The bonus quests offered to the logged-in student: those after a module they have\ncompleted, in module order, each with whether they have finished it. Empty until a module\nwith a quest is complete. Only ever the student's own (NFR-S2).",
+        "operationId": "list_quests_api_quests_get",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QuestOut"
+                  },
+                  "title": "Response List Quests Api Quests Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/videos/{video_id}": {
       "get": {
         "tags": [
@@ -6328,6 +6382,46 @@
         "title": "PositionIn",
         "description": "Request body for ``POST /api/modules/{moduleId}/position`` (FR-2.5).\n\nThe client sends the zero-based position of the segment the student just\nreached. The server keeps the furthest one, and refuses a position more than one past it,\nso a module can't be finished by jumping to its end.\n\n``ge=0`` rejects negative values at the API boundary: a negative position stored in\n``ModuleProgress.current_segment_position`` would cause ``segments[-1]`` (undefined\nin JavaScript) on resume, crashing the ModulePage render."
       },
+      "QuestOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "moduleId": {
+            "type": "integer",
+            "title": "Moduleid"
+          },
+          "moduleNumber": {
+            "type": "integer",
+            "title": "Modulenumber"
+          },
+          "moduleTitle": {
+            "type": "string",
+            "title": "Moduletitle"
+          },
+          "completed": {
+            "type": "boolean",
+            "title": "Completed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "moduleId",
+          "moduleNumber",
+          "moduleTitle",
+          "completed"
+        ],
+        "title": "QuestOut",
+        "description": "One bonus quest offered to the student: an optional extra challenge after a module they\nhave completed. The quest is an ordinary activity, so it is opened, hinted and answered\nthrough ``/api/activities/{id}``; ``id`` is that activity's id. ``completed`` is true once\nthey have answered it correctly without hint 3 or 4, which is what earns its points and\nbadge."
+      },
       "QuickCheckAnswerIn": {
         "properties": {
           "activityId": {
@@ -6927,6 +7021,33 @@
               }
             ],
             "title": "Supportfor"
+          },
+          "skipCheckActivityId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skipcheckactivityid"
+          },
+          "skipCheck": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "not_taken",
+                  "passed",
+                  "not_passed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skipcheck"
           },
           "shown": {
             "type": "boolean",

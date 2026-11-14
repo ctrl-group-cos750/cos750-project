@@ -42,6 +42,7 @@ from app.schemas.modules import (
     ModuleStatus,
     RetrievalActivityOut,
     SegmentOut,
+    SkipCheckState,
 )
 from app.services import rewards
 from app.services.events import log_event
@@ -445,6 +446,26 @@ def course_minutes(session: Session) -> int:
     return int(session.scalar(select(func.coalesce(func.sum(Module.estimated_minutes), 0))) or 0)
 
 
+def skip_check_state(
+    session: Session, user_id: int, activity_id: int | None
+) -> SkipCheckState | None:
+    """Where a student stands on a segment's skip check (FR-8.1, FR-8.2): not taken, passed or
+    not passed. A pass must be the first attempt, correct and made before hint 3 or 4."""
+    if activity_id is None:
+        return None
+    first = session.scalar(
+        select(Attempt)
+        .where(Attempt.user_id == user_id, Attempt.activity_id == activity_id)
+        .order_by(Attempt.id)
+        .limit(1)
+    )
+    if first is None:
+        return "not_taken"
+    if first.correct and first.hint_level < rewards.SUPPORT_LEVEL:
+        return "passed"
+    return "not_passed"
+
+
 def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleDetailOut:
     """One module with its segments in order. Raises `ModuleNotFound` or `ModuleLocked`."""
     status = _status(session, user_id, module_id)
@@ -485,8 +506,6 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
     look_again = answer_states(
         session, user_id, {s.activity_id for s in segments if s.activity_id}, after
     ).look_again
-    # TODO (FR-8.1): leave out the refreshers module 0's diagnostic has ruled out, once the
-    # diagnostic records its result. Until then every refresher is shown.
     detail = ModuleDetailOut(
         **_summary(
             module, status, len(segments), row, _hidden_positions(segments, hidden)
@@ -500,6 +519,8 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
                 body=segment.body or None,
                 video_id=videos.get(segment.id),
                 activity_id=segment.activity_id,
+                skip_check_activity_id=segment.skip_check_activity_id,
+                skip_check=skip_check_state(session, user_id, segment.skip_check_activity_id),
                 done=segment.id in done,
                 attempted=segment.activity_id is not None and segment.activity_id in attempted,
                 optional=segment.activity_id is not None and segment.activity_id in optional,

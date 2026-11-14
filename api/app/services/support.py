@@ -151,40 +151,64 @@ def struggling_objectives(
     }
 
 
+def skip_checks(session: Session, user_id: int, segments: Sequence[Segment]) -> set[int]:
+    """Segments hidden because the student passed their short skip check (FR-8.1, FR-8.2). A
+    check is passed only by the student's first attempt: it must have been correct and come before
+    hint 3 or 4, which give the answer away. The server derives this from attempts: no new table."""
+    hidden: set[int] = set()
+    for segment in segments:
+        if segment.skip_check_activity_id is None:
+            continue
+        attempt = session.scalar(
+            select(Attempt)
+            .where(
+                Attempt.user_id == user_id,
+                Attempt.activity_id == segment.skip_check_activity_id,
+            )
+            .order_by(Attempt.id)
+            .limit(1)
+        )
+        if attempt is not None and attempt.correct and attempt.hint_level < HINT_TO_STRUGGLE:
+            hidden.add(segment.id)
+    return hidden
+
+
 def hidden_segments(
     session: Session, user_id: int, segments: Sequence[Segment], row: ModuleProgress | None
 ) -> set[int]:
-    """The ids of this module's segments not shown to this student: the support segments
-    (`Segment.support_for`) they don't need. `segments` is the module's whole list in order and
-    `row` the student's progress in it (None before they open it).
+    """The ids of this module's segments not shown to this student: support segments they don't
+    need, plus any refresher or worked example they passed the short skip check for.
 
     A support segment is shown if it was recorded as shown (`ShownSegment`), or if it is still
     ahead of the student in a module they haven't completed and they are struggling with its
     objective. Every other support segment is hidden."""
+    hidden = set()
     support = [(index, s) for index, s in enumerate(segments) if s.support_for is not None]
-    if not support:
-        return set()
-    recorded = set(
-        session.scalars(
-            select(ShownSegment.segment_id).where(
-                ShownSegment.user_id == user_id,
-                ShownSegment.segment_id.in_([s.id for _, s in support]),
+    if support:
+        recorded = set(
+            session.scalars(
+                select(ShownSegment.segment_id).where(
+                    ShownSegment.user_id == user_id,
+                    ShownSegment.segment_id.in_([s.id for _, s in support]),
+                )
             )
         )
-    )
-    deciding = row is None or row.status != "complete"
-    furthest = row.current_segment_position if row is not None else 0
-    ahead = {s.support_for for index, s in support if index > furthest and s.id not in recorded}
-    live = (
-        struggling_objectives(session, user_id, segments, {o for o in ahead if o is not None})
-        if deciding and ahead
-        else set()
-    )
-    return {
-        s.id
-        for index, s in support
-        if s.id not in recorded and not (deciding and index > furthest and s.support_for in live)
-    }
+        deciding = row is None or row.status != "complete"
+        furthest = row.current_segment_position if row is not None else 0
+        ahead = {s.support_for for index, s in support if index > furthest and s.id not in recorded}
+        live = (
+            struggling_objectives(session, user_id, segments, {o for o in ahead if o is not None})
+            if deciding and ahead
+            else set()
+        )
+        hidden |= {
+            s.id
+            for index, s in support
+            if s.id not in recorded
+            and not (deciding and index > furthest and s.support_for in live)
+        }
+    hidden |= skip_checks(session, user_id, segments)
+    return hidden
 
 
 def record_shown(

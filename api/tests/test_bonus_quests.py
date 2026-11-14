@@ -44,6 +44,22 @@ def test_a_bonus_quest_is_optional_and_never_holds_next_back(
     assert (segment["optional"], segment["done"], segment["attempted"]) == (True, True, False)
 
 
+def test_a_bonus_quest_opens_after_its_module_is_complete(client: TestClient, db: Session) -> None:
+    load(db)
+    user_id = log_in(client)
+    open_through(db, user_id, 3)
+
+    response = client.get("/api/activities/380")
+    assert (response.status_code, response.json()["detail"]) == (
+        403,
+        "This bonus quest opens when you finish the module it follows.",
+    )
+
+    db.add(ModuleProgress(user_id=user_id, module_id=3, status="complete"))
+    db.commit()
+    assert client.get("/api/activities/380").status_code == 200
+
+
 def test_a_right_answer_earns_the_quest_and_both_earn_all_quests(
     client: TestClient, db: Session
 ) -> None:

@@ -242,10 +242,13 @@ def _walk(session: Session, user_id: int, account: DemoAccount) -> str | None:
             # A number counts the segments the account is shown, as "Segment N of M" does.
             position, reached = 0, 1
             save_position(session, user_id, entry.module, position)
-            while (after := _next_shown(session, user_id, entry.module, position)) is not None:
+            while True:
                 if entry.through != "end" and reached >= entry.through:
                     break
                 _do(session, user_id, segments[position], where)
+                after = _next_shown(session, user_id, entry.module, position)
+                if after is None:
+                    break
                 save_position(session, user_id, entry.module, after)
                 position, reached = after, reached + 1
             if entry.through == "end":

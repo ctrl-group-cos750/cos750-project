@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Activity, Checkpoint, Module, ModuleProgress, Segment, User, Video
+from app.routers.activities import QUEST_CLOSED
 from app.seed import load
 
 STUDENT = {"email": "ada@example.com", "password": "Correct horse 1", "displayName": "Ada"}
@@ -64,8 +65,12 @@ def test_modules_0_to_5_are_open_from_the_start(client: TestClient, db: Session)
     ):
         if activity.id in support:  # shown only to a student who needs it (FR-8.4)
             continue
-        expected = 403 if activity.purpose == "test_out" else 200
-        assert client.get(f"/api/activities/{activity.id}").status_code == expected, activity.id
+        response = client.get(f"/api/activities/{activity.id}")
+        if activity.purpose == "bonus":
+            assert (response.status_code, response.json()["detail"]) == (403, QUEST_CLOSED)
+        else:
+            expected = 403 if activity.purpose == "test_out" else 200
+            assert response.status_code == expected, activity.id
     assert client.get(f"/api/activities/{mastery_item(db).id}").status_code == 403
 
 

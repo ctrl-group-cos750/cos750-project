@@ -1,0 +1,175 @@
+/* Turning a motivational element off where it is, and minimising a panel (#214). Quiet: muted
+ * text, no fills, one small control per panel. Every control 44 px on a touch screen. */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+/* The heading's own button: looks like the heading, with a chevron that turns when minimised. */
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.toggle:focus-visible,
+.menuButton:focus-visible,
+.menuItem:focus-visible,
+.undo:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.chevron {
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+  fill: none;
+  stroke: var(--color-text-muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 150ms ease;
+}
+
+.toggle[aria-expanded='false'] .chevron {
+  transform: rotate(-90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
+}
+
+.menu {
+  position: relative;
+  flex: none;
+}
+
+.menuButton {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-muted);
+  font-size: var(--text-lg);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.menuButton:hover,
+.menuButton[aria-expanded='true'] {
+  border-color: var(--color-line);
+  color: var(--color-text);
+}
+
+.menuList {
+  position: absolute;
+  z-index: 20;
+  inset-inline-end: 0;
+  top: calc(100% + var(--space-1));
+  display: grid;
+  min-width: 13rem;
+  padding: var(--space-1);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-solid);
+  box-shadow: var(--shadow-card);
+}
+
+.menuList[hidden] {
+  display: none;
+}
+
+.menuItem {
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: calc(var(--radius-sm) - 2px);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: start;
+  cursor: pointer;
+}
+
+.menuItem:hover {
+  background: var(--color-surface-sunken);
+}
+
+/* "Skill profile hidden. Turn it back on in your profile. Undo" */
+.note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px dashed var(--color-line);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.note:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.note a {
+  color: var(--color-accent-text);
+  font-weight: 600;
+}
+
+.undo {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent-text);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+@media (pointer: coarse) {
+  .toggle,
+  .menuButton,
+  .menuItem,
+  .undo,
+  .note a {
+    min-height: 44px;
+  }
+
+  .menuButton {
+    width: 44px;
+  }
+
+  .undo,
+  .note a {
+    display: inline-flex;
+    align-items: center;
+  }
+}

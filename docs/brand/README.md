@@ -55,6 +55,28 @@ change in dark mode.
 Table: The main colour tokens. Every text colour meets WCAG 2.1 AA (at least 4.5:1) on the backgrounds it
 is used on; control borders meet 3:1.
 
+### Page backgrounds
+
+A student chooses the page background (SE FR-9.9): **Glow** (the default), **Doodles** or **Plain**, set as
+`data-bg` on `<html>` and painted by `web/src/styles/backgrounds.css` behind everything. Nothing moves.
+Forced colours and print always get the plain page.
+
+| Token | Light | Dark | Use |
+|---|---|---|---|
+| `--bg-glow-blue` | `rgb(36 112 201 / 28%)` | `rgb(0 62 150 / 70%)` | Glow, top-left corner |
+| `--bg-glow-gold` | `rgb(246 193 85 / 42%)` | `rgb(120 78 8 / 60%)` | Glow, bottom-right corner (honey) |
+| `--bg-glow-blue-faint` | `rgb(36 112 201 / 14%)` | `rgb(0 62 150 / 40%)` | Glow, top-right corner |
+| `--bg-glow-soft-blue`, `--bg-glow-soft-gold` | 10%, 24% | 55%, 45% | The gentler glows behind the doodles |
+| `--doodle-ink` | `rgb(36 112 201 / 16%)` | `rgb(128 187 255 / 11%)` | The doodle wallpaper (`assets/doodles.svg`, a mask) |
+| `--surface-tinted` | `rgb(255 255 255 / 88%)` | `rgb(38 38 38 / 86%)` | Cards on the module map, badges and report |
+| `--color-surface-solid` | as `--color-surface` | as `--color-surface` | Popups, menus and notes: always opaque |
+| `--muted-foreground` with a background | `rgb(84 84 84)` | `rgb(176 176 176)` | Muted text, darker (lighter in dark) |
+| `--color-accent-text` with a background | `--accent-foreground` `rgb(13 79 165)` | `rgb(179 214 255)` | Links |
+
+Table: Background tokens. Text keeps 4.5:1 at the strongest point of every glow and on a tinted card over
+it (`web/src/styles/contrast.test.ts`). Lessons, activities, the quick check, the profile and staff pages keep
+solid cards: decoration stays away from reading.
+
 **Red is for errors only**, such as a failed save or a destructive button. A wrong answer or a "not yet"
 result is not an error: use the warning (amber) tone and explain what to try next.
 
@@ -124,7 +146,7 @@ Badges are private (FR-9.4) and drawn by `AchievementBadge` from the catalogue i
 
 | Kind | Shape | Colour tokens |
 |---|---|---|
-| Objective (one per learning objective) | Hexagon. Bronze = met with support; gold adds an inner outline and a star = met independently | `--badge-bronze*`, `--badge-gold*` |
+| Objective (one per learning objective) | Hexagon in three levels. Practised = an accent outline with no fill (secure in practice); bronze = met with support; gold adds an inner outline and a star = met independently | accent, `--badge-bronze*`, `--badge-gold*` |
 | Milestone (Ready for the Lecture, Came Back Stronger, Solo Run) | Medal with ribbons | accent |
 | Quest | Shield | success |
 | Hidden (Off the Map) | Diamond; shows "?" until found | accent |

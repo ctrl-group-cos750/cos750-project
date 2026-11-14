@@ -1,0 +1,34 @@
+/* The study companion characters' colours (#214). Brand blue and honey stay the same in both themes
+ * (they are the brand); only the lines that sit straight on the page and the soft fills change, so
+ * each character keeps 3:1 or more against the page in light and dark. */
+:root {
+  --cmp-blue: #2470c9; /* Ctrl blue: 4.9:1 on white, 3.6:1 on the dark page */
+  --cmp-edge: #184a85; /* the logo's darker key-cap edge */
+  --cmp-honey: rgb(246 193 85);
+  --cmp-honey-edge: #8f6110;
+  --cmp-ink: #141414;
+  --cmp-paper: #ffffff;
+  --cmp-line: #184a85; /* edges and arms on the page: 9:1 on white */
+  --cmp-soft: #dce8f7;
+  --cmp-on-soft: #141414;
+  --cmp-screen: #10223a;
+  --cmp-off: #3f6ea8;
+}
+
+.dark,
+:root[data-theme='dark'] {
+  /* Ctrl blue is 3.0:1 on the dark card: a step lighter, so Inka's arms and head keep 3:1. */
+  --cmp-blue: #3d86dc;
+  --cmp-line: #8fbaf0; /* 8:1 on the dark page */
+  --cmp-soft: #1d3a5c;
+  --cmp-on-soft: #f2f2f2;
+  --cmp-honey-edge: #f6c155;
+}
+
+/* Fur and skin: the same in both themes (a character doesn't change colour at night). */
+:root {
+  --cmp-skin: #c98d5f;
+  --cmp-hair: #2b2118;
+  --cmp-grey: #8c939c;
+  --cmp-grey-dark: #353a42;
+}

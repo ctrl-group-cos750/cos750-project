@@ -4,11 +4,12 @@ import type { Achievement, AchievementKind } from './achievements.ts'
 import styles from './AchievementBadge.module.css'
 
 /**
- * Where a student stands with a badge. Objective badges have two tiers that mirror the mastery
- * results: bronze when the objective was met with support (hint level 3 or 4), gold when it was
- * later met independently. Every other badge is simply earned or not.
+ * Where a student stands with a badge. Objective badges have three levels (#214): practised when
+ * the objective is secure in the modules' practice, then the mastery results: bronze when it was
+ * met with support (hint level 3 or 4), gold when it was met independently. Every other badge is
+ * simply earned or not.
  */
-export type AchievementState = 'locked' | 'earned' | 'bronze' | 'gold'
+export type AchievementState = 'locked' | 'earned' | 'practised' | 'bronze' | 'gold'
 
 export type AchievementBadgeProps = {
   achievement: Achievement
@@ -54,14 +55,15 @@ const goldStar = Array.from({ length: 10 }, (_, i) => {
 const tierText: Record<AchievementState, string> = {
   locked: 'not earned yet',
   earned: 'earned',
+  practised: 'practised, secure in practice',
   bronze: 'bronze, met with support',
   gold: 'gold, met independently',
 }
 
 /**
  * A badge's picture, drawn from tokens so it follows the theme. Each state differs in shape as
- * well as colour (NFR-A2): gold adds an inner outline and a star, and locked badges are dashed,
- * faded and carry a padlock. The hidden badge shows "?" until it is found.
+ * well as colour (NFR-A2): practised is an outline with no fill, gold adds an inner outline and a
+ * star, and locked badges are dashed, faded and carry a padlock. The hidden badge shows "?" until it is found.
  */
 export function AchievementBadge({ achievement, state, size = 64 }: AchievementBadgeProps) {
   const { kind, glyph, name } = achievement

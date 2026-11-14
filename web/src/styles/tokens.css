@@ -31,6 +31,9 @@
    */
   --color-bg: var(--background, var(--brand-paper));
   --color-surface: var(--card, #ffffff);
+  /* Always opaque, also where the page background shows through the cards (backgrounds.css):
+   * popups, menus and notes that float over the page. */
+  --color-surface-solid: var(--card, #ffffff);
   --color-surface-sunken: var(--muted, #e9e6de);
   --color-text: var(--foreground, var(--brand-ink));
   --color-text-muted: var(--muted-foreground, #595959);
@@ -85,6 +88,9 @@
   --badge-bronze-soft: #f5d3ce;
   --badge-gold: #8a6b00;
   --badge-gold-soft: #fff0b5;
+  /* The skill radar's bronze ring and points (#214): a real bronze, not the badge's red.
+   * #a8692a is 4.4:1 on the white card (WCAG 1.4.11 asks 3:1 of a graphic). */
+  --skill-bronze: #a8692a;
   /* Silver is only a module medal (#214): a cool grey, 5.9:1 on white, 4.6:1 on its fill. */
   --badge-silver: #5b6570;
   --badge-silver-soft: #e3e7eb;
@@ -140,5 +146,6 @@
   --badge-gold-soft: #4a3a14;
   --badge-silver: #c9d1da;
   --badge-silver-soft: #343b43;
+  --skill-bronze: #cd9358; /* 5.7:1 on the dark card */
   --overlay: rgb(0 0 0 / 70%);
 }

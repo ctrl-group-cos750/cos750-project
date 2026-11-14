@@ -198,10 +198,24 @@
   font-weight: 600;
 }
 
+/* How to open the locked mastery check (#214): always shown under its card, not only on hover,
+   lined up with the title. Each module still to do is a link. */
+.unlock {
+  margin: var(--space-2) 0 0 calc(2rem + var(--space-4) + var(--space-5));
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.unlock a {
+  color: var(--color-accent-text);
+  font-weight: 600;
+}
+
 /* Links a full 44 px tall where the pointer is a finger (WCAG 2.5.5). */
 @media (pointer: coarse) {
   .quickCheck,
-  .quickCheckScore a {
+  .quickCheckScore a,
+  .unlock a {
     display: inline-flex;
     align-items: center;
     min-height: 44px;
@@ -229,7 +243,8 @@
   }
 
   .quickCheck,
-  .quickCheckScore {
+  .quickCheckScore,
+  .unlock {
     margin-inline-start: calc(2rem + var(--space-4) + var(--space-4));
   }
 }

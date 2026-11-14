@@ -41,8 +41,9 @@ class UserBadge(Base):
 
     `badge` is an id from the catalogue (app/services/rewards.py, and web/src/components/
     achievements.ts for its name and picture). `ref` tells apart badges a student can earn more
-    than once, such as one per bonus quest; it is "" otherwise. Objective badges have a `tier`:
-    "bronze" (met with support) can later become "gold" (met independently), never the reverse.
+    than once, such as one per bonus quest; it is "" otherwise. Objective badges have a `tier`,
+    their level: "practised" (secure in practice), "bronze" (met with support) or "gold" (met
+    independently). It only goes up that list, never down.
     """
 
     __tablename__ = "user_badges"

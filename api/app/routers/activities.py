@@ -94,7 +94,9 @@ REVIEW_HINT_LIMIT = 3
 
 def _hint_limit(activity: Activity, user: User) -> int | None:
     """The highest hint level this student may see on the activity: the mastery check's, a review
-    path fresh item's, or None for the full ladder. Staff see every hint, to preview."""
+    path fresh item's, or None for the full ladder. Staff see every hint, to preview. The one place
+    the limit lives: the hints routes and the demo seed both use it, so a demo step can't ask for a
+    hint a student would never be shown (#222 re-review, A2)."""
     if user.is_staff:
         return None
     if in_check(activity):
@@ -110,6 +112,19 @@ def _checked(activity: Activity, user: User) -> bool:
     return in_check(activity) and not user.is_staff
 
 
+def _after_wrong_first(session: DbSession, attempt: Attempt) -> bool:
+    """Whether the student's first answer to this activity, in any round, was wrong and this is a
+    later one: under the evidence rule it then counts for no medal (FR-9.6), which the companion
+    says (#222 re-review, nit 4: it used to remember wrong answers per browser tab)."""
+    first = session.scalar(
+        select(Attempt)
+        .where(Attempt.user_id == attempt.user_id, Attempt.activity_id == attempt.activity_id)
+        .order_by(Attempt.id)
+        .limit(1)
+    )
+    return first is not None and first.id != attempt.id and not first.correct
+
+
 def _withheld(session: DbSession, activity: Activity, user: User) -> bool:
     """Whether this student's result on the activity is still withheld: a mastery check item
     while the check is unfinished (#144). Once every module 6 item is answered, each item shows
@@ -117,7 +132,7 @@ def _withheld(session: DbSession, activity: Activity, user: User) -> bool:
     return _checked(activity, user) and not check_finished(session, user.id)
 
 
-def _attempt_out(attempt: Attempt, checked: bool) -> AttemptOut:
+def _attempt_out(session: DbSession, attempt: Attempt, checked: bool) -> AttemptOut:
     """An attempt's result as the student is shown it: in full, or `withheld` on a mastery check
     item (#144), where nothing says whether it was right."""
     if checked:
@@ -139,6 +154,7 @@ def _attempt_out(attempt: Attempt, checked: bool) -> AttemptOut:
         parts=[PartResult.model_validate(p) for p in (attempt.detail or {}).get("parts", [])],
         feedback=str((attempt.detail or {}).get("feedback", "")),
         hint_level=attempt.hint_level,
+        after_wrong_first=_after_wrong_first(session, attempt),
     )
 
 
@@ -156,7 +172,7 @@ def _last_attempt(
         return None
     return LastAttemptOut(
         submitted=attempt.submitted,
-        result=_attempt_out(attempt, _withheld(session, activity, user)),
+        result=_attempt_out(session, attempt, _withheld(session, activity, user)),
     )
 
 
@@ -297,7 +313,7 @@ def submit_attempt(
     except ActivityGone:  # the seed deleted it while this answer waited
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NOT_FOUND) from None
     session.commit()
-    out = _attempt_out(attempt, checked)
+    out = _attempt_out(session, attempt, checked)
     if not checked:  # a mastery check item's points wait for the end of the check (#144)
         out.points = points
     return out

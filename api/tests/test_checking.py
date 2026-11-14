@@ -436,6 +436,16 @@ def _seed_activity(file: str, activity_id: int) -> dict[str, Any]:
     return activity
 
 
+def _seed_traces() -> list[tuple[str, int]]:
+    """Every trace item in the seed, as (file, activity id)."""
+    found = []
+    for path in sorted(SEED.glob("*.json")):
+        for activity in json.loads(path.read_text()).get("activities", []):
+            if activity.get("kind") == "trace":
+                found.append((path.name, activity["id"]))
+    return found
+
+
 def _trace_marking_on_leaving(config: TraceConfig, *, skip_rows: bool) -> list[dict[str, Any]]:
     """The trace a student writes who marks a vertex only when it leaves the queue: a neighbour
     still waiting is added again. With `skip_rows`, a row too for each repeat taken off the queue
@@ -473,6 +483,22 @@ def test_marking_on_leaving_the_queue_fails_objective_5_on_item_618(skip_rows: b
     objective_5 = Rule(max_wrong=1)  # objectives.json: "at most one error"
     right = sum(p.correct for p in result.parts)
     assert not objective_5.met(right, len(result.parts))
+
+
+@pytest.mark.parametrize("skip_rows", [False, True])
+@pytest.mark.parametrize(("file", "activity_id"), _seed_traces())
+def test_marking_on_leaving_the_queue_fails_objective_5_on_every_seed_trace(
+    file: str, activity_id: int, skip_rows: bool
+) -> None:
+    """Re-review of #221 at f1be622: the fix for a current-vertex slip must not let the
+    mark-on-dequeue misconception through again. On every seed trace it still costs at least two
+    rows, so it fails objective 5, and a row says why."""
+    config = TraceConfig.model_validate(_seed_activity(file, activity_id)["config"])
+    rows = _trace_marking_on_leaving(config, skip_rows=skip_rows)
+    result = checking.check_trace(config, TraceSubmission.model_validate({"rows": rows}))
+    assert any(p.message and checking.QUEUE_TWICE in p.message for p in result.parts)
+    right = sum(p.correct for p in result.parts)
+    assert not Rule(max_wrong=1).met(right, len(result.parts))
 
 
 @pytest.mark.parametrize(
@@ -514,6 +540,47 @@ def test_the_found_set_in_the_visited_column_is_not_called_marking_on_leaving() 
             assert part.message == (
                 f"{checking.WRONG_TRACE_STEP} {checking.TRACE_COLUMN_HINTS['visited']}"
             )
+
+
+def _correct_rows(config: TraceConfig) -> list[dict[str, Any]]:
+    scenario = GraphScenarioOut(id=0, name="", **config.model_dump())
+    return [
+        {
+            "visited_vertex": step.visited_vertex,
+            "queue": list(step.queue),
+            "visited": list(step.visited),
+            "order": list(step.order),
+        }
+        for step in run_bfs(scenario).steps
+    ]
+
+
+def test_the_seed_has_the_trace_items_the_slip_tests_cover() -> None:
+    ids = {activity_id for _, activity_id in _seed_traces()}
+    assert {618, 1502} <= ids
+
+
+@pytest.mark.parametrize(("file", "activity_id"), _seed_traces())
+def test_one_slip_in_the_current_vertex_column_costs_one_row(file: str, activity_id: int) -> None:
+    """Re-review of #221 at f1be622: a wrong current vertex, every other cell right, counted as
+    "left the queue", so the later rows still holding that vertex were wrong too (on 618 and
+    1502, rows 1 to 3 for the queue's second vertex, which failed objective 5). Only a current
+    vertex the order column agrees with has left the queue, so a slip in that column costs its
+    own row alone: tried with every other vertex, on every row of every seed trace."""
+    config = TraceConfig.model_validate(_seed_activity(file, activity_id)["config"])
+    rows = _correct_rows(config)
+    objective_5 = Rule(max_wrong=1)  # objectives.json: "at most one error"
+    for i, row in enumerate(rows):
+        for vertex in config.vertices:
+            if vertex == row["visited_vertex"]:
+                continue
+            slipped = [dict(r) for r in rows]
+            slipped[i] = {**row, "visited_vertex": vertex}
+            result = checking.check_trace(config, TraceSubmission.model_validate({"rows": slipped}))
+            wrong = [p.ref for p in result.parts if not p.correct]
+            assert wrong == [i], (activity_id, i, vertex, wrong)
+            assert objective_5.met(len(result.parts) - 1, len(result.parts))
+            assert checking.QUEUE_AFTER_VISIT not in (result.parts[i].message or "")
 
 
 def test_a_slip_carried_through_wrongly_is_still_wrong() -> None:

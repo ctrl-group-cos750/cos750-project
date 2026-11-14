@@ -44,6 +44,10 @@ MISSING_LINE = "A line is missing from this position."
 MISSING_PARSONS = ("add it from the available lines.", "add them from the available lines.")
 MISSING_FIX = ("put it back, or add its correction.", "put them back, or add their corrections.")
 EXTRA_LINE = "This line does not belong in the answer."
+IMPORT_NOT_FIRST = (
+    "Python runs it with the import lower down, but imports go at the top of the file, before any"
+    " other code, so that a reader sees what the program uses first."
+)
 WRONG_CHOICE = "This is not the right choice for this blank."
 EMPTY_BLANK = "This blank has not been filled in."
 WRONG_OPTION = "That is not the right answer. Have another look."
@@ -329,7 +333,9 @@ def check_trace(config: TraceConfig, submission: TraceSubmission) -> CheckResult
             continue
         own = {have.visited_vertex} if have.visited_vertex in have.order else set()
         impossible = _impossible_queue(have, left | own)
-        left.add(have.visited_vertex)
+        # Only a current vertex the order column agrees with has left the queue: a slip in the
+        # current-vertex column alone must not make a later, correct queue "impossible".
+        left |= own
         if impossible is not None:
             parts.append(
                 PartResult(ref=i, correct=False, message=f"{WRONG_TRACE_STEP} {impossible}")
@@ -494,8 +500,30 @@ def check_activity(
     result = _check(kind, config, solution, submission)
     explanation = solution.get("explanation") if isinstance(solution, dict) else None
     if result.correct and isinstance(explanation, str) and explanation:
-        return result.model_copy(update={"feedback": explanation})
+        result = result.model_copy(update={"feedback": explanation})
+    if result.correct and _import_not_first(kind, config, submission):
+        result = result.model_copy(update={"feedback": f"{result.feedback} {IMPORT_NOT_FIRST}"})
     return result
+
+
+def _import_not_first(kind: str, config: dict[str, Any], submission: dict[str, Any]) -> bool:
+    """Whether an ordered answer puts an import after other code. Python runs it, so a BFS
+    written that way is accepted (FR-5.4), but the right answer's feedback says where imports go
+    (re-review of #221: marking it wrong failed objectives 6 and 7 for a program that works)."""
+    if kind not in ("parsons", "fix_the_bug"):
+        return False
+    text = {
+        line["id"]: str(line.get("text", "")).lstrip()
+        for line in [*config.get("lines", []), *config.get("corrections", [])]
+        if isinstance(line, dict) and "id" in line
+    }
+    code_before = False
+    for line_id in submission.get("order") or []:
+        if not text.get(line_id, "").startswith(("import ", "from ")):
+            code_before = True
+        elif code_before:
+            return True
+    return False
 
 
 def _check(

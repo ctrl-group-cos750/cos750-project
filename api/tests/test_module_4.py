@@ -231,12 +231,10 @@ def test_the_parsons_answer_is_the_worked_examples_code() -> None:
 
 def test_the_parsons_problem_accepts_exactly_the_orders_that_work() -> None:
     """Every order of the lines Python can run is tried on the design's tests: each the checker
-    accepts passes, and each that passes is accepted if its import comes first (FR-5.4, #145).
-    That includes order.append(v) after the neighbour loop: it gives the right BFS, so marking it
-    wrong marked a correct BFS wrong (review of 13 Nov, High 5). The import after the function
-    also runs, but it is odd Python to teach, so it is not accepted (review of 13 Nov on #221).
-    The solution lists the accepted orders as alternatives; this test, which runs every order, is
-    what keeps that list right."""
+    accepts passes, and each that passes is accepted (FR-5.4, #145). That includes the import
+    after the function and order.append(v) after the neighbour loop: both give the right BFS, so
+    marking them wrong marked a correct BFS wrong (review of 13 Nov, High 5). The solution lists
+    them as alternatives; this test, which runs every order, is what keeps that list complete."""
     a = activity(404)
     text = {line["id"]: line["text"] for line in a.config["lines"]}
     working, accepted = [], []
@@ -245,13 +243,12 @@ def test_the_parsons_problem_accepts_exactly_the_orders_that_work() -> None:
             working.append(order)
         if check_activity("parsons", a.config, a.solution, {"order": order}).correct:
             accepted.append(order)
-    assert accepted == [o for o in working if text[o[0]].startswith("from ")]
+    assert accepted == working
     # The three starting values (3! orders) x visited.add/queue.append (2), doubled twice: the
-    # import first or last, order.append(v) before or after the neighbour loop. Import first: 24.
+    # import first or last, order.append(v) before or after the neighbour loop.
     assert len(working) == 48
-    assert len(accepted) == 24
     after_loop = [o for o in accepted if not conventional(o, text)]
-    assert len(after_loop) == 12
+    assert len(after_loop) == 36
 
 
 def conventional(order: list[int], text: dict[int, str]) -> bool:

@@ -291,7 +291,7 @@ export function ModulePage() {
       : segment.attempted
         ? hideRewards
           ? 'Not yet right. Try again: after one more answer you can move on, though it won’t count as right, and the hints can help.'
-          : 'Not yet right. Try again: after one more answer you can move on, though it earns no points then, and the hints can help.'
+          : 'Not yet right. Try again, and the hints can help: it earns no points now that the first answer was wrong, and after one more answer you can move on.'
         : 'Answer the activity to continue.'
   // Two answers, or one after the last hint, and the student may move on without getting it right
   // (FR-2.7, #214): say so, that it is marked to look at again, and plainly that moving on earns
@@ -302,7 +302,7 @@ export function ModulePage() {
     (segment?.lookAgain
       ? hideRewards
         ? 'You can move on: this one is marked to look at again. It doesn’t count as right until you answer it right.'
-        : 'You can move on: this one is marked to look at again. It earns no points now that the first answer was wrong, but answer it right later and it counts towards your medal.'
+        : 'You can move on: this one is marked to look at again. It earns no points or medal now that the first answer was wrong; answering it right later still helps you learn it.'
       : '')
   // The page opened here because the student moved past this activity before answering it: say
   // so, until it is done, so the jump back isn't a mystery.
@@ -637,7 +637,8 @@ function RestartModule({
         <legend className="float-left mb-1 w-full p-0 font-semibold">Restart this module?</legend>
         <p className="m-0 text-sm text-muted-foreground">
           Its questions will show unanswered, with their hints from the first again, so you can try
-          them afresh. You keep your points and badges, and the module stays complete.
+          them afresh. You keep your points and badges, and the module stays complete. Answers this
+          time earn no new points.
         </p>
         {error && <Alert tone="danger">{error}</Alert>}
         <div className="flex flex-wrap gap-2">

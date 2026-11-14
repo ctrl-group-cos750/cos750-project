@@ -607,9 +607,8 @@ def test_the_parsons_answer_is_module_4s_bfs_with_new_names() -> None:
 
 
 def test_the_parsons_problem_accepts_exactly_the_orders_that_work() -> None:
-    """As for 404: every runnable order that passes the tests with its import first is accepted,
-    order.append after the neighbour loop included (review of 13 Nov, High 5), the import after
-    the function not (review of 13 Nov on #221)."""
+    """As for 404: every runnable order that passes the tests is accepted, the import after the
+    function and order.append after the neighbour loop included (review of 13 Nov, High 5)."""
     a = activity(490)
     text: dict[int, str] = {line["id"]: line["text"] for line in a["config"]["lines"]}
     working, accepted = [], []
@@ -618,9 +617,8 @@ def test_the_parsons_problem_accepts_exactly_the_orders_that_work() -> None:
             working.append(order)
         if check_activity("parsons", a["config"], a["solution"], {"order": order}).correct:
             accepted.append(order)
-    assert accepted == [o for o in working if text[o[0]].startswith("from ")]
-    assert len(working) == 48
-    assert len(accepted) == 24
+    assert accepted == working
+    assert len(accepted) == 48
 
 
 def test_the_bfs_question_is_the_engines_order_and_each_mistake_is_real() -> None:

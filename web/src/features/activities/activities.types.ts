@@ -19,7 +19,7 @@ export type AttemptResult = {
   hintLevel: number
   /** A mastery check answer: recorded, but whether it was right is only in the report (#144). */
   withheld?: boolean
-  /** The points this answer earned (10, 4 after hint 3 or 4, or 0); 0 when shown again (#214). */
+  /** The points this answer earned (10, 4 after hint 3, 0 after hint 4 or a wrong first answer); 0 when shown again (#214). */
   points?: number
 }
 

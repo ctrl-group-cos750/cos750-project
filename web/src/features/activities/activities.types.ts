@@ -146,12 +146,15 @@ export type TraceRow = {
 }
 
 /** A module 6 mastery item (#144): one answer only, its result shown only in the mastery report,
- * and hints 1 and 2 only. `answered` says this student has given that answer. `reviewCheck`: a
- * fresh question on a review path, which decides the objective's result and gives hints 1 to 3
- * only (hint 4 is the worked answer). */
+ * and hints 1 and 2 only. `answered` says this student has given that answer.
+ * `answeredEarlierVersion`: answered because their answer to the item this one replaced counts
+ * for it, so there is no answer of theirs to show here. `reviewCheck`: a fresh question on a
+ * review path, which decides the objective's result and gives hints 1 to 3 only (hint 4 is the
+ * worked answer). */
 export type MasteryCheckFlags = {
   masteryCheck?: boolean
   answered?: boolean
+  answeredEarlierVersion?: boolean
   reviewCheck?: boolean
 }
 

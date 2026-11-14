@@ -177,12 +177,21 @@ export function ActivityRenderer(props: ActivityRendererProps) {
   // none, and the answer just given would vanish.
   const control = (
     <>
-      {answeredInCheck && !props.result && (
-        <Alert tone="info" title="Answer recorded">
-          You have answered this question. Only your first answer counts, so it can't be changed.
-          Your results are in your mastery report once every question in the check is answered.
-        </Alert>
-      )}
+      {answeredInCheck &&
+        !props.result &&
+        (props.activity.answeredEarlierVersion === true ? (
+          // Their answer to the item this one replaced stands in for it (review of #223, nit 2).
+          <Alert tone="info" title="Answered in an earlier version">
+            This question was reworded after you answered it. Your answer to the earlier version
+            counts for it, so this one takes no answer. Your mastery report lists that answer with
+            why.
+          </Alert>
+        ) : (
+          <Alert tone="info" title="Answer recorded">
+            You have answered this question. Only your first answer counts, so it can't be changed.
+            Your results are in your mastery report once every question in the check is answered.
+          </Alert>
+        ))}
       <fieldset
         disabled={answeredInCheck}
         aria-label={answeredInCheck ? 'Your answer' : undefined}

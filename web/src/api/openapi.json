@@ -4028,6 +4028,11 @@
             "title": "Answered",
             "default": false
           },
+          "answeredEarlierVersion": {
+            "type": "boolean",
+            "title": "Answeredearlierversion",
+            "default": false
+          },
           "reviewCheck": {
             "type": "boolean",
             "title": "Reviewcheck",
@@ -6082,7 +6087,7 @@
           "objectives"
         ],
         "title": "ModuleMedalOut",
-        "description": "A module's medal (FR-9.8): `medal` once the module is complete (gold, every first answer\nright without a hint; silver, every first answer right without hint 3 or 4; bronze, finished),\nand `headingFor`, what the answers so far are on course for. Never counts time or speed.\n`objectives` are the learning objectives its activities practise."
+        "description": "A module's medal (FR-9.8): `medal` once the module is complete (gold, every first answer\nright without a hint; silver, every first answer right without hint 3 or 4; bronze, finished),\nand `headingFor`, what the answers so far are on course for. Never counts time or speed.\n`objectives` are the learning objectives its activities practise. `answered` and `total` count\nthe same activities: on a finished module, those it was judged on (the ones answered before it\nwas finished), so `answered` is never more than `total`."
       },
       "ModuleOut": {
         "properties": {

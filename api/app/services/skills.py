@@ -291,7 +291,9 @@ def module_medals(session: Session, user_id: int) -> list[ModuleMedal]:
                 complete=finished,
                 first_time=first,
                 on_your_own=own,
-                answered=len(done),
+                # Over the same activities as `total`, so it is never more: a finished module is
+                # judged on those it asked (review of #223, nit 4).
+                answered=sum(1 for a in asked if a in got.answered),
                 total=len(asked),
                 medal=medal,
                 heading_for=medal if finished else so_far if done else None,

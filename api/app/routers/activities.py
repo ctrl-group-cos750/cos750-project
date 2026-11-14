@@ -239,6 +239,8 @@ def get_activity(activity_id: RowId, session: DbSession, user: CurrentUser) -> A
     else:
         out.solved = answered_correctly(session, user.id, activity.id, after)
     out.last_attempt = _last_attempt(session, user, activity, after)  # coming back shows it (#171)
+    # Answered with no attempt of its own: the replaced item's answer stands in for it (REPLACES).
+    out.answered_earlier_version = out.answered and out.last_attempt is None
     return out
 
 

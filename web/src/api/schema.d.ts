@@ -1334,6 +1334,11 @@ export interface components {
        */
       answered: boolean
       /**
+       * Answeredearlierversion
+       * @default false
+       */
+      answeredEarlierVersion: boolean
+      /**
        * Reviewcheck
        * @default false
        */
@@ -2129,7 +2134,9 @@ export interface components {
      * @description A module's medal (FR-9.8): `medal` once the module is complete (gold, every first answer
      *     right without a hint; silver, every first answer right without hint 3 or 4; bronze, finished),
      *     and `headingFor`, what the answers so far are on course for. Never counts time or speed.
-     *     `objectives` are the learning objectives its activities practise.
+     *     `objectives` are the learning objectives its activities practise. `answered` and `total` count
+     *     the same activities: on a finished module, those it was judged on (the ones answered before it
+     *     was finished), so `answered` is never more than `total`.
      */
     ModuleMedalOut: {
       /** Moduleid */

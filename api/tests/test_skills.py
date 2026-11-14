@@ -440,6 +440,9 @@ def test_going_back_to_an_item_that_joined_a_finished_module_never_lowers_its_me
     answer(client, 106, WRONG)
     medal = profile(client)["modules"][0]
     assert (medal["medal"], medal["firstTime"], medal["total"]) == ("gold", 4, 4)
+    # 106 was answered after the module was finished, so it isn't counted as answered either:
+    # answered never exceeds total (review of #223, nit 4; it said 5 of 4).
+    assert (medal["answered"], medal["total"]) == (4, 4)
     answer(client, 106)
     assert profile(client)["modules"][0]["medal"] == "gold"
 

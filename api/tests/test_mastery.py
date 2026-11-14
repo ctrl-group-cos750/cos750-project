@@ -39,6 +39,7 @@ from app.services import mastery, rewards
 from app.services.attempts import record_attempt
 from app.services.bfs import run_bfs
 from app.services.mastery import Answer, Rule, decide
+from app.services.modules import answer_states
 
 STUDENT = {"email": "ada@example.com", "password": "Correct horse 1", "displayName": "Ada"}
 RIGHT = {"submitted": {"selected": "a"}}
@@ -1211,7 +1212,16 @@ def test_a_student_who_finished_the_check_cannot_answer_a_replaced_item_again(
     assert states(client)[2] == "not_yet"
 
     replace_612(before_630, db)
-    assert client.get("/api/activities/630").json()["answered"] is True
+    item = client.get("/api/activities/630").json()
+    # 612's answer stands in, so the page says so instead of a blank form (review of #223, nit 2).
+    assert (item["answered"], item["answeredEarlierVersion"], item["lastAttempt"]) == (
+        True,
+        True,
+        None,
+    )
+    # And its segment is done, as the one-answer rule has it (nit 3).
+    user = int(client.get("/api/auth/me").json()["id"])
+    assert answer_states(db, user, [630, 601]).done == {630, 601}
     response = client.post("/api/activities/630/attempts", json=RIGHT)
     assert response.status_code == 409
     assert response.json()["detail"] == ALREADY_ANSWERED
@@ -1229,7 +1239,14 @@ def test_the_students_own_answer_to_the_replacement_counts_instead(
     for item in (601, 612):
         answer(client, item)
     replace_612(before_630, db)
+    # Part-way through, 630 is still open: neither answered nor done.
+    item = client.get("/api/activities/630").json()
+    assert (item["answered"], item["answeredEarlierVersion"]) == (False, False)
+    user = int(client.get("/api/auth/me").json()["id"])
+    assert answer_states(db, user, [630]).done == set()
     answer(client, 630, WRONG)
+    item = client.get("/api/activities/630").json()
+    assert (item["answered"], item["answeredEarlierVersion"]) == (True, False)
     answer(client, 602)
     assert states(client)[2] == "not_yet"
     [mine] = client.get("/api/me/report").json()["objectives"][1]["answers"]

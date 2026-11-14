@@ -14,7 +14,7 @@ from app.schemas.activities import CheckResult
 from app.services.checking import check_activity, is_blank
 from app.services.events import log_event
 from app.services.locks import hold_activity, lock_student
-from app.services.mastery import counts, in_check, recompute
+from app.services.mastery import check_answered, counts, in_check, recompute
 from app.services.modules import reward_completed_modules
 from app.services.restart import activity_round
 from app.services.rewards import on_attempt, on_bonus_quest, real_work, real_work_on
@@ -102,7 +102,8 @@ def record_attempt(
     `ActivityGone` if the activity was deleted meanwhile.
 
     With `one_answer` (a mastery check item, #144) it raises `AlreadyAnswered` if the student has
-    an attempt at it already. That is checked under the student's lock, after the submission has
+    an attempt at it already, or finished the check with one at the item it replaced
+    (mastery.check_answered). That is checked under the student's lock, after the submission has
     passed every other check, so a refused submission never uses up the one answer and two sent
     at once can't both be recorded."""
     result = check_activity(activity.kind, activity.config, activity.solution, submitted)
@@ -110,7 +111,7 @@ def record_attempt(
         raise BlankAnswer(activity.id)
     hold_activity(session, activity.id)  # before the student: see app/services/locks.py
     lock_student(session, user_id)  # before any insert (#138)
-    if one_answer and answered(session, user_id, activity.id):
+    if one_answer and check_answered(session, user_id, activity.id):  # REPLACES-aware
         raise AlreadyAnswered(activity.id)
     attempt = Attempt(
         user_id=user_id,
@@ -152,18 +153,6 @@ def record_attempt(
     if counts(activity):
         recompute(session, user_id)  # the objective results, and what they earn (FR-7)
     return attempt, result
-
-
-def answered(session: Session, user_id: int, activity_id: int) -> bool:
-    """Whether this student has any attempt at the activity."""
-    return (
-        session.scalar(
-            select(Attempt.id)
-            .where(Attempt.user_id == user_id, Attempt.activity_id == activity_id)
-            .limit(1)
-        )
-        is not None
-    )
 
 
 def answered_correctly(

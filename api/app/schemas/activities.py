@@ -436,6 +436,10 @@ class ActivityOut(ApiModel):
     purpose: Purpose = "practice"
     # This student has answered this mastery check item, so it takes no more answers or hints.
     answered: bool = False
+    # `answered` because their answer to the item this one replaced stands in for it (`REPLACES`
+    # in app/services/mastery.py): they never answered this version, so there is no `lastAttempt`
+    # to show, and the page says why (review of #223, nit 2).
+    answered_earlier_version: bool = False
     # A fresh item on a review path: it decides the objective's result, and its hints stop at
     # hint 3 (the fourth is the worked answer; review of 13 Nov). False for staff, who see all.
     review_check: bool = False

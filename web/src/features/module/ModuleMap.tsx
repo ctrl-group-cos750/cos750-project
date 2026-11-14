@@ -47,7 +47,7 @@ function statusDisplay(module: ModuleSummary): { tone: TagTone; label: string; i
     case 'complete':
       return { tone: 'success', label: 'complete', icon: '✓' }
     case 'tested_out':
-      return { tone: 'success', label: 'tested out', icon: '»' }
+      return { tone: 'success', label: 'passed the quick check', icon: '»' }
   }
 }
 
@@ -56,7 +56,7 @@ function formatDuration(minutes: number): string {
   return `${minutes} min`
 }
 
-/** Where the student is in a module, counted the way the module page counts it ("Segment 4 of
+/** Where the student is in a module, counted the way the module page counts it ("Step 4 of
  * 8"): only the segments this student is shown, so support they don't need isn't counted. */
 function segmentProgress(module: ModuleSummary): { value: number; max: number } {
   const max = module.shownSegmentCount ?? module.segmentCount

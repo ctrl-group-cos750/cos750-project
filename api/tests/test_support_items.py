@@ -159,6 +159,8 @@ ORDER = {
         170,
         106,
         107,
+        197,
+        198,
         108,
         109,
         [192, 193, 194],
@@ -226,7 +228,9 @@ def test_the_existing_segments_keep_their_order() -> None:
     base = {
         # 114-117: the closing task as four questions, each with its own options (13 Nov). Fresh
         # segment ids: 110 showed the retired activity 107, and a segment id is never reused.
-        1: [101, 102, 103, 104, 105, 170, 106, 107, 108, 109, 114, 115, 116, 117],
+        # 197 and 198: path, cycle, connected, tree and weighted, after the campus graph is built
+        # (review 13 Nov, High 11).
+        1: [101, 102, 103, 104, 105, 170, 106, 107, 197, 198, 108, 109, 114, 115, 116, 117],
         2: [203, 204, 270, 205, 206, 207, 271, 208, 209],
         3: [313, 314, 315, 316, 317, 370, 318, 320, 321, 319, 380],
         4: [403, 404, 470, 405, 406, 471, 472, 473, 407, 408, 480],
@@ -244,7 +248,7 @@ STAGING_MODULE_1 += [192, 193, 194, 195, 196, 110]
 def test_a_student_on_the_retired_closing_task_keeps_their_place(db: Session) -> None:
     """The seed keeps each student on the segment they had reached (keep_places, SE document
     ModuleProgress). A student on the retired segment 110 goes back to the segment before it, so
-    Next takes them to the first new closing question; nobody else moves."""
+    Next takes them to the first new closing question; a student on 109 stays on 109."""
     load(db)
     places = {"on-110": STAGING_MODULE_1.index(110), "on-109": STAGING_MODULE_1.index(109)}
     for name, place in places.items():
@@ -257,7 +261,9 @@ def test_a_student_on_the_retired_closing_task_keeps_their_place(db: Session) ->
             )
         )
     db.flush()
-    assert keep_places(db, 1, STAGING_MODULE_1) == 1
+    # The student on 109 moves too, by the two graph-words segments (197, 198) put in before it,
+    # and stays on 109.
+    assert keep_places(db, 1, STAGING_MODULE_1) == 2
     now = segment_order(db, 1)
     names = {u.id: u.display_name for u in db.scalars(select(User))}
     moved = {
@@ -531,7 +537,7 @@ def test_the_four_jobs_example_is_module_4s_bfs() -> None:
     assert code_lines(we.group(1)) == code_lines(reference())
 
 
-RENAMED = {"visited": "seen", "v": "current", "n": "neighbour"}
+RENAMED = {"found": "seen", "v": "current", "n": "neighbour"}
 
 
 def renamed(code: str) -> str:

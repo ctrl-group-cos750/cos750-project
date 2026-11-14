@@ -27,7 +27,7 @@ AL-Foundational 11.c speaks of *tree* search, so we do not rely on it alone. AI-
 
 Two parts of these topics are taught only briefly (#150). Module 2 compares the adjacency list with the adjacency matrix (8.a): the space each takes, and which answers "is X joined to Y?" or "which vertices are next to X?" in one step; BFS then uses the list. Module 4 explains BFS's running time, which AL-Complexity's learning outcome 4 asks for every algorithm in AL-Foundational [40, p. 92]: O(V + E) with an adjacency list, O(V²) with a matrix. Each is one short text segment, with no practice item yet.
 
-BFS is hard for beginners. A student must track the current vertex, the queue and the visited set at the same time, and one mistake changes the whole traversal. A lecture leaves little time to practise this tracking. The application gives guided practice before the lecture, so the lecture can go deeper.
+BFS is hard for beginners. A student must track the current vertex, the queue and the found set at the same time, and one mistake changes the whole traversal. A lecture leaves little time to practise this tracking. The application gives guided practice before the lecture, so the lecture can go deeper.
 
 ## Our instructional design approach
 
@@ -39,7 +39,7 @@ Our design rests on the following choices. Each is explained in the section show
 -	Mastery: each objective is reported on its own, and a review path gives extra scaffolding to students who need it [12] (Sections 3.2 and 7.6).
 -	Learning theories: the module’s behaviourist, cognitivist, constructivist, social cognitive and transformative views [47, 48], and the research on active learning, cognitive load, scaffolding and retrieval (Section 5).
 -	Motivation: the ARCS model, flow, and Malone and Lepper’s taxonomy, supported by private points and badges [37, 41, 51] (Sections 7.1 and 7.2).
--	Inclusion: Universal Design for Learning and WCAG 2.1 level AA [31, 45], with Kolb’s learning cycle as a check on each module [50] (Section 6).
+-	Inclusion: Universal Design for Learning and WCAG 2.2 level AA [31, 45], with Kolb’s learning cycle as a check on each module [50] (Section 6).
 -	Evaluation: a pilot, usage logs and surveys that feed back into the design (Section 8).
 
 ## Structure of this document
@@ -93,7 +93,7 @@ Students may progress through the material at different speeds. They may also di
 Beginners make predictable mistakes when they first meet BFS. We expect students to:
 
 - confuse BFS with depth-first order and follow one branch to its end before visiting the other neighbours;
-- forget to record a vertex as found (in the code, to add it to the `visited` set) when it joins the queue, which causes repeated visits when a vertex can be reached along two routes, or an endless loop on a graph with a cycle;
+- forget to record a vertex as found (in the code, to add it to the `found` set) when it joins the queue, which causes repeated visits when a vertex can be reached along two routes, or an endless loop on a graph with a cycle;
 - record a vertex as found only when it leaves the queue (when it is visited), so the same vertex is added to the queue more than once;
 - not see why a queue, and not a stack, produces the level-by-level order;
 - assume that BFS reaches every vertex, and miss the vertices in a disconnected part of the graph.
@@ -151,7 +151,7 @@ A student is ready for the lecture when no objective is marked "Not yet". The st
 
 Table: Level, CS2023 skill level, evidence and success criterion for each learning objective.
 
-Table 1 gives the evidence as designed. On staging, some items are simpler. Objective 2 uses four matching items instead of labelled diagrams. Objective 3 uses four multiple-choice items, so the student recognises a model rather than naming its parts. Objective 5 has one trace item.
+Table 1 gives the evidence as designed. On staging, some items are simpler. Objective 2 uses four matching items instead of labelled diagrams. Objective 3 uses three multiple-choice items, in which the student recognises a model, and one matching item (630), in which the student builds it: each part of the situation is matched to vertices, an edge, the edge's direction or the kind of graph, with spare choices. The prompt says which way a "must be finished before" arrow points, and the item counts as one situation, right only when the whole model is, so the criterion still counts situations. Its review path practises the same kind first (1306). Objective 5 has one trace item. In objective 7's fix-the-bug items, another line has as many candidate corrections as the faulty one, and hints 1 and 2 are about what the program outputs rather than about a line, so neither the choices nor the hints point at the bug and the student still has to locate it (the Analyse part of the objective). Every bug is a real BFS bug, not a break of the course's alphabetical convention.
 
 # Instructional design model and its application
 
@@ -186,7 +186,7 @@ We use Gagné's Nine Events of Instruction as a step-by-step guide to structure 
 | 1. Gain attention | A short puzzle on a campus map: "Which building can you reach in the fewest steps?" It appears before any terms are taught. |
 | 2. Inform learners of the objectives | Each module starts with "By the end of this module you can …" in plain words. The words match the objectives. |
 | 3. Stimulate recall of prior learning | A quick queue refresher that uses COS110 knowledge: add an item, remove an item and first in, first out. |
-| 4. Present the content | A narrated walkthrough that shows the graph, the queue and the visited set together. Each segment covers one idea. The walkthroughs are scripted, not yet recorded (#37); until then, worked examples and the visualiser carry this event. Every narrated video's script is also shown as text in its segment, so module 1's definitions and module 3's queue and visited rules are taught before the activities that use them, even with no video (#149). |
+| 4. Present the content | A narrated walkthrough that shows the graph, the queue and the found set together. Each segment covers one idea. The walkthroughs are scripted, not yet recorded (#37); until then, worked examples and the visualiser carry this event. Every narrated video's script is also shown as text in its segment, so module 1's definitions and module 3's queue and visited rules are taught before the activities that use them, even with no video (#149). |
 | 5. Provide learning guidance | A worked example first. Then partly completed code. Then a blank task. A four-level hint ladder is always available. |
 | 6. Elicit performance | Checkpoints where the student predicts, traces, completes or orders code before the lesson continues. |
 | 7. Provide feedback | Instant and specific feedback from trace checks and comparison with the solution. The feedback explains why an answer is wrong. |
@@ -306,7 +306,7 @@ Interactive video also supports learning. Zhang and colleagues compared video th
 
 ## Cognitive load and multimedia design
 
-Working memory is limited, so a lesson must avoid overload. BFS asks a student to track the current vertex, the queue and the visited set at the same time. Sweller showed that novices who solve problems by searching for a method can struggle to build useful knowledge, and that worked examples can help [20]. Later work asks designers to cut load that does not help learning [21]. For this reason each module starts with a worked example. It then moves to partly completed tasks and then to blank tasks. The worked examples in modules 3 and 4 also label the subgoals of BFS: initialise, take the next vertex, for each neighbour, mark and enqueue. Module 4's Parsons problem names them in its first hint. Subgoal labels improve novices' performance and transfer, and help on Parsons problems [63, 64, 65].
+Working memory is limited, so a lesson must avoid overload. BFS asks a student to track the current vertex, the queue and the found set at the same time. Sweller showed that novices who solve problems by searching for a method can struggle to build useful knowledge, and that worked examples can help [20]. Later work asks designers to cut load that does not help learning [21]. For this reason each module starts with a worked example. It then moves to partly completed tasks and then to blank tasks. The worked examples in modules 3 and 4 also label the subgoals of BFS: initialise, take the next vertex, for each neighbour, mark and enqueue. Module 4's Parsons problem names them in its first hint. Subgoal labels improve novices' performance and transfer, and help on Parsons problems [63, 64, 65].
 
 We also apply Mayer's multimedia principles [15]. We use signalling, which means the current vertex is highlighted in each step. We use segmenting, which means each segment covers one idea and the student controls the pace. We use pre-training, which means the key terms and the queue refresher come before BFS. We use coherence, which means we leave out decoration that does not teach from the material itself; the decoration we allow around it (a background glow and an optional companion beside feedback) is discussed under "Engagement and gamification". These choices cut extra load, so students can spend their effort on the algorithm.
 
@@ -337,7 +337,7 @@ Showing BFS on screen helps only if students take part. Hundhausen, Douglas and 
 | Theory | Key idea | How the application applies it |
 |---|---|---|
 | Active learning [6] | Deeper activity leads to deeper learning. | Checkpoints ask students to predict, order and complete code. Students also trace BFS in a table, one row per step. |
-| Cognitive load [21, 15] | Working memory is limited. | Worked examples first. One idea per segment. The graph, queue and visited set shown together. |
+| Cognitive load [21, 15] | Working memory is limited. | Worked examples first. One idea per segment. The graph, queue and found set shown together. |
 | Scaffolding [27, 28] | Support lets students do more than they can alone. It fades over time. | A four-level hint ladder. Parsons problems. Less help in later modules. |
 | Retrieval practice [18] | Recalling information strengthens memory. | Opening questions on earlier modules. A final mastery check. |
 | Prior knowledge [2] | New ideas link to existing ideas. | A warm-up on queues and basic Python. |
@@ -351,10 +351,10 @@ The module defines learning as "an enduring change in behavior, or in the capaci
 | Theory | Key idea | Where the application uses it | What we limit or leave out |
 |---|---|---|---|
 | Behaviourism | A response followed by a reinforcing consequence becomes more likely (the three-term contingency). Complex behaviour is shaped by reinforcing small steps. Instruction should have measurable objectives, small steps and reinforcement; mastery learning applies this [47, pp. 114–115]. | Every practice answer gets an immediate result. Points reward correct work. Tasks go in small steps from worked example to blank task. Objectives are measurable, and mastery is judged per objective. | Reinforcement does not explain understanding. Points are private and reduced after hint level 3 or 4, so that they do not become the goal (Section 7.2). |
-| Information processing (cognitivism) | Information passes from the sensory registers to a working memory of limited capacity, and is kept in long-term memory when it is organised and linked to what the learner knows. Advance organisers and reducing extraneous load apply this [47, pp. 224–226]. | The visualiser's panel keeps the current vertex, the queue and the visited set on screen, so the student does not hold them in memory. One idea per segment. Each module states its goals first, as an advance organiser. The campus graph gives one familiar context. | — |
+| Information processing (cognitivism) | Information passes from the sensory registers to a working memory of limited capacity, and is kept in long-term memory when it is organised and linked to what the learner knows. Advance organisers and reducing extraneous load apply this [47, pp. 224–226]. | The visualiser's panel keeps the current vertex, the queue and the found set on screen, so the student does not hold them in memory. One idea per segment. Each module states its goals first, as an advance organiser. The campus graph gives one familiar context. | — |
 | Constructivism | Learners construct their own understanding. The teacher structures the environment and gives scaffolding in the zone of proximal development. Discovery needs carefully arranged activities [47, pp. 274–276]. | Students predict the next vertex before BFS shows it, then compare. Scaffolding fades across modules (Section 5.3). | Pure discovery, which works poorly for novices [11]. Peer discussion, which the application cannot offer; the lecture provides it. |
 | Social cognitive theory | People learn by doing (enactively) and by observing models, reading and listening (vicariously). Self-efficacy and visible progress towards goals sustain learning. Worked examples apply these ideas [47, pp. 159–161]. | Worked examples, and the planned narrated walkthroughs, model the skill. Activities give enactive practice. Module goals, the module map and the per-objective report make progress visible. "Met with support" keeps self-efficacy honest. | Peer models: the student works alone. |
-| Transformative learning | A "disorienting dilemma" leads to critical reflection on one's assumptions and a change of perspective. Smaller predicaments set by a teacher can also start it [49]. | On a small scale: the campus puzzle comes before any teaching, and feedback names the student's misconception, for example that adding a vertex to `visited` (the set of found vertices) only when it leaves the queue lets it join the queue twice. | A 75-minute tutorial cannot transform a perspective. This theory fits the individual reflection report better than the application. |
+| Transformative learning | A "disorienting dilemma" leads to critical reflection on one's assumptions and a change of perspective. Smaller predicaments set by a teacher can also start it [49]. | On a small scale: the campus puzzle comes before any teaching, and feedback names the student's misconception, for example that adding a vertex to `found` (the set of found vertices) only when it leaves the queue lets it join the queue twice. | A 75-minute tutorial cannot transform a perspective. This theory fits the individual reflection report better than the application. |
 
 Table: The module's learning theories applied to the application [47, 48, 49].
 
@@ -367,7 +367,7 @@ Instead, we follow Universal Design for Learning (UDL), which gives every studen
 
 | UDL principle | How the application applies it |
 |---|---|
-| Multiple means of representation | Each idea appears as text, a worked example and, where relevant, code. BFS also appears in the visualiser, which draws the graph and shows the current vertex, the queue and the visited set. Narrated videos with captions and a transcript are scripted for modules 1 to 4; the player is built, but the videos are not yet recorded (#37). |
+| Multiple means of representation | Each idea appears as text, a worked example and, where relevant, code. BFS also appears in the visualiser, which draws the graph and shows the current vertex, the queue and the found set. Narrated videos with captions and a transcript are scripted for modules 1 to 4; the player is built, but the videos are not yet recorded (#37). |
 | Multiple means of action and expression |	Students answer by choosing, matching, ordering lines, completing code, predicting each BFS step in the visualiser and filling in trace tables. Labelling and building graphs by hand are not built; module 1 uses matching instead. |
 | Multiple means of engagement |	Students control their pace and ask for hints only when they choose. Skipping refreshers and worked examples after a short check is designed (SE document FR-8.1, FR-8.2) but not yet wired (#31). Two optional bonus quests, after modules 3 and 4, give extra challenge to students who want it and never hold anyone back (#87). |
 
@@ -377,7 +377,7 @@ The examination specification asks which learning styles the application caters 
 
 | Style category | Where the application provides it |
 |---|---|
-| Visual | The visualiser's drawing of the graph, with each vertex's state shown by colour, a marker and a label, and the panel showing the queue and visited set. A text drawing of the campus map in module 1. |
+| Visual | The visualiser's drawing of the graph, with each vertex's state shown by colour, a marker and a label, and the panel showing the queue, the found vertices and the visited ones. A text drawing of the campus map in module 1. |
 | Aural | Narrated videos for each walkthrough: scripted, not yet recorded (#37). |
 | Read/write | Short definitions, worked examples, code, written feedback and hints, and the per-objective report. Transcripts come with the videos. |
 | Kinesthetic | Ordering Parsons lines, completing code, matching, stepping through BFS in the visualiser and filling in trace tables. |
@@ -411,13 +411,13 @@ Every stage appears somewhere, but reflective observation is the weakest. This m
 
 ## Accessibility
 
-The application aims to meet WCAG 2.1 at level AA [45], the same target as the SE document (NFR-A1 to NFR-A4). The Table below lists the main barriers in our lesson design and how each one is removed.
+The application aims to meet WCAG 2.2 at level AA [45], the same target as the SE document (NFR-A1 to NFR-A4). WCAG 2.2 keeps every 2.1 criterion used below and adds some that matter here: a focused control must not be hidden by the sticky header (2.4.11 Focus Not Obscured), dragging must have a non-drag alternative (2.5.7 Dragging Movements) and targets must be at least 24 by 24 px (2.5.8 Target Size). The review of 13 November found 2.4.11 failing in two places (the skip link and Shift+Tab in fix-the-bug and Parsons, under the sticky header). Both are fixed: the skip link is drawn above the header, and the page's scrolling is padded by the header's height, so a control reached with Tab or Shift+Tab is scrolled clear of it. An end-to-end test checks both on a phone-sized screen. The Table below lists the main barriers in our lesson design and how each one is removed.
 
-| Barrier in our design |	Design response	| WCAG 2.1 criterion |
+| Barrier in our design |	Design response	| WCAG 2.2 criterion |
 |---|---|---|
 | BFS animations use colour to show the current, queued and visited vertices. |	Each state also has a label and a marker, so colour is never the only signal.	| 1.4.1 Use of Colour |
 | Light text or thin lines on graph diagrams.	| Text and controls meet a contrast ratio of at least 4.5:1. |	1.4.3 Contrast (Minimum) |
-| Parsons problems use drag and drop.	| Lines can also be moved with the arrow keys. Every activity works with the keyboard alone. |	2.1.1 Keyboard |
+| Parsons problems use drag and drop.	| Lines can also be moved with the arrow keys or with buttons. Every activity works with the keyboard alone. |	2.1.1 Keyboard; 2.5.7 Dragging Movements |
 | Graph diagrams cannot be read by a screen reader.	| Each graph in the content has a short text description, such as its list of vertices and edges. A drawn answer's text alternative says what the drawing shows and no more, so it never names a missed edge before a right answer or hint 4 (#155). |	1.1.1 Non-text Content |
 | Drawn answers in module 1 mark wrong and missed edges. |	Wrong edges are red, dashed and labelled "✗"; missed edges green and labelled "✓", so colour is never the only signal. Each picture has a "View full size" view and a dark-mode palette (#155). |	1.4.1 Use of Colour |
 | Narrated videos. |	The player shows captions by default and a transcript below each video. No video is recorded yet (#37). Every video's script is also shown as text in its segment, so a student who cannot hear or watch it, or who meets the segment before its video exists, gets the same teaching (#149). |	1.2.2 Captions (Prerecorded); 1.2.3 Media Alternative |
@@ -472,7 +472,7 @@ Malone and Lepper studied what makes learning environments intrinsically motivat
 | Factor | What it asks [41, pp. 15–20] | How the application meets it | What is weak or left out |
 |---|---|---|---|
 | Challenge | Goals that are obvious, visible and both short- and long-term; outcomes that are uncertain; feedback that is clear without hurting self-esteem. | Module goals (short term) and "ready for the lecture" (long term). Predicting the next vertex has an uncertain outcome. Feedback explains, never scolds, and there are no timers. | Difficulty does not vary with the student's performance. |
-| Curiosity | Sensory curiosity from sound and visual effects; cognitive curiosity from showing that the learner's knowledge is incomplete or inconsistent. | The campus puzzle comes before any teaching. The visualiser animates each step. Feedback that names a misconception shows the student where their idea fails. | The narrated videos, the main sensory element, are not yet recorded (#37). |
+| Curiosity | Sensory curiosity from sound and visual effects; cognitive curiosity from showing that the learner's knowledge is incomplete or inconsistent. | The campus puzzle comes before any teaching. It is a diagnostic item, not practice: a wrong guess costs no medal or result, so showing a gap is safe, not a loss. The visualiser animates each step. Feedback that names a misconception shows the student where their idea fails. | The narrated videos, the main sensory element, are not yet recorded (#37). |
 | Control | Contingency (outcomes depend on the learner's responses), choice and power. | Feedback and hints respond to each answer. The visualiser can be played, paused, stepped forward and back, reset and slowed down. Hints are by choice. The student chooses which module to start, and can test out of a module by passing its quick check. | Inside a module the steps come in a fixed order, and skipping needs a passed check, not only the student's choice: deliberately, because novices misjudge what they know [73, 74]. |
 | Fantasy | Imagined situations; in educational games, an accurate simulation rather than imitation. | The campus storyline: on the first day, find the route with the fewest walkways to friends waiting at the Green. The routing problem is real, so the fantasy is a simulation. | It is a light storyline, not a game world. |
 | Cooperation | Group work towards a clear goal. | None in the application. | Left to the COS212 lecture and tutorials. |
@@ -560,7 +560,7 @@ The lecture divides each assessment criterion into a pass descriptor and differe
 | Objective and criterion | Pass descriptor | Limited | Satisfactory | Good | Excellent |
 |---|---|---|---|---|---|
 | 5. Traces BFS on an unseen graph | Correct queue, visited set and next vertex at every step, with at most one error. | Errors from the first steps, such as stack order or adding a vertex twice. | Meets the pass descriptor after hint level 3 or 4. | Meets it without hint level 3 or 4. | Meets it with no error, and can explain why the queue gives the level-by-level order. |
-| 6. Implements BFS | The ordered and completed code matches the solution. | Lines in the wrong structure, such as adding a vertex to `visited` (the set of found vertices) only when it leaves the queue. | Matches the solution after hint level 3 or 4. | Matches it without hint level 3 or 4. | Matches it at the first check, and rejects every distractor line. |
+| 6. Implements BFS | The ordered and completed code matches the solution. | Lines in the wrong structure, such as adding a vertex to `found` (the set of found vertices) only when it leaves the queue. | Matches the solution after hint level 3 or 4. | Matches it without hint level 3 or 4. | Matches it at the first check, and rejects every distractor line. |
 | 7. Tests and debugs BFS | Both faulty versions corrected, and a test chosen that exposes each bug. | Fixes one bug, or chooses tests that both versions pass. | Meets the pass descriptor after hint level 3 or 4. | Meets it without hint level 3 or 4. | Meets it, and can name the misconception behind each bug. |
 
 Table: Pass and differentiated descriptors for objectives 5 to 7 [52].
@@ -601,7 +601,7 @@ Content authors write each message in this form; the authoring guide (`api/app/s
 
 Example for a trace error: “Not quite. You added C to the queue, but C has already been found: it is still waiting in the queue. BFS adds only vertices it has not found yet. Check the neighbours of B again.”
 
-Feedback on code is given line by line. The student sees which lines or blanks are wrong and a message for each one, for example: “Vertex B was visited twice. Is it added to the `visited` set, which holds every vertex found so far, when it joins the queue?” A wrong answer at a video checkpoint can be tried again with hints, and the video continues once the answer is correct.
+Feedback on code is given line by line. The student sees which lines or blanks are wrong and a message for each one, for example: “Vertex B was visited twice. Is it added to the `found` set, which holds every vertex found so far, when it joins the queue?” A wrong answer at a video checkpoint can be tried again with hints, and the video continues once the answer is correct.
 
 Feedback on a graph question in module 1 is also drawn (#155). Each practice item shows a picture of its situation: the campus map, the bus map, the worked example's graph, the P, Q, R, S graph and the four directed-or-undirected panels; the closing task has none, because a picture would hint at the answer. After a wrong answer the student's own answer is drawn as a graph beside the map, and an edge that is not on the map is marked "✗ no such walkway". After a right answer, or once hint 4 is open, it is drawn beside the correct graph, with the walkways the student missed marked "✓ walkway on the map". Placing the student's graph beside the situation follows Mayer's spatial contiguity principle [15]. The drawing is made in the browser from the student's own answer and the per-row results, so the correct answer is not sent before it is earned.
 
@@ -610,7 +610,7 @@ Feedback on a graph question in module 1 is also drawn (#155). Each practice ite
 Every activity offers a four-level hint ladder. Hints are shown one level at a time and only when the student asks:
 
 1. Nudge: reminds the student of the key idea. Example: “Which vertex has been in the queue the longest?”
-2. Targeted hint: points to the exact step or line. Example: “Look at where a vertex is added to the visited set.”
+2. Targeted hint: points to the exact step or line. Example: “Look at where a vertex is added to the found set.”
 3. Partial solution: shows part of the answer, such as the next state of the queue or one key line of code.
 4. Worked solution: shows the full answer with an explanation of each step. On a graph question in module 1 it also offers the correct graph (#155). Mastery items never show a correct graph.
 
@@ -651,7 +651,7 @@ The lecture divides ADDIE's Evaluate phase into formative evaluation, done while
 
 Three kinds of formative evaluation have run while the application was built, and each changed it.
 
-**Accessibility, automatically.** The end-to-end tests run axe-core on every page and on every activity kind (unanswered, with hints, wrong and right), in the light and the dark theme, in Chromium, Firefox and WebKit, and check the keyboard path and visible focus through a module. They report no WCAG 2.1 AA violations; the failures they found while being written (focus rings, contrast in dark mode, a page caught mid-fade) were fixed before they merged (SE document §14.1).
+**Accessibility, automatically.** The end-to-end tests run axe-core on every page and on every activity kind (unanswered, with hints, wrong and right), in the light and the dark theme, in Chromium, Firefox and WebKit, and check the keyboard path and visible focus through a module. They check the WCAG 2.2 A and AA rules axe-core has, and report no violations; the failures they found while being written (focus rings, contrast in dark mode, a page caught mid-fade) were fixed before they merged (SE document §14.1).
 
 **The content, automatically.** Every answer in the content is checked by running it: traces through the BFS engine, code through the checkers. The mastery items are also checked for cues a student could use without the skill: dozens of surface strategies (always the longest option, the option that repeats the question's words, the one that echoes the hints, and combinations of them) must not meet any objective. Several items were rewritten when one did.
 
@@ -662,7 +662,7 @@ Three kinds of formative evaluation have run while the application was built, an
 | Visibility of system status | 4 | Progress on the module map disagreed with the module page; every tab was titled "Ctrl Academy". Both fixed. |
 | Match with the real world | 2 | A review path showed raw Markdown (code fences, table pipes) to students. Fixed. |
 | User control and freedom | 3 | Badges could only be turned off deep in the profile; now from the badge note itself. After logging in, a student lost the page they had asked for. Fixed. |
-| Consistency and standards | 6 | Two button styles (square and rounded), mixed fonts, a 404 page outside the app's frame. Fixed. |
+| Consistency and standards | 6 | A 404 page outside the app's frame: fixed. Two button kits and mixed fonts: not fixed. The review of 13 November found primary buttons at four heights (28 to 44 px) from two kits, sometimes on one screen, and the code font (JetBrains Mono) never loading, so code shows in the system's monospace font. Moving the student screens to one kit is open work (SE document §15.5). |
 | Recognition rather than recall | 3 | The report's verdict was small grey text, with no next step; it now has a tally and one button to the next step. |
 | Flexibility and efficiency | 5 | On a large monitor the page filled a third of the screen; it now scales and uses two columns. Staff content lists have no search (open). |
 | Aesthetic and minimalist design | 8 | A header of outlined buttons; the module goals repeated on every segment; a public visitor met a bare login form instead of a landing page. Fixed. |
@@ -762,6 +762,20 @@ Applying the module's frameworks to the design (Sections 4.5 to 4.8, 5.5, 6.1, 7
 - **Our process is close to SAM.** We named ADDIE, but the platform was built in short design–build–review cycles. The content has had only one such cycle so far (Section 4.6).
 
 If the pilot shows that our choices do not work as intended, the first thing we would change is the review path: if students still score "Not yet" after it, the review segment needs a different representation of the idea, not only a new worked example.
+
+## Left out, and future work
+
+The research-grounded review of staging on 13 November found that the application leaves out some things the research behind it calls for. Each is listed with the reason it matters, so that the gap is stated rather than hidden. The visualiser's missing "found" state was fixed after that review: it now shows **Found (has joined the queue)** and **Visited (has left the queue)** as two rows, and the code in modules 4 to 6 calls its set `found`, so the picture and the program name the same state the same way [85].
+
+- **Generative prediction in the visualiser.** It asks only which vertex comes next, which the queue panel already shows; asking which vertices join the queue now would make the student construct the next state, the engagement that makes a visualisation teach [6, 9, 16].
+- **Diagnostic routing in module 0.** The warm-up's answers don't choose the refreshers (FR-8.1): every student sees all three, so a student who already knows queues reads what they don't need, which can hold back learners with more prior knowledge [10, 72].
+- **Stepped worked examples.** Each worked example appears whole on one page; revealing it one labelled step at a time, and fading the steps, is how worked examples are meant to lower load [62].
+- **Review paths that adapt to the error.** A "not yet" objective gets the same review path whatever the mistake; feedback works best when it addresses the student's own error and its cause [36, 44].
+- **A reflection step.** Nothing asks the student how sure they are, or what was least clear (a "muddiest point"), so they can't check their confidence against their result, and novices tend to overrate what they know [73, 74]; Kolb's reflective observation stays the weakest stage (Section 6.1).
+- **A spaced, hint-free post-test.** All retrieval happens in one sitting; only a delayed test without hints shows what lasts [18, 60, 61] (Section 8).
+- **A lecturer view of each student's results beyond multiple choice.** The readiness page counts wrong options for multiple-choice items only, so the lecturer can't see, for example, how many students put a vertex in the queue twice in a trace; that is the fact the lecture most needs to build on [36].
+- **Recorded videos.** The narrated videos are scripted but not recorded (#37); every video segment shows its narration as text instead, which loses narration with a moving picture, the combination the multimedia principles favour [15].
+
 
 # Generative AI acknowledgement and prompt record
 
@@ -974,7 +988,7 @@ Marcelo Pias, Susan Reiser, Christian Servin, Rahul Simha, Titus Winters, and Qi
 
 [44]	Valerie J. Shute. Focus on formative feedback. *Review of Educational Research*, 78(1):153–189, 2008.
 
-[45]	World Wide Web Consortium. *Web Content Accessibility Guidelines* (WCAG) 2.1. W3C Recommendation, 2018, updated 2023. https://www.w3.org/TR/WCAG21/
+[45]	World Wide Web Consortium. *Web Content Accessibility Guidelines* (WCAG) 2.2. W3C Recommendation, 2023. https://www.w3.org/TR/WCAG22/
 
 [46]	Neil D. Fleming. *Teaching and Learning Styles: VARK Strategies.* N. D. Fleming, Christchurch, New Zealand, 2001.
 
@@ -1054,5 +1068,7 @@ Marcelo Pias, Susan Reiser, Christian Servin, Rahul Simha, Titus Winters, and Qi
 [83]	B. P. Bailey and J. A. Konstan. On the need for attention-aware systems: Measuring effects of interruption on task performance, error rate, and affective state. *Computers in Human Behavior*, 22(4):685–708, 2006. https://doi.org/10.1016/j.chb.2005.12.009
 
 [84]	D. C. McFarlane. Comparison of four primary methods for coordinating the interruption of people in human-computer interaction. *Human-Computer Interaction*, 17(1):63–139, 2002.
+
+[85]	J. Sorva. Notional machines and introductory programming education. *ACM Transactions on Computing Education*, 13(2):8:1–8:31, 2013. https://doi.org/10.1145/2483710.2483713
 
 </div>

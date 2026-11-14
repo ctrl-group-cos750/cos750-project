@@ -43,3 +43,13 @@ export function stateForVertex(input: { vertexId: VertexId; frame: BfsFrame }): 
   if (input.frame.visited.includes(input.vertexId)) return 'visited'
   return 'unvisited'
 }
+
+/** Every vertex BFS has found: those that have left the queue, then those still in it, in the
+ * order they joined. This is the set the module 4 code calls `found` (a vertex goes in it when it
+ * joins the queue), so the panel and the code name the same two states the same way (Sorva 2013:
+ * the picture must match the machine that runs the code). */
+export function foundVertices(input: { frame: BfsFrame }): VertexId[] {
+  const found = [...input.frame.traversal]
+  for (const vertex of input.frame.queue) if (!found.includes(vertex)) found.push(vertex)
+  return found
+}

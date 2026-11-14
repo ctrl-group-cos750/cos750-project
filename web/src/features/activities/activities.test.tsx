@@ -922,6 +922,23 @@ describe('the mastery check (#144)', () => {
     expect(screen.queryByRole('button', { name: 'Show next hint' })).toBeNull()
   })
 
+  it('says when an earlier version of the question was answered instead', () => {
+    render(
+      <ActivityRenderer
+        activity={{ ...checkItem, answered: true, answeredEarlierVersion: true }}
+        result={undefined}
+        submitting={false}
+        onSubmit={vi.fn<(submitted: Submission) => Promise<void>>()}
+        requestHint={vi.fn<(activityId: number) => Promise<Hint>>()}
+        loadHints={() => Promise.resolve([])}
+      />,
+    )
+    expect(screen.getByText('Answered in an earlier version')).toBeInTheDocument()
+    expect(screen.getByText(/Your answer to the earlier version counts/)).toBeInTheDocument()
+    expect(screen.queryByText('Answer recorded')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Check answer' })).not.toBeInTheDocument()
+  })
+
   it('says an item answered before is answered, without showing the form again', async () => {
     render(
       <ActivityRenderer

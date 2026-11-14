@@ -137,7 +137,7 @@ test('module 4: a code activity answered wrong, then right, then the rest of the
   const segment = module.segments[index]
   const region = segmentRegion(page, segment.title)
   const a = activity(segment.activityId ?? 0)
-  const next = page.getByRole('navigation', { name: 'Segment navigation' }).getByRole('button', {
+  const next = page.getByRole('navigation', { name: 'Step navigation' }).getByRole('button', {
     name: /^Next/,
   })
   const blocked = page.locator('#segment-blocked')
@@ -178,7 +178,7 @@ test('module 1: two wrong answers and the student may move on, marked to look at
   await page.goto(`/modules/${module.id}`)
   const segment = module.segments[index]
   const a = activity(segment.activityId ?? 0)
-  const next = page.getByRole('navigation', { name: 'Segment navigation' }).getByRole('button', {
+  const next = page.getByRole('navigation', { name: 'Step navigation' }).getByRole('button', {
     name: /^Next/,
   })
   const status = page.locator('#segment-blocked')
@@ -195,7 +195,10 @@ test('module 1: two wrong answers and the student may move on, marked to look at
   )
   await expect(next).not.toHaveAttribute('aria-disabled', 'true')
   await next.click()
-  await expect(page.getByText(`Segment ${index + 2} of`)).toBeVisible()
+  // Steps count only the segments shown: support the student isn't shown comes before this one
+  // now that module 1's opening puzzle is a diagnostic item, not practice.
+  const shown = module.segments.filter((s) => s.shown !== false).map((s) => s.id)
+  await expect(page.getByText(`Step ${shown.indexOf(segment.id) + 2} of`)).toBeVisible()
   // Moving on earns nothing: the activity is still not right.
   expect(await points()).toBe(before)
   // It is listed to look at again, and the link opens it (#215 review).
@@ -243,7 +246,7 @@ test('a new student tests out of module 3 with its quick check, from the map', a
   await expect(page).toHaveURL(/\/modules\/4$/)
   await page.goto('/')
   const card = page.getByRole('link', { name: /Meet BFS/ })
-  await expect(card).toContainText('tested out')
+  await expect(card).toContainText('passed the quick check')
   await expect(page.getByText('Already know module 3?')).toHaveCount(0)
   // The result stays one link away (#215 review).
   await expect(

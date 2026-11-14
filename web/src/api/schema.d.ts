@@ -1340,6 +1340,11 @@ export interface components {
        */
       answered: boolean
       /**
+       * Answeredearlierversion
+       * @default false
+       */
+      answeredEarlierVersion: boolean
+      /**
        * Reviewcheck
        * @default false
        */
@@ -2173,7 +2178,9 @@ export interface components {
      *     finished, the module finished with at least one right at the first attempt without hint 3 or
      *     4: not "bronze", which is an objective badge's level),
      *     and `headingFor`, what the answers so far are on course for. Never counts time or speed.
-     *     `objectives` are the learning objectives its activities practise.
+     *     `objectives` are the learning objectives its activities practise. `answered` and `total` count
+     *     the same activities: on a finished module, those it was judged on (the ones answered before it
+     *     was finished), so `answered` is never more than `total`.
      */
     ModuleMedalOut: {
       /** Moduleid */

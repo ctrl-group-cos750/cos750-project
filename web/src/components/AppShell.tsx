@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useLayoutEffect, useRef, type ReactNode } from 'react'
 import { Link, useInRouterContext } from 'react-router'
 import mark from '../mark.svg'
 import styles from './AppShell.module.css'
@@ -18,6 +18,40 @@ export type AppShellProps = {
   children: ReactNode
 }
 
+/**
+ * Keeps `--header-h` on the root element equal to the sticky header's height, as it wraps or the
+ * text grows. base.css pads the page's scrolling by it, so a control reached with Tab or Shift+Tab
+ * is scrolled clear of the header instead of under it (WCAG 2.2 2.4.11 Focus Not Obscured).
+ * Firefox scrolls a focused control only when it is out of view, so one partly under the header
+ * stayed there: a control that gets focus under the header is scrolled clear of it here too.
+ */
+function useHeaderHeight() {
+  const header = useRef<HTMLElement>(null)
+  useLayoutEffect(() => {
+    const element = header.current
+    const root = document.documentElement
+    if (!element) return
+    const measure = () => root.style.setProperty('--header-h', `${element.offsetHeight}px`)
+    measure()
+    const clear = (event: FocusEvent) => {
+      const target = event.target
+      if (!(target instanceof HTMLElement) || element.contains(target)) return
+      if (getComputedStyle(target).position === 'fixed') return // the skip link, drawn above it
+      const under = element.getBoundingClientRect().bottom - target.getBoundingClientRect().top
+      if (under > 0) window.scrollBy({ top: -(under + 8), behavior: 'instant' })
+    }
+    document.addEventListener('focusin', clear)
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure)
+    observer?.observe(element)
+    return () => {
+      observer?.disconnect()
+      document.removeEventListener('focusin', clear)
+      root.style.removeProperty('--header-h')
+    }
+  }, [])
+  return header
+}
+
 /** The frame around every signed-in page: header, then the page in <main>. */
 export function AppShell({
   nav,
@@ -26,6 +60,7 @@ export function AppShell({
   surfaces = 'solid',
   children,
 }: AppShellProps) {
+  const header = useHeaderHeight()
   // A client-side link inside the app, so the logo doesn't reload everything; a plain one in
   // the UI kit and the component tests, which have no router.
   const inRouter = useInRouterContext()
@@ -41,7 +76,7 @@ export function AppShell({
       <a className={styles.skip} href="#main">
         Skip to content
       </a>
-      <header className={styles.header}>
+      <header ref={header} className={styles.header}>
         <div className={`${styles.bar} ${styles.wide}`}>
           {inRouter ? (
             <Link to="/" className={styles.brand}>

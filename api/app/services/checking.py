@@ -256,12 +256,12 @@ def _impossible_queue(row: TraceRow, left: set[str]) -> str | None:
     that has already left the queue (`QUEUE_AFTER_VISIT`). `left` is the vertices the student's
     own trace took off the queue: the current vertex of every row before this one, and this
     row's own once its order says it has left (so a slip in this row's current vertex alone gets
-    that column's hint). Such a
-    row is wrong on every reading. Not against the visited column: module 4's Python `visited`
-    set holds the vertices found, queued ones included (TraceTable.tsx warns of it), so a correct
-    student who writes that set there must not be told this misconception; their visited column
-    is still wrong, and its own hint says why (review of 13 Nov on #221, item 1502). Nor against
-    the order column, so a slip there gets the order column's hint."""
+    that column's hint). Such a row is wrong on every reading. Not against the visited column:
+    module 4's Python `found` set (called `visited` before the review of 13 Nov) holds the vertices
+    found, queued ones included (TraceTable.tsx warns of it), so a correct student who writes that
+    set there must not be told this misconception; their visited column is still wrong, and its own
+    hint says why (review of 13 Nov on #221, item 1502). Nor against the order column, so a slip
+    there gets the order column's hint."""
     if len(set(row.queue)) < len(row.queue):
         return QUEUE_TWICE
     if set(row.queue) & left:

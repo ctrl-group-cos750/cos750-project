@@ -27,12 +27,6 @@ now, ID document §7.2 and ARCS confidence, and practice is where mistakes are e
 4 seen in an earlier round still counts against a later answer, as everywhere (FR-2.8). Points and
 medals keep the first attempt ever, so a restart can't win back what guessing lost there (FR-9.6).
 
-**On your own** is real work under the evidence rule every reward shares (FR-9.6,
-`rewards.first_answers`, the query module points use through `real_work_on`, so the two can't
-drift apart): the student's first attempt ever at the question was right, before hint 3 or 4 in
-any round. A right answer after a wrong one never counts, and a restart doesn't make a new first
-attempt.
-
 The counts behind the level are sent too, for the profile to show on request. Practice items are
 the module activities tagged with the objective whose purpose is practice or retrieval, that every
 student meets on the way through a module: on a module segment that is not extra support (FR-8.4),
@@ -60,6 +54,15 @@ Then (`medal_for`, the one place the rule lives):
 - **none**: the module finished without one (every answer wrong, moved on after two tries): the
   same line as the module's points and First Module badge (app/services/modules.py
   `reward_module`), so walking through a module earns nothing (#215 review).
+
+A module the student worked through to the end is judged on the activities they answered on the
+way. An activity added to it afterwards isn't one they were asked, so it can't lower the medal they
+finished with (review of #223, Must fix 2: module 1's warm-up question left the medal set and a
+graph-words item joined it, and every finished student's gold became bronze). Working through a
+module answers every activity it asks for, so for anyone who finished it since, that is all of
+them. An activity first answered after the module was finished doesn't join it either: going back
+to an item that joined later is more work, and more work never lowers a medal (review of #223, new
+finding 2: one wrong answer to the new item 194 turned a kept gold into bronze).
 
 **Where to improve it** (#214). Each objective says where the student can work on it, worked
 out here from the content so the web doesn't guess (`improve`):
@@ -97,6 +100,7 @@ activities already answered.
 from bisect import bisect_left
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Literal, cast
 
 from sqlalchemy import Exists, exists, select
@@ -233,6 +237,12 @@ class _Answers:
     right: set[int]
     on_own: set[int]
     first_time: set[int]
+    first_at: dict[int, datetime]  # when each was first answered
+
+
+def _utc(moment: datetime) -> datetime:
+    """`moment` as an aware time: SQLite gives back naive UTC times, Postgres aware ones."""
+    return moment if moment.tzinfo is not None else moment.replace(tzinfo=UTC)
 
 
 def _hint_before(level: int) -> Exists:
@@ -280,12 +290,13 @@ def _answers(
     profile and Practised (see "Where the student stands now")."""
     ids = [a.id for a in items]
     if not ids:
-        return _Answers(set(), set(), set(), set())
+        return _Answers(set(), set(), set(), set(), {})
     rows = session.execute(
         select(
             Attempt.id,
             Attempt.activity_id,
             Attempt.correct,
+            Attempt.created_at,
             (Attempt.hint_level < SUPPORT_LEVEL) & ~_hint_before(SUPPORT_LEVEL),
             (Attempt.hint_level == 0) & ~_hint_before(1),
         )
@@ -302,16 +313,21 @@ def _answers(
     # then right (guessing until right) is never on your own (#222 review, A1). Per round, with
     # `latest_round`: a later round's first attempt replaces an earlier round's.
     first: dict[int, tuple[int, bool, bool]] = {}
-    for attempt, activity, correct, unsupported, unhinted in rows:
+    # When each activity was first answered, in any round: a finished module's medal is judged on
+    # the activities answered before it was finished (`module_medals`; review of #223).
+    first_at: dict[int, datetime] = {}
+    for attempt, activity, correct, created, unsupported, unhinted in rows:
+        first_at.setdefault(activity, _utc(created))
         at = round_of(activity, attempt)
         if activity not in first or at > first[activity][0]:
             ok = bool(correct) and bool(unsupported)
             first[activity] = (at, ok, ok and bool(unhinted))
     return _Answers(
         answered=set(first),
-        right={a for _, a, correct, _, _ in rows if correct},
+        right={a for _, a, correct, _, _, _ in rows if correct},
         on_own={a for a, (_, own, _) in first.items() if own},
         first_time={a for a, (_, _, unhinted) in first.items() if unhinted},
+        first_at=first_at,
     )
 
 
@@ -527,15 +543,17 @@ def module_medals(session: Session, user_id: int) -> list[ModuleMedal]:
             Segment.activity_id.is_not(None),
         )
     ).all()
-    statuses: dict[int, str] = {
-        row.module_id: row.status
-        for row in session.execute(
-            select(ModuleProgress.module_id, ModuleProgress.status).where(
-                ModuleProgress.user_id == user_id,
-                ModuleProgress.status.in_(("complete", "tested_out")),
-            )
+    statuses: dict[int, str] = {}
+    completed_at: dict[int, datetime] = {}
+    for row in session.execute(
+        select(ModuleProgress.module_id, ModuleProgress.status, ModuleProgress.completed_at).where(
+            ModuleProgress.user_id == user_id,
+            ModuleProgress.status.in_(("complete", "tested_out")),
         )
-    }
+    ):
+        statuses[row.module_id] = row.status
+        if row.completed_at is not None:
+            completed_at[row.module_id] = _utc(row.completed_at)
     complete = set(statuses)
     # A module passed through its quick check (FR-8.2) has a medal too (#214), and keeps it once
     # worked through (the status is then "complete"): the better of the two.
@@ -552,17 +570,23 @@ def module_medals(session: Session, user_id: int) -> list[ModuleMedal]:
         )
         if not mine:
             continue
-        first = sum(1 for a in mine if a in got.first_time)
-        own = sum(1 for a in mine if a in got.on_own)
         done = [a for a in mine if a in got.answered]
         finished = module.id in complete
+        # Judged on what the student was asked when they worked through it (see the docstring).
+        asked = mine
+        if statuses.get(module.id) == "complete" and done:
+            asked = done
+            if (end := completed_at.get(module.id)) is not None:
+                asked = [a for a in done if got.first_at[a] <= end] or done
+        first = sum(1 for a in asked if a in got.first_time)
+        own = sum(1 for a in asked if a in got.on_own)
         so_far = medal_for(
             len(done),
             sum(1 for a in done if a in got.first_time),
             sum(1 for a in done if a in got.on_own),
         )
         medal = (
-            medal_for(len(mine), first, own, tested_out=module.id in tested_out)
+            medal_for(len(asked), first, own, tested_out=module.id in tested_out)
             if finished
             else None
         )
@@ -572,8 +596,10 @@ def module_medals(session: Session, user_id: int) -> list[ModuleMedal]:
                 complete=finished,
                 first_time=first,
                 on_your_own=own,
-                answered=len(done),
-                total=len(mine),
+                # Over the same activities as `total`, so it is never more: a finished module is
+                # judged on those it asked (review of #223, nit 4).
+                answered=sum(1 for a in asked if a in got.answered),
+                total=len(asked),
                 medal=medal,
                 heading_for=medal if finished else so_far if done else None,
                 objectives=tuple(

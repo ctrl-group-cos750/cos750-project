@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { toBfsScenario } from './bfs.api.ts'
+import { foundVertices } from './bfs.types.ts'
 
 describe('toBfsScenario', () => {
   it('creates an initial frame before the server BFS steps', () => {
@@ -42,5 +43,20 @@ describe('toBfsScenario', () => {
       visited: ['A'],
       traversal: ['A'],
     })
+  })
+})
+
+describe('foundVertices', () => {
+  // The code's `found` set (module 4): a vertex is found when it joins the queue, visited when it
+  // leaves. The visualiser shows both, so its picture matches the code (review 13 Nov, High 3).
+  it('is every vertex that has joined the queue: those that left it, then those still in it', () => {
+    expect(
+      foundVertices({
+        frame: { current: 'A', queue: ['B', 'C'], visited: ['A'], traversal: ['A'] },
+      }),
+    ).toEqual(['A', 'B', 'C'])
+    expect(
+      foundVertices({ frame: { current: null, queue: ['A'], visited: [], traversal: [] } }),
+    ).toEqual(['A'])
   })
 })

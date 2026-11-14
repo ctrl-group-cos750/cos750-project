@@ -24,8 +24,8 @@ const EN_DASH = '–'
 const ARROW = '→'
 const LIST_COLUMNS: readonly { column: ListColumn; heading: string }[] = [
   { column: 'queue', heading: 'Queue after the step' },
-  // Visited here means "has left the queue", as module 3 and the BFS engine define it; the header
-  // says so, because module 4's Python `visited` set holds the vertices found instead.
+  // Visited means "has left the queue", as module 3, the BFS engine and modules 4 to 6 use it. A
+  // vertex is found earlier, when it joins the queue: the code's `found` set. The header says which.
   { column: 'visited', heading: 'Visited (has left the queue)' },
   { column: 'order', heading: 'Order so far' },
 ]
@@ -226,6 +226,11 @@ export function TraceTable({
       <p className="m-0 text-sm">
         <span className="font-medium">{directed ? 'Directed' : 'Undirected'} graph.</span> Edges:{' '}
         <span className="font-mono [overflow-wrap:anywhere]">{edgeText || 'none'}</span>
+      </p>
+      <p className="m-0 text-sm">
+        A vertex is <strong>found</strong> when it joins the queue and <strong>visited</strong> when
+        it leaves it. The found vertices are the visited ones plus those still in the queue: the
+        code’s <code>found</code> set.
       </p>
       <p id={`${baseId}-how`} className="m-0 text-sm text-muted-foreground">
         Add one step each time a vertex leaves the queue. Type the vertices of each list separated

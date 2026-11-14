@@ -9,7 +9,7 @@ export function indentLabel(text: string): string {
 }
 
 /** How a line is named to a screen reader: its code, then its indentation, e.g.
- * "“if n not in visited:” (indent level 3)". Two lines that differ only by indentation get
+ * "“if n not in found:” (indent level 3)". Two lines that differ only by indentation get
  * different names. */
 export function lineName(text: string): string {
   const level = indentLabel(text)

@@ -61,7 +61,7 @@ uses a Chromium of your own (a machine that can't download Playwright's).
 | `student-path.spec.ts` | Register, log out and in, refused passwords, every demo account's stage, module 0 on screen, a code activity wrong then right (module 4) |
 | `video-checkpoint.spec.ts` | A video stops at its checkpoint, feedback, the hint ladder, resume; a passed checkpoint doesn't ask again |
 | `mastery.spec.ts` | The report (ready, not yet), the mastery check on screen (all seven kinds), a review path that makes the student ready |
-| `accessibility.spec.ts` | No WCAG 2.1 AA violations (axe-core) on every page, staff pages included, and each activity kind unanswered, wrong with hints, and right; light and dark |
+| `accessibility.spec.ts` | No WCAG 2.2 AA violations (axe-core) on every page, staff pages included, and each activity kind unanswered, wrong with hints, and right; light and dark |
 | `keyboard.spec.ts` | Module 0 with the keyboard only; visible focus on every control |
 | `mobile.spec.ts` | Modules 0, 1, 3 and 6 at 360 px, every activity answered; the pages around them |
 | `no-timers.spec.ts` | Nothing counts down or expires in two hours: a checkpoint, a module activity, each activity kind |

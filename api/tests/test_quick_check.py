@@ -329,6 +329,11 @@ def test_two_wrong_answers_let_the_student_move_on_without_a_reward(
         for s in client.get("/api/modules/1").json()["segments"]
         if s["id"] == segment.id
     )
+    # Module 1 opens with a diagnostic puzzle (101): one answer, right or wrong, lets the student on.
+    puzzle = committed.get_one(Activity, 101)
+    assert puzzle.purpose == "diagnostic"
+    guess = {"submitted": wrong_answer(puzzle)}
+    assert client.post("/api/activities/101/attempts", json=guess).status_code == 201
     for position in range(1, index + 1):
         client.post("/api/modules/1/position", json={"segmentPosition": position})
     body = {"submitted": wrong_answer(activity)}

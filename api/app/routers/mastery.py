@@ -24,6 +24,7 @@ from app.services.mastery import (
     evaluate,
     is_ready,
     review_items,
+    stood_in,
 )
 
 router = APIRouter(prefix="/api/me", tags=["mastery"])
@@ -38,7 +39,9 @@ def _answers(
     """Each objective's module 6 items with the student's first answer and its result, once the
     check is finished (every module 6 item answered); none before, so nothing is given away
     early (#144). The result is the one stored with the attempt, as marked (after a re-grade,
-    the new mark)."""
+    the new mark). An answer to a replaced item that stands in for its replacement
+    (app/services/mastery.py, `REPLACES`) is listed under the replacement, which the link opens:
+    the old item is no longer part of the course."""
     evidence = [i for o in outcomes for i in o.check.evidence]
     if not evidence or not check_finished(session, user_id):
         return {}
@@ -46,19 +49,31 @@ def _answers(
         select(Attempt, Activity)
         .join(Activity, Activity.id == Attempt.activity_id)
         .where(Attempt.id.in_(evidence))
-        .order_by(Activity.id)
     ).all()
+    standing_in = stood_in(session, evidence)
+    replacements = {
+        a.id: a
+        for a in session.scalars(select(Activity).where(Activity.id.in_(standing_in.values())))
+    }
+    # Before the replacement is in the course, the old item is still itself.
+    shown = sorted(
+        (
+            (replacements.get(standing_in.get(attempt.id, 0), activity), attempt, activity)
+            for attempt, activity in rows
+        ),
+        key=lambda row: row[0].id,
+    )
     found: dict[int, list[MasteryAnswerOut]] = {}
-    for attempt, activity in rows:
+    for item, attempt, activity in shown:
         detail = attempt.detail or {}
         notes: list[str] = []
         for part in detail.get("parts") or []:
             message = part.get("message")
             if not part.get("correct") and message and message not in notes:
                 notes.append(str(message))
-        found.setdefault(activity.objective_id or 0, []).append(
+        found.setdefault(item.objective_id or 0, []).append(
             MasteryAnswerOut(
-                activity_id=activity.id,
+                activity_id=item.id,
                 title=activity.title,
                 correct=attempt.correct,
                 score=attempt.score,

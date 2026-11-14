@@ -284,9 +284,14 @@ describe('what the companion says', () => {
 
   it('never says "without a hint" for a right answer after a wrong one, which counts for no medal', () => {
     expect(answerLine(result(false)).pose).toBe('encouraging')
-    expect(answerLine(result(true))).toEqual({ pose: 'pleased', text: RIGHT_AFTER_WRONG })
-    // Another activity, right at its first attempt, is still right without a hint.
-    expect(answerLine(result(true, { activityId: 8 })).text).toBe('Right, without a hint.')
+    // The API says the first answer was wrong, so this holds after a reload or a restart too.
+    expect(answerLine(result(true, { afterWrongFirst: true }))).toEqual({
+      pose: 'pleased',
+      text: RIGHT_AFTER_WRONG,
+    })
+    // Right at the first attempt: still right without a hint, whatever came before in this tab.
+    expect(answerLine(result(false)).pose).toBe('encouraging')
+    expect(answerLine(result(true)).text).toBe('Right, without a hint.')
   })
 
   it('sums up a quick check and a finished module', () => {

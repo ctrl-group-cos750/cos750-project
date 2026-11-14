@@ -45,7 +45,7 @@ from sqlalchemy.orm import Session
 from app.models import Activity, Attempt, Checkpoint, Module, Segment, User, Video
 from app.models.user import DEMO_EMAIL_DOMAIN
 from app.passwords import password_problem
-from app.routers.activities import MASTERY_HINT_LIMIT
+from app.routers.activities import _hint_limit
 from app.schemas.activities import (
     ChooseTestsConfig,
     ChooseTestsSolution,
@@ -67,7 +67,7 @@ from app.services.attempts import hint_level_seen, record_attempt, reveal_next_h
 from app.services.bfs import run_bfs
 from app.services.checking import check_activity
 from app.services.history import delete_history
-from app.services.mastery import evaluate, in_check, is_ready
+from app.services.mastery import evaluate, is_ready
 from app.services.modules import ModuleLocked, done_segments, get_module_detail, save_position
 
 DEMO_FILE = Path(__file__).parent / "demo" / "accounts.json"
@@ -199,8 +199,9 @@ def _rebuild(session: Session, account: DemoAccount, password_hash: str) -> str 
     for n, step in enumerate(account.steps, start=1):
         for activity in _questions(session, step):
             where = f"{account.email}, step {n}, activity {activity.id}"
-            # The hints route's limit (app/routers/activities.py): a student can't see more.
-            limit = MASTERY_HINT_LIMIT if in_check(activity) else None
+            # The hints routes' own limit (app/routers/activities.py `_hint_limit`), for this demo
+            # student: a student can't see more, whatever rule sets it (#222 re-review, A2).
+            limit = _hint_limit(activity, user)
             while hint_level_seen(session, user.id, activity.id) < step.hints:
                 if reveal_next_hint(session, user.id, activity, limit=limit) is None:
                     if limit is not None and step.hints > limit:

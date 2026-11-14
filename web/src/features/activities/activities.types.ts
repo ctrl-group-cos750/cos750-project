@@ -21,6 +21,9 @@ export type AttemptResult = {
   withheld?: boolean
   /** The points this answer earned (10, 4 after hint 3 or 4, or 0); 0 when shown again (#214). */
   points?: number
+  /** The student's first answer to this activity was wrong, and this is a later one: it counts
+   * for no medal (FR-9.6). The companion says so (#222 re-review). */
+  afterWrongFirst?: boolean
 }
 
 export type Hint = {

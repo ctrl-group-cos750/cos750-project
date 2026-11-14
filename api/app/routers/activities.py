@@ -81,13 +81,38 @@ SUPPORT_LEVEL = 3  # hint levels 3 and 4 make a correct answer count as "with su
 MASTERY_HINT_LIMIT = 2
 
 
+def _hint_limit(activity: Activity, user: User) -> int | None:
+    """The highest hint level this student may see on the activity: the mastery check's, or None
+    for the full ladder. Staff see every hint, to preview. The one place the limit lives: the
+    hints routes and the demo seed both use it, so a demo step can't ask for a hint a student
+    would never be shown (#222 re-review, A2)."""
+    if user.is_staff:
+        return None
+    if in_check(activity):
+        return MASTERY_HINT_LIMIT
+    return None
+
+
 def _checked(activity: Activity, user: User) -> bool:
     """Whether the mastery check's rules apply: a module 6 item, answered by a student (#144).
     Staff are let through, so the content editor's "Open as a student" still shows each result."""
     return in_check(activity) and not user.is_staff
 
 
-def _attempt_out(attempt: Attempt, checked: bool) -> AttemptOut:
+def _after_wrong_first(session: DbSession, attempt: Attempt) -> bool:
+    """Whether the student's first answer to this activity, in any round, was wrong and this is a
+    later one: under the evidence rule it then counts for no medal (FR-9.6), which the companion
+    says (#222 re-review, nit 4: it used to remember wrong answers per browser tab)."""
+    first = session.scalar(
+        select(Attempt)
+        .where(Attempt.user_id == attempt.user_id, Attempt.activity_id == attempt.activity_id)
+        .order_by(Attempt.id)
+        .limit(1)
+    )
+    return first is not None and first.id != attempt.id and not first.correct
+
+
+def _attempt_out(session: DbSession, attempt: Attempt, checked: bool) -> AttemptOut:
     """An attempt's result as the student is shown it: in full, or `withheld` on a mastery check
     item (#144), where nothing says whether it was right."""
     if checked:
@@ -109,6 +134,7 @@ def _attempt_out(attempt: Attempt, checked: bool) -> AttemptOut:
         parts=[PartResult.model_validate(p) for p in (attempt.detail or {}).get("parts", [])],
         feedback=str((attempt.detail or {}).get("feedback", "")),
         hint_level=attempt.hint_level,
+        after_wrong_first=_after_wrong_first(session, attempt),
     )
 
 
@@ -125,7 +151,7 @@ def _last_attempt(
     if attempt is None:
         return None
     return LastAttemptOut(
-        submitted=attempt.submitted, result=_attempt_out(attempt, _checked(activity, user))
+        submitted=attempt.submitted, result=_attempt_out(session, attempt, _checked(activity, user))
     )
 
 
@@ -262,7 +288,7 @@ def submit_attempt(
     except ActivityGone:  # the seed deleted it while this answer waited
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NOT_FOUND) from None
     session.commit()
-    out = _attempt_out(attempt, checked)
+    out = _attempt_out(session, attempt, checked)
     if not checked:  # a mastery check item's points wait for the end of the check (#144)
         out.points = points
     return out
@@ -280,7 +306,7 @@ def get_revealed_hints(activity_id: RowId, user: CurrentUser, session: DbSession
     seen = hint_level_seen(
         session, user.id, activity.id, activity_round(session, user.id, activity).number
     )
-    limit = MASTERY_HINT_LIMIT if _checked(activity, user) else None
+    limit = _hint_limit(activity, user)
     out: list[HintOut] = []
     for h in all_hints:
         if h.level <= seen:
@@ -306,11 +332,10 @@ def reveal_hint(activity_id: RowId, user: CurrentUser, session: DbSession) -> Hi
     requests sent at once reveal two levels in turn, never the same level twice."""
     hints_limiter.check(f"user:{user.id}")
     activity = _activity_or_404(session, activity_id, user)
-    limit = None
+    limit = _hint_limit(activity, user)
     if _checked(activity, user):
         if answered(session, user.id, activity.id):
             raise HTTPException(status.HTTP_409_CONFLICT, detail=ANSWERED_NO_HINTS)
-        limit = MASTERY_HINT_LIMIT
     # A hint after a right answer helps with nothing, and would count in the pilot's hint use as
     # help the student needed (#158). A right answer in this round: a restarted module's questions
     # are redone with their hints, which are recorded with their round, count only against the

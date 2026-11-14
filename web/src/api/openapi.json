@@ -4137,6 +4137,11 @@
             "type": "integer",
             "title": "Points",
             "default": 0
+          },
+          "afterWrongFirst": {
+            "type": "boolean",
+            "title": "Afterwrongfirst",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -5747,6 +5752,11 @@
               }
             ],
             "title": "Objectiveid"
+          },
+          "locked": {
+            "type": "boolean",
+            "title": "Locked",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -5758,7 +5768,7 @@
           "objectiveId"
         ],
         "title": "ImproveOut",
-        "description": "Where the student can work on an objective (#214): `practise` in a module (at `segment`,\n0-based, when they can open it there), `revisit` a module (secure in practice, or met with\nsupport), its `review` path once module 6 has said \"not yet\" (FR-7.5), or the mastery `check`\n(module 6) once practice can no longer make it secure: too many first answers weren't on your\nown, and only a first attempt counts (FR-9.6). Never module 6 to practise."
+        "description": "Where the student can work on an objective (#214): `practise` in a module (at `segment`,\n0-based, when they can open it there), `revisit` a module (secure in practice, or met with\nsupport), its `review` path once module 6 has said \"not yet\" (FR-7.5), or the mastery `check`\n(module 6) once practice can no longer make it secure: too many first answers weren't on your\nown, and only a first attempt counts (FR-9.6). Never module 6 to practise. `locked`: the\nmodule isn't open to the student yet (the mastery check, before modules 1 to 5 are done), so\nthe profile says where it will be shown rather than linking to a locked page."
       },
       "Insights": {
         "properties": {

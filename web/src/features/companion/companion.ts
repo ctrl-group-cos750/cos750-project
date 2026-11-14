@@ -45,22 +45,21 @@ export function wrongLine(parts: readonly PartResult[], hintLevel: number): stri
 // its pose changes (say less to students doing well, research note: D'Mello).
 let streak = 0
 
-// Activities answered wrong this visit. Only a first attempt counts (the evidence rule, FR-9.6),
-// so a right answer after a wrong one isn't "right, without a hint" for its medal (#222 re-review).
-const answeredWrong = new Set<number>()
-
 /** After a right answer that came after a wrong one: it counts for no medal, but still helps. */
 export const RIGHT_AFTER_WRONG =
   'Right this time. Only a first answer counts toward a medal, but working it out still helps.'
 
 /** The line for an answer just checked, or a pose with no words while the student is on a run. */
+// Only a first attempt counts (the evidence rule, FR-9.6), so a right answer after a wrong first one
+// isn't "right, without a hint" for its medal. The API says so (`afterWrongFirst`), across reloads,
+// visits and restarts, rather than this tab remembering it (#222 re-review, nit 4).
 export function answerLine(result: {
-  activityId: number
   correct: boolean | null
   parts: readonly PartResult[]
   hintLevel: number
+  afterWrongFirst?: boolean
 }): Line {
-  if (result.correct && answeredWrong.has(result.activityId)) {
+  if (result.correct && result.afterWrongFirst === true) {
     streak = 1
     return { pose: 'pleased', text: RIGHT_AFTER_WRONG }
   }
@@ -71,14 +70,12 @@ export function answerLine(result: {
     return { pose: 'pleased', text: quiet ? null : rightLine(result.hintLevel) }
   }
   streak = 0
-  answeredWrong.add(result.activityId)
   return { pose: 'encouraging', text: wrongLine(result.parts, result.hintLevel) }
 }
 
-/** For tests: forget the run of right answers and the activities answered wrong. */
+/** For tests: forget the run of right answers. */
 export function resetStreak(): void {
   streak = 0
-  answeredWrong.clear()
 }
 
 /** What each quick check item was about, for the one line after a near pass. Keyed by activity

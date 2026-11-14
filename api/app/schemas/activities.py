@@ -470,6 +470,9 @@ class AttemptOut(ApiModel):
     # right answer, 4 if that came after hint 3 or 4, a bonus quest's own points, else 0. Always 0
     # on a mastery check item, and 0 when the attempt is shown again later (#171).
     points: int = 0
+    # The student's first answer to this activity (in any round) was wrong, and this is a later
+    # one: it counts for no medal (FR-9.6). False on a mastery check item, which takes one answer.
+    after_wrong_first: bool = False
 
 
 class LastAttemptOut(ApiModel):

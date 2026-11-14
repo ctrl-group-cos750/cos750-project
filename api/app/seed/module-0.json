@@ -14,7 +14,7 @@
           "id": 1,
           "kind": "text",
           "title": "Before we start",
-          "body": "How does a social network find your friends of friends without checking every account it has? It starts from you and spreads out one ring of friends at a time. That search is **breadth-first search** (BFS), and by the end of this course you will have written it yourself.\n\nBFS explores a graph **one ring at a time**, and to do that it keeps a **queue** of places still to visit. The code we will write and read uses Python **lists** and a **loop**.\n\nThis short warm-up checks what you already remember. Each question is followed by a short refresher on the same idea: if you got the question wrong or weren't sure, read it before you move on. Your answers here earn no medal and no result on your report: they only show you what to read."
+          "body": "How does a social network find your friends of friends without checking every account it has? It starts from you and spreads out one ring of friends at a time. That search is **breadth-first search** (BFS), and by the end of this course you will have written it yourself.\n\nBFS explores a graph **one ring at a time**, and to do that it keeps a **queue** of places still to visit. The code we will write and read uses Python **lists** and a **loop**.\n\nThis short warm-up checks what you already remember. Each question is followed by a short refresher on the same idea. Answer a question right at your first try and its refresher is skipped; otherwise the refresher comes next, so read it before you move on. Your answers here earn no medal and no result on your report: they only show you what to read."
         },
         {
           "id": 2,

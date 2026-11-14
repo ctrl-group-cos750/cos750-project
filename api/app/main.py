@@ -20,6 +20,7 @@ from app.routers import (
     mastery,
     modules,
     profile,
+    quests,
     rewards,
     skills,
     staff,
@@ -59,6 +60,7 @@ app.include_router(mastery.router)
 app.include_router(skills.router)
 app.include_router(profile.router)
 app.include_router(modules.router)
+app.include_router(quests.router)
 app.include_router(videos.router)
 app.include_router(staff.router)
 app.include_router(staff_accounts.router)

@@ -82,6 +82,7 @@ RECORDED = (
     "is answered."
 )
 NOT_SHOWN = "This activity is extra help that isn't part of your way through the module."
+QUEST_CLOSED = "This bonus quest opens when you reach it at the end of its module."
 SUPPORT_LEVEL = 3  # hint levels 3 and 4 make a correct answer count as "with support" (FR-7.2)
 # The highest hint a mastery check item gives (#144): hints 3 and 4 give the answer away, so a
 # student who needs them goes to the review path instead (FR-7.5).
@@ -232,6 +233,8 @@ def _activity_or_404(session: DbSession, activity_id: int, user: User) -> Activi
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=QUICK_CHECK)
     if refusal == "not_shown":  # a support item this student isn't shown (FR-8.4)
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=NOT_SHOWN)
+    if refusal == "quest_closed":  # a bonus quest whose module isn't complete yet (FR-8.3)
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=QUEST_CLOSED)
     return activity
 
 

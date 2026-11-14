@@ -630,6 +630,28 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/quests': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List Quests
+     * @description The bonus quests offered to the logged-in student: those they may open now (they have
+     *     reached the quest's segment at the end of its module, or finished the module), in module
+     *     order, each with whether they have finished it. Only ever the student's own (NFR-S2).
+     */
+    get: operations['list_quests_api_quests_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/videos/{video_id}': {
     parameters: {
       query?: never
@@ -2350,6 +2372,28 @@ export interface components {
       /** Segmentposition */
       segmentPosition: number
     }
+    /**
+     * QuestOut
+     * @description One bonus quest offered to the student: an optional extra challenge after a module they
+     *     have completed. The quest is an ordinary activity, so it is opened, hinted and answered
+     *     through ``/api/activities/{id}``; ``id`` is that activity's id. ``completed`` is true once
+     *     they have answered it correctly without hint 3 or 4, which is what earns its points and
+     *     badge.
+     */
+    QuestOut: {
+      /** Id */
+      id: number
+      /** Title */
+      title: string
+      /** Moduleid */
+      moduleId: number
+      /** Modulenumber */
+      moduleNumber: number
+      /** Moduletitle */
+      moduleTitle: string
+      /** Completed */
+      completed: boolean
+    }
     /** QuickCheckAnswerIn */
     QuickCheckAnswerIn: {
       /** Activityid */
@@ -2613,6 +2657,10 @@ export interface components {
       activityId?: number | null
       /** Supportfor */
       supportFor?: number | null
+      /** Skipcheckactivityid */
+      skipCheckActivityId?: number | null
+      /** Skipcheck */
+      skipCheck?: ('not_taken' | 'passed' | 'not_passed') | null
       /**
        * Shown
        * @default true
@@ -3865,6 +3913,37 @@ export interface operations {
           [name: string]: unknown
         }
         content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  list_quests_api_quests_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        '__Host-session'?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['QuestOut'][]
+        }
       }
       /** @description Validation Error */
       422: {

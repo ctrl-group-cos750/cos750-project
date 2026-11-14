@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -19,11 +20,6 @@ import {
   rightLine,
   wrongLine,
 } from './companion.ts'
-import module1 from '../../../../api/app/seed/module-1.json'
-import module2 from '../../../../api/app/seed/module-2.json'
-import module3 from '../../../../api/app/seed/module-3.json'
-import module4 from '../../../../api/app/seed/module-4.json'
-import module5 from '../../../../api/app/seed/module-5.json'
 
 let nextId = 1
 function result(correct: boolean, more: Partial<AttemptResult> = {}): AttemptResult {
@@ -308,8 +304,14 @@ describe('what the companion says', () => {
 
   it('has a fitting tip for every quick check item in modules 1 to 5', () => {
     type Item = { id: number; title: string; purpose?: string }
-    const items = [module1, module2, module3, module4, module5].flatMap((m) =>
-      (m.activities as Item[]).filter((a) => a.purpose === 'test_out'),
+    // Read at run time, as the other tests read the seed: the web image is built from web/ alone,
+    // and its type check (tsc -b) can't see api/ (CI's stack build failed on these as imports).
+    const items = [1, 2, 3, 4, 5].flatMap((n) =>
+      (
+        JSON.parse(readFileSync(`${process.cwd()}/../api/app/seed/module-${n}.json`, 'utf8')) as {
+          activities: Item[]
+        }
+      ).activities.filter((a) => a.purpose === 'test_out'),
     )
     expect(items.length).toBeGreaterThanOrEqual(15)
     for (const item of items) {

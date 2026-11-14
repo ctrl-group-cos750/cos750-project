@@ -47,7 +47,7 @@ from app.schemas.modules import (
 from app.services import rewards
 from app.services.events import log_event
 from app.services.locks import lock_student
-from app.services.mastery import MASTERY_MODULE
+from app.services.mastery import MASTERY_MODULE, REPLACES, check_answered
 from app.services.quick_check import DONE
 from app.services.quick_check import scores as quick_check_scores
 from app.services.quick_check import states as quick_check_states
@@ -410,6 +410,12 @@ def answer_states(
             done.add(activity_id)
         if correct:
             right.add(activity_id)
+    # A mastery item that replaced another (`mastery.REPLACES`) is done once the earlier item's
+    # answer stands in for it, as the one-answer rule has it (`check_answered`), so its segment
+    # shows done too (review of #223, nit 3).
+    for new in sorted((wanted & REPLACES.keys()) - done):
+        if check_answered(session, user_id, new):
+            done.add(new)
     look_again = (attempted & done) - right - optional - one_answer
     return AnswerStates(done=done, right=right, look_again=look_again)
 

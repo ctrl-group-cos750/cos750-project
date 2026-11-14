@@ -516,8 +516,8 @@ def test_a_queue_no_bfs_can_hold_is_wrong_even_following_the_row_before(
 
 
 def test_the_found_set_in_the_visited_column_is_not_called_marking_on_leaving() -> None:
-    """Review of 13 Nov on #221: module 4's Python `visited` set holds the vertices found, so a
-    student may write that set in the visited column. On item 1502 a correct BFS written that way
+    """Review of 13 Nov on #221: module 4's Python `found` set (`visited` before the review of 13
+    Nov) holds the vertices found, so a student may write that set in the visited column. On item 1502 a correct BFS written that way
     was told on every row that a vertex had left the queue and come back. Only the visited
     column is wrong, and its message is the visited column's."""
     config = TraceConfig.model_validate(_seed_activity("review.json", 1502)["config"])

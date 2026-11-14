@@ -257,10 +257,11 @@ export const test = base.extend<Options & Fixtures>({
 export { expect, PASSWORD }
 export type { Activity, Page }
 
-/** The WCAG 2.0 and 2.1 A and AA rules (NFR-A2, NFR-A3; SE document §14.1). */
-const WCAG_21_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
+/** The WCAG 2.0, 2.1 and 2.2 A and AA rules (NFR-A2, NFR-A3; SE document §14.1). The target is
+ * WCAG 2.2 AA; axe has rules for some of 2.2's new criteria (target size), not all of them. */
+const WCAG_22_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
 
-/** Fails, listing each violation and where it is, when axe-core finds a WCAG 2.1 A or AA
+/** Fails, listing each violation and where it is, when axe-core finds a WCAG 2.2 A or AA
  * violation on the page as it is now. Run it again after anything that changes the page. */
 export async function expectNoViolations(page: Page, label: string) {
   // Let entrance animations finish first: mid-fade, text is see-through and fails contrast
@@ -270,7 +271,7 @@ export async function expectNoViolations(page: Page, label: string) {
       .getAnimations()
       .every((a) => a.playState !== 'running' || a.effect?.getTiming().iterations === Infinity),
   )
-  const { violations } = await new AxeBuilder({ page }).withTags(WCAG_21_AA).analyze()
+  const { violations } = await new AxeBuilder({ page }).withTags(WCAG_22_AA).analyze()
   const found = violations.map(
     (v) =>
       `${v.id} (${v.impact}): ${v.help}\n` +

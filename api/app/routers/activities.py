@@ -30,14 +30,13 @@ from app.services.access import activity_refusal
 from app.services.attempts import (
     AlreadyAnswered,
     BlankAnswer,
-    answered,
     answered_correctly,
     hint_level_seen,
     record_attempt,
     reveal_next_hint,
 )
 from app.services.locks import ActivityGone
-from app.services.mastery import check_finished, in_check, on_review_path
+from app.services.mastery import check_answered, check_finished, in_check, on_review_path
 from app.services.restart import activity_round
 from app.services.rewards import activity_refs, points_for_refs
 from app.services.submissions import clean, submission_problem
@@ -255,10 +254,12 @@ def get_activity(activity_id: RowId, session: DbSession, user: CurrentUser) -> A
     after = activity_round(session, user.id, activity).after  # a restarted module shows it afresh
     if _checked(activity, user):  # says it was answered, never whether it was right (#144)
         out.mastery_check = True
-        out.answered = answered(session, user.id, activity.id)
+        out.answered = check_answered(session, user.id, activity.id)  # REPLACES too
     else:
         out.solved = answered_correctly(session, user.id, activity.id, after)
     out.last_attempt = _last_attempt(session, user, activity, after)  # coming back shows it (#171)
+    # Answered with no attempt of its own: the replaced item's answer stands in for it (REPLACES).
+    out.answered_earlier_version = out.answered and out.last_attempt is None
     return out
 
 
@@ -364,7 +365,7 @@ def reveal_hint(activity_id: RowId, user: CurrentUser, session: DbSession) -> Hi
     activity = _activity_or_404(session, activity_id, user)
     limit = _hint_limit(activity, user)
     if _checked(activity, user):
-        if answered(session, user.id, activity.id):
+        if check_answered(session, user.id, activity.id):
             raise HTTPException(status.HTTP_409_CONFLICT, detail=ANSWERED_NO_HINTS)
     # A hint after a right answer helps with nothing, and would count in the pilot's hint use as
     # help the student needed (#158). A right answer in this round: a restarted module's questions

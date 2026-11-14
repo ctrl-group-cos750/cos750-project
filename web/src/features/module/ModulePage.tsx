@@ -482,7 +482,7 @@ export function ModulePage() {
                 />
               </div>
               <p className="m-0 shrink-0 text-sm text-muted-foreground" aria-live="polite">
-                Segment {place.number} of {place.total}
+                Step {place.number} of {place.total}
               </p>
             </div>
 
@@ -518,7 +518,7 @@ export function ModulePage() {
               <output id="segment-blocked" className="block text-sm text-muted-foreground">
                 {statusLine}
               </output>
-              <nav className="flex justify-between" aria-label="Segment navigation">
+              <nav className="flex justify-between" aria-label="Step navigation">
                 <Button
                   variant="secondary"
                   onClick={handlePrevious}
@@ -593,12 +593,12 @@ function ModuleRefused({
 }
 
 /** At the top of a module (#214): the quick check offer ("Already know this?", FR-8.2) while the
- * student can take it, or a note that they tested out of the module. */
+ * student can take it, or a note that they passed it. */
 function ChoiceNote({ module }: { module: ModuleDetail }) {
   if (module.status === 'tested_out')
     return (
       <p className="m-0 text-sm text-muted-foreground">
-        You tested out of this module with its quick check. Working through it is up to you.{' '}
+        You passed this module’s quick check. Working through it is up to you.{' '}
         <QuickCheckScore module={module} />
       </p>
     )

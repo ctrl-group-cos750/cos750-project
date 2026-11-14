@@ -86,7 +86,7 @@ result is not an error: use the warning (amber) tone and explain what to try nex
 |---|---|---|
 | Headings, buttons, the logo | Space Grotesk | `--font-display` |
 | Body text | The device's system font | `--font-body` |
-| Code, vertex labels, the queue and visited set | JetBrains Mono | `--font-mono` |
+| Code, vertex labels, the queue, and the found and visited sets | JetBrains Mono | `--font-mono` |
 
 Use the type scale (`--text-sm` to `--text-3xl`), not pixel sizes. Headings are sentence case
 ("Meet BFS", not "Meet Bfs" or "MEET BFS"). Don't put small labels or tags above headings: the heading

@@ -304,7 +304,7 @@ export async function walkModule(
   for (const [n, i] of shown.entries()) {
     if (i < module.currentSegmentPosition) continue
     const segment = module.segments[i]
-    await expect(page.getByText(`Segment ${n + 1} of ${total}`, { exact: true })).toBeVisible()
+    await expect(page.getByText(`Step ${n + 1} of ${total}`, { exact: true })).toBeVisible()
     const region = segmentRegion(page, segment.title)
     await expect(region).toBeVisible()
     if (segment.kind === 'activity' && segment.activityId !== null && !segment.done) {
@@ -315,7 +315,7 @@ export async function walkModule(
     await onSegment?.(`module ${module.number}, segment ${n + 1} (${segment.kind})`)
     const last = n === total - 1
     const next = page
-      .getByRole('navigation', { name: 'Segment navigation' })
+      .getByRole('navigation', { name: 'Step navigation' })
       .getByRole('button', { name: last ? 'Finish module' : /^Next/ })
     // Next stays blocked until the module, fetched again after the answer, says the segment is done.
     await expect(next).not.toHaveAttribute('aria-disabled', 'true')

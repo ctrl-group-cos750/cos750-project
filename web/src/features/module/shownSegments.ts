@@ -3,7 +3,7 @@ import type { Segment } from './module.types.ts'
 /**
  * Which of a module's segments this student is shown (FR-8.4, #172). Support for an objective the
  * student doesn't need stays in the list, so every segment keeps its position, but is not shown:
- * Previous and Next skip it and "Segment N of M" doesn't count it. A segment from an API that
+ * Previous and Next skip it and "Step N of M" doesn't count it. A segment from an API that
  * doesn't say is shown.
  */
 export const isShown = (segment: Segment): boolean => segment.shown !== false
@@ -27,7 +27,7 @@ export function nearestShown(segments: readonly Segment[], index: number): numbe
   return next >= 0 ? next : Math.max(previousShown(segments, index), 0)
 }
 
-/** "Segment N of M" for the segment at `index`, counting only the segments shown. */
+/** "Step N of M" for the segment at `index`, counting only the segments shown. */
 export function shownPlace(
   segments: readonly Segment[],
   index: number,

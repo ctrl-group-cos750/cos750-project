@@ -25,7 +25,7 @@ test('module 0, from the map to "Finish module", with the keyboard only', async 
   // The segments the student is shown (#172), as "Segment N of M" counts them.
   const segments = shownPositions(module).map((i) => module.segments[i])
   for (const [i, segment] of segments.entries()) {
-    await expect(page.getByText(`Segment ${i + 1} of ${segments.length}`)).toBeVisible()
+    await expect(page.getByText(`Step ${i + 1} of ${segments.length}`)).toBeVisible()
     const region = segmentRegion(page, segment.title)
     await expect(region).toBeVisible()
     if (segment.kind === 'activity' && segment.activityId !== null) {
@@ -85,4 +85,73 @@ test('every control in a module activity shows a visible focus indicator', async
     await tabTo(page, control)
     await expectVisibleFocus(control, (await control.textContent()) ?? '')
   }
+})
+
+// WCAG 2.2 2.4.11 Focus Not Obscured: the sticky header covered the skip link on every signed-in
+// page, and Shift+Tab from the bottom of a page left controls under the header (review of 13 Nov;
+// #223 review, Should fix 7). The page's scrolling is padded by the header's height (base.css).
+test('the sticky header never hides the focused control', async ({ page, course }) => {
+  void course // a signed-in student, on the module map
+  await page.setViewportSize({ width: 375, height: 667 })
+  await page.goto('/')
+  await expect(page.getByRole('button', { name: /^(Start|Continue) module 0/ })).toBeVisible()
+
+  await page.keyboard.press('Tab')
+  const skip = page.getByRole('link', { name: 'Skip to content' })
+  await expect(skip).toBeFocused()
+  // The element drawn at the link's centre is the link, not the header painted over it.
+  await expect
+    .poll(
+      () =>
+        skip.evaluate((el) => {
+          const r = el.getBoundingClientRect()
+          const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+          return !!hit && el.contains(hit)
+        }),
+      { message: 'the skip link is drawn above the header' },
+    )
+    .toBe(true)
+
+  // From the bottom of the page, back up through it with Shift+Tab, once the map has loaded
+  // everything (the quick check links come in later and move the cards down).
+  await page.waitForLoadState('networkidle')
+  await expect(page.getByRole('link', { name: /Already know module 1\?/ })).toBeVisible()
+  // Straight to the bottom, on the page's last control: the End key scrolls smoothly in Chromium,
+  // and a scroll still under way carried on past the control Shift+Tab had just scrolled to; and
+  // Shift+Tab from the page itself starts at the top in Firefox.
+  await page.evaluate(() => {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' })
+    const controls = document.querySelectorAll<HTMLElement>('main a[href], main button')
+    controls[controls.length - 1]?.focus({ preventScroll: true })
+  })
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
+  const hidden: string[] = []
+  // What the focused control is, if the header covers half of it or more. 2.4.11 (Minimum) fails
+  // only when all of it is covered; without scroll-padding-top the map's cards end up more than
+  // half under it, and Firefox, which scrolls only a control out of view, can leave a little.
+  const covered = () =>
+    page.evaluate(() => {
+      const el = document.activeElement
+      const header = document.querySelector('header')
+      if (!el || el === document.body || !header || el.closest('header, a[href="#main"]'))
+        return null
+      const r = el.getBoundingClientRect()
+      const h = header.getBoundingClientRect()
+      return r.top + r.height / 2 >= h.bottom
+        ? null
+        : (el.textContent ?? el.tagName).trim().slice(0, 60)
+    })
+  // Up the page to the header: past it, Shift+Tab leaves the page.
+  const inHeader = () =>
+    page.evaluate(() => {
+      const el = document.activeElement
+      return !!el && !!el.closest('header, a[href="#main"]')
+    })
+  for (let i = 0; i < 40 && !(await inHeader()); i++) {
+    await page.keyboard.press('Shift+Tab')
+    const still = await covered()
+    if (still !== null) hidden.push(still)
+  }
+  expect(await inHeader(), 'Shift+Tab reached the header').toBe(true)
+  expect(hidden, 'controls under the sticky header').toEqual([])
 })

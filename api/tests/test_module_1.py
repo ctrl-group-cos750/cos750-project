@@ -7,6 +7,7 @@ Plus the content rules from issue #83: four hint levels on every activity, and f
 every wrong answer.
 """
 
+import itertools
 import re
 
 import pytest
@@ -53,13 +54,17 @@ def test_every_activity_is_shown_once_and_every_objective_has_one() -> None:
     shown = [s.activity_id for s in MODULE.segments if s.activity_id is not None]
     skip_checks = [a.id for a in QUICK_CHECK]  # asked in the quick check, in no segment
     assert sorted(shown + skip_checks) == sorted(a.id for a in ACTIVITIES + QUICK_CHECK)
-    assert {a.objective_id for a in ACTIVITIES} == {1, 2, 3}
+    assert {a.objective_id for a in ACTIVITIES} == {None, 1, 2, 3}  # None: the opening puzzle
 
 
 def test_the_module_opens_with_the_campus_and_its_puzzle() -> None:  # Gagné event 1
     first, second = MODULE.segments[:2]
     assert first.kind == "text"
     assert second.activity_id == 101
+    # Asked before any teaching, to show what the student doesn't know yet: a wrong guess must not
+    # cost the module's medal, so it is a diagnostic item, with no objective (review 13 Nov, 12).
+    assert activity(101).purpose == "diagnostic"
+    assert activity(101).objective_id is None
     assert edges_in(first.body) == campus_edges()
     assert all(vertex in first.body for vertex in CAMPUS.vertices)
 
@@ -183,3 +188,77 @@ def test_the_modelling_support_item_does_not_name_each_situations_nouns() -> Non
     for r in a.config["right"]:
         assert not any(n in r["label"].lower() for n in nouns), r["label"]
     assert len(a.config["right"]) > len(a.config["left"])
+
+
+def _campus_edges() -> set[frozenset[str]]:
+    return {frozenset((e.source, e.target)) for e in CAMPUS.edges}
+
+
+def _pieces(edges: set[frozenset[str]]) -> list[set[str]]:
+    pieces: list[set[str]] = []
+    for v in CAMPUS.vertices:
+        if any(v in p for p in pieces):
+            continue
+        piece, todo = {v}, [v]
+        while todo:
+            x = todo.pop()
+            for e in edges:
+                if x in e:
+                    (y,) = e - {x}
+                    if y not in piece:
+                        piece.add(y)
+                        todo.append(y)
+        pieces.append(piece)
+    return pieces
+
+
+def test_the_graph_words_are_taught_on_the_campus_and_are_true_of_it() -> None:
+    """Path, cycle, connected, tree and weighted were used (module 5, objective 7) but never taught
+    (CS2023 AL-Foundational; review 13 Nov, High 11). Segment 197 teaches them on the campus,
+    right after the student builds the campus graph, and each claim it makes is checked here."""
+    ids = [s.id for s in MODULE.segments]
+    assert ids.index(107) < ids.index(197) < ids.index(198) < ids.index(108)
+    body = next(s.body for s in MODULE.segments if s.id == 197)
+    for word in ("path", "cycle", "connected", "disconnected", "tree", "weighted"):
+        assert f"**{word}**" in body, word
+    edges = _campus_edges()
+    for stops in ("ACBG", "ACFEA"):  # the path and the cycle
+        assert DASH.join(stops) in body
+        assert all(frozenset(p) in edges for p in itertools.pairwise(stops))
+    assert len(_pieces(edges)) == 1  # connected
+    assert len(_pieces(edges - {frozenset("BC")})) == 2  # closing B-C splits it
+    tree = edges - {frozenset("CF")}
+    assert len(_pieces(tree)) == 1  # a tree: connected,
+    assert len(tree) == len(CAMPUS.vertices) - 1  # and with no cycle
+    item = activity(194)
+    assert item.kind == "matching"
+    assert len(item.config["right"]) == len(item.config["left"]) + 2  # two spares
+    # A path visits no vertex twice: the tree's "exactly one path" relies on it (#223 review).
+    assert "never visits a vertex twice" in body
+    assert "found in the puzzle" not in body  # the puzzle is now a warm-up question
+
+
+def test_the_graph_words_item_has_no_objective() -> None:
+    """Path, cycle, connected, tree and weighted aren't objective 2 ("vertices and edges ...
+    directed and undirected"), and no mastery item tests them. Tagged objective 2, 194 counted
+    towards its practice total and, placed before objective 2's support block, a wrong answer on
+    graph words could bring up arrows-and-edges support (#223 review, Should fix 5)."""
+    item = activity(194)
+    assert item.objective_id is None
+    labels = [r["label"] for r in item.config["right"]]
+    assert not any(label.endswith(".") for label in labels)
+    # A spare is no example of any word: "the Admin block on its own" was a tree, a connected
+    # graph and a path of length 0 (#223 review).
+    assert "The Admin block on its own" not in labels
+
+
+def test_enqueue_and_dequeue_are_defined_before_they_are_used() -> None:
+    """ "Dequeued" was used in module 5 but never defined (review 13 Nov, High 11)."""
+    refresher = next(s for m in CONTENT.modules if m.id == 0 for s in m.segments if s.id == 3)
+    assert "**enqueue**" in refresher.body
+    assert "**dequeue**" in refresher.body
+    trace = next(
+        s for m in CONTENT.modules if m.id == 3 for s in m.segments if "Two words" in s.body
+    )
+    assert "**enqueued**" in trace.body
+    assert "**dequeued**" in trace.body

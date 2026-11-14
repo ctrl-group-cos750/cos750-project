@@ -485,7 +485,7 @@ describe('ModuleMap — learner choice (#214)', () => {
       completeModule,
     ])
     renderApp('/')
-    expect(await screen.findByText('tested out')).toBeInTheDocument()
+    expect(await screen.findByText('passed the quick check')).toBeInTheDocument()
     expect(screen.getByText('complete')).toBeInTheDocument()
     expect(screen.queryByText(/Take the quick check/)).toBeNull()
   })

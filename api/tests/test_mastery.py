@@ -17,6 +17,7 @@ from support import wrong_answer
 from app.models import (
     Activity,
     Attempt,
+    Event,
     HintView,
     Module,
     ModuleProgress,
@@ -25,6 +26,7 @@ from app.models import (
     User,
 )
 from app.routers.activities import (
+    ALREADY_ANSWERED,
     RECORDED,
     REVIEW_HINT_LIMIT_REACHED,
     attempts_limiter,
@@ -37,6 +39,7 @@ from app.services import mastery, rewards
 from app.services.attempts import record_attempt
 from app.services.bfs import run_bfs
 from app.services.mastery import Answer, Rule, decide
+from app.services.modules import answer_states
 
 STUDENT = {"email": "ada@example.com", "password": "Correct horse 1", "displayName": "Ada"}
 RIGHT = {"submitted": {"selected": "a"}}
@@ -1116,3 +1119,144 @@ def test_a_refused_submission_does_not_use_up_the_one_answer(
     assert client.get("/api/activities/601").json()["answered"] is False
     answer(client, 601)
     assert client.get("/api/activities/601").json()["answered"] is True
+
+
+# --- A replaced item (review of #223, Must fix 1) -------------------------------------------------
+# Objective 2's item 612 is retired and 630 takes its place (as in the committed module 6). A
+# student who answered 612 keeps that answer: it stands in for 630 until they answer 630.
+
+
+def replaced_course(item: int) -> dict[str, Any]:
+    """The small course with objective 2's module 6 item numbered `item` (612 before, 630 after)."""
+    course = small_course()
+    course["activities"] = [mcq(item, 2) if a["id"] == 603 else a for a in course["activities"]]
+    return course
+
+
+@pytest.fixture
+def before_630(tmp_path: Path, db: Session) -> Path:
+    (tmp_path / "course.json").write_text(json.dumps(replaced_course(612)), encoding="utf-8")
+    load(db, tmp_path)
+    return tmp_path
+
+
+def replace_612(course: Path, db: Session) -> None:
+    (course / "course.json").write_text(json.dumps(replaced_course(630)), encoding="utf-8")
+    load(db, course)
+    db.expire_all()
+
+
+def test_a_student_who_finished_before_an_item_was_replaced_stays_ready(
+    client: TestClient, before_630: Path, db: Session
+) -> None:
+    user = log_in(client)
+    for item in (601, 602, 612):
+        answer(client, item)
+    before = client.get("/api/me/report").json()
+    assert before["ready"] is True
+    changes = len(db.scalars(select(Event).where(Event.type == "result_changed")).all())
+
+    replace_612(before_630, db)
+    assert db.get_one(Activity, 612).visible is False  # retired, kept for its answers
+    after = client.get("/api/me/report").json()
+    assert after["ready"] is True
+    assert states(client) == {1: "met_independently", 2: "met_independently"}
+    assert after["objectives"][1]["answered"] == 1
+    # The answer is listed under the item that replaced it, whose link opens.
+    [mine] = after["objectives"][1]["answers"]
+    assert (mine["activityId"], mine["title"], mine["correct"]) == (630, "Question 612", True)
+    assert client.get("/api/activities/630").status_code == 200
+    # Recomputing on the seed changed nothing, so no result_changed went into the evaluation data.
+    assert len(db.scalars(select(Event).where(Event.type == "result_changed")).all()) == changes
+    assert mastery.check_finished(db, user)
+
+
+def test_a_review_path_open_before_an_item_was_replaced_stays_open(
+    client: TestClient, before_630: Path, db: Session
+) -> None:
+    log_in(client)
+    answer(client, 601)
+    answer(client, 602)
+    answer(client, 612, WRONG)
+    assert states(client)[2] == "not_yet"
+    assert client.get("/api/me/review/2").status_code == 200
+
+    replace_612(before_630, db)
+    assert states(client)[2] == "not_yet"
+    assert client.get("/api/me/review/2").status_code == 200
+    practise(client, 2)
+    answer(client, 1202)  # the path's fresh item still decides it
+    assert states(client)[2] == "met_independently"
+
+
+def test_part_way_through_the_check_an_answered_replaced_item_counts(
+    client: TestClient, before_630: Path, db: Session
+) -> None:
+    log_in(client)
+    answer(client, 612)
+    replace_612(before_630, db)
+    answer(client, 601)
+    answer(client, 602)  # 612's answer stands in for 630, so this finishes the check
+    assert client.get("/api/me/report").json()["ready"] is True
+
+
+def test_a_student_who_finished_the_check_cannot_answer_a_replaced_item_again(
+    client: TestClient, before_630: Path, db: Session
+) -> None:
+    """The old answer uses up the new item's one answer once the results are out (#144; review of
+    #223, new finding 1): a second answer would overwrite a result the student has already seen."""
+    log_in(client)
+    for item in (601, 602):
+        answer(client, item)
+    answer(client, 612, WRONG)
+    assert states(client)[2] == "not_yet"
+
+    replace_612(before_630, db)
+    item = client.get("/api/activities/630").json()
+    # 612's answer stands in, so the page says so instead of a blank form (review of #223, nit 2).
+    assert (item["answered"], item["answeredEarlierVersion"], item["lastAttempt"]) == (
+        True,
+        True,
+        None,
+    )
+    # And its segment is done, as the one-answer rule has it (nit 3).
+    user = int(client.get("/api/auth/me").json()["id"])
+    assert answer_states(db, user, [630, 601]).done == {630, 601}
+    response = client.post("/api/activities/630/attempts", json=RIGHT)
+    assert response.status_code == 409
+    assert response.json()["detail"] == ALREADY_ANSWERED
+    assert client.post("/api/activities/630/hints").status_code == 409
+    assert states(client)[2] == "not_yet"
+    assert client.get("/api/me/report").json()["ready"] is False
+    assert db.scalars(select(Attempt).where(Attempt.activity_id == 630)).all() == []
+
+
+def test_the_students_own_answer_to_the_replacement_counts_instead(
+    client: TestClient, before_630: Path, db: Session
+) -> None:
+    """Part-way through the check: once it is finished, the old answer is the one (next tests)."""
+    log_in(client)
+    for item in (601, 612):
+        answer(client, item)
+    replace_612(before_630, db)
+    # Part-way through, 630 is still open: neither answered nor done.
+    item = client.get("/api/activities/630").json()
+    assert (item["answered"], item["answeredEarlierVersion"]) == (False, False)
+    user = int(client.get("/api/auth/me").json()["id"])
+    assert answer_states(db, user, [630]).done == set()
+    answer(client, 630, WRONG)
+    item = client.get("/api/activities/630").json()
+    assert (item["answered"], item["answeredEarlierVersion"]) == (True, False)
+    answer(client, 602)
+    assert states(client)[2] == "not_yet"
+    [mine] = client.get("/api/me/report").json()["objectives"][1]["answers"]
+    assert (mine["activityId"], mine["title"]) == (630, "Question 630")
+
+
+def test_an_item_graded_whole_is_one_part_right_only_when_all_of_it_is() -> None:
+    """630 builds one model of one situation: objective 3 counts situations (#223 review)."""
+    parts = [{"ref": i, "correct": i != 3} for i in range(4)]
+    attempt = Attempt(correct=False, detail={"parts": parts})
+    assert mastery._parts(attempt, 630) == (False,)
+    assert mastery._parts(attempt, 613) == (True, True, True, False)
+    assert mastery._parts(Attempt(correct=True, detail={"parts": parts[:3]}), 630) == (True,)

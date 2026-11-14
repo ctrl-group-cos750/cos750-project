@@ -2,6 +2,7 @@
 an answer reports earning."""
 
 import json
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -402,6 +403,113 @@ def test_a_module_tested_out_through_its_quick_check_has_silver(
     db.commit()
     medal = profile(client)["modules"][0]
     assert (medal["moduleId"], medal["complete"], medal["medal"]) == (1, True, "silver")
+
+
+def test_a_wrong_guess_at_an_opening_puzzle_costs_no_medal(
+    client: TestClient, db: Session, tmp_path: Path
+) -> None:
+    """Module 1 opens with a puzzle asked before any teaching, to show the student what they don't
+    know yet (Malone and Lepper's curiosity). It is a diagnostic item, so a wrong guess there
+    doesn't lose the module's gold for good, and the student can move on after one answer (review
+    13 Nov, High 12)."""
+    data = course()
+    data["modules"][0]["segments"].insert(0, segment(1000, 106))
+    data["activities"].append(mcq(106, None, 1, "diagnostic"))
+    (tmp_path / "course.json").write_text(json.dumps(data), encoding="utf-8")
+    load(db, tmp_path)
+    user = log_in(client)
+    answer(client, 106, WRONG)
+    assert profile(client)["modules"][0]["answered"] == 0  # the guess isn't counted
+    for activity in (101, 102, 103, 104):
+        answer(client, activity)
+    complete(db, user, 1)
+    assert profile(client)["modules"][0]["medal"] == "gold"
+
+
+def test_a_module_finished_before_its_medal_set_changed_keeps_its_medal(
+    client: TestClient, db: Session, tmp_path: Path
+) -> None:
+    """Module 1's warm-up question left its medal set and a graph-words item joined it, so a
+    student who finished module 1 with gold had answered 9 of the 10 items that now counted, and
+    dropped to bronze (review of #223, Must fix 2). A finished module is judged on what the student
+    was asked when they worked through it; a student who works through it now is asked the new
+    item, and it counts for them."""
+    (tmp_path / "course.json").write_text(json.dumps(course()), encoding="utf-8")
+    load(db, tmp_path)
+    user = log_in(client)
+    for activity in (101, 102, 103, 104):
+        answer(client, activity)
+    complete(db, user, 1)
+    assert profile(client)["modules"][0]["medal"] == "gold"
+    level = {s["id"]: s["level"] for s in profile(client)["objectives"]}
+
+    # A new practice item with no objective (as 194) joins module 1, and 101 becomes a warm-up.
+    data = course()
+    data["modules"][0]["segments"].insert(4, segment(1006, 106))
+    data["activities"].append(mcq(106, None, 1))
+    next(a for a in data["activities"] if a["id"] == 101)["purpose"] = "diagnostic"
+    next(a for a in data["activities"] if a["id"] == 101)["objective_id"] = None
+    (tmp_path / "course.json").write_text(json.dumps(data), encoding="utf-8")
+    load(db, tmp_path)
+    db.expire_all()
+    medal = profile(client)["modules"][0]
+    assert (medal["medal"], medal["firstTime"], medal["total"]) == ("gold", 3, 3)
+    assert {s["id"]: s["level"] for s in profile(client)["objectives"]} == level
+
+    # Working through the module after the change, the new item is asked and counts.
+    other = {"email": "ada@example.com", "password": "Correct horse 1", "displayName": "Ada"}
+    client.post("/api/auth/logout")
+    assert client.post("/api/auth/register", json=other).status_code == 201
+    newcomer = int(client.get("/api/auth/me").json()["id"])
+    for activity in (102, 103, 104):
+        answer(client, activity)
+    answer(client, 106, WRONG)
+    answer(client, 106)
+    complete(db, newcomer, 1)
+    medal = profile(client)["modules"][0]
+    # A right answer after a wrong one isn't real work (FR-9.6), so 106 is not on your own.
+    assert (medal["medal"], medal["onYourOwn"], medal["total"]) == ("finished", 3, 4)
+
+
+def test_going_back_to_an_item_that_joined_a_finished_module_never_lowers_its_medal(
+    client: TestClient, db: Session, tmp_path: Path
+) -> None:
+    """A gold student who opens module 1 again and gets the new item (as 194) wrong keeps gold:
+    an activity first answered after the module was finished isn't one it was finished with, and
+    more work never lowers a medal (review of #223, new finding 2)."""
+    (tmp_path / "course.json").write_text(json.dumps(course()), encoding="utf-8")
+    load(db, tmp_path)
+    user = log_in(client)
+    for activity in (101, 102, 103, 104):
+        answer(client, activity)
+    # Finished an hour ago, a minute after these answers.
+    for attempt in db.scalars(select(Attempt).where(Attempt.user_id == user)):
+        attempt.created_at = datetime.now(tz=UTC) - timedelta(hours=1, minutes=1)
+    db.add(
+        ModuleProgress(
+            user_id=user,
+            module_id=1,
+            status="complete",
+            completed_at=datetime.now(tz=UTC) - timedelta(hours=1),
+        )
+    )
+    db.commit()
+    assert profile(client)["modules"][0]["medal"] == "gold"
+
+    data = course()
+    data["modules"][0]["segments"].insert(4, segment(1006, 106))
+    data["activities"].append(mcq(106, None, 1))
+    (tmp_path / "course.json").write_text(json.dumps(data), encoding="utf-8")
+    load(db, tmp_path)
+    db.expire_all()
+    answer(client, 106, WRONG)
+    medal = profile(client)["modules"][0]
+    assert (medal["medal"], medal["firstTime"], medal["total"]) == ("gold", 4, 4)
+    # 106 was answered after the module was finished, so it isn't counted as answered either:
+    # answered never exceeds total (review of #223, nit 4; it said 5 of 4).
+    assert (medal["answered"], medal["total"]) == (4, 4)
+    answer(client, 106)
+    assert profile(client)["modules"][0]["medal"] == "gold"
 
 
 def improve(client: TestClient) -> dict[int, Any]:

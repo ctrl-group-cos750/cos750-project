@@ -17,7 +17,7 @@
       },
       {
         "id": 3,
-        "text": "    visited = {start}"
+        "text": "    found = {start}"
       },
       {
         "id": 4,
@@ -45,11 +45,11 @@
       },
       {
         "id": 10,
-        "text": "            if n not in visited:"
+        "text": "            if n not in found:"
       },
       {
         "id": 11,
-        "text": "                visited.add(n)"
+        "text": "                found.add(n)"
       },
       {
         "id": 12,

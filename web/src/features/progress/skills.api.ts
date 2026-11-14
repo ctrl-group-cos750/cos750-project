@@ -10,7 +10,7 @@ export type Medal = 'gold' | 'silver' | 'bronze'
 export type Skill = {
   id: number
   text: string
-  /** Of `total` practice items: answered at all, right at some point, right without hint 3 or 4. */
+  /** Of `total` practice items: answered at all, right at some point, right at the first answer without hint 3 or 4. */
   answered: number
   correct: number
   onYourOwn: number

@@ -6,7 +6,7 @@ import styles from './progress.module.css'
 /** The evidence behind a level, for whoever opens the row. */
 function evidence(skill: Skill): string {
   if (skill.total === 0) return 'No practice questions on this objective yet.'
-  const right = `${skill.onYourOwn} right without hint 3 or 4`
+  const right = `${skill.onYourOwn} right first time, without hint 3 or 4`
   return `${skill.answered} of ${skill.total} practice questions answered, ${right}.`
 }
 

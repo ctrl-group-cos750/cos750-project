@@ -1388,6 +1388,65 @@
             12
           ],
           13
+        ],
+        "alternatives": [
+          [
+            1,
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            7,
+            9,
+            10,
+            [
+              11,
+              12
+            ],
+            8,
+            13
+          ],
+          [
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            7,
+            8,
+            9,
+            10,
+            [
+              11,
+              12
+            ],
+            13,
+            1
+          ],
+          [
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            7,
+            9,
+            10,
+            [
+              11,
+              12
+            ],
+            8,
+            13,
+            1
+          ]
         ]
       },
       "hints": [
@@ -1582,6 +1641,65 @@
           ],
           13
         ],
+        "alternatives": [
+          [
+            1,
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            7,
+            24,
+            10,
+            [
+              11,
+              12
+            ],
+            8,
+            13
+          ],
+          [
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            7,
+            8,
+            24,
+            10,
+            [
+              11,
+              12
+            ],
+            13,
+            1
+          ],
+          [
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            7,
+            24,
+            10,
+            [
+              11,
+              12
+            ],
+            8,
+            13,
+            1
+          ]
+        ],
         "feedback": {
           "9": "Not quite. This loop takes v's neighbours in the order their edges were added, so D, added first, joins the queue first. The traversal must take neighbours in alphabetical order. Sort v's own list of neighbours."
         }
@@ -1702,6 +1820,65 @@
             12
           ],
           13
+        ],
+        "alternatives": [
+          [
+            1,
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            20,
+            9,
+            10,
+            [
+              11,
+              12
+            ],
+            8,
+            13
+          ],
+          [
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            20,
+            8,
+            9,
+            10,
+            [
+              11,
+              12
+            ],
+            13,
+            1
+          ],
+          [
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            20,
+            9,
+            10,
+            [
+              11,
+              12
+            ],
+            8,
+            13,
+            1
+          ]
         ],
         "feedback": {
           "7": "Not quite. pop() takes the newest vertex, from the back, so this explores depth first. BFS must take the vertex that has waited longest, from the front."

@@ -175,3 +175,31 @@ def test_objective_7s_worked_example_tests_say_what_the_code_does() -> None:
     assert "test 2 **fails**" in body
     assert "test 1 **passes**" in body
     assert "test 3 **passes**" in body
+
+
+FRESH_MC = [
+    a
+    for objective in sorted(PATHS)
+    for a in on_path(objective, "mastery")
+    if a.kind == "multiple_choice"
+]
+ROUTE = re.compile(r"\b[A-Z](?:, [A-Z]){2,}\b")  # a walk written out: "J, I, G, F"
+
+
+@pytest.mark.parametrize("item", FRESH_MC, ids=lambda a: str(a.id))
+def test_a_fresh_items_hints_up_to_3_never_give_its_answer(item: ActivityFixture) -> None:
+    """A fresh item stops at hint 3, and an answer after it still meets the objective "with
+    support", so hints 1 to 3 must each be a step, not the answer: none names the right option,
+    and none writes out a route to walk back (review of 13 Nov on #221: 1804's hint 3 was the
+    walk back, J, I, G, F). On a route question none says which vertex found the goal either:
+    that is the last step of the walk back (1802's "Z finds U first")."""
+    right = next(o for o in item.config["options"] if o["id"] == item.solution["correct"])
+    answer = right["label"].lower().rstrip(".")
+    goal = re.search(r"from [A-Z] to ([A-Z])\b", item.config["prompt"])
+    route = ROUTE.fullmatch(right["label"])
+    last = goal.group(1) if goal else right["label"][-1] if route else None
+    for hint in (h for h in item.hints if h.level <= 3):
+        assert answer not in hint.body.lower(), (item.id, hint.level)
+        assert not ROUTE.search(hint.body), (item.id, hint.level)
+        if last is not None:
+            assert not re.search(rf"\b[A-Z] (?:finds|found) {last}\b", hint.body), (item.id, hint)

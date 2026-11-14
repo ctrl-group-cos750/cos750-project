@@ -480,7 +480,7 @@ describe('ModulePage — navigation and position saving', () => {
     renderApp('/modules/1')
     const next = await screen.findByRole('button', { name: 'Next →' })
     expect(next).toHaveAccessibleDescription(
-      'Not yet right. Try again: after one more answer you can move on, though it earns no points then, and the hints can help.',
+      'Not yet right. Try again, and the hints can help: it earns no points now that the first answer was wrong, and after one more answer you can move on.',
     )
   })
 
@@ -502,7 +502,7 @@ describe('ModulePage — navigation and position saving', () => {
     // Said plainly: moving on earns nothing for it (#215 review).
     expect(
       screen.getByText(
-        'You can move on: this one is marked to look at again. Moving on earns no points for it; answer it right later and it does.',
+        'You can move on: this one is marked to look at again. It earns no points or medal now that the first answer was wrong; answering it right later still helps you learn it.',
       ),
     ).toBeInTheDocument()
   })

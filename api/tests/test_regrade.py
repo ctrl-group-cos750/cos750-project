@@ -136,6 +136,25 @@ def test_an_equivalent_order_marked_wrong_is_now_correct_and_decides_objective_6
     assert (one, 6, "not_yet", "met_independently") in report.results
 
 
+def test_a_module_6_answer_re_marked_before_the_check_is_finished_earns_nothing_yet(
+    db: Session,
+) -> None:
+    """Review of 13 Nov on #221: the re-grade paid a module 6 item's points while the check was
+    still open, which says the answer is right before the report does (#144)."""
+    load(db)
+    one = student(db, 1)
+    parsons = db.get(Activity, 619)
+    assert parsons is not None
+    stored_as_on_staging(db, one, parsons, EQUIVALENT)
+    db.commit()
+    assert not mastery.check_finished(db, one)
+
+    regrade.regrade(db)
+    db.commit()
+    refs = db.scalars(select(PointsEntry.ref).where(PointsEntry.user_id == one)).all()
+    assert "activity:619" not in refs
+
+
 def test_a_second_run_changes_nothing(db: Session) -> None:
     load(db)
     one = student(db, 1)
@@ -271,8 +290,8 @@ def test_a_student_answering_during_the_regrade_waits_and_both_succeed(
     db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The re-grade locks a student before it touches their rows. A student answering 619 at that
-    moment (their attempt references the locked user row) waits, then finds the points already
-    given: no deadlock, no duplicate points (review of #145, /tmp/a4r2/race.py)."""
+    moment (their attempt references the locked user row) waits, then both succeed: no deadlock,
+    and no points paid early or twice (review of #145, /tmp/a4r2/race.py)."""
     load(db)
     one = student(db, 1)
     stored_as_on_staging(db, one, db.get_one(Activity, 619), EQUIVALENT)
@@ -324,7 +343,9 @@ def test_a_student_answering_during_the_regrade_waits_and_both_succeed(
         rows = session.scalars(
             select(PointsEntry).where(PointsEntry.user_id == one, PointsEntry.ref == "activity:619")
         ).all()
-        assert len(rows) == 1
+        # None yet, and never two: a module 6 item's points wait for the end of the check, which
+        # this student hasn't finished (review of 13 Nov on #221).
+        assert rows == []
         assert state(session, one, 6) == "not_attempted"  # the other module 6 items: unanswered
 
 

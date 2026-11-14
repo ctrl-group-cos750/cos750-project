@@ -10,6 +10,9 @@ mastery items for that objective only. Once every fresh item is answered, they d
 by the same rule, and the module 6 result no longer does. The path opens only for a "not yet"
 objective, so its fresh items stay unseen until then (`review_open`), and there is one path per
 objective: a student still "not yet" after it is told to bring that objective to the lecture.
+The fresh items open once the path's practice is done (app/services/access.py) and give hints 1
+to 3 only (app/routers/activities.py): hint 4 is the worked answer, and an answer copied from it
+on every path made a student "ready" without answering anything themselves (review of 13 Nov).
 
 The objective's rule (`pass_fraction` or `max_wrong` on the Objective, from the criterion in
 Table 1) is counted over the parts of those attempts: an option for multiple choice, a step of a
@@ -17,7 +20,8 @@ trace table, a pair in a matching item, a line or blank in code. The result is t
 
 - **met independently** if the rule is met counting only answers given before hint level 3 or 4
   (an answer given after them counts as wrong here),
-- **met with support** if it is only met when those answers count too,
+- **met with support** if it is only met when those answers count too, except an answer given
+  after hint 4, the worked answer, which counts as wrong here as well (`WORKED_LEVEL`),
 - **not yet** if it isn't met either way,
 - **not attempted** until every one of the objective's items has been answered.
 
@@ -55,6 +59,11 @@ State = Literal["not_attempted", "met_independently", "met_with_support", "not_y
 
 MASTERY_MODULE = 6  # module 6 is the mastery check (FR-7.1)
 SUPPORT_LEVEL = rewards.SUPPORT_LEVEL  # hint 3 or 4 makes a correct answer "with support"
+# Hint 4 is the worked answer. An answer given after it is the hint's, not the student's: it counts
+# as wrong, even towards "met with support". Module 6 stops at hint 2 and a review path's fresh
+# items at hint 3 (app/routers/activities.py), so only an answer stored before those limits can
+# have it (review of 13 Nov, Critical 1).
+WORKED_LEVEL = 4
 MET: tuple[State, ...] = ("met_independently", "met_with_support")
 
 # The rewards service names the results more briefly (app/services/rewards.py).
@@ -76,6 +85,13 @@ def in_check(activity: Activity) -> bool:
     """Whether this is one of module 6's mastery items: one answer each, no right or wrong shown
     and hints up to level 2 only, until the check is finished (#144)."""
     return activity.purpose == "mastery" and activity.module_id == MASTERY_MODULE
+
+
+def on_review_path(activity: Activity) -> bool:
+    """Whether this is a fresh item on a review path: it decides the objective's result there, so
+    its hints stop at `REVIEW_HINT_LIMIT` and it opens once the path's practice is done (review of
+    13 Nov, Critical 1)."""
+    return activity.purpose == "mastery" and activity.module_id is None
 
 
 def _counted() -> ColumnElement[bool]:
@@ -118,7 +134,7 @@ def decide(rule: Rule, answers: Sequence[Answer | None]) -> State:
     unaided = sum(sum(a.parts) for a in given if a.hint_level < SUPPORT_LEVEL)
     if rule.met(unaided, total):
         return "met_independently"
-    if rule.met(sum(sum(a.parts) for a in given), total):
+    if rule.met(sum(sum(a.parts) for a in given if a.hint_level < WORKED_LEVEL), total):
         return "met_with_support"
     return "not_yet"
 

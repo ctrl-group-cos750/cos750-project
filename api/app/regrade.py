@@ -32,7 +32,10 @@ updates `correct`, `score` and `detail`, then recomputes the results of each stu
   passes is marked tested out, as taking it would have done (`quick_check.refresh_tested_out`).
   They earn nothing, as when taken.
 
-No migration: it only updates rows that exist. It does not touch other kinds.
+No migration: it only updates rows that exist. It does not touch other kinds. Trace answers in
+particular are left as stored: the trace checker's impossible-queue rule (review of 13 Nov, item
+618) would only lower marks, and a re-grade never lowers, so results earned before it stand (SE
+document FR-6.6, FR-9.6).
 """
 
 import argparse
@@ -155,8 +158,10 @@ def _regrade_student(session: Session, user_id: int, report: Report) -> None:
         # A quick check answer earns nothing (FR-8.2, #214), so a re-grade gives it nothing either.
         if activity.purpose == QUICK_CHECK:
             quick_check_changed = True
-        elif became_correct:
-            rewards.on_attempt(session, attempt)  # once per activity: points are keyed by ref
+        elif became_correct and not mastery.in_check(activity):
+            # Once per activity: points are keyed by ref. A module 6 item's points wait for the
+            # end of the check, as when answered (#144): `mastery.recompute` below pays them then.
+            rewards.on_attempt(session, attempt)
         report.changed.append((attempt.id, user_id, activity.id, result.correct))
     if quick_check_changed:
         report.tested_out += [

@@ -7,10 +7,10 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import event, func, select
 from sqlalchemy.orm import Session
 
-from app.models import HintView, ModuleProgress
+from app.models import Attempt, HintView, ModuleProgress
 from app.seed import load
 from app.services.skills import level_for, medal_for
 
@@ -223,22 +223,61 @@ def test_a_medal_needs_the_module_finished(client: TestClient, db: Session, load
     assert profile(client)["modules"][0]["medal"] == "gold"
 
 
-def test_a_wrong_first_answer_makes_it_silver(
+def test_a_hint_before_a_right_first_answer_makes_it_silver(
     client: TestClient, db: Session, loaded: None
 ) -> None:
     user = log_in(client)
-    answer(client, 101, WRONG)
-    answer(client, 101)
-    answer(client, 102)
-    answer(client, 103)
-    answer(client, 104)
+    see_hints(db, user, 101, 1)
+    for activity in (101, 102, 103, 104):
+        answer(client, activity)
     complete(db, user, 1)
     medal = profile(client)["modules"][0]
     assert (medal["medal"], medal["firstTime"], medal["onYourOwn"]) == ("silver", 3, 4)
 
-    see_hints(db, user, 102, 4)
+    latest = db.scalar(select(func.max(Attempt.id)))
+    for level in (1, 2, 3, 4):  # opened after every answer above
+        db.add(HintView(user_id=user, activity_id=102, level=level, after_attempt=latest))
+    db.commit()
     # Already answered right without the hints, so it stays on your own: a medal never goes down.
     assert profile(client)["modules"][0]["medal"] == "silver"
+
+
+def test_a_right_answer_after_a_wrong_one_counts_for_no_medal(
+    client: TestClient, db: Session, loaded: None
+) -> None:
+    """Re-review of #221: wrong, wrong, then right earned no points or module points, but still
+    silver, "secure" and on your own. The medal and the skill profile follow the evidence rule
+    (FR-9.6), the same line as the module's points: only the first attempt counts."""
+    user = log_in(client)
+    answer(client, 101, WRONG)
+    answer(client, 101)
+    for activity in (102, 103):
+        answer(client, activity)
+    answer(client, 104, WRONG)
+    answer(client, 104, WRONG)
+    assert answer(client, 104)["points"] == 0
+    complete(db, user, 1)
+    medal = profile(client)["modules"][0]
+    assert (medal["medal"], medal["firstTime"], medal["onYourOwn"]) == ("bronze", 2, 2)
+    skills = {s["id"]: s for s in profile(client)["objectives"]}
+    assert (skills[2]["correct"], skills[2]["onYourOwn"], skills[2]["level"]) == (
+        1,
+        0,
+        "practising",
+    )
+
+
+def test_every_first_answer_wrong_earns_no_medal(
+    client: TestClient, db: Session, loaded: None
+) -> None:
+    """Wrong then right everywhere: no module points (FR-9.1), so no medal either."""
+    user = log_in(client)
+    for activity in (101, 102, 103, 104):
+        answer(client, activity, WRONG)
+        answer(client, activity)
+    complete(db, user, 1)
+    medal = profile(client)["modules"][0]
+    assert (medal["medal"], medal["onYourOwn"], medal["answered"]) == (None, 0, 4)
 
 
 def test_hint_3_before_the_only_right_answer_makes_it_bronze(
@@ -271,9 +310,10 @@ def test_an_answer_says_what_points_it_earned(
     client: TestClient, db: Session, loaded: None
 ) -> None:
     user = log_in(client)
-    assert answer(client, 101, WRONG)["points"] == 0
     assert answer(client, 101)["points"] == 10
     assert answer(client, 101)["points"] == 0  # rewarded once
+    assert answer(client, 103, WRONG)["points"] == 0
+    assert answer(client, 103)["points"] == 0  # right only after a wrong first attempt (FR-9.1)
     see_hints(db, user, 102, 3)
     assert answer(client, 102)["points"] == 4
 
@@ -297,3 +337,34 @@ def test_a_module_tested_out_through_its_quick_check_has_silver(
     db.commit()
     medal = profile(client)["modules"][0]
     assert (medal["moduleId"], medal["complete"], medal["medal"]) == (1, True, "silver")
+
+
+def queries_for_profile(client: TestClient, db: Session) -> int:
+    statements: list[str] = []
+    engine = db.get_bind()
+
+    def count(*args: Any) -> None:
+        statements.append(args[2])
+
+    event.listen(engine, "before_cursor_execute", count)
+    try:
+        profile(client)
+    finally:
+        event.remove(engine, "before_cursor_execute", count)
+    return len(statements)
+
+
+def test_the_profile_costs_the_same_queries_however_much_was_answered(
+    client: TestClient, db: Session, loaded: None
+) -> None:
+    """The evidence rule is one query (`rewards.first_answers`), not a few per answered item: at
+    946ae95 the skills request ran 369 queries on the real seed (#221 re-review)."""
+    user_id = log_in(client)
+    answer(client, 101)
+    one = queries_for_profile(client, db)
+    see_hints(db, user_id, 102, 2)
+    answer(client, 102)
+    answer(client, 103, WRONG)
+    answer(client, 103)
+    answer(client, 104)
+    assert queries_for_profile(client, db) == one

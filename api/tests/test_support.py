@@ -612,3 +612,63 @@ def test_every_support_block_in_the_course_is_reached_by_wrong_answers(db: Sessi
             found = support.struggling_objectives(db, student.id, segments, {objective})
             assert objective in found, f"module {module_id}, objective {objective}"
     assert blocks == 9
+
+
+def test_a_student_walking_the_real_course_wrongly_is_shown_every_support_block(
+    client: TestClient, db: Session
+) -> None:
+    """Through the API, as the page does it, for every block in the real course: a student who
+    answers every question in modules 1 to 5 wrong, twice, so as to move on (FR-2.7), is shown
+    every support segment. Checked again for the review of 13 Nov, which reported 4 of 9 blocks
+    (single-practice-item ones) as never shown; that was fixed in #215 (`per_objective` in
+    `struggling_objectives`), and this walk confirms it end to end, Next and all."""
+    from support import wrong_answer
+    from test_mastery import correct_submission
+
+    from app.routers.activities import attempts_limiter
+    from app.seed import load
+
+    load(db)
+    _register(client, ADA)
+    every: dict[int, set[int]] = {}
+    shown: dict[int, set[int]] = {}
+    for module in (1, 2, 3, 4, 5):
+
+        def segments(module: int = module) -> list[dict[str, Any]]:
+            detail: list[dict[str, Any]] = client.get(f"/api/modules/{module}").json()["segments"]
+            return detail
+
+        def wrong(activity_id: int) -> None:
+            activity = db.get_one(Activity, activity_id)
+            body = {"submitted": wrong_answer(activity)}
+            client.post(f"/api/activities/{activity_id}/attempts", json=body)
+
+        every[module] = {s["supportFor"] for s in segments() if s["supportFor"]}
+        for question in client.get(f"/api/modules/{module}").json()["retrieval"]:
+            wrong(question["id"])
+        position = 0
+        while True:
+            attempts_limiter.reset()
+            segment = segments()[position]
+            if segment["supportFor"]:
+                shown.setdefault(module, set()).add(segment["supportFor"])
+            if segment["kind"] == "activity" and segment["activityId"]:
+                for _ in range(2):  # two wrong answers: marked to look at again, may move on
+                    wrong(segment["activityId"])
+            if segment["kind"] == "video" and segment["videoId"]:
+                for checkpoint in client.get(f"/api/videos/{segment['videoId']}").json()[
+                    "checkpoints"
+                ]:
+                    activity = db.get_one(Activity, checkpoint["activity"]["id"])
+                    body = {"submitted": correct_submission(activity)}
+                    client.post(f"/api/activities/{activity.id}/attempts", json=body)
+            after = [i for i, s in enumerate(segments()) if i > position and s["shown"]]
+            if not after:
+                break
+            moved = client.post(
+                f"/api/modules/{module}/position", json={"segmentPosition": after[0]}
+            )
+            assert moved.status_code == 200, (module, position, moved.text)
+            position = after[0]
+    assert shown == {m: objectives for m, objectives in every.items() if objectives}
+    assert sum(len(objectives) for objectives in shown.values()) == 9

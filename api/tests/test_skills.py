@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import func, select
+from sqlalchemy import event, func, select
 from sqlalchemy.orm import Session
 
 from app.models import Attempt, HintView, ModuleProgress
@@ -337,3 +337,34 @@ def test_a_module_tested_out_through_its_quick_check_has_silver(
     db.commit()
     medal = profile(client)["modules"][0]
     assert (medal["moduleId"], medal["complete"], medal["medal"]) == (1, True, "silver")
+
+
+def queries_for_profile(client: TestClient, db: Session) -> int:
+    statements: list[str] = []
+    engine = db.get_bind()
+
+    def count(*args: Any) -> None:
+        statements.append(args[2])
+
+    event.listen(engine, "before_cursor_execute", count)
+    try:
+        profile(client)
+    finally:
+        event.remove(engine, "before_cursor_execute", count)
+    return len(statements)
+
+
+def test_the_profile_costs_the_same_queries_however_much_was_answered(
+    client: TestClient, db: Session, loaded: None
+) -> None:
+    """The evidence rule is one query (`rewards.first_answers`), not a few per answered item: at
+    946ae95 the skills request ran 369 queries on the real seed (#221 re-review)."""
+    user_id = log_in(client)
+    answer(client, 101)
+    one = queries_for_profile(client, db)
+    see_hints(db, user_id, 102, 2)
+    answer(client, 102)
+    answer(client, 103, WRONG)
+    answer(client, 103)
+    answer(client, 104)
+    assert queries_for_profile(client, db) == one

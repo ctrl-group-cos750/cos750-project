@@ -37,7 +37,7 @@ from app.services.attempts import (
     reveal_next_hint,
 )
 from app.services.locks import ActivityGone
-from app.services.mastery import in_check
+from app.services.mastery import check_finished, in_check, on_review_path
 from app.services.restart import activity_round
 from app.services.rewards import activity_refs, points_for_refs
 from app.services.submissions import clean, submission_problem
@@ -53,6 +53,10 @@ FOREIGN = "This answer names something that isn't in this activity."
 NO_MORE_HINTS = "You have seen every hint for this activity."
 SOLVED = "You have already answered this correctly, so no more hints are given."
 REVIEW_CLOSED = "This activity is on a review path, which opens when the mastery check marks its objective 'not yet'."
+PRACTICE_FIRST = (
+    "This question opens once you have done the practice before it on the review path. The "
+    "practice teaches the objective again; this question then decides your result."
+)
 MODULE_LOCKED = (
     "This activity is in the mastery check, which opens once modules 1 to 5 are each complete or "
     "tested out."
@@ -70,6 +74,10 @@ HINT_LIMIT = (
     "The mastery check gives two hints at most. If you need more, answer as best you can: "
     "if this objective comes out 'not yet', its review path teaches it again with every hint."
 )
+REVIEW_HINT_LIMIT_REACHED = (
+    "This question gives three hints at most: the fourth is the worked answer, and this question "
+    "decides your result. Answer as best you can."
+)
 RECORDED = (
     "Answer recorded. Your results are in your mastery report once every question in the check "
     "is answered."
@@ -80,6 +88,23 @@ SUPPORT_LEVEL = 3  # hint levels 3 and 4 make a correct answer count as "with su
 # The highest hint a mastery check item gives (#144): hints 3 and 4 give the answer away, so a
 # student who needs them goes to the review path instead (FR-7.5).
 MASTERY_HINT_LIMIT = 2
+# The highest hint a fresh item on a review path gives (review of 13 Nov, Critical 1): hint 4 is the
+# worked answer, and these items decide the result. Hint 3 still makes it "met with support".
+REVIEW_HINT_LIMIT = 3
+
+
+def _hint_limit(activity: Activity, user: User) -> int | None:
+    """The highest hint level this student may see on the activity: the mastery check's, a review
+    path fresh item's, or None for the full ladder. Staff see every hint, to preview. The one place
+    the limit lives: the hints routes and the demo seed both use it, so a demo step can't ask for a
+    hint a student would never be shown (#222 re-review, A2)."""
+    if user.is_staff:
+        return None
+    if in_check(activity):
+        return MASTERY_HINT_LIMIT
+    if on_review_path(activity):
+        return REVIEW_HINT_LIMIT
+    return None
 
 
 def _checked(activity: Activity, user: User) -> bool:
@@ -88,7 +113,27 @@ def _checked(activity: Activity, user: User) -> bool:
     return in_check(activity) and not user.is_staff
 
 
-def _attempt_out(attempt: Attempt, checked: bool) -> AttemptOut:
+def _after_wrong_first(session: DbSession, attempt: Attempt) -> bool:
+    """Whether the student's first answer to this activity, in any round, was wrong and this is a
+    later one: under the evidence rule it then counts for no medal (FR-9.6), which the companion
+    says (#222 re-review, nit 4: it used to remember wrong answers per browser tab)."""
+    first = session.scalar(
+        select(Attempt)
+        .where(Attempt.user_id == attempt.user_id, Attempt.activity_id == attempt.activity_id)
+        .order_by(Attempt.id)
+        .limit(1)
+    )
+    return first is not None and first.id != attempt.id and not first.correct
+
+
+def _withheld(session: DbSession, activity: Activity, user: User) -> bool:
+    """Whether this student's result on the activity is still withheld: a mastery check item
+    while the check is unfinished (#144). Once every module 6 item is answered, each item shows
+    its result and feedback when opened again, as the report does (review of 13 Nov, High 9)."""
+    return _checked(activity, user) and not check_finished(session, user.id)
+
+
+def _attempt_out(session: DbSession, attempt: Attempt, checked: bool) -> AttemptOut:
     """An attempt's result as the student is shown it: in full, or `withheld` on a mastery check
     item (#144), where nothing says whether it was right."""
     if checked:
@@ -110,6 +155,7 @@ def _attempt_out(attempt: Attempt, checked: bool) -> AttemptOut:
         parts=[PartResult.model_validate(p) for p in (attempt.detail or {}).get("parts", [])],
         feedback=str((attempt.detail or {}).get("feedback", "")),
         hint_level=attempt.hint_level,
+        after_wrong_first=_after_wrong_first(session, attempt),
     )
 
 
@@ -126,7 +172,8 @@ def _last_attempt(
     if attempt is None:
         return None
     return LastAttemptOut(
-        submitted=attempt.submitted, result=_attempt_out(attempt, _checked(activity, user))
+        submitted=attempt.submitted,
+        result=_attempt_out(session, attempt, _withheld(session, activity, user)),
     )
 
 
@@ -179,6 +226,8 @@ def _activity_or_404(session: DbSession, activity_id: int, user: User) -> Activi
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=RETIRED)
     if refusal == "review_closed":
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=REVIEW_CLOSED)
+    if refusal == "practice_first":  # a review path's fresh item (review of 13 Nov)
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=PRACTICE_FIRST)
     if refusal == "module_locked":
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=MODULE_LOCKED)
     if refusal == "quick_check":  # answered only in the quick check (FR-8.2, #214)
@@ -196,11 +245,13 @@ def get_activity(activity_id: RowId, session: DbSession, user: CurrentUser) -> A
     browser (FR-5.3, NFR-S2). `solved` says whether this student has already answered it
     correctly, so the page stops offering hints after a refresh too (#158), and `lastAttempt`
     holds this student's latest answer and the result for it, as marked now, so coming back to an
-    activity shows it (#171; withheld on a mastery check item, as when answered). 403 while the
+    activity shows it (#171; withheld on a mastery check item, as when answered, until every
+    module 6 item is answered, then shown with its feedback: review of 13 Nov). 403 while the
     activity's module is locked or its review path is closed, 404 if it doesn't exist or is no
     longer part of the course."""
     activity = _activity_or_404(session, activity_id, user)
     out = ActivityOut.model_validate(activity)
+    out.review_check = on_review_path(activity) and not user.is_staff
     after = activity_round(session, user.id, activity).after  # a restarted module shows it afresh
     if _checked(activity, user):  # says it was answered, never whether it was right (#144)
         out.mastery_check = True
@@ -265,7 +316,7 @@ def submit_attempt(
     except ActivityGone:  # the seed deleted it while this answer waited
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NOT_FOUND) from None
     session.commit()
-    out = _attempt_out(attempt, checked)
+    out = _attempt_out(session, attempt, checked)
     if not checked:  # a mastery check item's points wait for the end of the check (#144)
         out.points = points
     return out
@@ -283,7 +334,7 @@ def get_revealed_hints(activity_id: RowId, user: CurrentUser, session: DbSession
     seen = hint_level_seen(
         session, user.id, activity.id, activity_round(session, user.id, activity).number
     )
-    limit = MASTERY_HINT_LIMIT if _checked(activity, user) else None
+    limit = _hint_limit(activity, user)
     out: list[HintOut] = []
     for h in all_hints:
         if h.level <= seen:
@@ -302,18 +353,19 @@ def reveal_hint(activity_id: RowId, user: CurrentUser, session: DbSession) -> Hi
     with support" (ID document §7.4).
 
     A module 6 mastery item gives hints 1 and 2 only (#144): asking for a third is 409, and the
-    second says `limitReached`. Once the item is answered it is 409 too, with a message that
-    doesn't say whether the answer was right.
+    second says `limitReached`; once the item is answered it is 409 too, with a message that
+    doesn't say whether the answer was right. A fresh item on a review path gives hints 1 to 3
+    only, the same way: hint 4 is the worked answer, and the item decides the result (review of
+    13 Nov).
 
     403 and 404 as for GET. 429 with `Retry-After` past 30 reveals a minute from one student. Two
     requests sent at once reveal two levels in turn, never the same level twice."""
     hints_limiter.check(f"user:{user.id}")
     activity = _activity_or_404(session, activity_id, user)
-    limit = None
+    limit = _hint_limit(activity, user)
     if _checked(activity, user):
         if answered(session, user.id, activity.id):
             raise HTTPException(status.HTTP_409_CONFLICT, detail=ANSWERED_NO_HINTS)
-        limit = MASTERY_HINT_LIMIT
     # A hint after a right answer helps with nothing, and would count in the pilot's hint use as
     # help the student needed (#158). A right answer in this round: a restarted module's questions
     # are redone with their hints, which are recorded with their round, count only against the
@@ -328,9 +380,12 @@ def reveal_hint(activity_id: RowId, user: CurrentUser, session: DbSession) -> Hi
     except ActivityGone:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=NOT_FOUND) from None
     if revealed is None:
-        raise HTTPException(
-            status.HTTP_409_CONFLICT, detail=NO_MORE_HINTS if limit is None else HINT_LIMIT
-        )
+        detail = NO_MORE_HINTS
+        if limit == MASTERY_HINT_LIMIT:
+            detail = HINT_LIMIT
+        elif limit == REVIEW_HINT_LIMIT:
+            detail = REVIEW_HINT_LIMIT_REACHED
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=detail)
     session.commit()
     hint, following = revealed
     return _hint_out(hint, following, limit)

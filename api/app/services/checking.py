@@ -44,6 +44,10 @@ MISSING_LINE = "A line is missing from this position."
 MISSING_PARSONS = ("add it from the available lines.", "add them from the available lines.")
 MISSING_FIX = ("put it back, or add its correction.", "put them back, or add their corrections.")
 EXTRA_LINE = "This line does not belong in the answer."
+IMPORT_NOT_FIRST = (
+    "Python runs it with the import lower down, but imports go at the top of the file, before any"
+    " other code, so that a reader sees what the program uses first."
+)
 WRONG_CHOICE = "This is not the right choice for this blank."
 EMPTY_BLANK = "This blank has not been filled in."
 WRONG_OPTION = "That is not the right answer. Have another look."
@@ -60,6 +64,17 @@ UNKNOWN_TEST = "This is not one of the test cases."
 WRONG_TRACE_STEP = "This step does not match the traversal."
 MISSING_TRACE_STEP = "The traversal has more steps than this."
 EXTRA_TRACE_STEP = "The traversal is already finished by this step."
+# A queue no BFS can hold, whatever came before it: a vertex in it twice, or one that has already
+# left it (review of 13 Nov, item 618). Both come from marking a vertex only when it leaves the
+# queue, so a neighbour still waiting is added again; follow-through marking must not accept it.
+QUEUE_TWICE = (
+    "A vertex joined the queue twice: mark a vertex found when it joins the queue, not when it "
+    "leaves, and never add a found vertex again."
+)
+QUEUE_AFTER_VISIT = (
+    "A vertex that has already left the queue is back in it: mark a vertex found when it joins "
+    "the queue, not when it leaves, and never add a found vertex again."
+)
 # What to check in each column of a wrong trace row (ID document §7.3: the reason and the next
 # step, not just "wrong"). Named by column, never by the right value, so a row's message helps
 # without giving the answer away.
@@ -175,7 +190,9 @@ def check_parsons(
     not position: the lines of a longest common subsequence stay, the rest are marked. So one
     line in the wrong place is the only line marked wrong, instead of every line after it. The
     Parsons reviews (Du et al. 2020; Ericson et al. 2022) set line-order grading against
-    execution-based grading; this keeps line order but accepts every order the content lists.
+    execution-based grading; this keeps line order but accepts every order the content lists,
+    and the content tests (tests/parsons_orders.py) run every order to check the list holds
+    exactly the orders that work, so a correct BFS is never marked wrong (review of 13 Nov).
 
     There is one part per position of the answer, as before: right if the line there is in that
     longest run, otherwise "in the wrong place" (a solution line, or one used twice) or "does not
@@ -234,6 +251,24 @@ def _trace_columns_wrong(have: TraceRow, want: TraceRow | BfsStep) -> list[str]:
     ]
 
 
+def _impossible_queue(row: TraceRow, left: set[str]) -> str | None:
+    """Why no BFS can reach this row's queue, or None: a vertex in it twice (`QUEUE_TWICE`), or one
+    that has already left the queue (`QUEUE_AFTER_VISIT`). `left` is the vertices the student's
+    own trace took off the queue: the current vertex of every row before this one, and this
+    row's own once its order says it has left (so a slip in this row's current vertex alone gets
+    that column's hint). Such a
+    row is wrong on every reading. Not against the visited column: module 4's Python `visited`
+    set holds the vertices found, queued ones included (TraceTable.tsx warns of it), so a correct
+    student who writes that set there must not be told this misconception; their visited column
+    is still wrong, and its own hint says why (review of 13 Nov on #221, item 1502). Nor against
+    the order column, so a slip there gets the order column's hint."""
+    if len(set(row.queue)) < len(row.queue):
+        return QUEUE_TWICE
+    if set(row.queue) & left:
+        return QUEUE_AFTER_VISIT
+    return None
+
+
 def _next_step(adjacency: dict[str, list[str]], start: str, row: TraceRow) -> TraceRow | None:
     """The step BFS takes from the state a student wrote in `row` (its queue and its order), or
     None when that queue is empty and BFS has finished. Found = everything already visited or
@@ -262,7 +297,13 @@ def check_trace(config: TraceConfig, submission: TraceSubmission) -> CheckResult
     it (`TRACE_COLUMN_HINTS`), never the right value. The traversal is the engine's, not a stored
     answer (SE document decision "BFS computed server-side"); no `solution` is kept for this kind.
     There are at least as many parts as the engine has steps, so a short answer leaves its missing
-    steps wrong; a step after the traversal has finished, on either reading, is wrong too."""
+    steps wrong; a step after the traversal has finished, on either reading, is wrong too.
+
+    A row whose queue no BFS can hold (a vertex in it twice, or one already taken off it) is wrong
+    whatever the readings say, and its message names the misconception behind it: marking a
+    vertex found only when it leaves the queue (`_impossible_queue`). Otherwise follow-through
+    would carry that misconception through every later row at the cost of one step, and pass
+    objective 5's "at most one error" (review of 13 Nov, item 618)."""
     scenario = GraphScenarioOut(
         id=0,
         name="",
@@ -275,6 +316,7 @@ def check_trace(config: TraceConfig, submission: TraceSubmission) -> CheckResult
     adjacency = bfs_adjacency(scenario)
     got = submission.rows
     parts: list[PartResult] = []
+    left: set[str] = set()  # the vertices the student's trace has taken off the queue so far
     for i in range(max(len(expected), len(got))):
         if i >= len(got):
             parts.append(PartResult(ref=i, correct=False, message=MISSING_TRACE_STEP))
@@ -288,6 +330,16 @@ def check_trace(config: TraceConfig, submission: TraceSubmission) -> CheckResult
             readings.append(follow)
         if not readings:
             parts.append(PartResult(ref=i, correct=False, message=EXTRA_TRACE_STEP))
+            continue
+        own = {have.visited_vertex} if have.visited_vertex in have.order else set()
+        impossible = _impossible_queue(have, left | own)
+        # Only a current vertex the order column agrees with has left the queue: a slip in the
+        # current-vertex column alone must not make a later, correct queue "impossible".
+        left |= own
+        if impossible is not None:
+            parts.append(
+                PartResult(ref=i, correct=False, message=f"{WRONG_TRACE_STEP} {impossible}")
+            )
             continue
         wrong = min((_trace_columns_wrong(have, want) for want in readings), key=len)
         if not wrong:
@@ -448,8 +500,30 @@ def check_activity(
     result = _check(kind, config, solution, submission)
     explanation = solution.get("explanation") if isinstance(solution, dict) else None
     if result.correct and isinstance(explanation, str) and explanation:
-        return result.model_copy(update={"feedback": explanation})
+        result = result.model_copy(update={"feedback": explanation})
+    if result.correct and _import_not_first(kind, config, submission):
+        result = result.model_copy(update={"feedback": f"{result.feedback} {IMPORT_NOT_FIRST}"})
     return result
+
+
+def _import_not_first(kind: str, config: dict[str, Any], submission: dict[str, Any]) -> bool:
+    """Whether an ordered answer puts an import after other code. Python runs it, so a BFS
+    written that way is accepted (FR-5.4), but the right answer's feedback says where imports go
+    (re-review of #221: marking it wrong failed objectives 6 and 7 for a program that works)."""
+    if kind not in ("parsons", "fix_the_bug"):
+        return False
+    text = {
+        line["id"]: str(line.get("text", "")).lstrip()
+        for line in [*config.get("lines", []), *config.get("corrections", [])]
+        if isinstance(line, dict) and "id" in line
+    }
+    code_before = False
+    for line_id in submission.get("order") or []:
+        if not text.get(line_id, "").startswith(("import ", "from ")):
+            code_before = True
+        elif code_before:
+            return True
+    return False
 
 
 def _check(

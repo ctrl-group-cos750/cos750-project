@@ -160,6 +160,22 @@ describe('ModulePage — goals', () => {
       renderApp('/modules/1')
       expect(await goals()).not.toHaveAttribute('open')
     })
+
+    it('stays closed once the student closes it, until opened again (#214)', async () => {
+      screenIsPhone(false)
+      setupModuleApi(twoSegmentDetail)
+      const { unmount } = renderApp('/modules/1')
+      const box = (await goals())!
+      expect(box).toHaveAttribute('open')
+      await userEvent.click(within(box).getByText('By the end of this module you can:'))
+      await waitFor(() =>
+        expect(localStorage.getItem(`ctrl-academy.${ada.id}.minimised.moduleGoals`)).toBe('yes'),
+      )
+      unmount()
+      renderApp('/modules/1')
+      expect(await goals()).not.toHaveAttribute('open')
+      localStorage.clear()
+    })
   })
 })
 
@@ -480,7 +496,7 @@ describe('ModulePage — navigation and position saving', () => {
     renderApp('/modules/1')
     const next = await screen.findByRole('button', { name: 'Next →' })
     expect(next).toHaveAccessibleDescription(
-      'Not yet right. Try again: after one more answer you can move on, though it earns no points then, and the hints can help.',
+      'Not yet right. Try again, and the hints can help: it earns no points now that the first answer was wrong, and after one more answer you can move on.',
     )
   })
 
@@ -502,7 +518,7 @@ describe('ModulePage — navigation and position saving', () => {
     // Said plainly: moving on earns nothing for it (#215 review).
     expect(
       screen.getByText(
-        'You can move on: this one is marked to look at again. Moving on earns no points for it; answer it right later and it does.',
+        'You can move on: this one is marked to look at again. It earns no points or medal now that the first answer was wrong; answering it right later still helps you learn it.',
       ),
     ).toBeInTheDocument()
   })
@@ -725,6 +741,40 @@ describe('ModulePage — refused and switched', () => {
     expect(screen.getByText(/Complete the previous module to unlock it/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Back to your modules' })).toHaveAttribute('href', '/')
     expect(api.callsTo('GET /api/modules/6')).toHaveLength(1)
+  })
+
+  it('says how to open the locked mastery check when opened by its address (#214)', async () => {
+    const modules = [0, 1, 2, 3, 4, 5, 6].map((number) => ({
+      id: number + 1,
+      number,
+      slug: `m${number}`,
+      title: `Module ${number}`,
+      goals: [],
+      estimatedMinutes: 10,
+      status: number === 6 ? 'locked' : number === 2 ? 'complete' : 'open',
+      segmentCount: 3,
+      currentSegmentPosition: 0,
+    }))
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules': () => Response.json(modules),
+        'GET /api/modules/:id': () =>
+          Response.json({ detail: 'The mastery check opens once …' }, { status: 403 }),
+      },
+    })
+    renderApp('/modules/7')
+    expect(
+      await screen.findByRole('heading', { name: 'Module 6 isn’t open yet' }),
+    ).toBeInTheDocument()
+    const note = await screen.findByText(/Still to do/)
+    expect(note).toHaveTextContent(
+      'Opens once each of modules 1 to 5 is finished or you passed its quick check. Still to do: module 1, module 3, module 4, module 5.',
+    )
+    expect(within(note).getByRole('link', { name: 'module 3' })).toHaveAttribute(
+      'href',
+      '/modules/4',
+    )
   })
 
   it('does not retry any refusal, such as too many requests (429)', async () => {

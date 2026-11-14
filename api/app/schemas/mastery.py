@@ -1,5 +1,7 @@
 from typing import Literal
 
+from pydantic import Field
+
 from app.schemas.base import ApiModel
 from app.schemas.content import SegmentKind
 
@@ -14,10 +16,26 @@ class ReviewProgressOut(ApiModel):
     total: int
 
 
+class MasteryAnswerOut(ApiModel):
+    """One mastery check item and the student's answer to it, on the report once the check is
+    finished (review of 13 Nov, High 9): whether it was right, and why. Before then the results
+    stay withheld (#144), so there are none."""
+
+    activity_id: int
+    title: str
+    correct: bool
+    score: float
+    feedback: str  # why it is right (the item's explanation), or the checker's summary
+    notes: list[str]  # what each wrong part says, each message once
+    hint_level: int  # the highest hint seen before answering (at most 2 in the check)
+
+
 class ObjectiveReportOut(ApiModel):
     """One objective on the mastery report (FR-7.2, FR-7.3). `answered` of `total` is how many of
     its module 6 items the student has answered; the result stays `not_attempted` until all are.
-    `review` is there once module 6 marks it "not yet", which opens its review path."""
+    `review` is there once module 6 marks it "not yet", which opens its review path. `answers`
+    are its module 6 items with the student's result on each, once the whole check is answered
+    (empty before)."""
 
     id: int
     text: str
@@ -26,6 +44,7 @@ class ObjectiveReportOut(ApiModel):
     answered: int
     total: int
     review: ReviewProgressOut | None
+    answers: list[MasteryAnswerOut] = Field(default_factory=list)
 
 
 class MasteryReportOut(ApiModel):
@@ -48,6 +67,9 @@ class ReviewStepOut(ApiModel):
     activity_id: int | None
     purpose: Literal["review", "mastery"] | None
     answered: bool
+    # A fresh item that waits for the path's practice to be done (review of 13 Nov): shown, but
+    # not opened yet. Never for staff, who preview everything.
+    locked: bool = False
 
 
 class ReviewPathOut(ApiModel):

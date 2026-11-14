@@ -12,11 +12,20 @@ export type AppShellProps = {
    * report, a review path, badges, the profile, an activity); "wide" is for the module map, the
    * BFS visualiser and the staff portal. */
   width?: 'reading' | 'page' | 'wide'
+  /** "tinted": the cards let the page background show through (the module map, badges, the
+   * report; styles/backgrounds.css). "solid", the default, keeps them opaque behind reading. */
+  surfaces?: 'tinted' | 'solid'
   children: ReactNode
 }
 
 /** The frame around every signed-in page: header, then the page in <main>. */
-export function AppShell({ nav, actions, width = 'wide', children }: AppShellProps) {
+export function AppShell({
+  nav,
+  actions,
+  width = 'wide',
+  surfaces = 'solid',
+  children,
+}: AppShellProps) {
   // A client-side link inside the app, so the logo doesn't reload everything; a plain one in
   // the UI kit and the component tests, which have no router.
   const inRouter = useInRouterContext()
@@ -51,7 +60,7 @@ export function AppShell({ nav, actions, width = 'wide', children }: AppShellPro
           {actions && <div className={styles.actions}>{actions}</div>}
         </div>
       </header>
-      <main id="main" className={`${styles.main} ${styles[width]}`}>
+      <main id="main" className={`${styles.main} ${styles[width]}`} data-surfaces={surfaces}>
         {children}
       </main>
     </>

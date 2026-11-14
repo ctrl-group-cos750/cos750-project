@@ -6,4 +6,5 @@ export const demo = {
   mid: 'mid@demo.example.com',
   ready: 'ready@demo.example.com',
   notYet: 'not-yet@demo.example.com',
+  bronze: 'bronze@demo.example.com',
 } as const

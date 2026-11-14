@@ -4,7 +4,7 @@ import styles from './progress.module.css'
 
 /**
  * A module medal: a disc on a ribbon. The tiers differ in shape as well as colour (NFR-A2): gold
- * carries a star, silver a ring, bronze is plain. Named for screen readers by `label`, or by its
+ * carries a star, silver a ring, finished a tick, in blue: not the objective badges' bronze. Named for screen readers by `label`, or by its
  * tier and rule.
  */
 export function Medal({
@@ -30,6 +30,7 @@ export function Medal({
       <path className={styles.ribbon} d="M10 2h5l3 9h-5zM22 2h-5l-3 9h5z" />
       <circle className={styles.disc} cx="16" cy="20" r="10" />
       {tier === 'silver' && <circle className={styles.mark} cx="16" cy="20" r="6" fill="none" />}
+      {tier === 'finished' && <path className={styles.mark} d="M12 20.5l3 3 5.5-6" />}
       {tier === 'gold' && (
         <polygon
           className={styles.star}

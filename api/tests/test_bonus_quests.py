@@ -80,19 +80,25 @@ def test_a_right_answer_earns_the_quest_and_both_earn_all_quests(
     assert client.get("/api/rewards").json()["points"] == 40
 
 
-def test_a_wrong_answer_earns_nothing_and_no_quest_touches_mastery(
+def test_wrong_then_right_earns_nothing_and_no_quest_touches_mastery(
     client: TestClient, db: Session
 ) -> None:
+    """Only a first attempt counts (the evidence rule, FR-9.6): wrong then right on a quest pays
+    no points and no Quest badge, and so All Quests can't come either (review of 13 Nov on #221:
+    it paid 20 points and both badges)."""
     load(db)
     user_id = log_in(client)
     open_through(db, user_id, 5)
     answer(client, 380, "b")
     assert client.get("/api/rewards").json()["points"] == 0
     answer(client, 380, "a")
+    assert client.get("/api/rewards").json()["points"] == 0
+    assert badges(client) == []
     answer(client, 480, "a")
     assert db.scalars(select(ObjectiveResult).where(ObjectiveResult.user_id == user_id)).all() == []
     refs = db.scalars(select(PointsEntry.ref).where(PointsEntry.user_id == user_id)).all()
-    assert sorted(refs) == ["quest:380", "quest:480"]
+    assert sorted(refs) == ["quest:480"]
+    assert badges(client) == [("quest", "480")]  # not All Quests: 380 wasn't earned
 
 
 def test_a_quest_answered_after_the_hints_give_it_away_earns_nothing(

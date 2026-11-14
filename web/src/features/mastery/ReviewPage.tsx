@@ -33,7 +33,7 @@ function Step({ step, objectiveId }: { step: ReviewStep; objectiveId: number }) 
           <h2 className={styles.title}>{step.title}</h2>
           <p className={styles.muted}>
             {fresh
-              ? 'A new question. Your first answer counts towards your result.'
+              ? 'A new question. Your first answer counts towards your result, with up to three hints.'
               : 'Practice, with all four hints. It doesn’t count towards your result.'}
           </p>
         </div>
@@ -43,25 +43,38 @@ function Step({ step, objectiveId }: { step: ReviewStep; objectiveId: number }) 
           </Tag>
         ) : null}
       </div>
-      <Link
-        to={`/activities/${step.activityId}`}
-        // The activity page leads back to this path (#146).
-        state={backState(`/review/${objectiveId}`, 'Back to the review path')}
-        className={cn(
-          buttonVariants({ variant: step.answered ? 'outline' : 'default' }),
-          'justify-self-start',
-        )}
-      >
-        {step.answered
-          ? fresh
-            ? 'See it again'
-            : 'Practise again'
-          : fresh
-            ? 'Answer'
-            : 'Practise'}
-        <span className="sr-only">: {step.title}</span>
-      </Link>
+      {step.locked ? (
+        // The path shows every step at once, so a fresh question says why it can't be opened yet.
+        <p className={styles.muted}>Opens once you have done the practice above.</p>
+      ) : (
+        <ActivityLink step={step} objectiveId={objectiveId} fresh={fresh} />
+      )}
     </li>
+  )
+}
+
+function ActivityLink({
+  step,
+  objectiveId,
+  fresh,
+}: {
+  step: ReviewStep
+  objectiveId: number
+  fresh: boolean
+}) {
+  return (
+    <Link
+      to={`/activities/${step.activityId}`}
+      // The activity page leads back to this path (#146).
+      state={backState(`/review/${objectiveId}`, 'Back to the review path')}
+      className={cn(
+        buttonVariants({ variant: step.answered ? 'outline' : 'default' }),
+        'justify-self-start',
+      )}
+    >
+      {step.answered ? (fresh ? 'See it again' : 'Practise again') : fresh ? 'Answer' : 'Practise'}
+      <span className="sr-only">: {step.title}</span>
+    </Link>
   )
 }
 

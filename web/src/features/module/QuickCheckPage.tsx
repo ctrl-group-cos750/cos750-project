@@ -4,6 +4,8 @@ import { Link, useParams } from 'react-router'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { Alert, Button, Card, Spinner, Tag } from '../../components'
 import { usePageTitle } from '../../pages/usePageTitle.ts'
+import { CompanionSays } from '../companion/Companion.tsx'
+import { quickCheckLine } from '../companion/companion.ts'
 import { useRefreshRewards } from '../rewards/hooks.ts'
 import { fetchModules, fetchQuickCheck, takeQuickCheck } from './module.api.ts'
 import type { ModuleSummary, QuickCheckQuestion, QuickCheckResult } from './module.types.ts'
@@ -213,6 +215,15 @@ function Result({
   useEffect(() => heading.current?.focus(), [])
   const here = modules.find((m) => m.id === moduleId)
   const suggested = result.suggestedModule
+  // The study companion's line on the marked check (#214), worked out once.
+  const [line] = useState(() =>
+    quickCheckLine(
+      here?.number,
+      result.correct,
+      result.total,
+      result.items.filter((i) => !i.correct),
+    ),
+  )
   return (
     <div className="grid gap-6">
       <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold">
@@ -232,6 +243,7 @@ function Result({
             : 'Work through this module: it teaches exactly these.'}
         </Alert>
       )}
+      <CompanionSays line={line} />
       <div className="flex flex-wrap gap-3">
         {result.passed ? (
           suggested !== null ? (

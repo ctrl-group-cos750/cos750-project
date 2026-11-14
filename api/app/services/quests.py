@@ -3,10 +3,10 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Attempt, Module, ModuleProgress
+from app.models import Activity, Module, ModuleProgress
 from app.schemas.quests import QuestOut
 from app.services.attempts import bonus_quests
-from app.services.rewards import real_work
+from app.services.rewards import real_work_on
 
 
 def offered_quests(session: Session, user_id: int) -> list[QuestOut]:
@@ -36,21 +36,7 @@ def offered_quests(session: Session, user_id: int) -> list[QuestOut]:
             )
         )
     }
-    completed_quests = {
-        activity_id
-        for activity_id in quest_ids
-        if session.scalar(
-            select(Attempt.id)
-            .where(
-                Attempt.user_id == user_id,
-                Attempt.activity_id == activity_id,
-                Attempt.correct.is_(True),
-                real_work(),
-            )
-            .limit(1)
-        )
-        is not None
-    }
+    completed_quests = real_work_on(session, user_id, quest_ids)
     out: list[QuestOut] = []
     for activity_id in quest_ids:
         activity = activities.get(activity_id)

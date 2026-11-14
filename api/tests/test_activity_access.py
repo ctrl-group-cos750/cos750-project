@@ -26,6 +26,7 @@ from app.models import (
 )
 from app.routers.activities import (
     MODULE_LOCKED,
+    PRACTICE_FIRST,
     QUEST_CLOSED,
     QUICK_CHECK,
     RETIRED,
@@ -361,7 +362,22 @@ def test_a_review_path_opens_when_module_6_says_not_yet(
     db.commit()
     states = {o["id"]: o["state"] for o in client.get("/api/me/report").json()["objectives"]}
     assert states[1] == "not_yet"
-    for step in review_items(db, 1):
+    steps = review_items(db, 1)
+    purposes = {a.id: a.purpose for a in db.scalars(select(Activity).where(Activity.id.in_(steps)))}
+    practice = [s for s in steps if purposes[s] == "review"]
+    fresh = [s for s in steps if purposes[s] == "mastery"]
+    for step in practice:
+        assert client.get(f"/api/activities/{step}").status_code == 200
+    # The fresh items wait for the practice (review of 13 Nov, Critical 1).
+    for step in fresh:
+        refused = client.get(f"/api/activities/{step}")
+        assert (refused.status_code, refused.json()["detail"]) == (403, PRACTICE_FIRST)
+        assert client.post(f"/api/activities/{step}/hints").status_code == 403
+    for step in practice:  # answered twice: done, as in a module (FR-2.7)
+        for _ in range(2):
+            body = {"submitted": first_submission(db, step)}
+            assert client.post(f"/api/activities/{step}/attempts", json=body).status_code == 201
+    for step in fresh:
         assert client.get(f"/api/activities/{step}").status_code == 200
     for step in review_items(db, 2):  # objective 2's path is still closed
         assert client.get(f"/api/activities/{step}").status_code == 403

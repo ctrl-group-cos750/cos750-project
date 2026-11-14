@@ -279,23 +279,55 @@ def test_guessing_until_right_earns_no_silver_and_no_practised(
     assert objective_badges(client) == {}
 
 
-def test_a_restart_is_not_a_new_first_attempt(
+def test_a_restart_counts_for_the_profile_and_practised_but_not_the_medal(
     client: TestClient, db: Session, loaded: None
 ) -> None:
-    """A restart starts a new round but not a new first attempt (the evidence rule, FR-9.6):
-    guessing wrong then right, restarting and answering right first time in the new round still
-    earns no medal and no Practised, or a restart would win back what guessing lost."""
+    """Guessing wrong then right, restarting and answering right first time in the new round: the
+    profile shows where the student stands now, so it is secure and Practised comes; the medal
+    keeps the first attempt ever, so a restart can't win it back (#222 review by Koos; FR-9.6)."""
     user = log_in(client)
     for activity in (101, 102, 103, 104):
         answer(client, activity, WRONG)
         answer(client, activity)
     complete(db, user, 1)
+    levels = {s["id"]: (s["level"], s["onYourOwn"]) for s in profile(client)["objectives"]}
+    assert levels == {1: ("practising", 0), 2: ("practising", 0)}
+    # Practice this round can't help: restart module 1, which is finished, gives new first answers.
+    assert improve(client)[1] == {
+        "kind": "restart",
+        "moduleId": 1,
+        "segment": None,
+        "objectiveId": None,
+        "locked": False,
+    }
     assert client.post("/api/modules/1/restart").status_code == 200
+    # Not redone yet: each item keeps the result it had.
+    assert profile(client)["objectives"][0]["onYourOwn"] == 0
     for activity in (101, 102, 103, 104):
         answer(client, activity)
     medal = next(m for m in profile(client)["modules"] if m["moduleId"] == 1)
     assert (medal["medal"], medal["firstTime"], medal["onYourOwn"]) == (None, 0, 0)
-    assert objective_badges(client) == {}
+    levels = {s["id"]: (s["level"], s["onYourOwn"]) for s in profile(client)["objectives"]}
+    assert levels == {1: ("secure", 3), 2: ("secure", 1)}
+    assert objective_badges(client) == {"lo1": "practised", "lo2": "practised"}
+
+
+def test_only_the_first_answer_in_the_new_round_counts(
+    client: TestClient, db: Session, loaded: None
+) -> None:
+    """A restart gives one new first answer, not a retry: wrong then right in the new round still
+    isn't on your own, and hint 3 seen in the first round still counts against it (FR-2.8)."""
+    user = log_in(client)
+    for activity in (101, 102, 103, 104):
+        answer(client, activity)
+    see_hints(db, user, 104, 3)
+    complete(db, user, 1)
+    assert client.post("/api/modules/1/restart").status_code == 200
+    answer(client, 101, WRONG)
+    answer(client, 101)
+    answer(client, 104)  # after hint 3 from the first round
+    own = {s["id"]: s["onYourOwn"] for s in profile(client)["objectives"]}
+    assert own == {1: 2, 2: 0}  # 102 and 103 not redone keep theirs; 101 and 104 don't count
 
 
 def test_gold_is_without_a_hint_and_silver_allows_hints_1_and_2(

@@ -17,6 +17,15 @@ the worked answer never counts. The skill profile and medals go one step further
 do: the first attempt must also come before hint 3 or 4, in any round. Worked out here from the
 attempts and hint views, so this file needs nothing from rewards.py's helpers.
 
+**Where the student stands now.** The skill profile's level and the Practised badge count, for
+each practice item, the first answer in the latest round of its module in which the student
+answered it (`_answers(..., latest_round=True)`): restarting a module (FR-2.8) gives its items a
+new first answer, so practice after a slip can make an objective secure again, while an item not
+redone yet keeps the result it had (#222 review by Koos: the profile shows where the student stands
+now, ID document §7.2 and ARCS confidence, and practice is where mistakes are expected). Hint 3 or
+4 seen in an earlier round still counts against a later answer, as everywhere (FR-2.8). Points and
+medals keep the first attempt ever, so a restart can't win back what guessing lost there (FR-9.6).
+
 The counts behind the level are sent too, for the profile to show on request. Practice items are
 the module activities tagged with the objective whose purpose is practice or retrieval, that every
 student meets on the way through a module: on a module segment that is not extra support (FR-8.4),
@@ -52,11 +61,13 @@ out here from the content so the web doesn't guess (`improve`):
   item on it the student hasn't answered yet, at that item's segment when the student has already
   reached it (a segment further on can't be opened yet, FR-2.7, so the module opens where it
   resumes);
-- *practising*, but secure is out of reach: only a first attempt counts, so once more than a fifth
-  of an objective's practice items had a first answer that wasn't on your own, no amount of
-  practice makes it secure (an objective with fewer than five allows none). Sending the student
-  back to practise would send them somewhere that can never help (#222 re-review, N1), so it
-  points to the mastery **check** (module 6) instead, where the objective is still met in full;
+- *practising*, but secure is out of reach this round: once more than a fifth of an objective's
+  practice items had a first answer (this round) that wasn't on your own, answering the rest can't
+  make it secure (an objective with fewer than five allows none). Sending the student on to
+  practise would send them somewhere that can't help (#222 re-review, N1). A **restart** of the
+  module with the first such item can (above), so it points there once that module is finished
+  and can be restarted; until then it points to the mastery **check** (module 6), where the
+  objective is still met in full;
 - *secure*, or bronze (met with support, which only a review path gives): **revisit** the first module that practises it
   (the result stands; going over it again is the student's choice);
 - *not yet* from the mastery check: its **review** path, the designed route after module 6, once
@@ -76,6 +87,7 @@ is in progress, `heading_for` is the medal the answers so far are on course for,
 activities already answered.
 """
 
+from bisect import bisect_left
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from typing import Literal, cast
@@ -87,6 +99,7 @@ from app.models import (
     Activity,
     Attempt,
     Checkpoint,
+    Event,
     HintView,
     Module,
     ModuleProgress,
@@ -112,7 +125,7 @@ Level = Literal["not_started", "practising", "secure"]
 SECURE_SHARE = 0.8
 
 
-ImproveKind = Literal["practise", "revisit", "review", "check"]
+ImproveKind = Literal["practise", "revisit", "review", "check", "restart"]
 
 
 @dataclass(frozen=True)
@@ -226,15 +239,44 @@ def _hint_before(level: int) -> Exists:
     )
 
 
-def _answers(session: Session, user_id: int, items: Sequence[Activity]) -> _Answers:
+def _round_starts(session: Session, user_id: int) -> dict[int, list[int]]:
+    """Each module's restart boundaries for this student, in order: attempts at its activities with
+    an id above a boundary, and not above the next, are that round's (app/services/restart.py)."""
+    starts: dict[int, set[int]] = {}
+    for ref, payload in session.execute(
+        select(Event.ref, Event.payload).where(
+            Event.user_id == user_id, Event.type == "module_restarted"
+        )
+    ):
+        after = (payload or {}).get("after_attempt")
+        if ref.startswith("module:") and isinstance(after, int):
+            starts.setdefault(int(ref.removeprefix("module:")), set()).add(after)
+    # The latest restart is on its progress row too, in case its event is missing.
+    for module_id, after in session.execute(
+        select(ModuleProgress.module_id, ModuleProgress.restarted_after_attempt).where(
+            ModuleProgress.user_id == user_id,
+            ModuleProgress.restarted_after_attempt.is_not(None),
+        )
+    ):
+        if after is not None:
+            starts.setdefault(module_id, set()).add(after)
+    return {module_id: sorted(afters) for module_id, afters in starts.items()}
+
+
+def _answers(
+    session: Session, user_id: int, items: Sequence[Activity], *, latest_round: bool = False
+) -> _Answers:
     """Of these activities: those answered at all, right at some point, right on your own (the
-    first attempt ever, right, before hint 3 or 4: the module docstring), and right first time
-    (that, before any hint)."""
+    first attempt, right, before hint 3 or 4: the module docstring), and right first time (that,
+    before any hint). The first attempt is the first ever, for medals; with `latest_round`, the
+    first in the latest round of its module in which the student answered it, for the skill
+    profile and Practised (see "Where the student stands now")."""
     ids = [a.id for a in items]
     if not ids:
         return _Answers(set(), set(), set(), set())
     rows = session.execute(
         select(
+            Attempt.id,
             Attempt.activity_id,
             Attempt.correct,
             (Attempt.hint_level < SUPPORT_LEVEL) & ~_hint_before(SUPPORT_LEVEL),
@@ -243,18 +285,26 @@ def _answers(session: Session, user_id: int, items: Sequence[Activity]) -> _Answ
         .where(Attempt.user_id == user_id, Attempt.activity_id.in_(ids))
         .order_by(Attempt.id)
     ).all()
-    # The evidence rule (FR-9.6): only the first attempt at each activity is evidence, in any
-    # round, so wrong then right (guessing until right) is never on your own (#222 review, A1).
-    first: dict[int, tuple[bool, bool]] = {}
-    for activity, correct, unsupported, unhinted in rows:
-        if activity not in first:
+    starts = _round_starts(session, user_id) if latest_round else {}
+    module = {a.id: a.module_id for a in items}
+
+    def round_of(activity: int, attempt: int) -> int:
+        return bisect_left(starts.get(module[activity] or 0, []), attempt)
+
+    # The evidence rule (FR-9.6): only the first attempt at each activity is evidence, so wrong
+    # then right (guessing until right) is never on your own (#222 review, A1). Per round, with
+    # `latest_round`: a later round's first attempt replaces an earlier round's.
+    first: dict[int, tuple[int, bool, bool]] = {}
+    for attempt, activity, correct, unsupported, unhinted in rows:
+        at = round_of(activity, attempt)
+        if activity not in first or at > first[activity][0]:
             ok = bool(correct) and bool(unsupported)
-            first[activity] = (ok, ok and bool(unhinted))
+            first[activity] = (at, ok, ok and bool(unhinted))
     return _Answers(
         answered=set(first),
-        right={a for a, correct, _, _ in rows if correct},
-        on_own={a for a, (own, _) in first.items() if own},
-        first_time={a for a, (_, unhinted) in first.items() if unhinted},
+        right={a for _, a, correct, _, _ in rows if correct},
+        on_own={a for a, (_, own, _) in first.items() if own},
+        first_time={a for a, (_, _, unhinted) in first.items() if unhinted},
     )
 
 
@@ -327,10 +377,20 @@ def _improve(
         return None
     if result == "met_with_support" or level == "secure":
         return Improve("revisit", module_id=places[ordered[0]][1])
-    # A first answer that wasn't on your own never counts again (the evidence rule, FR-9.6):
-    # with too many of those, practice can't make it secure, so the check is where it is decided.
+    # A first answer that wasn't on your own counts until the module is restarted (FR-9.6): with
+    # too many of those, answering the rest can't make it secure this round.
     missed = sum(1 for a in mine if a in got.answered and a not in got.on_own)
     if len(mine) - missed < SECURE_SHARE * len(mine):
+        # A restart gives the module's items a new first answer (the module docstring), so restart
+        # the first module with such an item, once it is finished (only then can it be restarted,
+        # FR-2.8; `reached` is None for it). Until then, the mastery check decides it.
+        restartable = [
+            places[a][1]
+            for a in ordered
+            if a in got.answered and a not in got.on_own and reached.get(places[a][1], 0) is None
+        ]
+        if restartable:
+            return Improve("restart", module_id=restartable[0])
         return Improve("check", module_id=MASTERY_MODULE, locked=check_locked)
     todo = [a for a in ordered if a not in got.answered]
     _, module_id, segment = places[(todo or ordered)[0]]
@@ -352,7 +412,7 @@ def _reached(session: Session, user_id: int) -> dict[int, int | None]:
 def skills(session: Session, user_id: int) -> list[Skill]:
     """The student's skill profile, in objective order."""
     items = _practice(session)
-    got = _answers(session, user_id, items)
+    got = _answers(session, user_id, items, latest_round=True)
     places = _places(session, items)
     reached = _reached(session, user_id)
     check_locked = module_locked(session, user_id, MASTERY_MODULE)
@@ -406,12 +466,13 @@ def secure_objectives(
     """The objectives this student is secure in, in practice (`level_for`), of `only` if given,
     for the Practised badge: the skill profile's count, without the rest of it. "On your own" is
     real work (`_answers`), so an answer given away by hint 3 or 4 before a module's restart
-    doesn't count after it, and only a first attempt counts at all (the evidence rule, FR-9.6), as
-    for every other reward (13 Nov audit; #222 review, A1)."""
+    doesn't count after it, and only a first attempt counts (the evidence rule, FR-9.6; #222
+    review, A1): the first in the latest round, as on the profile, so practice after a restart
+    can earn it (#222 review by Koos)."""
     items = [a for a in _practice(session) if a.objective_id is not None]
     if only is not None:
         items = [a for a in items if a.objective_id in only]
-    got = _answers(session, user_id, items)
+    got = _answers(session, user_id, items, latest_round=True)
     answered_ids, own_ids = got.answered, got.on_own
     secure = set()
     for objective in {cast(int, a.objective_id) for a in items}:

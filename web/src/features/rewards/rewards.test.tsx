@@ -332,6 +332,11 @@ describe('badge levels', () => {
           modules: [4, 5],
           improve: { kind: 'check', moduleId: 6, segment: null, objectiveId: null },
         }),
+        skill(4, {
+          level: 'practising',
+          modules: [3],
+          improve: { kind: 'restart', moduleId: 3, segment: null, objectiveId: null },
+        }),
       ],
     )
     const byId = Object.fromEntries(shelf.objective.map((i) => [i.achievement.id, i]))
@@ -344,6 +349,10 @@ describe('badge levels', () => {
     // Practice can no longer make it secure: never "practise it" in vain (#222 re-review, N1).
     expect(byId.lo7.next).toBe(
       'Only a first answer counts, so practice can no longer make it secure. Meet it in the mastery check in module 6.',
+    )
+    // A finished module to restart: its questions get a new first answer (#222 review by Koos).
+    expect(byId.lo4.next).toBe(
+      "Only a first answer counts, so answering the rest can't make it secure this time. Restart module 3 to answer its questions afresh.",
     )
     expect(modulesText([1, 2, 5])).toBe('modules 1, 2 and 5')
   })

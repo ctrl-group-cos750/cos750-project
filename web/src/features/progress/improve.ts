@@ -16,7 +16,9 @@ export type ImproveLink = {
  * The link from an objective on the skill profile to where it can be improved (#214): practise
  * in a module (at the segment, when the student can open it there), revisit a module (secure, or
  * met with support: the result stands), the review path after a "not yet" in the mastery check,
- * or the mastery check itself once practice can no longer make it secure (#222 re-review, N1).
+ * restart a finished module once practice this round can no longer make it secure (a restart
+ * gives its questions a new first answer, #222 review by Koos), or the mastery check itself
+ * while there is no module to restart (#222 re-review, N1).
  * While the mastery check is still locked, that says when it will be shown instead of linking to a
  * page that isn't open (#222 re-review, nit 3). Nothing for gold. The API decides where
  * (`improve`); this only words it.
@@ -45,6 +47,13 @@ export function improveLink(skill: Skill): ImproveLink | null {
       to: `/modules/${improve.moduleId}`,
       text: 'Show it in the mastery check',
       label: `Improve ${name}: show it in the mastery check`,
+      quiet: false,
+    }
+  if (improve.kind === 'restart')
+    return {
+      to: `/modules/${improve.moduleId}`,
+      text: `Restart module ${improve.moduleId} to answer afresh`,
+      label: `Improve ${name}: restart module ${improve.moduleId} to answer afresh`,
       quiet: false,
     }
   if (improve.kind === 'revisit')

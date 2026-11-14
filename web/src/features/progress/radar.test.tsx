@@ -329,6 +329,24 @@ describe('the way to improve each objective (#214)', () => {
     ).toBeInTheDocument()
   })
 
+  it('offers a restart once practice this round can no longer make it secure', async () => {
+    // Module 1 is finished, so restarting it gives its questions a new first answer (#222 review
+    // by Koos); the badge says the same.
+    home([
+      skill(1, {
+        level: 'practising',
+        improve: { kind: 'restart', moduleId: 1, segment: null, objectiveId: null },
+      }),
+    ])
+    renderApp('/')
+    const region = await screen.findByRole('region', { name: 'Skill profile' })
+    expect(
+      within(region).getByRole('link', {
+        name: 'Improve Key terms: restart module 1 to answer afresh',
+      }),
+    ).toHaveAttribute('href', '/modules/1')
+  })
+
   it('shows the same links in the progress panel’s list, in the opened row', async () => {
     vi.stubGlobal(
       'matchMedia',

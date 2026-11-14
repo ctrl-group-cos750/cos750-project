@@ -10,11 +10,13 @@ export type Medal = 'gold' | 'silver' | 'finished'
 /** Where to work on an objective (#214), worked out by the API from the content: `practise` in a
  * module (at `segment`, 0-based, when the student can open it there), `revisit` a module, its
  * `review` path once module 6 has said "not yet", or the mastery `check` (module 6) once practice
- * can no longer make it secure (only a first attempt counts, FR-9.6). Never module 6 to practise.
+ * this round can no longer make it secure (only a first attempt counts, FR-9.6), or `restart` a
+ * finished module, which gives its questions a new first answer for the profile. Never module 6
+ * to practise.
  * `locked`: that module isn't open to the student yet (the mastery check, before modules 1 to 5
  * are done). */
 export type Improve = {
-  kind: 'practise' | 'revisit' | 'review' | 'check'
+  kind: 'practise' | 'revisit' | 'review' | 'check' | 'restart'
   moduleId: number | null
   segment: number | null
   objectiveId: number | null

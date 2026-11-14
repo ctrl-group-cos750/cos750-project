@@ -151,26 +151,31 @@ def struggling_objectives(
     }
 
 
+def skip_check_passed(session: Session, user_id: int, activity_id: int) -> bool | None:
+    """Whether this student passed a segment's skip check (FR-8.1, FR-8.2): None before they
+    answer it. Only their first attempt counts, and it passes only if right and given before
+    hint 3 or 4, which give the answer away. The one place the rule lives: the module page's
+    `skipCheck` state and the hidden segments both read it."""
+    first = session.scalar(
+        select(Attempt)
+        .where(Attempt.user_id == user_id, Attempt.activity_id == activity_id)
+        .order_by(Attempt.id)
+        .limit(1)
+    )
+    if first is None:
+        return None
+    return bool(first.correct) and first.hint_level < HINT_TO_STRUGGLE
+
+
 def skip_checks(session: Session, user_id: int, segments: Sequence[Segment]) -> set[int]:
-    """Segments hidden because the student passed their short skip check (FR-8.1, FR-8.2). A
-    check is passed only by the student's first attempt: it must have been correct and come before
-    hint 3 or 4, which give the answer away. The server derives this from attempts: no new table."""
-    hidden: set[int] = set()
-    for segment in segments:
-        if segment.skip_check_activity_id is None:
-            continue
-        attempt = session.scalar(
-            select(Attempt)
-            .where(
-                Attempt.user_id == user_id,
-                Attempt.activity_id == segment.skip_check_activity_id,
-            )
-            .order_by(Attempt.id)
-            .limit(1)
-        )
-        if attempt is not None and attempt.correct and attempt.hint_level < HINT_TO_STRUGGLE:
-            hidden.add(segment.id)
-    return hidden
+    """Segments hidden because the student passed their short skip check (`skip_check_passed`).
+    The server derives this from attempts: no new table."""
+    return {
+        segment.id
+        for segment in segments
+        if segment.skip_check_activity_id is not None
+        and skip_check_passed(session, user_id, segment.skip_check_activity_id)
+    }
 
 
 def hidden_segments(

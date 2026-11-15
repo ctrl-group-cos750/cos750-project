@@ -1,6 +1,6 @@
 import { activity, wrongOption, type ActivityOf } from './content'
 import { result, segmentRegion } from './drive'
-import { expect, shownPositions, test } from './fixtures'
+import { expect, moduleNow, shownPositions, test } from './fixtures'
 import { chooseRadio, expectVisibleFocus, press, tabTo } from './helpers'
 
 // NFR-A1 (issue #35: "one module completed with the keyboard only"; SE document §14.1): module 0
@@ -22,10 +22,17 @@ test('module 0, from the map to "Finish module", with the keyboard only', async 
   ).toBeVisible()
 
   let firstActivity = true
-  // The segments the student is shown (#172), as "Segment N of M" counts them.
-  const segments = shownPositions(module).map((i) => module.segments[i])
-  for (const [i, segment] of segments.entries()) {
-    await expect(page.getByText(`Step ${i + 1} of ${segments.length}`)).toBeVisible()
+  // The segments the student is shown (#172), as "Step N of M" counts them. A right first answer
+  // to a warm-up question skips the refresher after it (#224), so the module is read again after
+  // each answer, and the walk goes on to the next segment shown now.
+  let current = await moduleNow(page, module.id)
+  let from = current.currentSegmentPosition
+  for (;;) {
+    const shown = shownPositions(current)
+    const i = shown.findIndex((p) => p >= from)
+    if (i === -1) break
+    const segment = current.segments[shown[i]]
+    await expect(page.getByText(`Step ${i + 1} of ${shown.length}`)).toBeVisible()
     const region = segmentRegion(page, segment.title)
     await expect(region).toBeVisible()
     if (segment.kind === 'activity' && segment.activityId !== null) {
@@ -47,11 +54,15 @@ test('module 0, from the map to "Finish module", with the keyboard only', async 
       await press(page, checkAnswer)
       await expect(result(region)).toContainText('Correct')
     }
-    const last = i === segments.length - 1
+    current = await moduleNow(page, module.id)
+    const after = shownPositions(current)
+    const last = after[after.length - 1] === shown[i]
     const next = page.getByRole('button', { name: last ? 'Finish module' : /^Next/ })
     // Blocked until the module, fetched again after the answer, says the segment is done.
     await expect(next).not.toHaveAttribute('aria-disabled', 'true')
     await press(page, next)
+    if (last) break
+    from = shown[i] + 1
   }
 
   // Back on the map: module 0 is complete and module 1 is open (FR-2.1, FR-2.6).

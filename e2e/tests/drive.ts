@@ -7,7 +7,7 @@ import {
   type Activity,
   type ActivityOf,
 } from './content'
-import { expect, shownPositions, type ModuleDetail } from './fixtures'
+import { expect, shownPositions, type ModuleDetail, moduleNow } from './fixtures'
 import { clickOrExplain, tabTo } from './helpers'
 
 /**
@@ -298,13 +298,18 @@ export async function walkModule(
       .getByRole('button', { name: i === recall.length - 1 ? 'Start module' : 'Next question' })
       .click()
   }
-  // "Segment N of M" counts only the segments the student is shown (#172).
-  const shown = shownPositions(module)
-  const total = shown.length
-  for (const [n, i] of shown.entries()) {
-    if (i < module.currentSegmentPosition) continue
-    const segment = module.segments[i]
-    await expect(page.getByText(`Step ${n + 1} of ${total}`, { exact: true })).toBeVisible()
+  // "Step N of M" counts only the segments the student is shown (#172), and an answer can change
+  // them: a right warm-up answer skips its refresher (#224). So the module is read again after
+  // each answer, and the walk goes on to the next segment shown now.
+  let current = await moduleNow(page, module.id)
+  let from = current.currentSegmentPosition
+  for (;;) {
+    const shown = shownPositions(current)
+    const n = shown.findIndex((p) => p >= from)
+    if (n === -1) break
+    const i = shown[n]
+    const segment = current.segments[i]
+    await expect(page.getByText(`Step ${n + 1} of ${shown.length}`, { exact: true })).toBeVisible()
     const region = segmentRegion(page, segment.title)
     await expect(region).toBeVisible()
     if (segment.kind === 'activity' && segment.activityId !== null && !segment.done) {
@@ -313,13 +318,17 @@ export async function walkModule(
       await answerActivity(page, region, a, answerFor(a))
     }
     await onSegment?.(`module ${module.number}, segment ${n + 1} (${segment.kind})`)
-    const last = n === total - 1
+    current = await moduleNow(page, module.id)
+    const after = shownPositions(current)
+    const last = after[after.length - 1] === i
     const next = page
       .getByRole('navigation', { name: 'Step navigation' })
       .getByRole('button', { name: last ? 'Finish module' : /^Next/ })
     // Next stays blocked until the module, fetched again after the answer, says the segment is done.
     await expect(next).not.toHaveAttribute('aria-disabled', 'true')
     await next.click()
+    if (last) break
+    from = i + 1
   }
   await expect(page).toHaveURL(/\/(report)?$/)
 }

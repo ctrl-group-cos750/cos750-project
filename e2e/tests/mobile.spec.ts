@@ -27,6 +27,8 @@ for (const number of [0, 1, 3, 6]) {
     course,
   }) => {
     if (number >= 3) test.slow()
+    // Module 6 is the 28-item mastery check: its walk takes over 3 minutes in Firefox on CI.
+    if (number === 6) test.setTimeout(6 * 60_000)
     await course.completeBefore(number)
     const module = await course.module(number)
     await course.roomFor(module.segments.length + module.retrieval.length)

@@ -18,8 +18,9 @@ export default defineConfig({
   retries: 0,
   timeout: 60_000,
   expect: { timeout: 10_000 },
-  // Stops a hung run well inside the CI step's own limit.
-  globalTimeout: CI ? 40 * 60_000 : undefined,
+  // Stops a hung run well inside the CI step's own limit. The three browsers take about 45 minutes
+  // on CI's two workers (193 tests on 15 November 2026), WebKit the slowest.
+  globalTimeout: CI ? 60 * 60_000 : undefined,
   reporter: CI ? [['github'], ['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: BASE_URL,

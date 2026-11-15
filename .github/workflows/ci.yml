@@ -138,7 +138,7 @@ jobs:
       - name: End-to-end tests (Chromium, Firefox, WebKit)
         if: steps.paths.outputs.e2e == 'true'
         working-directory: e2e
-        timeout-minutes: 45
+        timeout-minutes: 70
         env:
           # The setup project makes a staff account with `docker compose exec` (tests/env.ts).
           COMPOSE_PROJECT_NAME: ctrlci

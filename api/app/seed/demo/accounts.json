@@ -103,6 +103,60 @@
         { "review": 7, "purposes": ["mastery"], "answer": "right", "hints": 3 }
       ],
       "expect": { "ready": true }
+    },
+    {
+      "key": "explorer",
+      "display_name": "Demo: exploring",
+      "stage": "Finished module 0 with every warm-up question right, so its refreshers were skipped. Modules 1 to 5 are open and no quick check has been taken, so any of them can be tested out of live.",
+      "progress": [{ "module": 0 }],
+      "steps": [{ "module": 0, "answer": "right" }],
+      "expect": { "ready": false }
+    },
+    {
+      "key": "struggling",
+      "display_name": "Demo: struggling",
+      "stage": "Finished module 0. In module 1 got the first questions on objectives 1 and 2 wrong, then answered them after hint 3, so module 1 added its support segments (a new worked example and fresh questions) for both objectives, which stay at practising. Partway through module 2.",
+      "progress": [
+        { "module": 0 },
+        { "module": 1 },
+        { "module": 2, "through": 3 }
+      ],
+      "steps": [
+        { "module": 0, "answer": "right" },
+        { "module": 1, "objectives": [1, 2], "answer": "wrong" },
+        { "module": 1, "objectives": [1, 2], "answer": "right", "hints": 3 },
+        { "module": 1, "objectives": [3], "answer": "right" }
+      ],
+      "expect": { "ready": false }
+    },
+    {
+      "key": "mixed",
+      "display_name": "Demo: mixed results",
+      "stage": "Finished the course: gold on objectives 1, 3, 4, 5 and 8; bronze on 2 and 7 through their review paths; objective 6 \"not yet\", its review path not started. The skill profile and the badge shelf show every level.",
+      "progress": [
+        { "module": 0 },
+        { "module": 1 },
+        { "module": 2 },
+        { "module": 3 },
+        { "module": 4 },
+        { "module": 5 },
+        { "module": 6 }
+      ],
+      "steps": [
+        { "module": 0, "answer": "right" },
+        { "module": 1, "answer": "right" },
+        { "module": 2, "answer": "right" },
+        { "module": 3, "answer": "right" },
+        { "module": 4, "answer": "right" },
+        { "module": 5, "answer": "right" },
+        { "module": 6, "purposes": ["mastery"], "except_objectives": [2, 6, 7], "answer": "right" },
+        { "module": 6, "purposes": ["mastery"], "objectives": [2, 6, 7], "answer": "wrong" },
+        { "review": 2, "purposes": ["review"], "answer": "right" },
+        { "review": 2, "purposes": ["mastery"], "answer": "right", "hints": 3 },
+        { "review": 7, "purposes": ["review"], "answer": "right" },
+        { "review": 7, "purposes": ["mastery"], "answer": "right", "hints": 3 }
+      ],
+      "expect": { "ready": false, "not_yet": [6] }
     }
   ]
 }

@@ -47,6 +47,18 @@ export function shownPositions(module: ModuleDetail): number[] {
   return module.segments.flatMap((s, i) => (s.shown === false ? [] : [i]))
 }
 
+/** The module as the signed-in student sees it now, read from inside the page. An answer can
+ * change which segments are shown: a right first answer to a warm-up question hides the refresher
+ * after it (FR-8.1, #224), and a struggling student is shown support (FR-8.4). So a walk reads the
+ * module again after each answer rather than trusting the list it started with. */
+export async function moduleNow(page: Page, id: number): Promise<ModuleDetail> {
+  return page.evaluate(async (id) => {
+    const r = await fetch(`/api/modules/${id}`, { credentials: 'same-origin' })
+    if (!r.ok) throw new Error(`GET /api/modules/${id}: ${r.status}`)
+    return (await r.json()) as ModuleDetail
+  }, id)
+}
+
 type ModuleSummary = { id: number; number: number; status: string; segmentCount: number }
 
 /** The API allows a student 60 answers a minute (#139). The course walk stays under it, and
@@ -150,19 +162,22 @@ export class Course {
     for (const item of module.retrieval) if (!item.answered) await this.answer(item.id)
     if (module.segments.length === 0) return // nothing to do yet (FR-2.1; "coming soon", #146)
     module = await this.module(number)
-    // On from segment to segment shown, over support this student isn't shown (#172).
+    // On from segment to segment shown, over support this student isn't shown (#172) and over a
+    // refresher its warm-up question just skipped (#224): the module is read again after each
+    // answer, because an answer can change which segments are shown.
     const shown = () => shownPositions(module)
-    const last = stopAt ?? shown()[shown().length - 1]
+    const last = () => stopAt ?? shown()[shown().length - 1]
     let position = module.currentSegmentPosition
-    while (position < last) {
+    while (position < last()) {
       await this.doSegment(module, position)
-      const next = shown().find((p) => p > position) ?? last
+      module = await this.module(number)
+      const next = shown().find((p) => p > position) ?? last()
       module = await this.save(module, next)
       position = next
     }
     if (stopAt === undefined) {
-      await this.doSegment(module, last)
-      module = await this.save(module, last) // "Finish module"
+      await this.doSegment(module, position)
+      module = await this.save(module, position) // "Finish module"
       expect(module.status, `module ${number} is complete`).toBe('complete')
     }
   }

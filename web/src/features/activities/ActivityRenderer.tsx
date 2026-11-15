@@ -89,11 +89,18 @@ export function ActivityRenderer(props: ActivityRendererProps) {
         mastery report once every question in the check is answered.
       </p>
     ) : (
-      props.result && (
+      props.result &&
+      (props.result.withheld ? (
         <p className="mb-4 text-sm text-muted-foreground">
           You have answered this question. Only your first answer counts, so it can't be changed.
         </p>
-      )
+      ) : (
+        // The check is finished, so the result is shown (review of 13 Nov).
+        <p className="mb-4 text-sm text-muted-foreground">
+          You have finished the mastery check, so your answer is marked below. Your mastery report
+          lists every answer with why.
+        </p>
+      ))
     ))
   const screen =
     props.activity.kind === 'parsons' ? (
@@ -170,12 +177,21 @@ export function ActivityRenderer(props: ActivityRendererProps) {
   // none, and the answer just given would vanish.
   const control = (
     <>
-      {answeredInCheck && !props.result && (
-        <Alert tone="info" title="Answer recorded">
-          You have answered this question. Only your first answer counts, so it can't be changed.
-          Your results are in your mastery report once every question in the check is answered.
-        </Alert>
-      )}
+      {answeredInCheck &&
+        !props.result &&
+        (props.activity.answeredEarlierVersion === true ? (
+          // Their answer to the item this one replaced stands in for it (review of #223, nit 2).
+          <Alert tone="info" title="Answered in an earlier version">
+            This question was reworded after you answered it. Your answer to the earlier version
+            counts for it, so this one takes no answer. Your mastery report lists that answer with
+            why.
+          </Alert>
+        ) : (
+          <Alert tone="info" title="Answer recorded">
+            You have answered this question. Only your first answer counts, so it can't be changed.
+            Your results are in your mastery report once every question in the check is answered.
+          </Alert>
+        ))}
       <fieldset
         disabled={answeredInCheck}
         aria-label={answeredInCheck ? 'Your answer' : undefined}
@@ -195,6 +211,7 @@ export function ActivityRenderer(props: ActivityRendererProps) {
       loadHints={props.loadHints}
       onLevel={onLevel}
       bonus={props.bonus}
+      assessed={check ? 'mastery-check' : props.activity.reviewCheck ? 'review-path' : undefined}
     />
   )
   const title = props.showTitle !== false && (
@@ -237,7 +254,8 @@ export function ActivityRenderer(props: ActivityRendererProps) {
           data-two-column
           className="grid grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] items-start gap-7"
         >
-          <div className="sticky top-4 grid gap-3">
+          {/* Sticks below the sticky header, whose height AppShell keeps in --header-h. */}
+          <div className="sticky top-[calc(var(--header-h,4.5rem)_+_1rem)] grid gap-3">
             {prompt}
             {panel}
           </div>

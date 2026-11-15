@@ -11,6 +11,7 @@ from app.db import SessionLocal
 from app.seed import load, read_fixtures, read_templates
 from app.seed.demo_accounts import load_demo_accounts
 from app.services.modules import backfill_module_rewards
+from app.services.skills import backfill_practised
 
 if sys.argv[1:] == ["--check"]:
     try:
@@ -42,6 +43,8 @@ with SessionLocal() as session:
         demo, demo_problem = [], str(exc)
     # Modules completed before module points were awarded get them now, if earned (#166).
     backfilled = backfill_module_rewards(session)
+    # Students secure in practice before objective badges had levels get Practised now (#214).
+    practised = backfill_practised(session)
     session.commit()
 segments = sum(len(m.segments) for m in content.modules)
 print(
@@ -71,3 +74,5 @@ else:
     print("seed: no demo accounts (DEMO_PASSWORD is not set)")
 if backfilled:
     print(f"seed: {backfilled} complete modules gained their points (completed before #166)")
+if practised:
+    print(f"seed: {practised} Practised badges for objectives already secure in practice (#214)")

@@ -14,18 +14,18 @@
           "id": 502,
           "kind": "video",
           "title": "Debugging a faulty BFS",
-          "body": "You have written a BFS and tested it on a simple path: a few vertices in a line. It gives the right answer every time. Then you try it on this graph, and something unexpected happens.\n\n```\n   A ─── B\n   │     │\n   │     │\n   │     │\n   C ─── D\n```\n\nUndirected graph with 4 vertices: A, B, C, D. It has 4 edges: A–B, A–C, B–D, C–D. The edges form a diamond: A at the top, D at the bottom. Every edge can be followed in either direction.\n\nHere is the faulty version. It looks almost right. Spot the difference from the BFS you built in module 4.\n\nFirst difference: visited starts empty. In the correct BFS, visited starts as `{start}`, because the start vertex is already in the queue.\n\nSecond difference: visited.add(v) runs just after popleft, not inside the neighbour loop. A vertex is only marked found when it leaves the queue, not when it joins.\n\nLet's trace it. We start at A. A leaves the queue, and A is marked found. Its neighbours are B and C. Neither is in visited yet, so both join the queue.\n\nB leaves next. A is already found, so we skip it. D is new, so D joins the queue. Queue now: C, D.\n\nC leaves. A is found. But D? D joined the queue when B was processed. However, visited.add(D) has not run yet: D leaves the queue only later. So right now, D is not in visited. C adds D to the queue again. Queue: D, D.\n\nD is dequeued once, then dequeued a second time. The output is A, B, C, D, D: D is visited twice.\n\nSo what has to change? Look again at the two differences above, and at the moment D joined the queue the second time. You'll make the fix yourself in a moment, so hold that thought.\n\nFinding a bug matters, but so does knowing which test case would expose it. Some graphs hide a bug; others bring it right out.\n\nThe visited-too-late bug only shows when some vertex can be reached along two different routes, so that a second vertex finds it while it is still waiting in the queue. In an undirected graph, two routes to a vertex mean a cycle. On a simple path or a tree there is only one route to each vertex, so nothing can be queued twice.\n\nA different bug adds unreachable vertices to the order. The graph below has two islands: A, B, C are connected, but D and E are completely cut off. A BFS from A visits only A, B, C. A bug that appends every vertex BFS never reached would return A, B, C, D, E, which is wrong. This test exposes the bug because some vertices are unreachable.\n\n```\n   A ─── B ─── C        D ─── E\n```\n\nUndirected graph with 5 vertices: A, B, C, D, E. It has 3 edges: A–B, B–C, D–E. Vertices D and E are not connected to A, B or C. Starting BFS from A visits only A, B, C.\n\nSo: to expose the visited-too-late bug, choose a graph where some vertex has two routes to it, such as an undirected graph with a cycle. To expose a bug that adds unreachable vertices, choose a disconnected graph, one with two separate islands. Each of these tests exposes a different bug, so a good set of tests has both shapes: a cycle, and a graph with a separate island.\n\nNow you will practise both: fixing the bugs and choosing the tests yourself."
+          "body": "You have written a BFS and tested it on a simple path: a few vertices in a line. It gives the right answer every time. Then you try it on this graph, and something unexpected happens.\n\n```\n   A ─── B\n   │     │\n   │     │\n   │     │\n   C ─── D\n```\n\nUndirected graph with 4 vertices: A, B, C, D. It has 4 edges: A–B, A–C, B–D, C–D. The edges form a diamond: A at the top, D at the bottom. Every edge can be followed in either direction.\n\nHere is the faulty version. It looks almost right. Spot the difference from the BFS you built in module 4.\n\nFirst difference: `found` starts empty. In the correct BFS, `found` starts as `{start}`, because the start vertex is already in the queue.\n\nSecond difference: `found.add(v)` runs just after `popleft`, not inside the neighbour loop. A vertex is only marked found when it leaves the queue, not when it joins.\n\nLet's trace it. We start at A. A leaves the queue, and A is marked found. Its neighbours are B and C. Neither is in the found set yet, so both join the queue.\n\nB leaves next. A is already found, so we skip it. D is new, so D joins the queue. Queue now: C, D.\n\nC leaves. A is found. But D? D joined the queue when B was processed. However, `found.add(D)` has not run yet: D leaves the queue only later. So right now, D is not in the found set. C adds D to the queue again. Queue: D, D.\n\nD leaves the queue (is dequeued) once, then leaves it a second time. The output is A, B, C, D, D: D is visited twice.\n\nSo what has to change? Look again at the two differences above, and at the moment D joined the queue the second time. You'll make the fix yourself in a moment, so hold that thought.\n\nFinding a bug matters, but so does knowing which test case would expose it. Some graphs hide a bug; others bring it right out.\n\nThe found-too-late bug only shows when some vertex can be reached along two different routes, so that a second vertex finds it while it is still waiting in the queue. In an undirected graph, two routes to a vertex mean a cycle. On a simple path or a tree there is only one route to each vertex, so nothing can be queued twice.\n\nA different bug adds unreachable vertices to the order. The graph below has two islands: A, B, C are connected, but D and E are completely cut off. A BFS from A visits only A, B, C. A bug that appends every vertex BFS never reached would return A, B, C, D, E, which is wrong. This test exposes the bug because some vertices are unreachable.\n\n```\n   A ─── B ─── C        D ─── E\n```\n\nUndirected graph with 5 vertices: A, B, C, D, E. It has 3 edges: A–B, B–C, D–E. Vertices D and E are not connected to A, B or C. Starting BFS from A visits only A, B, C.\n\nSo: to expose the found-too-late bug, choose a graph where some vertex has two routes to it, such as an undirected graph with a cycle. To expose a bug that adds unreachable vertices, choose a disconnected graph, one with two separate islands. Each of these tests exposes a different bug, so a good set of tests has both shapes: a cycle, and a graph with a separate island.\n\nNow you will practise both: fixing the bugs and choosing the tests yourself."
         },
         {
           "id": 501,
           "kind": "worked_example",
-          "title": "Worked example: finding and fixing the visited-too-late bug",
-          "body": "A classmate wrote this BFS and tested it on a simple path. It gave the right answer. But on a graph where a vertex can be reached along two routes, it visits that vertex twice. Here is the faulty code, step by step.\n\n**The graph we use.** Vertices: A, B, C, D. Edges: A–B, A–C, B–D, C–D (undirected). They form a diamond, the graph from the video.\n\n**The faulty BFS.**\n\n```python\nfrom collections import deque\n\ndef bfs(graph, start):\n    visited = set()\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        visited.add(v)        # marks v found only after dequeue\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                queue.append(n)\n    return order\n```\n\n**Step 1. Spot what is different from the correct BFS.**\n\nIn the correct BFS, `visited` starts as `{start}` and each neighbour is added to `visited` at the moment it joins the queue, so it can never be queued a second time. Here, `visited = set()` (empty) and `visited.add(v)` runs only when `v` leaves the queue.\n\n**Step 2. Trace it on the diamond.**\n\n| Queue | Action | visited |\n|---|---|---|\n| [A] | A leaves; B and C join (neither visited yet) | {A} |\n| [B, C] | B leaves; A is visited, D joins | {A, B} |\n| [C, D] | C leaves; A is visited, but D is not in visited yet (it joined at step 2 but visited.add(D) hasn't run), so **D joins again** | {A, B, C} |\n| [D, D] | D leaves; B and C are visited, nothing new added | {A, B, C, D} |\n| [D] | **D leaves a second time**: a duplicate visit | {A, B, C, D} |\n\nThe output is `['A', 'B', 'C', 'D', 'D']`, not `['A', 'B', 'C', 'D']`.\n\n**Step 3. Understand why.**\n\nWhen C was processed, D was already in the queue (added by B). But `visited.add(D)` runs only when D leaves the queue. So when C checked `if D not in visited`, D was not in visited yet, and D was enqueued a second time.\n\n**Step 4. Fix it.**\n\nTwo changes fix it: one to how `visited` starts, and one to when a vertex is added to it. Make them yourself in the next activity."
+          "title": "Worked example: finding and fixing the found-too-late bug",
+          "body": "A classmate wrote this BFS and tested it on a simple path. It gave the right answer. But on a graph where a vertex can be reached along two routes, it visits that vertex twice. Here is the faulty code, step by step.\n\n**The graph we use.** Vertices: A, B, C, D. Edges: A–B, A–C, B–D, C–D (undirected). They form a diamond, the graph from the video.\n\n**The faulty BFS.**\n\n```python\nfrom collections import deque\n\ndef bfs(graph, start):\n    found = set()\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        found.add(v)        # marks v found only after dequeue\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in found:\n                queue.append(n)\n    return order\n```\n\n**Step 1. Spot what is different from the correct BFS.**\n\nIn the correct BFS, `found` starts as `{start}` and each neighbour is added to `found` at the moment it joins the queue, so it can never be queued a second time. Here, `found = set()` (empty) and `found.add(v)` runs only when `v` leaves the queue.\n\n**Step 2. Trace it on the diamond.**\n\n| Queue | Action | `found` |\n|---|---|---|\n| [A] | A leaves; B and C join (neither found yet) | {A} |\n| [B, C] | B leaves; A is found, D joins | {A, B} |\n| [C, D] | C leaves; A is found, but D is not in `found` yet (it joined at step 2 but `found.add(D)` hasn't run), so **D joins again** | {A, B, C} |\n| [D, D] | D leaves; B and C are found, nothing new added | {A, B, C, D} |\n| [D] | **D leaves a second time**: a duplicate visit | {A, B, C, D} |\n\nThe output is `['A', 'B', 'C', 'D', 'D']`, not `['A', 'B', 'C', 'D']`.\n\n**Step 3. Understand why.**\n\nWhen C was processed, D was already in the queue (added by B). But `found.add(D)` runs only when D leaves the queue. So when C checked `if D not in found`, D was not in `found` yet, and D was enqueued a second time.\n\n**Step 4. Fix it.**\n\nTwo changes fix it: one to how `found` starts, and one to when a vertex is added to it. Make them yourself in the next activity."
         },
         {
           "id": 503,
           "kind": "activity",
-          "title": "Fix the bug: the visited-too-late BFS",
+          "title": "Fix the bug: the found-too-late BFS",
           "activity_id": 504
         },
         {
@@ -37,7 +37,7 @@
         {
           "id": 505,
           "kind": "activity",
-          "title": "Choose the tests: visited-too-late bug",
+          "title": "Choose the tests: found-too-late bug",
           "activity_id": 506
         },
         {
@@ -176,7 +176,7 @@
       "purpose": "test_out",
       "objective_id": 7,
       "config": {
-        "prompt": "This BFS starts with visited = set() and adds v to visited just after popleft, before the neighbour loop. On a graph where some vertex can be reached along two different routes, what goes wrong?",
+        "prompt": "This BFS starts with found = set() and adds v to found just after popleft, before the neighbour loop. On a graph where some vertex can be reached along two different routes, what goes wrong?",
         "options": [
           {
             "id": "a",
@@ -197,7 +197,7 @@
         ]
       },
       "solution": {
-        "explanation": "Because visited.add(v) runs only when v leaves the queue, a vertex already waiting can be found again by a second neighbour and added to the queue a second time.",
+        "explanation": "Because found.add(v) runs only when v leaves the queue, a vertex already waiting can be found again by a second neighbour and added to the queue a second time.",
         "correct": "a",
         "feedback": {
           "b": "Not quite. The order of dequeuing is still first-in first-out, so the traversal goes wide before deep. The bug is not about order. Think about what happens when two different vertices both try to add the same neighbour.",
@@ -209,12 +209,12 @@
     {
       "id": 550,
       "kind": "multiple_choice",
-      "title": "A test for the visited bug",
+      "title": "A test for the found-too-late bug",
       "module_id": 5,
       "purpose": "test_out",
       "objective_id": 7,
       "config": {
-        "prompt": "A faulty BFS adds a vertex to visited only when it leaves the queue, not when it joins. Which test graph, starting at A, shows the bug?",
+        "prompt": "A faulty BFS adds a vertex to the found set only when it leaves the queue, not when it joins. Which test graph, starting at A, shows the bug?",
         "options": [
           {
             "id": "a",
@@ -235,7 +235,7 @@
         ]
       },
       "solution": {
-        "explanation": "In the triangle, B and C are both waiting in the queue when B is taken out. C isn't in visited yet, so B adds it again and it is visited twice. The other graphs have no second way to a waiting vertex, so the faulty BFS gets them right.",
+        "explanation": "In the triangle, B and C are both waiting in the queue when B is taken out. C isn't in the found set yet, so B adds it again and it is visited twice. The other graphs have no second way to a waiting vertex, so the faulty BFS gets them right.",
         "correct": "c",
         "feedback": {
           "a": "A path has only one way to each vertex, so nothing is added twice: the faulty BFS passes.",
@@ -323,7 +323,7 @@
     {
       "id": 504,
       "kind": "fix_the_bug",
-      "title": "Fix the bug: the visited-too-late BFS",
+      "title": "Fix the bug: the found-too-late BFS",
       "module_id": 5,
       "objective_id": 7,
       "purpose": "practice",
@@ -340,7 +340,7 @@
           },
           {
             "id": 103,
-            "text": "    visited = set()"
+            "text": "    found = set()"
           },
           {
             "id": 104,
@@ -360,7 +360,7 @@
           },
           {
             "id": 108,
-            "text": "        visited.add(v)"
+            "text": "        found.add(v)"
           },
           {
             "id": 109,
@@ -372,7 +372,7 @@
           },
           {
             "id": 111,
-            "text": "            if n not in visited:"
+            "text": "            if n not in found:"
           },
           {
             "id": 112,
@@ -386,15 +386,15 @@
         "corrections": [
           {
             "id": 122,
-            "text": "    visited = []"
+            "text": "    found = []"
           },
           {
             "id": 120,
-            "text": "    visited = {start}"
+            "text": "    found = {start}"
           },
           {
             "id": 121,
-            "text": "                visited.add(n)"
+            "text": "                found.add(n)"
           },
           {
             "id": 123,
@@ -422,10 +422,69 @@
           ],
           113
         ],
-        "explanation": "Marking a vertex found when it joins the queue, not when it leaves, means a vertex that is still waiting can't be added again: on the diamond, B and C both find D, but only B adds it. Starting with visited = {start} does the same for the start vertex, which is in the queue from the beginning.",
+        "alternatives": [
+          [
+            101,
+            102,
+            [
+              120,
+              104,
+              105
+            ],
+            106,
+            107,
+            110,
+            111,
+            [
+              121,
+              112
+            ],
+            109,
+            113
+          ],
+          [
+            102,
+            [
+              120,
+              104,
+              105
+            ],
+            106,
+            107,
+            109,
+            110,
+            111,
+            [
+              121,
+              112
+            ],
+            113,
+            101
+          ],
+          [
+            102,
+            [
+              120,
+              104,
+              105
+            ],
+            106,
+            107,
+            110,
+            111,
+            [
+              121,
+              112
+            ],
+            109,
+            113,
+            101
+          ]
+        ],
+        "explanation": "Marking a vertex found when it joins the queue, not when it leaves, means a vertex that is still waiting can't be added again: on the diamond, B and C both find D, but only B adds it. Starting with found = {start} does the same for the start vertex, which is in the queue from the beginning.",
         "feedback": {
-          "103": "Not quite. The start vertex is in the queue but not in visited. A neighbour can find it again and add it to the queue a second time. Start with the start vertex already in visited.",
-          "108": "Not quite. This marks a vertex found only when it leaves the queue. A vertex still waiting in the queue does not count as found, so another vertex can add it again. Mark a vertex found the moment it joins, by putting visited.add(n) inside the if block instead."
+          "103": "Not quite. The start vertex is in the queue but not in the found set. A neighbour can find it again and add it to the queue a second time. Start with the start vertex already in the found set.",
+          "108": "Not quite. This marks a vertex found only when it leaves the queue. A vertex still waiting in the queue does not count as found, so another vertex can add it again. Mark a vertex found the moment it joins, by putting found.add(n) inside the if block instead."
         }
       },
       "hints": [
@@ -435,15 +494,15 @@
         },
         {
           "level": 2,
-          "body": "D joined the queue when B was processed. But visited.add runs only when D leaves the queue, so D is not in visited yet. C adds D to the queue again."
+          "body": "D joined the queue when B was processed. But found.add runs only when D leaves the queue, so D is not in the found set yet. C adds D to the queue again."
         },
         {
           "level": 3,
-          "body": "The fix needs two changes: start with visited = {start}, and move visited.add(n) inside the if block so a vertex is marked found the moment it joins."
+          "body": "The fix needs two changes: start with found = {start}, and move found.add(n) inside the if block so a vertex is marked found the moment it joins."
         },
         {
           "level": 4,
-          "body": "Answer: replace visited = set() with visited = {start}, leave out visited.add(v), and add visited.add(n) inside the if, next to queue.append(n). Either of those two inner lines can come first."
+          "body": "Answer: replace found = set() with found = {start}, leave out found.add(v), and add found.add(n) inside the if, next to queue.append(n). Either of those two inner lines can come first."
         }
       ]
     },
@@ -467,7 +526,7 @@
           },
           {
             "id": 153,
-            "text": "    visited = {start}"
+            "text": "    found = {start}"
           },
           {
             "id": 154,
@@ -495,11 +554,11 @@
           },
           {
             "id": 160,
-            "text": "            if n not in visited:"
+            "text": "            if n not in found:"
           },
           {
             "id": 161,
-            "text": "                visited.add(n)"
+            "text": "                found.add(n)"
           },
           {
             "id": 162,
@@ -511,7 +570,7 @@
           },
           {
             "id": 164,
-            "text": "        if v not in visited:"
+            "text": "        if v not in found:"
           },
           {
             "id": 165,
@@ -553,10 +612,69 @@
           ],
           166
         ],
+        "alternatives": [
+          [
+            151,
+            152,
+            [
+              153,
+              154,
+              155
+            ],
+            156,
+            157,
+            159,
+            160,
+            [
+              161,
+              162
+            ],
+            158,
+            166
+          ],
+          [
+            152,
+            [
+              153,
+              154,
+              155
+            ],
+            156,
+            157,
+            158,
+            159,
+            160,
+            [
+              161,
+              162
+            ],
+            166,
+            151
+          ],
+          [
+            152,
+            [
+              153,
+              154,
+              155
+            ],
+            156,
+            157,
+            159,
+            160,
+            [
+              161,
+              162
+            ],
+            158,
+            166,
+            151
+          ]
+        ],
         "explanation": "BFS only visits the vertices it can reach by following edges from the start, so on the two islands it returns A, B, C. The extra loop added every vertex the search never reached, D and E, so without it the program is plain BFS.",
         "feedback": {
           "163": "Not quite. This loop runs through every vertex in the graph after BFS finishes. It finds vertices BFS never reached and adds them to the order. BFS should only visit vertices reachable from the start. Remove this loop entirely.",
-          "164": "Not quite. This line checks whether a vertex was not visited, which is the condition for adding an unreachable vertex. It belongs to the faulty extra loop. Remove it along with the loop.",
+          "164": "Not quite. This line checks whether a vertex was never found, which is the condition for adding an unreachable vertex. It belongs to the faulty extra loop. Remove it along with the loop.",
           "165": "Not quite. This line adds unreachable vertices to the order. BFS must only return vertices it actually visited. Remove it along with the loop."
         }
       },
@@ -575,20 +693,20 @@
         },
         {
           "level": 4,
-          "body": "Answer: remove the three lines of the for loop (for v in graph.adjacency, if v not in visited, order.append(v)). The fixed program ends with return order straight after the while loop."
+          "body": "Answer: remove the three lines of the for loop (for v in graph.adjacency, if v not in found, order.append(v)). The fixed program ends with return order straight after the while loop."
         }
       ]
     },
     {
       "id": 506,
       "kind": "choose_tests",
-      "title": "Choose the tests: visited-too-late bug",
+      "title": "Choose the tests: found-too-late bug",
       "module_id": 5,
       "objective_id": 7,
       "purpose": "practice",
       "config": {
         "prompt": "This BFS has a bug: it marks a vertex as found only when it leaves the queue, not when it joins. Choose every test case it fails: each one is a graph, a start vertex and the order a correct BFS visits it in.",
-        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    visited = set()\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        visited.add(v)\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                queue.append(n)\n    return order",
+        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    found = set()\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        found.add(v)\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in found:\n                queue.append(n)\n    return order",
         "tests": [
           {
             "id": "cycle",
@@ -770,17 +888,17 @@
           "two-islands": "D and E are unreachable from A. BFS never tries to add them, so no vertex is found twice. The faulty version passes this test.",
           "line": "Every vertex on this path has only one way to be reached from the start, so no vertex is added twice. The faulty version passes this test.",
           "tree": "A tree has no cycle, so no vertex can be reached by two separate paths while it waits. The faulty version passes this test.",
-          "one-way": "The only cycle C to A leads back to A, which is already in visited by then. No other vertex is found twice. The faulty version passes this test."
+          "one-way": "The only cycle C to A leads back to A, which is already in the found set by then. No other vertex is found twice. The faulty version passes this test."
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "This version adds a vertex to visited only when it leaves the queue. When does that cause a problem?"
+          "body": "This version adds a vertex to the found set only when it leaves the queue. When does that cause a problem?"
         },
         {
           "level": 2,
-          "body": "A vertex already waiting in the queue is not yet in visited, so a second neighbour can add it again."
+          "body": "A vertex already waiting in the queue is not yet in the found set, so a second neighbour can add it again."
         },
         {
           "level": 3,
@@ -801,7 +919,7 @@
       "purpose": "practice",
       "config": {
         "prompt": "This BFS has a bug: after the main loop it adds every vertex BFS did not reach. Choose every test case it fails: each one is a graph, a start vertex and the order a correct BFS visits it in.",
-        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                visited.add(n)\n                queue.append(n)\n    for v in graph.adjacency:\n        if v not in visited:\n            order.append(v)\n    return order",
+        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    found = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in found:\n                found.add(n)\n                queue.append(n)\n    for v in graph.adjacency:\n        if v not in found:\n            order.append(v)\n    return order",
         "tests": [
           {
             "id": "cycle",

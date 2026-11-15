@@ -4,6 +4,8 @@ import { Link, useParams } from 'react-router'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { Alert, Button, Card, Spinner, Tag } from '../../components'
 import { usePageTitle } from '../../pages/usePageTitle.ts'
+import { CompanionSays } from '../companion/Companion.tsx'
+import { quickCheckLine } from '../companion/companion.ts'
 import { useRefreshRewards } from '../rewards/hooks.ts'
 import { fetchModules, fetchQuickCheck, takeQuickCheck } from './module.api.ts'
 import type { ModuleSummary, QuickCheckQuestion, QuickCheckResult } from './module.types.ts'
@@ -72,7 +74,7 @@ export function QuickCheckPage() {
         <>
           <h1 className="text-2xl font-bold">{name}: quick check</h1>
           <Alert tone="info">
-            You have completed this module already, so there is nothing to test out of.
+            You have completed this module already, so you don’t need its quick check.
           </Alert>
           <BackToModules />
         </>
@@ -137,8 +139,8 @@ function Questions({
         <h1 className="text-2xl font-bold">{name}: quick check</h1>
         <p className="m-0 text-muted-foreground">
           Already know this module? Answer these {questions.length} questions. There are no hints,
-          and you see how you did at the end. Get at least {passMark} right and the module is marked
-          as tested out, so you can move on. You get one try.{' '}
+          and you see how you did at the end. Get at least {passMark} right and the module counts as
+          done, so you can move on. You get one try.{' '}
           <Link to={`/modules/${moduleId}`}>Work through the module instead</Link>.
         </p>
       </div>
@@ -213,6 +215,15 @@ function Result({
   useEffect(() => heading.current?.focus(), [])
   const here = modules.find((m) => m.id === moduleId)
   const suggested = result.suggestedModule
+  // The study companion's line on the marked check (#214), worked out once.
+  const [line] = useState(() =>
+    quickCheckLine(
+      here?.number,
+      result.correct,
+      result.total,
+      result.items.filter((i) => !i.correct),
+    ),
+  )
   return (
     <div className="grid gap-6">
       <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold">
@@ -220,8 +231,8 @@ function Result({
       </h1>
       {result.passed ? (
         <Alert tone="success" title="You know this already">
-          Module {here?.number ?? moduleId} is marked as tested out. It stays open if you want to
-          look through it.
+          Module {here?.number ?? moduleId} counts as done: you passed its quick check. It stays
+          open if you want to look through it.
           {result.lookAt.length > 0 && ` Worth a second look: ${result.lookAt.join(', ')}.`}
         </Alert>
       ) : (
@@ -232,6 +243,7 @@ function Result({
             : 'Work through this module: it teaches exactly these.'}
         </Alert>
       )}
+      <CompanionSays line={line} />
       <div className="flex flex-wrap gap-3">
         {result.passed ? (
           suggested !== null ? (

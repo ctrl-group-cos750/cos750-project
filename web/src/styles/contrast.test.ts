@@ -143,3 +143,146 @@ describe('one place per colour', () => {
     expect(used.filter((name) => !defined.has(name) && name !== '--primary-dark')).toEqual([])
   })
 })
+
+/**
+ * The page backgrounds (#214, backgrounds.css). Text sits straight on the page and on the
+ * see-through cards of the overview pages, so every text colour is checked at the strongest point
+ * of each glow (its centre, the colour at full strength over the page), with the doodle ink on top,
+ * and on a tinted card over each of those.
+ */
+describe('page backgrounds', () => {
+  const backgroundsCss = read('./backgrounds.css')
+
+  /** `rgb(r g b / a%)` or `rgb(r, g, b)`, with its alpha (1 when opaque). */
+  function rgba(input: { css: string; selector: string; name: string }): [Rgb, number] {
+    const match = new RegExp(`${input.name}:\\s*([^;]+);`).exec(
+      block({ css: input.css, selector: input.selector }),
+    )
+    if (!match) throw new Error(`${input.name} not in ${input.selector}`)
+    const value = match[1].trim()
+    const m = /^rgb\((\d+)[ ,]+(\d+)[ ,]+(\d+)\s*(?:\/\s*(\d+)%)?\)$/.exec(value)
+    if (!m) throw new Error(`${input.name}: cannot read "${value}"`)
+    return [[Number(m[1]), Number(m[2]), Number(m[3])], m[4] ? Number(m[4]) / 100 : 1]
+  }
+
+  const decorated = ":root:is([data-bg='glow'], [data-bg='doodles'])"
+  const cases = [
+    {
+      theme: 'light',
+      global: ':root',
+      bg: ':root',
+      text: decorated,
+      accentText: () => colour({ css: globalCss, selector: ':root', name: '--accent-foreground' }),
+    },
+    {
+      theme: 'dark',
+      global: ".dark,\n:root[data-theme='dark']",
+      bg: ":root[data-theme='dark'],\n.dark",
+      text: `${decorated}[data-theme='dark']`,
+      accentText: () =>
+        rgba({
+          css: backgroundsCss,
+          selector: `${decorated}[data-theme='dark']`,
+          name: '--color-accent-text',
+        })[0],
+    },
+  ] as const
+
+  describe.each(cases)('$theme theme', ({ global, bg, text, accentText }) => {
+    const g = (name: string) => colour({ css: globalCss, selector: global, name })
+    const b = (name: string) => rgba({ css: backgroundsCss, selector: bg, name })
+    const page = () => g('--background')
+
+    /** Every glow at its centre over the page, and the doodle ink over the doodles' glows. */
+    function strongestPoints(): Rgb[] {
+      const glows = [
+        '--bg-glow-blue',
+        '--bg-glow-gold',
+        '--bg-glow-blue-faint',
+        '--bg-glow-soft-blue',
+        '--bg-glow-soft-gold',
+      ].map((name) => {
+        const [c, a] = b(name)
+        return mix(c, page(), a)
+      })
+      const [ink, inkAlpha] = b('--doodle-ink')
+      return [...glows, ...glows.slice(3).map((glow) => mix(ink, glow, inkAlpha))]
+    }
+
+    /** Each strongest point, and a tinted card on top of it. */
+    function surfaces(): Rgb[] {
+      const [card, alpha] = b('--surface-tinted')
+      return strongestPoints().flatMap((point) => [point, mix(card, point, alpha)])
+    }
+
+    it('body, muted and link text reach 4.5:1 at the strongest point of every background', () => {
+      const muted = rgba({ css: backgroundsCss, selector: text, name: '--muted-foreground' })[0]
+      for (const [name, value] of [
+        ['--foreground', g('--foreground')],
+        ['--muted-foreground', muted],
+        ['link text', accentText()],
+      ] as const) {
+        for (const surface of surfaces()) {
+          expect(ratio(value, surface), `${name} on ${surface}`).toBeGreaterThanOrEqual(4.5)
+        }
+      }
+    })
+
+    it('the darker muted text still reaches 4.5:1 on the solid surfaces and the accent tint', () => {
+      const muted = rgba({ css: backgroundsCss, selector: text, name: '--muted-foreground' })[0]
+      for (const surface of [g('--background'), g('--card'), g('--muted'), g('--accent')]) {
+        expect(ratio(muted, surface), `on ${surface}`).toBeGreaterThanOrEqual(4.5)
+      }
+    })
+
+    it('status text on a tinted card reaches 4.5:1 over every background', () => {
+      const [card, alpha] = b('--surface-tinted')
+      for (const name of ['--success', '--warning', '--destructive']) {
+        for (const point of strongestPoints()) {
+          const surface = mix(card, point, alpha)
+          expect(ratio(g(name), surface), `${name} on ${surface}`).toBeGreaterThanOrEqual(4.5)
+        }
+      }
+    })
+
+    it('form control borders reach 3:1 on a tinted card over every background', () => {
+      const [card, alpha] = b('--surface-tinted')
+      for (const point of strongestPoints()) {
+        expect(ratio(g('--input'), mix(card, point, alpha))).toBeGreaterThanOrEqual(3)
+      }
+    })
+  })
+})
+
+/**
+ * The study companion's characters (#214, features/companion/characters/characters.css): the
+ * colours that draw each one's outline and shape keep 3:1 (WCAG 1.4.11) on the solid surface the
+ * companion sits on, in light and dark, whatever the page background (Companion.module.css).
+ */
+describe('study companion characters', () => {
+  const css = read('../features/companion/characters/characters.css')
+  const cases = [
+    { theme: 'light', selector: ':root', global: ':root' },
+    {
+      theme: 'dark',
+      selector: ".dark,\n:root[data-theme='dark']",
+      global: ".dark,\n:root[data-theme='dark']",
+    },
+  ] as const
+  it.each(cases)(
+    'outline and shape colours reach 3:1 on the $theme card',
+    ({ selector, global }) => {
+      const card = colour({ css: globalCss, selector: global, name: '--card' })
+      const own = (name: string) => {
+        try {
+          return colour({ css, selector, name })
+        } catch {
+          return colour({ css, selector: ':root', name })
+        }
+      }
+      for (const name of ['--cmp-blue', '--cmp-line', '--cmp-honey-edge']) {
+        expect(ratio(own(name), card), `${name}`).toBeGreaterThanOrEqual(3)
+      }
+    },
+  )
+})

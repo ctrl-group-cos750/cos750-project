@@ -10,7 +10,11 @@ Every place an activity can appear is one of its *homes*:
   when the module is not locked for this student (`modules._statuses`, the module map's rule:
   since #214 only the mastery check is ever locked).
 - **a review path**: a segment of an objective's review path. Open once module 6 has marked that
-  objective "not yet" (`mastery.review_open`), so its fresh items stay unseen until then.
+  objective "not yet" (`mastery.review_open`), so its fresh items stay unseen until then. A fresh
+  item (purpose `mastery`, the ones that decide the result) opens only once the path's practice
+  is done as a module's is (`modules.answer_states`: right, answered after the last hint, or
+  answered twice): the path teaches before it tests, and the path page shows every step at once
+  (review of 13 Nov, Critical 1).
 - **a video**: the question at one of the video's checkpoints. Open when the video is (below).
 - **a support segment** (FR-8.4, #172): an activity that a module shows only on support segments
   (`Segment.support_for`) is extra help for a struggling student. It is open only where one of
@@ -40,11 +44,27 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Activity, Checkpoint, Segment, User, Video
-from app.services.mastery import review_open
-from app.services.modules import _modules, _progress, _segment_counts, _segments, _statuses
+from app.services.mastery import on_review_path, review_open
+from app.services.modules import (
+    _modules,
+    _progress,
+    _segment_counts,
+    _segments,
+    _statuses,
+    answer_states,
+    quest_open,
+)
 from app.services.support import hidden_segments
 
-Refusal = Literal["module_locked", "review_closed", "not_shown", "retired", "quick_check"]
+Refusal = Literal[
+    "module_locked",
+    "review_closed",
+    "practice_first",
+    "not_shown",
+    "retired",
+    "quick_check",
+    "quest_closed",
+]
 
 
 @dataclass(frozen=True)
@@ -151,15 +171,45 @@ def _first_refusal(session: Session, user_id: int, homes: Homes) -> Refusal | No
     return shut_videos[0] if shut_videos else "retired"
 
 
+def review_practice_done(session: Session, user_id: int, objective_id: int) -> bool:
+    """Whether this student has done every practice item (purpose `review`) on the objective's
+    review path, by the rule a module uses to let a student move on (FR-2.7)."""
+    practice = list(
+        session.scalars(
+            select(Activity.id)
+            .join(Segment, Segment.activity_id == Activity.id)
+            .where(Segment.review_objective_id == objective_id, Activity.purpose == "review")
+        )
+    )
+    return set(practice) <= answer_states(session, user_id, practice).done
+
+
 def activity_refusal(session: Session, user: User, activity: Activity) -> Refusal | None:
     """None if this student may open the activity, else why not (see the module docstring)."""
     if user.is_staff:
         return None
+    if activity.purpose == "bonus" and not quest_open(session, user.id, activity):
+        # Opens at its segment, or once its module is finished (FR-8.3; #224 review).
+        return "quest_closed"
     if activity.purpose == "test_out":
         # A quick check question is answered only in the quick check, all at once, with no hints
         # or feedback before the end (FR-8.2, #214): never one by one here.
         return "quick_check"
-    return _first_refusal(session, user.id, activity_homes(session, activity))
+    homes = activity_homes(session, activity)
+    refusal = _first_refusal(session, user.id, homes)
+    # A fresh item waits for its path's practice (review of 13 Nov, Critical 1).
+    if (
+        refusal is None
+        and on_review_path(activity)
+        and homes.review_paths
+        and not any(
+            review_open(session, user.id, objective)
+            and review_practice_done(session, user.id, objective)
+            for objective in homes.review_paths
+        )
+    ):
+        return "practice_first"
+    return refusal
 
 
 def _video_refusal(session: Session, user_id: int, video: Video) -> Refusal | None:

@@ -16,6 +16,10 @@ describe('routing', () => {
     expect(screen.getByRole('link', { name: 'Log in' })).toHaveAttribute('href', '/login')
     for (const link of screen.getAllByRole('link', { name: /Create a free account|Sign up/ }))
       expect(link).toHaveAttribute('href', '/register')
+    // It promises only what is built (review 13 Nov): no videos are recorded, the warm-up doesn't
+    // pick refreshers, and no one draws a graph.
+    const page = document.body.textContent ?? ''
+    expect(page).not.toMatch(/video|only where you need|draw graphs|WCAG 2\.1/i)
   })
 
   it('sends a visitor who is not logged in from any other page to the log-in page', async () => {

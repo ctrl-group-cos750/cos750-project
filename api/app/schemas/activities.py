@@ -16,6 +16,7 @@ from typing import Annotated, Any, Literal
 from pydantic import Field, StrictInt, ValidationInfo, field_validator, model_validator
 
 from app.schemas.base import ApiModel
+from app.schemas.content import Purpose
 from app.schemas.graphs import VERTEX, GraphEdge
 
 Vertex = Annotated[str, Field(pattern=VERTEX)]
@@ -429,8 +430,19 @@ class ActivityOut(ApiModel):
     # A module 6 mastery item (#144): one answer only, no right or wrong shown (the mastery report
     # gives the results once every item is answered), and hints up to `MASTERY_HINT_LIMIT` only.
     mastery_check: bool = False
+    # What the activity is for. A review path's fresh items are "mastery" too: they decide an
+    # objective, so the page keeps them as calm as the mastery check (no companion, confetti or
+    # success moment, #222 review).
+    purpose: Purpose = "practice"
     # This student has answered this mastery check item, so it takes no more answers or hints.
     answered: bool = False
+    # `answered` because their answer to the item this one replaced stands in for it (`REPLACES`
+    # in app/services/mastery.py): they never answered this version, so there is no `lastAttempt`
+    # to show, and the page says why (review of #223, nit 2).
+    answered_earlier_version: bool = False
+    # A fresh item on a review path: it decides the objective's result, and its hints stop at
+    # hint 3 (the fourth is the worked answer; review of 13 Nov). False for staff, who see all.
+    review_check: bool = False
     # This student's latest answer and the result for it, as marked now (after a regrade, #202,
     # the new mark), so coming back to an activity shows it instead of a blank form (#171). None
     # before they answer, and on a response that isn't about one student (a video's checkpoints).
@@ -465,6 +477,9 @@ class AttemptOut(ApiModel):
     # right answer, 4 if that came after hint 3 or 4, a bonus quest's own points, else 0. Always 0
     # on a mastery check item, and 0 when the attempt is shown again later (#171).
     points: int = 0
+    # The student's first answer to this activity (in any round) was wrong, and this is a later
+    # one: it counts for no medal (FR-9.6). False on a mastery check item, which takes one answer.
+    after_wrong_first: bool = False
 
 
 class LastAttemptOut(ApiModel):
@@ -480,12 +495,15 @@ ActivityOut.model_rebuild()
 
 class HintOut(ApiModel):
     """The hint just revealed. `next_counts_as_support` is true when the *next* hint would be level
-    3 or 4: show the "this counts as met with support" warning before asking for it (ID doc §7.4)."""
+    3 or 4: warn before asking for it (ID doc §7.4). On an item that decides an objective an
+    answer after it counts as "met with support"; on practice it earns fewer points, and after
+    hint 4, the worked answer, none (FR-9.2)."""
 
     level: int
     body: str
     has_more: bool
     next_counts_as_support: bool
-    # The mastery check's hint limit is reached and the activity has more hints it won't give
-    # (#144): a student who needs them gets them on the objective's review path.
+    # The hint limit is reached and the activity has more hints it won't give: the mastery
+    # check's (#144; a student who needs them gets them on the objective's review path), or a
+    # review path fresh item's (hint 4, the worked answer, is not given on an item that decides).
     limit_reached: bool = False

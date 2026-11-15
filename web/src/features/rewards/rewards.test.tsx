@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ada, fakeApi, renderApp } from '../../test/app.tsx'
 import type { EarnedBadge, Rewards } from './rewards.api.ts'
-import { buildShelf, unseen } from './shelf.ts'
+import type { Medal, ModuleMedal, Skill, Skills } from '../progress/skills.api.ts'
+import { buildShelf, modulesText, unseen } from './shelf.ts'
 
 function badge(id: string, more: Partial<EarnedBadge> = {}): EarnedBadge {
   return {
@@ -42,19 +43,29 @@ describe('buildShelf', () => {
     const states = Object.fromEntries(shelf.objective.map((i) => [i.achievement.id, i.state]))
     expect(states).toMatchObject({ lo5: 'gold', lo2: 'bronze', lo1: 'locked' })
     expect(shelf.objective.find((i) => i.achievement.id === 'lo1')?.next).toBe(
-      'Meet learning objective 1.',
+      'Practise learning objective 1 in the modules until it is secure.',
     )
     expect(shelf.objective.find((i) => i.achievement.id === 'lo2')?.next).toBe(
       'Met with support. Gold is for meeting it without hint 3 or 4.',
     )
-    expect(shelf.milestone.map((i) => i.state)).toEqual(['locked', 'locked', 'locked', 'locked'])
+    // Solo Run is left off: Edge Spotter was met with support, so it can't be earned now.
+    expect(shelf.milestone.map((i) => i.achievement.id)).not.toContain('solo-run')
+    expect(shelf.milestone.map((i) => i.state)).toEqual(['locked', 'locked', 'locked'])
+  })
+
+  it('offers Solo Run while every objective met so far was met on your own', () => {
+    const ids = (earned: EarnedBadge[]) => buildShelf(earned).milestone.map((i) => i.achievement.id)
+    expect(ids([badge('lo5', { tier: 'gold' }), badge('lo1', { tier: 'practised' })])).toContain(
+      'solo-run',
+    )
+    expect(ids([badge('lo5', { tier: 'bronze' })])).not.toContain('solo-run')
   })
 
   it('offers Shortcut Finder now that objective 8 is assessed (#70)', () => {
     const ids = buildShelf([]).objective.map((i) => i.achievement.id)
     expect(ids).toEqual(['lo1', 'lo2', 'lo3', 'lo4', 'lo5', 'lo6', 'lo7', 'lo8'])
     expect(buildShelf([]).objective.find((i) => i.achievement.id === 'lo8')?.next).toBe(
-      'Meet learning objective 8.',
+      'Practise learning objective 8 in the modules until it is secure.',
     )
   })
 
@@ -247,6 +258,266 @@ describe('Badge announcements', () => {
     expect(await screen.findByText('Badges and points are off')).toBeVisible()
     expect(api.callsTo('PUT /api/rewards/settings')[0]!.body).toEqual({ hideRewards: true })
     expect(screen.queryByText('Queue Tracer')).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'profile' })).toHaveAttribute('href', '/profile')
+    expect(screen.getByRole('link', { name: 'profile' })).toHaveAttribute(
+      'href',
+      '/profile#what-you-see',
+    )
+  })
+})
+
+// --- Badge levels and module medals (#214) -------------------------------------------------------
+
+function skill(id: number, more: Partial<Skill> = {}): Skill {
+  return {
+    id,
+    text: `Objective ${id}`,
+    answered: 0,
+    correct: 0,
+    onYourOwn: 0,
+    total: 4,
+    level: 'not_started',
+    result: null,
+    improve: null,
+    modules: [],
+    ...more,
+  }
+}
+
+function medal(moduleId: number, tier: Medal | null, complete = tier !== null): ModuleMedal {
+  return {
+    moduleId,
+    complete,
+    firstTime: 0,
+    onYourOwn: 0,
+    answered: 0,
+    total: 4,
+    medal: tier,
+    headingFor: tier,
+    objectives: [],
+  }
+}
+
+/** Rewards and a skill profile the test can change, as a student's answers would. */
+function withRewardsAndSkills(rewards: Rewards, skills: Skills) {
+  let current = rewards
+  const state = { skills }
+  const api = fakeApi({
+    user: ada,
+    overrides: {
+      'GET /api/rewards': () => Response.json(current),
+      'POST /api/rewards/seen': () => {
+        current = { ...current, badges: current.badges.map((b) => ({ ...b, seen: true })) }
+        return Response.json(current)
+      },
+      'PUT /api/rewards/settings': (body) => {
+        current = { ...current, ...(body as { hideRewards: boolean }) }
+        return Response.json(current)
+      },
+      'GET /api/me/skills': () => Response.json(state.skills),
+    },
+  })
+  return { api, state }
+}
+
+describe('badge levels', () => {
+  it('practised is the first level, then bronze and gold', () => {
+    const shelf = buildShelf(
+      [badge('lo1', { tier: 'practised' }), badge('lo2', { tier: 'bronze' })],
+      [
+        skill(1, { level: 'secure', modules: [1] }),
+        skill(3, { modules: [1] }),
+        skill(6, { modules: [2, 4] }),
+        skill(7, {
+          level: 'practising',
+          modules: [4, 5],
+          improve: { kind: 'check', moduleId: 6, segment: null, objectiveId: null },
+        }),
+        skill(4, {
+          level: 'practising',
+          modules: [3],
+          improve: { kind: 'restart', moduleId: 3, segment: null, objectiveId: null },
+        }),
+      ],
+    )
+    const byId = Object.fromEntries(shelf.objective.map((i) => [i.achievement.id, i]))
+    expect(byId.lo1.state).toBe('practised')
+    expect(byId.lo1.next).toBe(
+      'Next: gold when you meet it in the mastery check. If the check says not yet, its review path gives bronze, or gold without hint 3.',
+    )
+    expect(byId.lo3.next).toBe('Practise it in module 1 until it is secure.')
+    expect(byId.lo6.next).toBe('Practise it in modules 2 and 4 until it is secure.')
+    // Practice can no longer make it secure: never "practise it" in vain (#222 re-review, N1).
+    expect(byId.lo7.next).toBe(
+      'Only a first answer counts, so practice can no longer make it secure. Meet it in the mastery check in module 6.',
+    )
+    // A finished module to restart: its questions get a new first answer (#222 review by Koos).
+    expect(byId.lo4.next).toBe(
+      "Only a first answer counts, so answering the rest can't make it secure this time. Restart module 3 to answer its questions afresh.",
+    )
+    expect(modulesText([1, 2, 5])).toBe('modules 1, 2 and 5')
+  })
+
+  it('keeps practised when the check says not yet, and links the review path', () => {
+    const shelf = buildShelf(
+      [badge('lo6', { tier: 'practised' })],
+      [
+        skill(6, {
+          level: 'secure',
+          result: 'not_yet',
+          improve: { kind: 'review', moduleId: null, segment: null, objectiveId: 6 },
+        }),
+      ],
+    )
+    const lo6 = shelf.objective.find((i) => i.achievement.id === 'lo6')!
+    expect(lo6.state).toBe('practised')
+    expect(lo6.next).toBe('Practised; not yet met in the check.')
+    expect(lo6.review).toBe(6)
+  })
+
+  it('shows the three levels on the badges page, practised as an outline', async () => {
+    withRewardsAndSkills(
+      {
+        hideRewards: false,
+        points: 40,
+        badges: [
+          badge('lo1', { tier: 'practised' }),
+          badge('lo2', { tier: 'bronze' }),
+          badge('lo3', { tier: 'gold' }),
+          badge('lo6', { tier: 'practised' }),
+        ],
+      },
+      {
+        objectives: [
+          skill(6, {
+            result: 'not_yet',
+            improve: { kind: 'review', moduleId: null, segment: null, objectiveId: 6 },
+          }),
+        ],
+        modules: [],
+      },
+    )
+    renderApp('/badges')
+    expect(
+      await screen.findByRole('img', { name: 'Word Smith, practised, secure in practice' }),
+    ).toBeVisible()
+    const card = screen.getByRole('heading', { name: 'Word Smith' }).closest('li')!
+    expect(within(card).getByText('Practised: secure in the modules')).toBeVisible()
+    const levels = within(card).getByRole('list', { name: 'Levels' })
+    expect(
+      within(levels)
+        .getAllByRole('listitem')
+        .map((l) => l.textContent),
+    ).toEqual(['● Practised, reached', '○ Bronze', '○ Gold'])
+    expect(
+      within(levels)
+        .getByText(/Practised/)
+        .closest('li'),
+    ).toHaveAttribute('aria-current', 'step')
+    const bronze = screen.getByRole('heading', { name: 'Edge Spotter' }).closest('li')!
+    expect(within(bronze).getByText('Bronze: met with support')).toBeVisible()
+    expect(await screen.findByText('Practised; not yet met in the check.')).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Go over it on its review path' })).toHaveAttribute(
+      'href',
+      '/review/6',
+    )
+  })
+
+  it('announces "practised", then "now bronze" and "now gold" as a badge goes up', async () => {
+    withRewards({
+      hideRewards: false,
+      points: 0,
+      badges: [
+        badge('lo1', { tier: 'practised', seen: false }),
+        badge('lo2', { tier: 'bronze', seen: false, upgradedAt: '2026-11-13T10:00:00Z' }),
+        badge('lo3', { tier: 'gold', seen: false, upgradedAt: '2026-11-13T10:00:00Z' }),
+      ],
+    })
+    renderApp('/')
+    expect(await screen.findByText('Word Smith: practised')).toBeVisible()
+    expect(screen.getByText('Edge Spotter is now bronze')).toBeVisible()
+    expect(screen.getByText('Map Maker is now gold')).toBeVisible()
+  })
+})
+
+describe('module medal notes', () => {
+  it('count with the badge notes: at most three cards, the rest summed up', async () => {
+    window.localStorage.clear()
+    window.localStorage.setItem('ctrl-academy.1.medals-announced', '{}')
+    withRewardsAndSkills(
+      {
+        hideRewards: false,
+        points: 0,
+        badges: [badge('lo1', { tier: 'practised', seen: false })],
+      },
+      { objectives: [], modules: [1, 2, 3, 4].map((n) => medal(n, 'gold')) },
+    )
+    renderApp('/')
+    expect(await screen.findByText('Module 4: gold medal')).toBeVisible()
+    expect(screen.getAllByRole('button', { name: /^Dismiss Module/ })).toHaveLength(3)
+    expect(screen.getByText('2 more new badges')).toBeVisible()
+  })
+
+  it('announces a medal earned while the student is here, once', async () => {
+    window.localStorage.clear()
+    const { state } = withRewardsAndSkills(
+      { hideRewards: false, points: 0, badges: [] },
+      { objectives: [], modules: [medal(1, 'gold'), medal(2, null, false)] },
+    )
+    const view = renderApp('/')
+    await screen.findByRole('heading', { name: 'Graphs and breadth-first search' })
+    // Module 1's medal was earned before: recorded, not announced.
+    await waitFor(() =>
+      expect(localStorage.getItem('ctrl-academy.1.medals-announced')).not.toBeNull(),
+    )
+    expect(screen.queryByText(/Module 1: gold medal/)).toBeNull()
+
+    state.skills = { objectives: [], modules: [medal(1, 'gold'), medal(2, 'silver')] }
+    view.unmount()
+    const again = renderApp('/')
+    expect(await screen.findByText('Module 2: silver medal')).toBeVisible()
+    expect(
+      screen.getByText('Silver: every activity right first time, without hint 3 or 4.'),
+    ).toBeVisible()
+    await userEvent.click(screen.getByRole('button', { name: 'Dismiss Module 2: silver medal' }))
+    expect(screen.queryByText('Module 2: silver medal')).toBeNull()
+    again.unmount()
+
+    renderApp('/')
+    await screen.findByRole('heading', { name: 'Graphs and breadth-first search' })
+    await waitFor(() => expect(screen.queryByText('Module 2: silver medal')).toBeNull())
+  })
+
+  it('says nothing while points and badges are hidden', async () => {
+    window.localStorage.clear()
+    window.localStorage.setItem('ctrl-academy.1.medals-announced', '{}')
+    withRewardsAndSkills(
+      { hideRewards: true, points: 0, badges: [] },
+      { objectives: [], modules: [medal(3, 'finished')] },
+    )
+    renderApp('/')
+    await screen.findByRole('heading', { name: 'Graphs and breadth-first search' })
+    await waitFor(() =>
+      expect(localStorage.getItem('ctrl-academy.1.medals-announced')).toBe('{"3":"finished"}'),
+    )
+    expect(screen.queryByText('Module 3: finished medal')).toBeNull()
+  })
+})
+
+describe('note placement and timing (13 Nov review)', () => {
+  it('goes by itself after a few seconds on a laptop too, unless focus is in it', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      withRewards({
+        hideRewards: false,
+        points: 0,
+        badges: [badge('lo1', { tier: 'practised', seen: false })],
+      })
+      renderApp('/')
+      expect(await screen.findByText('Word Smith: practised')).toBeVisible()
+      await vi.advanceTimersByTimeAsync(9_000)
+      await waitFor(() => expect(screen.queryByText('Word Smith: practised')).toBeNull())
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

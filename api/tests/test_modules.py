@@ -1076,6 +1076,43 @@ def test_a_module_clicked_through_with_hints_earns_no_points_until_real_work(
     assert "first-module" in _badges(client)
 
 
+def test_a_module_answered_wrong_then_right_everywhere_earns_no_module_points(
+    client: TestClient, db: Session
+) -> None:
+    """Only a first attempt counts (the evidence rule, FR-9.6): a module answered wrong then right
+    on every question is complete, but it earns no module points and no First Module (review of
+    13 Nov on #221: it paid 25 points and the badge). One right first answer, later, earns them."""
+    _make_gated_module(db)
+    _register_and_login(client, ALICE)
+    for activity_id in (1, 2, 3):
+        _answer(client, activity_id, "b")
+        _answer(client, activity_id, "a")
+    for position in (1, 2, 3, 3):
+        assert _move(client, position) == 200
+    assert client.get("/api/modules/0").json()["status"] == "complete"
+    assert client.get("/api/rewards").json()["points"] == 0
+    assert _module_points(db) == []
+    assert "first-module" not in _badges(client)
+
+    recall = Activity(
+        id=4,
+        kind="multiple_choice",
+        title="Recall",
+        module_id=0,
+        purpose="retrieval",
+        config={
+            "prompt": "Which?",
+            "options": [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}],
+        },
+        solution={"correct": "a", "feedback": {}},
+    )
+    db.add(recall)
+    db.commit()
+    _answer(client, 4, "a")
+    assert _module_points(db) == [25]
+    assert "first-module" in _badges(client)
+
+
 def test_the_seed_backfills_modules_completed_before_module_points(db: Session) -> None:
     """A module completed before module points existed earns them on the next seed, if earned,
     once (#166 review)."""

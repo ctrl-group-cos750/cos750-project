@@ -24,7 +24,14 @@ from app.models import (
     User,
     Video,
 )
-from app.routers.activities import MODULE_LOCKED, QUICK_CHECK, RETIRED, REVIEW_CLOSED
+from app.routers.activities import (
+    MODULE_LOCKED,
+    PRACTICE_FIRST,
+    QUEST_CLOSED,
+    QUICK_CHECK,
+    RETIRED,
+    REVIEW_CLOSED,
+)
 from app.routers.videos import LOCKED as VIDEO_LOCKED
 from app.routers.videos import MODULE_LOCKED as VIDEO_MODULE_LOCKED
 from app.seed import load
@@ -124,9 +131,9 @@ def test_each_modules_activities_open_exactly_when_the_module_does(
     client: TestClient, committed: Session
 ) -> None:
     """The student chooses where to start (#214): every activity of modules 0 to 5 is usable from
-    the start, but an activity the module shows only as support (#172), which stays shut to this
-    student who isn't struggling, and the quick check questions (FR-8.2), which are only asked in
-    the quick check. Module 6's are 403 until module 6 opens."""
+    the start, except hidden support (#172), bonus quests until their module is complete, and quick
+    check questions (FR-8.2), which are only asked in the quick check. Module 6's are 403 until
+    module 6 opens."""
     db = committed
     register(client)
     on_base = set(
@@ -152,6 +159,8 @@ def test_each_modules_activities_open_exactly_when_the_module_does(
         response = client.get(f"/api/activities/{activity.id}")
         if activity.id in quick_check:
             assert (response.status_code, response.json()["detail"]) == (403, QUICK_CHECK)
+        elif activity.purpose == "bonus":
+            assert (response.status_code, response.json()["detail"]) == (403, QUEST_CLOSED)
         else:
             assert response.status_code == (403 if activity.id in support_only else 200), (
                 activity.id
@@ -353,7 +362,22 @@ def test_a_review_path_opens_when_module_6_says_not_yet(
     db.commit()
     states = {o["id"]: o["state"] for o in client.get("/api/me/report").json()["objectives"]}
     assert states[1] == "not_yet"
-    for step in review_items(db, 1):
+    steps = review_items(db, 1)
+    purposes = {a.id: a.purpose for a in db.scalars(select(Activity).where(Activity.id.in_(steps)))}
+    practice = [s for s in steps if purposes[s] == "review"]
+    fresh = [s for s in steps if purposes[s] == "mastery"]
+    for step in practice:
+        assert client.get(f"/api/activities/{step}").status_code == 200
+    # The fresh items wait for the practice (review of 13 Nov, Critical 1).
+    for step in fresh:
+        refused = client.get(f"/api/activities/{step}")
+        assert (refused.status_code, refused.json()["detail"]) == (403, PRACTICE_FIRST)
+        assert client.post(f"/api/activities/{step}/hints").status_code == 403
+    for step in practice:  # answered twice: done, as in a module (FR-2.7)
+        for _ in range(2):
+            body = {"submitted": first_submission(db, step)}
+            assert client.post(f"/api/activities/{step}/attempts", json=body).status_code == 201
+    for step in fresh:
         assert client.get(f"/api/activities/{step}").status_code == 200
     for step in review_items(db, 2):  # objective 2's path is still closed
         assert client.get(f"/api/activities/{step}").status_code == 403

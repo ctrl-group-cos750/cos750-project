@@ -1,12 +1,15 @@
 .skip {
-  position: absolute;
+  /* Fixed, so it shows wherever the page is scrolled to when it gets focus (Shift+Tab back to it
+   * from further down the page left it at the top of the document, out of view). */
+  position: fixed;
   left: var(--space-4);
   top: -3rem;
   padding: var(--space-2) var(--space-3);
   background: var(--color-primary);
   color: var(--color-on-accent);
   border-radius: var(--radius-md);
-  z-index: 10;
+  /* Above the sticky header (30), which is opaque and painted over the link (WCAG 2.4.7, 2.4.11). */
+  z-index: 40;
 }
 
 .skip:focus {
@@ -91,9 +94,15 @@
     width: 100%;
   }
 
-  /* Less space around the page on a phone, so code and tables get more of the width. */
+  /* Less space around the page on a phone, so code and tables get more of the width. While a
+   * badge note shows under the header, the page moves down by its height (`--note-space`, set by
+   * BadgeAnnouncer), so the note never covers the page's heading (#222 re-review). */
   .main {
-    padding: var(--space-5) var(--space-4) var(--space-7);
+    padding: calc(var(--space-5) + var(--note-space, 0px)) var(--space-4) var(--space-7);
+    /* Never animated: with reduced motion, base.css gives every element a 0.01 ms transition on
+     * every property, which held the old padding for a frame, so the page was scrolled back
+     * before it had moved and then jumped anyway (#222 re-review, new finding 1). */
+    transition-property: none;
   }
 }
 

@@ -42,15 +42,16 @@ from app.schemas.modules import (
     ModuleStatus,
     RetrievalActivityOut,
     SegmentOut,
+    SkipCheckState,
 )
 from app.services import rewards
 from app.services.events import log_event
 from app.services.locks import lock_student
-from app.services.mastery import MASTERY_MODULE
+from app.services.mastery import MASTERY_MODULE, REPLACES, check_answered
 from app.services.quick_check import DONE
 from app.services.quick_check import scores as quick_check_scores
 from app.services.quick_check import states as quick_check_states
-from app.services.support import hidden_segments, record_shown
+from app.services.support import hidden_segments, record_shown, skip_check_passed
 
 # Activity kinds the web can't show a student yet: it says "This activity kind is not available
 # yet" instead (SUPPORTED in web/src/features/activities/ActivityRenderer.tsx is the mirror of
@@ -180,6 +181,12 @@ def _locked(session: Session, user_id: int, module_ids: set[int]) -> bool:
         return False
     statuses = _statuses(_modules(session), _progress(session, user_id), _segment_counts(session))
     return all(statuses.get(module_id, "locked") == "locked" for module_id in module_ids)
+
+
+def module_locked(session: Session, user_id: int, module_id: int) -> bool:
+    """Whether this module is still locked for this student (FR-2.1): only the mastery check ever
+    is, until every module before it is done."""
+    return _locked(session, user_id, {module_id})
 
 
 def segment_locked(session: Session, user_id: int, segment_id: int) -> bool:
@@ -403,6 +410,12 @@ def answer_states(
             done.add(activity_id)
         if correct:
             right.add(activity_id)
+    # A mastery item that replaced another (`mastery.REPLACES`) is done once the earlier item's
+    # answer stands in for it, as the one-answer rule has it (`check_answered`), so its segment
+    # shows done too (review of #223, nit 3).
+    for new in sorted((wanted & REPLACES.keys()) - done):
+        if check_answered(session, user_id, new):
+            done.add(new)
     look_again = (attempted & done) - right - optional - one_answer
     return AnswerStates(done=done, right=right, look_again=look_again)
 
@@ -445,6 +458,43 @@ def course_minutes(session: Session) -> int:
     return int(session.scalar(select(func.coalesce(func.sum(Module.estimated_minutes), 0))) or 0)
 
 
+def quest_open(session: Session, user_id: int, activity: Activity) -> bool:
+    """Whether this student may open a bonus quest (FR-8.3): once they have reached the segment
+    that offers it in its module, or finished the module. A quest is a module's last segment
+    (380 in module 3, 480 in module 4), which a student reaches before the module is complete, so
+    finishing alone would shut it exactly where it is offered (#224 review). A quest no segment
+    places opens with its module's completion."""
+    if activity.module_id is None:
+        return False
+    row = _progress(session, user_id).get(activity.module_id)
+    if row is None:
+        return False
+    if row.status == "complete":
+        return True
+    index = next(
+        (
+            i
+            for i, s in enumerate(_segments(session, activity.module_id))
+            if s.activity_id == activity.id
+        ),
+        None,
+    )
+    return index is not None and row.current_segment_position >= index
+
+
+def skip_check_state(
+    session: Session, user_id: int, activity_id: int | None
+) -> SkipCheckState | None:
+    """Where a student stands on a segment's skip check (FR-8.1, FR-8.2): not taken, passed or
+    not passed (`support.skip_check_passed`, the rule that also hides the segment)."""
+    if activity_id is None:
+        return None
+    passed = skip_check_passed(session, user_id, activity_id)
+    if passed is None:
+        return "not_taken"
+    return "passed" if passed else "not_passed"
+
+
 def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleDetailOut:
     """One module with its segments in order. Raises `ModuleNotFound` or `ModuleLocked`."""
     status = _status(session, user_id, module_id)
@@ -485,8 +535,6 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
     look_again = answer_states(
         session, user_id, {s.activity_id for s in segments if s.activity_id}, after
     ).look_again
-    # TODO (FR-8.1): leave out the refreshers module 0's diagnostic has ruled out, once the
-    # diagnostic records its result. Until then every refresher is shown.
     detail = ModuleDetailOut(
         **_summary(
             module, status, len(segments), row, _hidden_positions(segments, hidden)
@@ -500,6 +548,8 @@ def get_module_detail(session: Session, user_id: int, module_id: int) -> ModuleD
                 body=segment.body or None,
                 video_id=videos.get(segment.id),
                 activity_id=segment.activity_id,
+                skip_check_activity_id=segment.skip_check_activity_id,
+                skip_check=skip_check_state(session, user_id, segment.skip_check_activity_id),
                 done=segment.id in done,
                 attempted=segment.activity_id is not None and segment.activity_id in attempted,
                 optional=segment.activity_id is not None and segment.activity_id in optional,
@@ -697,36 +747,25 @@ def _module_activities(session: Session, module_id: int) -> set[int]:
 def reward_module(session: Session, user_id: int, module_id: int) -> bool:
     """Give a complete module's 25 points, and the First Module badge with the first, once
     (FR-9.1, FR-9.3), if the student has done real work in it: at least one of its activities,
-    other than a diagnostic question, answered correctly without hint 3 or 4. A module walked
-    through by opening every hint and sending anything earns nothing (FR-9.6, ID document §7.2:
-    badges mark real progress, not clicks; #166 review). Called when the module completes, when such a right answer comes later,
-    and by the seed for modules completed before this rule. Returns whether it was earned."""
+    other than a diagnostic question, answered right at the first attempt without hint 3 or 4 (`rewards.real_work`, the evidence rule every reward follows). A module walked
+    through by opening every hint and sending anything, or by guessing until right, earns
+    nothing (FR-9.6, ID document §7.2: badges mark real progress, not clicks; #166 review, review
+    of 13 Nov). Called when the module completes, when such a right answer comes later, and by
+    the seed for modules completed before this rule. Returns whether it was earned."""
     # The diagnostic finds gaps, it doesn't teach (FR-8.1): answering it isn't the work a module's
     # reward is for. So module 0, the warm-up, which asks only diagnostic questions, earns none,
     # and the First Module badge comes with the first module that teaches (Matthew, 13 Nov: it
     # came after module 0 and read as if module 1's first answer had earned it).
     diagnostic = set(session.scalars(select(Activity.id).where(Activity.purpose == "diagnostic")))
     activities = _module_activities(session, module_id) - diagnostic
-    earned = (
-        session.scalar(
-            select(Attempt.id)
-            .where(
-                Attempt.user_id == user_id,
-                Attempt.activity_id.in_(activities),
-                Attempt.correct.is_(True),
-                rewards.real_work(),
-            )
-            .limit(1)
-        )
-        is not None
-    )
+    earned = bool(rewards.real_work_on(session, user_id, activities))
     if earned:
         rewards.on_module_completed(session, user_id, module_id)  # points and badge once each
     return earned
 
 
 def reward_completed_modules(session: Session, user_id: int, activity: Activity) -> None:
-    """After a right answer without hint 3 or 4: a complete module of this activity's that hadn't
+    """After real work (`rewards.real_work`): a complete module of this activity's that hadn't
     earned its reward yet earns it now."""
     homes = set(
         session.scalars(

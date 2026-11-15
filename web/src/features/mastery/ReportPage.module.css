@@ -125,3 +125,42 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* An objective's mastery check answers, marked, once the check is finished (review of 13 Nov). */
+.answers {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.answers > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.answers > ul {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.answerHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.why {
+  max-width: var(--reading-width);
+  margin: var(--space-1) 0 0;
+}
+
+.notes {
+  max-width: var(--reading-width);
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-4);
+  color: var(--color-text-muted);
+}

@@ -1,5 +1,13 @@
-import { useId, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-import { Link } from 'react-router'
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type ReactNode,
+} from 'react'
+import { Link, useLocation } from 'react-router'
 import { ApiError } from '../../api/client.ts'
 import type { User } from '../../auth/api.ts'
 import { useCurrentUser } from '../../auth/hooks.ts'
@@ -18,10 +26,20 @@ import {
 } from '../../components'
 import { useReport } from '../mastery/hooks.ts'
 import { prefersReducedMotion, useConfettiSetting } from '../progress/confetti.ts'
-import { usePreference } from '../progress/preferences.ts'
+import {
+  BACKGROUNDS,
+  useCompanionChoice,
+  type CompanionChoice,
+  usePreference,
+  useBackground,
+  type Background,
+} from '../progress/preferences.ts'
 import { useRewards, useRewardsSettings } from '../rewards/hooks.ts'
 import { useChangePassword, useDeletePicture, useSetAvatar, useUploadPicture } from './hooks.ts'
 import { squarePicture } from './squarePicture.ts'
+import { BACKGROUND_LABELS } from '../../theme/background.ts'
+import { CHARACTERS } from '../companion/characters/index.ts'
+import { BackgroundSwatch } from '../../theme/BackgroundSwatch.tsx'
 import styles from './ProfilePage.module.css'
 
 /** Points, badges and objectives met (FR-1.7): the student's own, never anyone else's. Points and
@@ -204,76 +222,235 @@ function Picture({ user }: { user: User }) {
   )
 }
 
-/** "Hide points and badges" (FR-9.5), the same setting as on the badges page. */
-function RewardsSetting() {
-  const rewards = useRewards()
-  const settings = useRewardsSettings()
+/** One switch in "What you see while you learn": a checkbox, its label and a line on what it
+ * does, read with it (`aria-describedby`, with the group's note on where it is kept). */
+function Setting({
+  label,
+  about,
+  checked,
+  onChange,
+  disabled,
+  note,
+}: {
+  label: string
+  about: ReactNode
+  checked: boolean
+  onChange: (on: boolean) => void
+  disabled?: boolean
+  note?: string
+}) {
   const id = useId()
   return (
-    <section aria-labelledby="rewards-heading" className={styles.section}>
-      <h2 id="rewards-heading">Points and badges</h2>
+    <div className={styles.setting}>
       <div className={styles.toggle}>
         <input
           id={id}
           type="checkbox"
-          checked={rewards.data?.hideRewards ?? false}
-          disabled={rewards.isPending || settings.isPending}
-          onChange={(e) => settings.mutate({ hideRewards: e.target.checked })}
+          checked={checked}
+          disabled={disabled}
+          aria-describedby={note ? `${id}-about ${note}` : `${id}-about`}
+          onChange={(e) => onChange(e.target.checked)}
         />
-        <label htmlFor={id}>Hide points and badges</label>
+        <label htmlFor={id}>{label}</label>
       </div>
-      <p className={styles.muted}>
-        You'll still earn them, and you can turn them back on at any time. Your results for each
-        objective are always shown.
+      <p id={`${id}-about`} className={styles.muted}>
+        {about}
       </p>
-      {settings.isError && <Alert tone="danger">{settings.error.message}</Alert>}
-    </section>
+    </div>
   )
 }
 
-/** The feedback switches (#214), together under "Feedback": confetti and encouraging comments.
- * Both on by default and kept on this device, per student (features/progress/preferences.ts). */
-function FeedbackSettings() {
+const BACKGROUND_ABOUT: Record<Background, string> = {
+  glow: 'Soft blue and honey light in the corners of the page.',
+  doodles: 'Small line drawings from the course, with gentler light behind them.',
+  plain: 'A flat page with no decoration.',
+}
+
+/** The page background (#214): three radios, each with a small picture of it. Lessons, activities
+ * and the quick check keep solid cards whichever is chosen; high contrast and print are always
+ * plain. Also in the header's theme menu. */
+function BackgroundSetting({ note }: { note: string }) {
+  const [background, setBackground] = useBackground()
+  const name = useId()
+  return (
+    <fieldset className={styles.backgrounds} aria-describedby={`${name}-about ${note}`}>
+      <legend>Background</legend>
+      <p id={`${name}-about`} className={styles.muted}>
+        Behind the module map, your badges and your report. Lessons and activities keep a solid
+        background behind the text.
+      </p>
+      <div className={styles.backgroundChoices}>
+        {BACKGROUNDS.map((value) => (
+          <label key={value} className={styles.backgroundChoice}>
+            <input
+              type="radio"
+              name={`${name}-background`}
+              value={value}
+              checked={background === value}
+              aria-labelledby={`${name}-${value}-name`}
+              aria-describedby={`${name}-${value}`}
+              onChange={() => setBackground(value)}
+            />
+            <BackgroundSwatch background={value} />
+            <span>
+              <span id={`${name}-${value}-name`} className={styles.backgroundName}>
+                {BACKGROUND_LABELS[value]}
+              </span>
+              <span id={`${name}-${value}`} className={styles.muted}>
+                {BACKGROUND_ABOUT[value]}
+              </span>
+            </span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  )
+}
+
+/** The study companion (#214): the five characters, small, with their names, and Off. Off until
+ * the student says yes (asked once, after their first answer) or picks one here. Also changed or
+ * turned off from the companion's own "⋯". */
+function CompanionSetting({ note }: { note: string }) {
+  const [choice, setChoice] = useCompanionChoice()
+  const name = useId()
+  const heading = useRef<HTMLLegendElement>(null)
+  const { hash } = useLocation()
+  // Linked from the companion's "Change companion": straight here, once.
+  const jumped = useRef(false)
+  useEffect(() => {
+    if (hash !== '#companion' || jumped.current) return
+    jumped.current = true
+    heading.current?.scrollIntoView?.({ block: 'start' })
+    document.getElementById(`${name}-${choice ?? 'off'}`)?.focus()
+  }, [hash, name, choice])
+  const options: { value: CompanionChoice; label: string; picture: ReactNode }[] = [
+    ...CHARACTERS.map(({ id, name: label, Drawing }) => ({
+      value: id,
+      label,
+      picture: <Drawing pose="neutral" size={40} />,
+    })),
+    { value: 'off', label: 'Off', picture: null },
+  ]
+  return (
+    <fieldset
+      id="companion"
+      className={styles.backgrounds}
+      aria-describedby={`${name}-about ${note}`}
+    >
+      <legend ref={heading}>Study companion</legend>
+      <p id={`${name}-about`} className={styles.muted}>
+        A small character beside the feedback on your answers, with one short line about the task:
+        what was right, or which hint helps next. Never during a question or in the mastery check.
+      </p>
+      <div className={styles.companions}>
+        {options.map(({ value, label, picture }) => (
+          <label key={value} className={styles.companionChoice}>
+            <input
+              id={`${name}-${value}`}
+              type="radio"
+              name={`${name}-companion`}
+              value={value}
+              checked={(choice ?? 'off') === value}
+              onChange={() => setChoice(value)}
+            />
+            {picture ?? <span aria-hidden="true" className={styles.companionOff} />}
+            <span>{label}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  )
+}
+
+/**
+ * What you see while you learn (#214): one switch for each motivational element, all on by
+ * default, because some students find them demotivating (Self-Determination Theory: autonomy).
+ *
+ * - Points and badges (FR-9.5): kept on the account, the same setting as on the badges page. The
+ *   module medals follow it, so they have no switch of their own.
+ * - Skill profile, progress panel, confetti, encouraging comments and the page background: kept
+ *   on this device, per student (features/progress/preferences.ts).
+ *
+ * The mastery report and quick check results are never hidden.
+ */
+function LearningSettings() {
+  const rewards = useRewards()
+  const settings = useRewardsSettings()
   const [confettiOn, setConfetti] = useConfettiSetting()
   const [comments, setComments] = usePreference('comments')
-  const confettiId = useId()
-  const commentsId = useId()
-  const feedbackNote = useId()
+  const [profile, setProfile] = usePreference('skillProfile')
+  const [panel, setPanel] = usePreference('progressPanel')
+  const deviceNote = useId()
+  const heading = useRef<HTMLHeadingElement>(null)
+  const { hash } = useLocation()
+  // Linked from "… hidden. Turn it back on in your profile" (#214): straight to this group.
+  useEffect(() => {
+    if (hash !== '#what-you-see') return
+    heading.current?.scrollIntoView?.({ block: 'start' })
+    heading.current?.focus()
+  }, [hash])
   return (
-    <section aria-labelledby="feedback-heading" className={styles.section}>
-      <h2 id="feedback-heading">Feedback</h2>
-      <div className={styles.toggle}>
-        <input
-          id={confettiId}
-          type="checkbox"
-          checked={confettiOn}
-          aria-describedby={`${confettiId}-about ${feedbackNote}`}
-          onChange={(e) => setConfetti(e.target.checked)}
-        />
-        <label htmlFor={confettiId}>Confetti when you get something right</label>
-      </div>
-      <p id={`${confettiId}-about`} className={styles.muted}>
-        A short burst for a right answer, and a bigger one when you finish a module or are ready for
-        the lecture. Never during the mastery check.
-        {prefersReducedMotion() && ' Your device asks for reduced motion, so it stays off anyway.'}
+    <section
+      id="what-you-see"
+      aria-labelledby="learning-settings-heading"
+      className={styles.section}
+    >
+      <h2 id="learning-settings-heading" ref={heading} tabIndex={-1}>
+        What you see while you learn
+      </h2>
+      <p className={styles.muted}>
+        Turn off anything you would rather not see. Your mastery report and your quick check results
+        are always shown.
       </p>
-      <div className={`${styles.toggle} ${styles.nextToggle}`}>
-        <input
-          id={commentsId}
-          type="checkbox"
-          checked={comments}
-          aria-describedby={`${commentsId}-about ${feedbackNote}`}
-          onChange={(e) => setComments(e.target.checked)}
-        />
-        <label htmlFor={commentsId}>Encouraging comments</label>
-      </div>
-      <p id={`${commentsId}-about`} className={styles.muted}>
-        A short line under a right answer, and a word on how far you have come. Off, you see only
-        the explanation of why the answer is right.
-      </p>
-      <p id={feedbackNote} className={styles.muted}>
-        Both are kept on this device, for you only: on a shared computer they don&apos;t change
-        anyone else&apos;s, and on another device they start on again.
+      <Setting
+        label="Points and badges"
+        about="Points for each answer, badges and module medals. Off, you still earn them, and they come back when you turn this on."
+        checked={rewards.data ? !rewards.data.hideRewards : true}
+        disabled={rewards.isPending || settings.isPending}
+        onChange={(on) => settings.mutate({ hideRewards: !on })}
+      />
+      {settings.isError && <Alert tone="danger">{settings.error.message}</Alert>}
+      <Setting
+        label="Skill profile"
+        about="The chart of the eight objectives on your home page, and the list of them in the progress panel."
+        checked={profile}
+        onChange={setProfile}
+        note={deviceNote}
+      />
+      <Setting
+        label="Progress panel beside lessons"
+        about="Your progress in the module, the activities to look at again and your latest badges, beside a lesson or under it on a phone. Off, the lesson takes the full width."
+        checked={panel}
+        onChange={setPanel}
+        note={deviceNote}
+      />
+      <Setting
+        label="Confetti when you get something right"
+        about={
+          <>
+            A short burst for a right answer, and a bigger one when you finish a module or are ready
+            for the lecture. Never during the mastery check.
+            {prefersReducedMotion() &&
+              ' Your device asks for reduced motion, so it stays off anyway.'}
+          </>
+        }
+        checked={confettiOn}
+        onChange={setConfetti}
+        note={deviceNote}
+      />
+      <Setting
+        label="Encouraging comments"
+        about="A short line under a right answer, and a word on how far you have come. Off, you see only the explanation of why the answer is right."
+        checked={comments}
+        onChange={setComments}
+        note={deviceNote}
+      />
+      <CompanionSetting note={deviceNote} />
+      <BackgroundSetting note={deviceNote} />
+      <p id={deviceNote} className={styles.muted}>
+        Points and badges are kept with your account. The rest are kept on this device, for you
+        only: on a shared computer they don&apos;t change anyone else&apos;s, and on another device
+        they start on again, with the glow background.
       </p>
     </section>
   )
@@ -404,8 +581,7 @@ export function ProfilePage() {
       </div>
       <Stats />
       <Picture user={user} />
-      <RewardsSetting />
-      <FeedbackSettings />
+      <LearningSettings />
       <Password user={user} />
     </>
   )

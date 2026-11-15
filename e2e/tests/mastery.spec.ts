@@ -113,7 +113,25 @@ test('the mastery check on screen, the report, then a review path that makes the
     .getByRole('link', { name: /^Start review path/ })
     .click()
   await expect(page.getByRole('heading', { name: `Review: objective ${missed}` })).toBeVisible()
+  // The practice first: the fresh questions open once it is done (review of 13 Nov).
   const freshLinks = page.getByRole('link', { name: /^Answer\W/ })
+  await expect(freshLinks).toHaveCount(0)
+  await expect(page.getByText('Opens once you have done the practice above.').first()).toBeVisible()
+  const practiceLinks = page.getByRole('link', { name: /^Practise\s*:/ })
+  // Each practice item by its address, collected first: the path page is shown from its last
+  // copy while it reloads, so a link counted afterwards could be one already answered.
+  const practice = await practiceLinks.evaluateAll((links) =>
+    links.map((l) => l.getAttribute('href') ?? ''),
+  )
+  expect(practice.length).toBeGreaterThan(0)
+  for (const href of practice) {
+    await page.getByRole('link', { name: /^Practise\s*:/ }).and(page.locator(`[href="${href}"]`)).click()
+    const id = Number(href.split('/').pop())
+    await answerActivity(page, page.getByRole('main'), activity(id), 'right')
+    await page.goBack()
+    await expect(page.getByRole('heading', { name: `Review: objective ${missed}` })).toBeVisible()
+  }
+  await expect(page.getByText('Opens once you have done the practice above.')).toHaveCount(0)
   const fresh = await freshLinks.count()
   expect(fresh).toBeGreaterThan(0)
   await expect(page.getByText(/^You have answered every fresh question/)).toHaveCount(0)

@@ -7,12 +7,15 @@ import type { ModuleSummary } from './module.types.ts'
 import { fetchModules } from './module.api.ts'
 import { minutesProgress } from './minutes.ts'
 import { useSkills } from '../progress/hooks.ts'
+import { ModuleDoneCompanion } from '../companion/Companion.tsx'
 import { Medal } from '../progress/Medal.tsx'
 import { medalText } from '../progress/medals.ts'
 import type { Medal as MedalTier } from '../progress/skills.api.ts'
-import { SkillProfileCard } from '../progress/SkillProfileCard.tsx'
+import { HomeSkillProfile } from '../progress/SkillProfileCard.tsx'
 import { useRewards } from '../rewards/hooks.ts'
 import { useMediaQuery } from '../activities/pictures/useMediaQuery.ts'
+import { LockedNote } from './LockedNote.tsx'
+import { unlockNeeds, type UnlockNeeds } from './unlock.ts'
 import styles from './ModuleMap.module.css'
 
 /** From here the map is two columns: "next up" and the skill profile beside the list
@@ -44,7 +47,7 @@ function statusDisplay(module: ModuleSummary): { tone: TagTone; label: string; i
     case 'complete':
       return { tone: 'success', label: 'complete', icon: '✓' }
     case 'tested_out':
-      return { tone: 'success', label: 'tested out', icon: '»' }
+      return { tone: 'success', label: 'passed the quick check', icon: '»' }
   }
 }
 
@@ -53,7 +56,7 @@ function formatDuration(minutes: number): string {
   return `${minutes} min`
 }
 
-/** Where the student is in a module, counted the way the module page counts it ("Segment 4 of
+/** Where the student is in a module, counted the way the module page counts it ("Step 4 of
  * 8"): only the segments this student is shown, so support they don't need isn't counted. */
 function segmentProgress(module: ModuleSummary): { value: number; max: number } {
   const max = module.shownSegmentCount ?? module.segmentCount
@@ -120,15 +123,25 @@ function NextUp({ modules, next }: { modules: ModuleSummary[]; next: ModuleSumma
   )
 }
 
-/** A single module row on the map. Only the mastery check is ever locked: shown but not
- * interactive. The recommended next module says so, and a module the student could test out of
- * offers its quick check under the card (FR-8.2, #214). */
-function ModuleRow({ module, medal }: { module: ModuleSummary; medal?: MedalTier | null }) {
+/** A single module row on the map. Only the mastery check is ever locked: its card still opens
+ * (to a page that says why it isn't open yet), and the line under it says how to open it, with a
+ * link to each module still to do. The recommended next module says so, and a module the student
+ * could test out of offers its quick check under the card (FR-8.2, #214). */
+function ModuleRow({
+  module,
+  medal,
+  needs,
+}: {
+  module: ModuleSummary
+  medal?: MedalTier | null
+  needs?: UnlockNeeds | null
+}) {
   const { tone, label, icon } = statusDisplay(module)
   const isLocked = module.status === 'locked'
+  const noteId = `module-${module.id}-unlock`
 
   const cardContent = (
-    <Card interactive={!isLocked} className={`${styles.row} ${isLocked ? styles.locked : ''}`}>
+    <Card interactive className={`${styles.row} ${isLocked ? styles.locked : ''}`}>
       <span className={styles.number} aria-hidden="true">
         {module.number}
       </span>
@@ -166,13 +179,14 @@ function ModuleRow({ module, medal }: { module: ModuleSummary; medal?: MedalTier
 
   return (
     <li>
-      {isLocked ? (
-        cardContent
-      ) : (
-        <Link to={`/modules/${module.id}`} className={styles.cardLink}>
-          {cardContent}
-        </Link>
-      )}
+      <Link
+        to={`/modules/${module.id}`}
+        className={styles.cardLink}
+        aria-describedby={isLocked && needs ? noteId : undefined}
+      >
+        {cardContent}
+      </Link>
+      {isLocked && needs && <LockedNote needs={needs} id={noteId} className={styles.unlock} />}
       {module.quickCheck === 'available' && !isDone(module) && (
         <Link to={`/modules/${module.id}/check`} className={styles.quickCheck}>
           Already know module {module.number}? Take the quick check
@@ -217,6 +231,8 @@ export function ModuleMap() {
   const twoColumns = useMediaQuery(TWO_COLUMNS)
   const skills = useSkills()
   const rewards = useRewards()
+  // The radar chart; it handles being minimised or switched off itself (#214).
+  const profile = <HomeSkillProfile />
 
   if (query.isPending) return <Spinner label="Loading modules" />
   if (query.isError) return <Alert tone="danger">{query.error.message}</Alert>
@@ -251,11 +267,13 @@ export function ModuleMap() {
             max={minutes.total}
           />
         )}
+        {/* A module just finished: the study companion's word on it, if it is on (#214). */}
+        <ModuleDoneCompanion modules={modules} />
       </div>
 
       <div className={styles.side}>
         <NextUp modules={modules} next={continueTarget} />
-        {twoColumns && <SkillProfileCard />}
+        {twoColumns && profile}
       </div>
 
       <section aria-labelledby="all-modules" className={styles.all}>
@@ -264,13 +282,18 @@ export function ModuleMap() {
         </h2>
         <ul className={styles.list}>
           {modules.map((m) => (
-            <ModuleRow key={m.id} module={m} medal={medals.get(m.id)} />
+            <ModuleRow
+              key={m.id}
+              module={m}
+              medal={medals.get(m.id)}
+              needs={unlockNeeds(modules, m)}
+            />
           ))}
         </ul>
       </section>
       {/* In one column the skill profile comes after the modules, so it doesn't push the list
           a screen or more down (about 1,500 px at 320 px, #215 review). */}
-      {!twoColumns && <SkillProfileCard />}
+      {!twoColumns && profile}
     </div>
   )
 }

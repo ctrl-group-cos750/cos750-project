@@ -1,6 +1,8 @@
 """The code-activity checkers (app/services/checking.py). Pure comparison, no database, no code
 execution: these mirror the grading a student submission gets."""
 
+import json
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -19,7 +21,12 @@ from app.schemas.activities import (
     TraceConfig,
     TraceSubmission,
 )
+from app.schemas.graphs import GraphScenarioOut
 from app.services import checking
+from app.services.bfs import run_bfs
+from app.services.mastery import Rule
+
+SEED = Path(__file__).resolve().parents[1] / "app" / "seed"
 
 # A small Parsons problem: three real lines (0, 1, 2) and one distractor (9).
 PARSONS = ParsonsConfig.model_validate(
@@ -421,6 +428,159 @@ def test_one_slip_carried_through_costs_one_step() -> None:
     result = checking.check_trace(TRACE, TraceSubmission.model_validate({"rows": rows}))
     assert [p.correct for p in result.parts] == [False, True, True, True]
     assert result.score == pytest.approx(3 / 4)
+
+
+def _seed_activity(file: str, activity_id: int) -> dict[str, Any]:
+    data = json.loads((SEED / file).read_text())
+    activity: dict[str, Any] = next(a for a in data["activities"] if a["id"] == activity_id)
+    return activity
+
+
+def _seed_traces() -> list[tuple[str, int]]:
+    """Every trace item in the seed, as (file, activity id)."""
+    found = []
+    for path in sorted(SEED.glob("*.json")):
+        for activity in json.loads(path.read_text()).get("activities", []):
+            if activity.get("kind") == "trace":
+                found.append((path.name, activity["id"]))
+    return found
+
+
+def _trace_marking_on_leaving(config: TraceConfig, *, skip_rows: bool) -> list[dict[str, Any]]:
+    """The trace a student writes who marks a vertex only when it leaves the queue: a neighbour
+    still waiting is added again. With `skip_rows`, a row too for each repeat taken off the queue
+    and skipped."""
+    adjacency: dict[str, set[str]] = {v: set() for v in config.vertices}
+    for edge in config.edges:
+        adjacency[edge.source].add(edge.target)
+        adjacency[edge.target].add(edge.source)
+    queue, visited, rows = [config.start_vertex], [], []
+    while queue:
+        u = queue.pop(0)
+        if u not in visited:
+            visited.append(u)
+            queue.extend(w for w in sorted(adjacency[u]) if w not in visited)
+        elif not skip_rows:
+            continue
+        rows.append(
+            {"visited_vertex": u, "queue": list(queue), "visited": visited[:], "order": visited[:]}
+        )
+    return rows
+
+
+@pytest.mark.parametrize("skip_rows", [False, True])
+def test_marking_on_leaving_the_queue_fails_objective_5_on_item_618(skip_rows: bool) -> None:
+    """Review of 13 Nov: on item 618, marking a vertex only when it leaves the queue put B and G
+    in the queue twice, and follow-through accepted every row after the first slip, so the trace
+    lost one step and met objective 5 ("at most one error") independently. Every row whose queue
+    holds a vertex twice, or one already visited, is wrong, and says why."""
+    config = TraceConfig.model_validate(_seed_activity("module-6.json", 618)["config"])
+    rows = _trace_marking_on_leaving(config, skip_rows=skip_rows)
+    result = checking.check_trace(config, TraceSubmission.model_validate({"rows": rows}))
+    wrong = [p for p in result.parts if not p.correct]
+    assert len(wrong) >= 3
+    assert any(p.message and checking.QUEUE_TWICE in p.message for p in wrong)
+    objective_5 = Rule(max_wrong=1)  # objectives.json: "at most one error"
+    right = sum(p.correct for p in result.parts)
+    assert not objective_5.met(right, len(result.parts))
+
+
+@pytest.mark.parametrize("skip_rows", [False, True])
+@pytest.mark.parametrize(("file", "activity_id"), _seed_traces())
+def test_marking_on_leaving_the_queue_fails_objective_5_on_every_seed_trace(
+    file: str, activity_id: int, skip_rows: bool
+) -> None:
+    """Re-review of #221 at f1be622: the fix for a current-vertex slip must not let the
+    mark-on-dequeue misconception through again. On every seed trace it still costs at least two
+    rows, so it fails objective 5, and a row says why."""
+    config = TraceConfig.model_validate(_seed_activity(file, activity_id)["config"])
+    rows = _trace_marking_on_leaving(config, skip_rows=skip_rows)
+    result = checking.check_trace(config, TraceSubmission.model_validate({"rows": rows}))
+    assert any(p.message and checking.QUEUE_TWICE in p.message for p in result.parts)
+    right = sum(p.correct for p in result.parts)
+    assert not Rule(max_wrong=1).met(right, len(result.parts))
+
+
+@pytest.mark.parametrize(
+    ("queue", "message"),
+    [(["C", "D", "D"], checking.QUEUE_TWICE), (["C", "A"], checking.QUEUE_AFTER_VISIT)],
+)
+def test_a_queue_no_bfs_can_hold_is_wrong_even_following_the_row_before(
+    queue: list[str], message: str
+) -> None:
+    rows = [dict(r) for r in CORRECT_ROWS]
+    rows[1] = {**rows[1], "queue": queue}
+    result = checking.check_trace(TRACE, TraceSubmission.model_validate({"rows": rows}))
+    assert not result.parts[1].correct
+    assert result.parts[1].message == f"{checking.WRONG_TRACE_STEP} {message}"
+
+
+def test_the_found_set_in_the_visited_column_is_not_called_marking_on_leaving() -> None:
+    """Review of 13 Nov on #221: module 4's Python `found` set (`visited` before the review of 13
+    Nov) holds the vertices found, so a student may write that set in the visited column. On item 1502 a correct BFS written that way
+    was told on every row that a vertex had left the queue and come back. Only the visited
+    column is wrong, and its message is the visited column's."""
+    config = TraceConfig.model_validate(_seed_activity("review.json", 1502)["config"])
+    scenario = GraphScenarioOut(id=0, name="", **config.model_dump())
+    rows = [
+        {
+            "visited_vertex": step.visited_vertex,
+            "queue": list(step.queue),
+            "visited": sorted({*step.order, *step.queue}),  # found: visited or waiting
+            "order": list(step.order),
+        }
+        for step in run_bfs(scenario).steps
+    ]
+    assert any(set(r["visited"]) != set(r["order"]) for r in rows)  # the case under test
+    result = checking.check_trace(config, TraceSubmission.model_validate({"rows": rows}))
+    for part, row in zip(result.parts, rows, strict=True):
+        assert part.message is None or checking.QUEUE_AFTER_VISIT not in part.message
+        if set(row["visited"]) != set(row["order"]):
+            assert not part.correct
+            assert part.message == (
+                f"{checking.WRONG_TRACE_STEP} {checking.TRACE_COLUMN_HINTS['visited']}"
+            )
+
+
+def _correct_rows(config: TraceConfig) -> list[dict[str, Any]]:
+    scenario = GraphScenarioOut(id=0, name="", **config.model_dump())
+    return [
+        {
+            "visited_vertex": step.visited_vertex,
+            "queue": list(step.queue),
+            "visited": list(step.visited),
+            "order": list(step.order),
+        }
+        for step in run_bfs(scenario).steps
+    ]
+
+
+def test_the_seed_has_the_trace_items_the_slip_tests_cover() -> None:
+    ids = {activity_id for _, activity_id in _seed_traces()}
+    assert {618, 1502} <= ids
+
+
+@pytest.mark.parametrize(("file", "activity_id"), _seed_traces())
+def test_one_slip_in_the_current_vertex_column_costs_one_row(file: str, activity_id: int) -> None:
+    """Re-review of #221 at f1be622: a wrong current vertex, every other cell right, counted as
+    "left the queue", so the later rows still holding that vertex were wrong too (on 618 and
+    1502, rows 1 to 3 for the queue's second vertex, which failed objective 5). Only a current
+    vertex the order column agrees with has left the queue, so a slip in that column costs its
+    own row alone: tried with every other vertex, on every row of every seed trace."""
+    config = TraceConfig.model_validate(_seed_activity(file, activity_id)["config"])
+    rows = _correct_rows(config)
+    objective_5 = Rule(max_wrong=1)  # objectives.json: "at most one error"
+    for i, row in enumerate(rows):
+        for vertex in config.vertices:
+            if vertex == row["visited_vertex"]:
+                continue
+            slipped = [dict(r) for r in rows]
+            slipped[i] = {**row, "visited_vertex": vertex}
+            result = checking.check_trace(config, TraceSubmission.model_validate({"rows": slipped}))
+            wrong = [p.ref for p in result.parts if not p.correct]
+            assert wrong == [i], (activity_id, i, vertex, wrong)
+            assert objective_5.met(len(result.parts) - 1, len(result.parts))
+            assert checking.QUEUE_AFTER_VISIT not in (result.parts[i].message or "")
 
 
 def test_a_slip_carried_through_wrongly_is_still_wrong() -> None:

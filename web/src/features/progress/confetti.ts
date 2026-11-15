@@ -58,7 +58,7 @@ function colours(): string[] {
   const style = getComputedStyle(document.documentElement)
   const names = ['--primary', '--success', '--badge-gold', '--badge-bronze', '--badge-silver']
   const found = names.map((n) => style.getPropertyValue(n).trim()).filter(Boolean)
-  return found.length > 0 ? found : ['#2f72c6', '#147047', '#8a6b00', '#c93b31']
+  return found.length > 0 ? found : ['#2f72c6', '#147047', '#8a6b00', '#a8692a']
 }
 
 type Piece = {

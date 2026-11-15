@@ -328,20 +328,20 @@ def test_452_pop_takes_from_the_back() -> None:
 
 # What each option of 451 does to the module's loop body, as code.
 BODIES_451 = {
-    "If n is not in visited: append n to the queue, and add it to visited when it leaves.": (
-        "            if n not in visited:\n                queue.append(n)",
-        "        visited.add(v)\n",
+    "If n is not in found: append n to the queue, and add it to found when it leaves.": (
+        "            if n not in found:\n                queue.append(n)",
+        "        found.add(v)\n",
     ),
-    "If n is not in visited: add n to visited, then append n to the queue.": (
-        "            if n not in visited:\n                visited.add(n)\n                queue.append(n)",
+    "If n is not in found: add n to found, then append n to the queue.": (
+        "            if n not in found:\n                found.add(n)\n                queue.append(n)",
         "",
     ),
-    "Add n to visited, then append n to the queue, with no if.": (
-        "            visited.add(n)\n            queue.append(n)",
+    "Add n to found, then append n to the queue, with no if.": (
+        "            found.add(n)\n            queue.append(n)",
         "",
     ),
-    "If n is not in visited: add n to visited, then append n to order.": (
-        "            if n not in visited:\n                visited.add(n)\n                order.append(n)",
+    "If n is not in found: add n to found, then append n to order.": (
+        "            if n not in found:\n                found.add(n)\n                order.append(n)",
         "",
     ),
 }
@@ -351,7 +351,7 @@ def test_451_builds_the_loop_and_only_the_right_body_makes_working_bfs() -> None
     """Module 4's quick check only asked what bfs returns, never how to build it (round 2 review
     of #215, content 7). 451 asks for the neighbour loop's body; each option is run as code."""
     code = reference()
-    body = "            if n not in visited:\n                visited.add(n)\n                queue.append(n)"
+    body = "            if n not in found:\n                found.add(n)\n                queue.append(n)"
     after_pop = "        v = queue.popleft()\n"
     assert body in code
     assert after_pop in code

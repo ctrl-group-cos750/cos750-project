@@ -42,6 +42,13 @@ point at them.
   segment. A module whose segments staff have edited in the portal keeps its list (the seed reports
   it as held), so the replacement doesn't reach it: make the change in the portal, or export the
   portal's content and commit it first.
+- To replace a module 6 mastery item, give the new one a new id too, and add the pair to
+  `REPLACES` in `app/services/mastery.py` (new id: old id). A student who answered the old item
+  keeps that answer for the new one until they answer it, so a student who had finished the check
+  isn't marked "not attempted" again. A student who had finished it can't answer the new item:
+  their old answer is its one answer. Without the entry, nobody has answered the new item yet. The
+  pairs don't chain: replacing 630 later needs the new id mapped to 612 as well as 630, or answers
+  to 612 are lost.
 
 Text is plain, short sentences, in British/South African spelling. Segment bodies and activity
 prompts are Markdown, so you can use **bold**, lists and code blocks (` ```python `).
@@ -178,7 +185,7 @@ tagging that breaks these rules:
 | `purpose` | Use it for | Rules the check enforces |
 |---|---|---|
 | `practice` | Practice with feedback inside a module. Most activities. | none beyond the basics |
-| `diagnostic` | Module 0's quiz on prior knowledge (FR-8.1). | No `objective_id`. |
+| `diagnostic` | Module 0's quiz on prior knowledge (FR-8.1), and module 1's opening puzzle (101), asked before any teaching. Never counts towards a medal, and the student moves on after one answer, so a wrong guess costs nothing. | No `objective_id`. |
 | `retrieval` | One or two questions at the start of modules 2 to 6, on earlier modules (FR-2.4). | `multiple_choice` only; `module_id` 2 to 6; at most two per module; never placed in a segment. |
 | `mastery` | The mastery check (module 6) and the fresh items at the end of a review path. Counts towards the objective's result (FR-7). | Needs `objective_id`; in module 6 or on a review path only. Every objective needs at least one in module 6. |
 | `review` | Practice on a review path (ID document §7.6). | Needs `objective_id`; on a review path it needs all four hint levels. |
@@ -224,7 +231,7 @@ Hints are shown one at a time, only when the student asks (ID document §7.5). G
 | Level | What it does | Example |
 |---|---|---|
 | 1 | Nudge: the key idea. | "Which vertex has been in the queue the longest?" |
-| 2 | Targeted hint: the exact step or line. | "Look at where a vertex is added to the visited set." |
+| 2 | Targeted hint: the exact step or line. | "Look at where a vertex is added to the found set." |
 | 3 | Partial solution: part of the answer. | "Row 1: A leaves, and B and C join." |
 | 4 | Worked solution: the full answer, explained. | "Answer: the order is A, B, C, D. …" |
 
@@ -328,7 +335,7 @@ examples below show only `config` and `solution`; open the template for the whol
 - `order` is one correct order of line ids. A line left out of it (here 6) is a distractor.
 - **Interchangeable lines:** a group in square brackets, such as `[2, 3]`, may go in any order
   among itself. Use it for lines that can swap, like BFS's three starting values
-  (`[3, 4, 5]`) or `visited.add(n)` and `queue.append(n)`.
+  (`[3, 4, 5]`) or `found.add(n)` and `queue.append(n)`.
 - **Alternatives:** `alternatives` lists other correct orders, written the same way, for a line
   that can move further than a swap with its neighbour. Each must use exactly the same lines as
   `order`.
@@ -341,7 +348,7 @@ examples below show only `config` and `solution`; open the template for the whol
 
 ```json
 "config": {
-  "code": "def bfs(graph, start):\n    …\n        v = queue.__1__()\n        …\n            if n __2__ visited:\n    …",
+  "code": "def bfs(graph, start):\n    …\n        v = queue.__1__()\n        …\n            if n __2__ found:\n    …",
   "blanks": [1, 2],
   "options": ["popleft", "pop", "not in", "in"]
 },
@@ -362,7 +369,9 @@ examples below show only `config` and `solution`; open the template for the whol
 ### Trace table
 
 `templates/trace.json`. Fill in the BFS trace, one row each time a vertex leaves the queue:
-the vertex, the queue after the step, the visited set and the order so far (FR-4.1, FR-6.6).
+the vertex, the queue after the step, the visited set (the vertices that have left the queue) and
+the order so far (FR-4.1, FR-6.6). Modules 4 to 6 call the set of vertices that have joined the
+queue `found`, so "visited" means one thing everywhere.
 
 ```json
 "config": {
@@ -398,15 +407,15 @@ with a correction and move any line that is in the wrong place (FR-5.5, objectiv
   "lines": [
     { "id": 1, "text": "from collections import deque" },
     { "id": 2, "text": "def bfs(graph, start):" },
-    { "id": 3, "text": "    visited = {start}" },
+    { "id": 3, "text": "    found = {start}" },
     { "id": 4, "text": "    queue = deque([start])" },
     { "id": 5, "text": "    order = []" },
     { "id": 6, "text": "    while queue:" },
     { "id": 7, "text": "        v = queue.pop()" },
     { "id": 8, "text": "        order.append(v)" },
     { "id": 9, "text": "        for n in sorted(graph.adjacency[v]):" },
-    { "id": 10, "text": "            if n not in visited:" },
-    { "id": 11, "text": "                visited.add(n)" },
+    { "id": 10, "text": "            if n not in found:" },
+    { "id": 11, "text": "                found.add(n)" },
     { "id": 12, "text": "                queue.append(n)" },
     { "id": 13, "text": "    return order" }
   ],

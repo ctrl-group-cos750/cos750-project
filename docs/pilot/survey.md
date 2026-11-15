@@ -1,6 +1,6 @@
 # Pilot survey
 
-The questions the ID document promises (§8.2), in the order to put them in the form. Copy each
+The questions the ID document promises (§8.3), in the order to put them in the form. Copy each
 section into the form as written. Every rating question is required; the open questions are not.
 
 ## 1. Before you start
@@ -32,7 +32,7 @@ scale: 1 Strongly disagree, 2, 3, 4, 5 Strongly agree.
 **Scoring.** For odd items, the score is the answer minus 1. For even items, it is 5 minus the
 answer. Add the ten scores and multiply by 2.5, giving 0 to 100 per participant. Report the mean
 for the group. With seven participants who know the design, treat it as a rough signal, not a
-benchmark (ID document §8.6).
+benchmark (ID document §8.7).
 
 ## 3. Feedback and hints
 

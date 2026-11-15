@@ -19,8 +19,11 @@ export type AttemptResult = {
   hintLevel: number
   /** A mastery check answer: recorded, but whether it was right is only in the report (#144). */
   withheld?: boolean
-  /** The points this answer earned (10, 4 after hint 3 or 4, or 0); 0 when shown again (#214). */
+  /** The points this answer earned (10, 4 after hint 3, 0 after hint 4 or a wrong first answer); 0 when shown again (#214). */
   points?: number
+  /** The student's first answer to this activity was wrong, and this is a later one: it counts
+   * for no medal (FR-9.6). The companion says so (#222 re-review). */
+  afterWrongFirst?: boolean
 }
 
 export type Hint = {
@@ -146,8 +149,20 @@ export type TraceRow = {
 }
 
 /** A module 6 mastery item (#144): one answer only, its result shown only in the mastery report,
- * and hints 1 and 2 only. `answered` says this student has given that answer. */
-export type MasteryCheckFlags = { masteryCheck?: boolean; answered?: boolean }
+ * and hints 1 and 2 only. `answered` says this student has given that answer.
+ * `answeredEarlierVersion`: answered because their answer to the item this one replaced counts
+ * for it, so there is no answer of theirs to show here. `reviewCheck`: a fresh question on a
+ * review path, which decides the objective's result and gives hints 1 to 3 only (hint 4 is the
+ * worked answer). */
+export type MasteryCheckFlags = {
+  masteryCheck?: boolean
+  answered?: boolean
+  answeredEarlierVersion?: boolean
+  reviewCheck?: boolean
+  /** What it is for. "mastery" on a review path's fresh items too, which decide an objective, so
+   * they stay as calm as the mastery check: no companion or success moment (#222 review). */
+  purpose?: 'practice' | 'diagnostic' | 'retrieval' | 'mastery' | 'review' | 'bonus' | 'test_out'
+}
 
 /** The student's latest answer and the result for it, as marked now (#171): what each kind
  * sends, as in `Submission`, and the check's result (withheld on a mastery check item). */

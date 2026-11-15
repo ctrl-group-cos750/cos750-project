@@ -7,7 +7,7 @@ import styles from './LandingPage.module.css'
 const MODULES: [string, string][] = [
   [
     'Warm-up and queue refresher',
-    'A short check of queues, lists and loops, with a refresher only where you need one.',
+    'A short check of queues, lists and loops, each with a refresher to read if you need it.',
   ],
   [
     'What is a graph?',
@@ -19,7 +19,7 @@ const MODULES: [string, string][] = [
   ],
   [
     'Meet BFS',
-    'What breadth-first search is for, and tracing it by hand: the queue, the visited set, the order.',
+    'What breadth-first search is for, and tracing it by hand: the queue, what is found and visited, the order.',
   ],
   ['Build BFS', 'Write bfs(graph, start) yourself, with less help each time.'],
   ['Test and debug', 'Find the bug in a faulty BFS, and choose the test cases that expose it.'],
@@ -36,7 +36,7 @@ const STEPS: [string, string][] = [
   ],
   [
     'Hints when you are stuck',
-    'Four hints on every question, from a nudge to the worked answer. Feedback says why, not only "wrong".',
+    'Up to four hints on every question, from a nudge to the worked answer. Feedback says why, not only "wrong".',
   ],
   [
     'Check what you know',
@@ -52,10 +52,10 @@ const PRACTICE = [
   'Put lines of code in order (Parsons problems)',
   'Fill in the missing code',
   'Trace BFS step by step in a table',
-  'Draw graphs and read them',
+  'Turn a real situation into a graph, and read graphs',
   'Find and fix the bug',
   'Choose the tests that catch a bug',
-  'Videos that stop to ask you a question',
+  'Questions that ask you to predict and to say why',
   'A BFS visualiser you can step through',
 ]
 
@@ -65,7 +65,7 @@ const RESEARCH: [string, string][] = [
   ['Feedback that explains', 'Hattie & Timperley (2007); Shute (2008)'],
   ['Practice by answering, not rereading', 'Roediger & Karpicke (2006)'],
   ['Badges for skills, no leaderboard', 'Deci, Koestner & Ryan (1999); Hamari et al. (2014)'],
-  ['Accessible to everyone', 'WCAG 2.1 AA, keyboard and screen reader, light and dark'],
+  ['Accessible to everyone', 'Built to WCAG 2.2 AA, keyboard and screen reader, light and dark'],
 ]
 
 /** A small graph, coloured by how far BFS has to go from the start: the course in one picture. */

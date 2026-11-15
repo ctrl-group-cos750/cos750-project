@@ -14,7 +14,7 @@
           "id": 601,
           "kind": "text",
           "title": "About the mastery check",
-          "body": "Could you model a network as a graph, say when BFS fits, trace it, write it and test it, on your own? The graphs lecture assumes you can. This check shows you now, while there is still time to fix a gap, rather than in the lecture.\n\nThis check has new questions on every objective. Your report shows each objective separately: **met independently**, **met with support** (if you used hint 3 or 4), or **not yet**. You're ready for the lecture when nothing is “not yet”. If something is, you'll get a short review and a fresh set of questions for it.\n\nEach question counts once: your first answer is the one your report uses."
+          "body": "Could you model a network as a graph, say when BFS fits, trace it, write it and test it, on your own? The graphs lecture assumes you can. This check shows you now, while there is still time to fix a gap, rather than in the lecture.\n\n**What to expect.** There are 28 questions on the eight objectives, all of them new to you. Allow about 55 minutes. You can stop at any time and carry on later from where you left off: your answers are kept.\n\n**One answer each.** Each question counts once: your first answer is the one your report uses, so check it before you send it. Hints 1 and 2 are there if you need them. Hints 3 and 4 give the answer away, so this check doesn't offer them.\n\n**Your report** shows each objective separately: **met independently** or **not yet**. You're ready for the lecture when nothing is “not yet”. If an objective is, you get a short review path for it: it teaches the idea again, gives you practice with every hint, and ends with fresh questions. Meeting the objective there after hint 3 or 4 counts as **met with support**."
         },
         {
           "id": 602,
@@ -83,10 +83,10 @@
           "activity_id": 611
         },
         {
-          "id": 613,
+          "id": 630,
           "kind": "activity",
-          "title": "Objective 3 · item 3 of 4",
-          "activity_id": 612
+          "title": "Objective 3 · item 3 of 4: build the model",
+          "activity_id": 630
         },
         {
           "id": 614,
@@ -127,7 +127,7 @@
         {
           "id": 620,
           "kind": "activity",
-          "title": "Objective 6 · item 1 of 2: put BFS in order",
+          "title": "Objective 6 · item 1 of 2: put BFS in order, taking neighbours in alphabetical order as this course does",
           "activity_id": 619
         },
         {
@@ -137,10 +137,10 @@
           "activity_id": 620
         },
         {
-          "id": 622,
+          "id": 631,
           "kind": "activity",
           "title": "Objective 7 · item 1 of 4: fix the faulty BFS",
-          "activity_id": 621
+          "activity_id": 631
         },
         {
           "id": 623,
@@ -907,57 +907,97 @@
       ]
     },
     {
-      "id": 612,
-      "kind": "multiple_choice",
-      "title": "Objective 3 · item 3 of 4",
+      "id": 630,
+      "kind": "matching",
+      "title": "Objective 3 · item 3 of 4: build the model",
       "module_id": 6,
-      "purpose": "mastery",
       "objective_id": 3,
+      "purpose": "mastery",
       "config": {
-        "prompt": "Building a house: the foundations must be finished before the walls go up, and the walls before the roof. A builder wants a graph showing which job must be finished before which. Which graph models it?",
-        "options": [
+        "prompt": "Building a house: the foundations must be finished before the walls go up, and the walls before the roof. A builder wants a graph of which job must be finished before which. In the graph, if a link points from one job to another, it means the first job must be finished before the second. Build the graph: match each part of the situation to what it becomes in the graph. Some choices fit nothing.",
+        "left": [
           {
-            "id": "f",
-            "label": "Vertices: jobs. Edges: “must finish first” links. Directed, because the roof can't come before walls."
+            "id": "p1",
+            "label": "The foundations, the walls and the roof"
           },
           {
-            "id": "e",
-            "label": "Vertices: jobs. Edges: “must finish first” links. Undirected, because each link joins two jobs."
+            "id": "p2",
+            "label": "“The foundations must be finished before the walls”"
           },
           {
-            "id": "g",
-            "label": "Vertices: builders. Edges: the jobs each builder does. Directed, because a builder does each job."
+            "id": "p3",
+            "label": "The way that link points"
           },
           {
-            "id": "h",
-            "label": "Vertices: “must finish first” links. Edges: jobs. Directed, because each job leads to the next job."
+            "id": "p4",
+            "label": "The whole graph"
+          }
+        ],
+        "right": [
+          {
+            "id": "dir",
+            "label": "A directed graph: each edge goes one way"
+          },
+          {
+            "id": "vs",
+            "label": "Vertices"
+          },
+          {
+            "id": "wf",
+            "label": "From the walls to the foundations"
+          },
+          {
+            "id": "v1",
+            "label": "A vertex"
+          },
+          {
+            "id": "e1",
+            "label": "An edge"
+          },
+          {
+            "id": "fw",
+            "label": "From the foundations to the walls"
+          },
+          {
+            "id": "es",
+            "label": "Edges"
+          },
+          {
+            "id": "und",
+            "label": "An undirected graph: each edge goes both ways"
           }
         ]
       },
       "solution": {
-        "correct": "f",
+        "pairs": {
+          "p1": "vs",
+          "p2": "e1",
+          "p3": "fw",
+          "p4": "dir"
+        },
         "feedback": {
-          "e": "Not quite. The walls must come before the roof, but the roof doesn't come before the walls. The link only works one way. Ask: if A must finish before B, must B finish before A?",
-          "g": "Not quite. The builders do the jobs, but they aren't what the graph is about: the question asks which job must come before which. Ask: what are the things being ordered?",
-          "h": "Not quite. That swaps them. Each “must finish first” link joins two jobs, so the link is the edge. Ask: which one joins the other two?"
+          "p1": "Not quite. The jobs are the things being linked, so each job is a vertex. Ask: which are the things, and which are the links between them?",
+          "p2": "Not quite. “Must be finished before” links two jobs, so it is an edge between their vertices. Ask: is it a thing, or a link between two things?",
+          "p3": "Not quite. The foundations come first and the walls wait for them, so the arrow goes from the foundations to the walls. Ask: which job must be done first?",
+          "p4": "Not quite. “Foundations before walls” doesn't work the other way round, so each edge goes one way and the graph is directed. Ask: does the link work both ways?"
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Ask: what are the things, and what joins two of them?"
+          "body": "First find the things being linked, then the links between them."
         },
         {
           "level": 2,
-          "body": "The vertices are the things being connected, and each edge joins exactly two of them."
+          "body": "Read the situation again: three jobs, and a rule about which job comes first. Which words name the jobs, and which words link two of them?"
         },
         {
           "level": 3,
-          "body": "Jobs are the vertices and the links are the edges. If the walls come before the roof, does the roof come before the walls?"
+          "body": "The jobs are the vertices and each “must be finished before” link is an edge. The arrow starts at the job that must be done first."
         },
         {
           "level": 4,
-          "body": "Answer: Vertices: jobs. Edges: “must finish first” links. Directed, because the roof can't come before walls."
+          "body": "Answer: the jobs → vertices; “foundations before walls” → an edge; the way it points → from the foundations to the walls; the whole graph → a directed graph."
         }
       ]
     },
@@ -1028,7 +1068,7 @@
         "options": [
           {
             "id": "g",
-            "label": "Yes. BFS orders the neighbours of a vertex alphabetically, and that keeps the ladder short."
+            "label": "Yes. Our BFS orders the neighbours of a vertex alphabetically, and that keeps the ladder short."
           },
           {
             "id": "h",
@@ -1293,7 +1333,7 @@
     {
       "id": 619,
       "kind": "parsons",
-      "title": "Objective 6 · item 1 of 2: put BFS in order",
+      "title": "Objective 6 · item 1 of 2: put BFS in order, taking neighbours in alphabetical order as this course does",
       "module_id": 6,
       "purpose": "mastery",
       "objective_id": 6,
@@ -1388,6 +1428,65 @@
             12
           ],
           13
+        ],
+        "alternatives": [
+          [
+            1,
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            7,
+            9,
+            10,
+            [
+              11,
+              12
+            ],
+            8,
+            13
+          ],
+          [
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            7,
+            8,
+            9,
+            10,
+            [
+              11,
+              12
+            ],
+            13,
+            1
+          ],
+          [
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            7,
+            9,
+            10,
+            [
+              11,
+              12
+            ],
+            8,
+            13,
+            1
+          ]
         ]
       },
       "hints": [
@@ -1401,7 +1500,7 @@
         },
         {
           "level": 3,
-          "body": "For each neighbour w in sorted(graph.adjacency[u]) that isn't in found yet: add it to found, then to the back of waiting. Return the order. Four lines don't belong: pop(), set(), the unsorted loop and return found."
+          "body": "For each neighbour w in sorted(graph.adjacency[u]) that isn't in the found set yet: add it to the found set, then to the back of waiting. Return the order. Four lines don't belong: pop(), set(), the loop that doesn't sort (a BFS could take neighbours in any order, but this course takes them alphabetically) and return found."
         },
         {
           "level": 4,
@@ -1417,7 +1516,7 @@
       "purpose": "mastery",
       "objective_id": 6,
       "config": {
-        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    # Return the vertices in the order BFS visits them from start,\n    # taking neighbours in alphabetical order.\n    # This version skips a neighbour it has already found with continue.\n    visited = __1__\n    queue = deque([start])\n    order = []\n    while len(queue) > 0:\n        v = queue.__2__\n        order.append(v)\n        for n in __3__:\n            if n in visited:\n                continue\n            visited.add(n)\n            queue.append(n)\n    return __4__",
+        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    # Return the vertices in the order BFS visits them from start,\n    # taking neighbours in alphabetical order.\n    # This version skips a neighbour it has already found with continue.\n    found = __1__\n    queue = deque([start])\n    order = []\n    while len(queue) > 0:\n        v = queue.__2__\n        order.append(v)\n        for n in __3__:\n            if n in found:\n                continue\n            found.add(n)\n            queue.append(n)\n    return __4__",
         "blanks": [
           1,
           2,
@@ -1435,7 +1534,7 @@
           "graph.adjacency[v]",
           "sorted(graph.adjacency[start])",
           "order",
-          "visited",
+          "found",
           "queue"
         ]
       },
@@ -1448,8 +1547,8 @@
         },
         "feedback": {
           "1": {
-            "set()": "Not quite. The start vertex is in the queue but not in visited, which holds every vertex found so far, so a neighbour can add it to the queue again and it is visited twice. Start with the start vertex already in visited.",
-            "{}": "Not quite. {} is an empty dictionary, not an empty set, so visited.add(n) stops with an error. A set holding the start vertex is written {start}."
+            "set()": "Not quite. The start vertex is in the queue but not in the found set, which holds every vertex found so far, so a neighbour can add it to the queue again and it is visited twice. Start with the start vertex already in the found set.",
+            "{}": "Not quite. {} is an empty dictionary, not an empty set, so found.add(n) stops with an error. A set holding the start vertex is written {start}."
           },
           "2": {
             "pop()": "Not quite. pop() takes the newest vertex, from the back of the queue, so BFS goes deep instead of wide. Take the vertex that has waited longest, from the front, with popleft().",
@@ -1460,7 +1559,7 @@
             "sorted(graph.adjacency[start])": "Not quite. That looks at the start's neighbours every time, not the neighbours of v, the vertex that just left the queue, so BFS never gets past the first ring. Loop over v's neighbours, sorted."
           },
           "4": {
-            "visited": "Not quite. visited is a set, and a set has no order. bfs must return the list of vertices in the order BFS visited them.",
+            "found": "Not quite. found is a set, and a set has no order. bfs must return the list of vertices in the order BFS visited them.",
             "queue": "Not quite. The loop only ends when the queue is empty, so the queue has nothing left in it. Return the list of vertices in the order BFS visited them."
           }
         }
@@ -1468,7 +1567,7 @@
       "hints": [
         {
           "level": 1,
-          "body": "You need a visited set, a queue and an order list before the loop."
+          "body": "You need a found set, a queue and an order list before the loop."
         },
         {
           "level": 2,
@@ -1476,7 +1575,7 @@
         },
         {
           "level": 3,
-          "body": "The start vertex is in visited (found) from the beginning, neighbours are taken in alphabetical order, and the order is a list."
+          "body": "The start vertex is in the found set from the beginning, neighbours are taken in alphabetical order, and the order is a list."
         },
         {
           "level": 4,
@@ -1485,14 +1584,14 @@
       ]
     },
     {
-      "id": 621,
+      "id": 631,
       "kind": "fix_the_bug",
       "title": "Objective 7 · item 1 of 4: fix the faulty BFS",
       "module_id": 6,
       "purpose": "mastery",
       "objective_id": 7,
       "config": {
-        "prompt": "On a graph whose edges were added in the order A–D, A–C, A–B, a correct BFS from A gives A, B, C, D, but this one gives A, D, C, B. Replace the faulty line with a correction.",
+        "prompt": "On a graph with undirected edges A–B, A–C, B–D and C–E, a correct BFS from A gives A, B, C, D, E, but this one gives only A, B, C. Replace the faulty line with a correction.",
         "lines": [
           {
             "id": 1,
@@ -1504,7 +1603,7 @@
           },
           {
             "id": 3,
-            "text": "    visited = {start}"
+            "text": "    found = {start}"
           },
           {
             "id": 4,
@@ -1528,15 +1627,15 @@
           },
           {
             "id": 9,
-            "text": "        for n in graph.adjacency[v]:"
+            "text": "        for n in sorted(graph.adjacency[start]):"
           },
           {
             "id": 10,
-            "text": "            if n not in visited:"
+            "text": "            if n not in found:"
           },
           {
             "id": 11,
-            "text": "                visited.add(n)"
+            "text": "                found.add(n)"
           },
           {
             "id": 12,
@@ -1549,16 +1648,24 @@
         ],
         "corrections": [
           {
-            "id": 25,
+            "id": 20,
+            "text": "        v = queue.pop()"
+          },
+          {
+            "id": 21,
+            "text": "        for n in sorted(graph.adjacency[v]):"
+          },
+          {
+            "id": 22,
+            "text": "            if n not in order:"
+          },
+          {
+            "id": 23,
             "text": "        for n in sorted(graph.adjacency):"
           },
           {
             "id": 24,
-            "text": "        for n in sorted(graph.adjacency[v]):"
-          },
-          {
-            "id": 26,
-            "text": "        for n in sorted(graph.adjacency[start]):"
+            "text": "        v = queue[0]"
           }
         ]
       },
@@ -1574,7 +1681,7 @@
           6,
           7,
           8,
-          24,
+          21,
           10,
           [
             11,
@@ -1582,26 +1689,85 @@
           ],
           13
         ],
+        "alternatives": [
+          [
+            1,
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            7,
+            21,
+            10,
+            [
+              11,
+              12
+            ],
+            8,
+            13
+          ],
+          [
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            7,
+            8,
+            21,
+            10,
+            [
+              11,
+              12
+            ],
+            13,
+            1
+          ],
+          [
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            7,
+            21,
+            10,
+            [
+              11,
+              12
+            ],
+            8,
+            13,
+            1
+          ]
+        ],
         "feedback": {
-          "9": "Not quite. This loop takes v's neighbours in the order their edges were added, so D, added first, joins the queue first. The traversal must take neighbours in alphabetical order. Sort v's own list of neighbours."
+          "9": "Not quite. This loop takes the start vertex's neighbours every time, whichever vertex v has just left the queue, so only the start and its neighbours are ever found. Take v's own neighbours."
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "Compare the two orders. Which vertices come out in a different order?"
+          "body": "Compare the two outputs. Which vertices are missing, and how many edges are they from A?"
         },
         {
           "level": 2,
-          "body": "Look at the line that loops over v's neighbours. In what order does it take them?"
+          "body": "Every vertex in the output is A or one of A's neighbours. To find D, whose neighbours must the program look at?"
         },
         {
           "level": 3,
-          "body": "It takes them in the order their edges were added, so D comes first. BFS takes each vertex's neighbours in alphabetical order."
+          "body": "The loop takes the start vertex's neighbours every time, so B's and C's neighbours are never looked at."
         },
         {
           "level": 4,
-          "body": "Answer: replace for n in graph.adjacency[v]: with for n in sorted(graph.adjacency[v]):, which sorts v's own neighbours."
+          "body": "Answer: replace for n in sorted(graph.adjacency[start]): with for n in sorted(graph.adjacency[v]):, which takes the neighbours of v, the vertex that has just left the queue."
         }
       ]
     },
@@ -1625,7 +1791,7 @@
           },
           {
             "id": 3,
-            "text": "    visited = {start}"
+            "text": "    found = {start}"
           },
           {
             "id": 4,
@@ -1653,11 +1819,11 @@
           },
           {
             "id": 10,
-            "text": "            if n not in visited:"
+            "text": "            if n not in found:"
           },
           {
             "id": 11,
-            "text": "                visited.add(n)"
+            "text": "                found.add(n)"
           },
           {
             "id": 12,
@@ -1670,16 +1836,24 @@
         ],
         "corrections": [
           {
-            "id": 21,
-            "text": "        v = queue.pop(0)"
-          },
-          {
             "id": 22,
             "text": "        v = queue[0]"
           },
           {
+            "id": 23,
+            "text": "        for n in sorted(graph.adjacency[v], reverse=True):"
+          },
+          {
             "id": 20,
             "text": "        v = queue.popleft()"
+          },
+          {
+            "id": 24,
+            "text": "            if n not in order:"
+          },
+          {
+            "id": 25,
+            "text": "        for n in sorted(graph.adjacency):"
           }
         ]
       },
@@ -1703,6 +1877,65 @@
           ],
           13
         ],
+        "alternatives": [
+          [
+            1,
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            20,
+            9,
+            10,
+            [
+              11,
+              12
+            ],
+            8,
+            13
+          ],
+          [
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            20,
+            8,
+            9,
+            10,
+            [
+              11,
+              12
+            ],
+            13,
+            1
+          ],
+          [
+            2,
+            [
+              3,
+              4,
+              5
+            ],
+            6,
+            20,
+            9,
+            10,
+            [
+              11,
+              12
+            ],
+            8,
+            13,
+            1
+          ]
+        ],
         "feedback": {
           "7": "Not quite. pop() takes the newest vertex, from the back, so this explores depth first. BFS must take the vertex that has waited longest, from the front."
         }
@@ -1710,11 +1943,11 @@
       "hints": [
         {
           "level": 1,
-          "body": "The order is wrong even on simple graphs. Which line takes a vertex from the queue?"
+          "body": "Try it on a small graph: edges A–B, A–C and B–D, from A. BFS gives A, B, C, D. What does this program give?"
         },
         {
           "level": 2,
-          "body": "BFS must take the vertex that has waited longest."
+          "body": "It gives A, C, B, D: after A it takes C, which joined the queue after B. Which vertex has waited longest when A is done?"
         },
         {
           "level": 3,
@@ -1735,7 +1968,7 @@
       "objective_id": 7,
       "config": {
         "prompt": "This BFS has a bug. Choose every test case it fails: each one is a graph, a start vertex and the order a correct BFS visits it in.",
-        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        visited.add(v)\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                queue.append(n)\n    return order",
+        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    found = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        found.add(v)\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in found:\n                queue.append(n)\n    return order",
         "tests": [
           {
             "id": "cycle",
@@ -1932,22 +2165,22 @@
           "fork-join"
         ],
         "feedback": {
-          "cycle": "R can be reached along two routes, from P and from Q. When Q looks at R, R is still waiting in the queue and isn't in visited yet, so it joins again: the faulty version gives P, Q, R, R and fails this test.",
+          "cycle": "R can be reached along two routes, from P and from Q. When Q looks at R, R is still waiting in the queue and isn't in the found set yet, so it joins again: the faulty version gives P, Q, R, R and fails this test.",
           "tree": "A tree has only one route to each vertex, so no vertex can be found a second time while it waits: the faulty version passes this test.",
           "added-backwards": "The faulty version still sorts each vertex's neighbours, and A's neighbours each have only one route to them, so nothing is added twice: it passes this test.",
-          "fork-join": "There's no cycle here, but D can be reached along two routes, through B and through C. When C looks at D, D is still waiting and isn't in visited yet, so it joins the queue again. The faulty version fails this test.",
-          "back-to-start": "This graph has a cycle, but it only leads back to A, which has already left the queue and is in visited. No vertex is reached twice while it waits, so the faulty version passes this test.",
+          "fork-join": "There's no cycle here, but D can be reached along two routes, through B and through C. When C looks at D, D is still waiting and isn't in the found set yet, so it joins the queue again. The faulty version fails this test.",
+          "back-to-start": "This graph has a cycle, but it only leads back to A, which has already left the queue and is in the found set. No vertex is reached twice while it waits, so the faulty version passes this test.",
           "two-islands": "BFS from B never reaches A, and B, C and D lie on a path with one route to each vertex. Nothing is found twice, so the faulty version passes this test."
         }
       },
       "hints": [
         {
           "level": 1,
-          "body": "This version adds a vertex to visited only when it leaves the queue, not when it joins."
+          "body": "This version adds a vertex to the found set only when it leaves the queue, not when it joins."
         },
         {
           "level": 2,
-          "body": "A vertex still waiting in the queue isn't in visited yet, so a second vertex can add it again."
+          "body": "A vertex still waiting in the queue isn't in the found set yet, so a second vertex can add it again."
         },
         {
           "level": 3,
@@ -1968,7 +2201,7 @@
       "objective_id": 7,
       "config": {
         "prompt": "This BFS has a bug. Choose every test case it fails: each one is a graph, a start vertex and the order a correct BFS visits it in.",
-        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in visited:\n                visited.add(n)\n                queue.append(n)\n        if not queue:\n            for u in sorted(graph.adjacency):\n                if u not in visited:\n                    visited.add(u)\n                    queue.append(u)\n                    break\n    return order",
+        "code": "from collections import deque\n\n\ndef bfs(graph, start):\n    found = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        v = queue.popleft()\n        order.append(v)\n        for n in sorted(graph.adjacency[v]):\n            if n not in found:\n                found.add(n)\n                queue.append(n)\n        if not queue:\n            for u in sorted(graph.adjacency):\n                if u not in found:\n                    found.add(u)\n                    queue.append(u)\n                    break\n    return order",
         "tests": [
           {
             "id": "tree",
@@ -2369,7 +2602,7 @@
           },
           {
             "id": "a",
-            "label": "BFS takes the neighbours of each vertex in alphabetical order, which leads it straight towards the goal."
+            "label": "Our BFS takes the neighbours of each vertex in alphabetical order, which leads it straight towards the goal."
           },
           {
             "id": "b",
@@ -2377,7 +2610,7 @@
           },
           {
             "id": "c",
-            "label": "BFS marks each vertex as visited, so it never goes round a cycle, and that keeps every route it records short."
+            "label": "BFS marks each vertex as found, so it never goes round a cycle, and that keeps every route it records short."
           }
         ]
       },
@@ -2436,7 +2669,7 @@
         "correct": "b",
         "feedback": {
           "c": "Not quite. BFS doesn't need to go back: it finishes every vertex 1 edge away before any 2 away, so a 2-edge route would have put T in the queue earlier. Ask: when would BFS have found T?",
-          "a": "Not quite. Cycles don't change the guarantee: BFS marks visited vertices and still works ring by ring. Ask: if T were 2 edges away, which vertex would have found it, and when?"
+          "a": "Not quite. Cycles don't change the guarantee: BFS marks each vertex it finds and still works ring by ring. Ask: if T were 2 edges away, which vertex would have found it, and when?"
         }
       },
       "hints": [

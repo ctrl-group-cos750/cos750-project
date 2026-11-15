@@ -44,9 +44,9 @@ app has to be installed where the repo lives.)
    pilot's CSV files (SE document FR-10.3), and changing it renames every student there, so set
    it once and keep it. Unset, the API uses `SECRET_KEY` and logs a warning, and then changing
    `SECRET_KEY` renames them too.
-   Optional: `DEMO_PASSWORD` makes the four seeded demo accounts, one per stage of the course:
-   `new@`, `mid@`, `not-yet@` and `ready@demo.example.com` (`api/app/seed/demo/accounts.json`
-   says what each shows). Every deploy rebuilds them, undoing whatever a rehearsal did. Unset,
+   Optional: `DEMO_PASSWORD` makes the eight seeded demo accounts, one per stage of the course:
+   `new@`, `mid@`, `not-yet@`, `ready@`, `bronze@`, `explorer@`, `struggling@` and
+   `mixed@demo.example.com` (`api/app/seed/demo/accounts.json` says what each shows). Every deploy rebuilds them, undoing whatever a rehearsal did. Unset,
    there are none. It must pass the app's password rules (upper, lower, number, symbol, 8+
    characters, no account's name in it). If it doesn't, the deploy still succeeds but the demo
    accounts aren't rebuilt: the api container's log says `demo accounts NOT rebuilt` and why.

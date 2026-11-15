@@ -76,7 +76,9 @@ describe('the situations match the module 1 fixture', () => {
   })
 
   it('pictures only practice items, so a mastery item never shows a correct graph', () => {
-    for (const id of PICTURED_ACTIVITY_IDS) expect(activityById(id).purpose).toBe('practice')
+    // 101, module 1's opening puzzle, is a diagnostic item: asked before teaching, never marked.
+    for (const id of PICTURED_ACTIVITY_IDS)
+      expect(['practice', 'diagnostic']).toContain(activityById(id).purpose)
   })
 
   it('has no picture for the closing task, which would show which things are the vertices', () => {

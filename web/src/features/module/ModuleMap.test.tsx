@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { ada, fakeApi, renderApp } from '../../test/app.tsx'
@@ -114,16 +114,12 @@ describe('ModuleMap — locked vs open affordances', () => {
     expect(screen.getByText('open')).toBeInTheDocument()
   })
 
-  it('shows a locked module but not as a clickable link', async () => {
+  it('shows a locked module as locked', async () => {
     moduleListApi([openModule, lockedModule])
     renderApp('/')
 
     expect(await screen.findByText('What is a graph?')).toBeInTheDocument()
     expect(screen.getByText('locked')).toBeInTheDocument()
-
-    // The locked module title should NOT be inside an anchor element
-    const lockedTitle = screen.getByText('What is a graph?')
-    expect(lockedTitle.closest('a')).toBeNull()
   })
 
   it('open module card IS a link to /modules/:id', async () => {
@@ -134,15 +130,6 @@ describe('ModuleMap — locked vs open affordances', () => {
     const link = screen.getByRole('link', { name: /warm-up/i })
     expect(link).toBeInTheDocument()
     expect(link).toHaveAttribute('href', `/modules/${openModule.id}`)
-  })
-
-  it('locked module card is NOT a link', async () => {
-    moduleListApi([openModule, lockedModule])
-    renderApp('/')
-    await screen.findByText('What is a graph?')
-    // The locked card must not be wrapped in an anchor.
-    const lockedTitle = screen.getByText('What is a graph?')
-    expect(lockedTitle.closest('a')).toBeNull()
   })
 
   it('clicking an open module card navigates to the module page', async () => {
@@ -162,6 +149,88 @@ describe('ModuleMap — locked vs open affordances', () => {
     await userEvent.click(link)
     // ModulePage renders the module heading (even for the empty-segments state).
     expect(await screen.findByText(/module 0/i)).toBeInTheDocument()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// How to open the locked mastery check (#214)
+// ---------------------------------------------------------------------------
+
+/** The course as a new student sees it: modules 0 to 5 open, 6 (the mastery check) locked. */
+function course(done: Record<number, ModuleSummary['status']> = {}): ModuleSummary[] {
+  return [0, 1, 2, 3, 4, 5, 6].map((number) => ({
+    id: number + 1,
+    number,
+    slug: `m${number}`,
+    title: number === 6 ? 'Mastery check' : `Module title ${number}`,
+    goals: [],
+    estimatedMinutes: 10,
+    status: number === 6 ? 'locked' : (done[number] ?? 'open'),
+    segmentCount: 3,
+    currentSegmentPosition: 0,
+  }))
+}
+
+describe('ModuleMap — the locked mastery check says how to open it', () => {
+  it('says which of modules 1 to 5 are still to do, each a link', async () => {
+    moduleListApi(course({ 1: 'complete', 2: 'tested_out', 4: 'complete' }))
+    renderApp('/')
+    const note = await screen.findByText(
+      /Opens once each of modules 1 to 5 is finished or you passed its quick check/,
+    )
+    expect(note).toHaveTextContent(
+      'Opens once each of modules 1 to 5 is finished or you passed its quick check. Still to do: module 3, module 5.',
+    )
+    const links = within(note).getAllByRole('link')
+    expect(links.map((l) => [l.textContent, l.getAttribute('href')])).toEqual([
+      ['module 3', '/modules/4'],
+      ['module 5', '/modules/6'],
+    ])
+  })
+
+  it('lists all five for a new student, and module 0 is not one of them', async () => {
+    moduleListApi(course())
+    renderApp('/')
+    const note = await screen.findByText(/Still to do/)
+    expect(
+      within(note)
+        .getAllByRole('link')
+        .map((l) => l.textContent),
+    ).toEqual(['module 1', 'module 2', 'module 3', 'module 4', 'module 5'])
+  })
+
+  it('leaves out a module with nothing in it yet, which does not hold the check back', async () => {
+    const modules = course({ 1: 'complete', 2: 'complete', 3: 'complete', 4: 'complete' })
+    modules[5] = { ...modules[5]!, segmentCount: 0 } // module 5: coming soon
+    moduleListApi(modules)
+    renderApp('/')
+    const note = await screen.findByText(/Opens once each of modules 1 to 4/)
+    expect(note).not.toHaveTextContent('Still to do')
+  })
+
+  it('is a card that opens, described by the reason, not a dead click', async () => {
+    moduleListApi(course())
+    renderApp('/')
+    const card = await screen.findByRole('link', { name: /Mastery check/ })
+    expect(card).toHaveAttribute('href', '/modules/7')
+    expect(card).toHaveAccessibleDescription(
+      /^Opens once each of modules 1 to 5 is finished or you passed its quick check\. Still to do: module 1/,
+    )
+  })
+
+  it('says nothing more for an open module', async () => {
+    const modules = course({
+      1: 'complete',
+      2: 'complete',
+      3: 'complete',
+      4: 'complete',
+      5: 'complete',
+    })
+    modules[6] = { ...modules[6]!, status: 'open' }
+    moduleListApi(modules)
+    renderApp('/')
+    await screen.findByText('Mastery check')
+    expect(screen.queryByText(/Opens once/)).toBeNull()
   })
 })
 
@@ -416,7 +485,7 @@ describe('ModuleMap — learner choice (#214)', () => {
       completeModule,
     ])
     renderApp('/')
-    expect(await screen.findByText('tested out')).toBeInTheDocument()
+    expect(await screen.findByText('passed the quick check')).toBeInTheDocument()
     expect(screen.getByText('complete')).toBeInTheDocument()
     expect(screen.queryByText(/Take the quick check/)).toBeNull()
   })

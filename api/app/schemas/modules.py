@@ -27,6 +27,10 @@ QuickCheckState = Literal["available", "passed", "not_passed"]
 # The five kinds of segment a module can contain (matches Segment.kind in the DB).
 SegmentKind = Literal["video", "text", "worked_example", "activity", "refresher"]
 
+# Where a student stands on a skippable segment's short check (FR-8.1, FR-8.2): not answered
+# yet, passed (the segment is skipped) or not passed (it stays).
+SkipCheckState = Literal["not_taken", "passed", "not_passed"]
+
 
 class QuickCheckScoreOut(ApiModel):
     """How a quick check went, for the map and the module page to link back to its result."""
@@ -114,8 +118,16 @@ class SegmentOut(ApiModel):
     # Support for this objective (FR-8.4): shown only to a student struggling with it here. The
     # page opens a run of support segments with a short, kind line saying why it is there.
     support_for: int | None = None
-    # False for support this student doesn't need: it stays in the list, so positions never
-    # shift, and is done, but the page skips it and doesn't count it.
+    # A refresher or worked example the student can skip by passing a short check (FR-8.1,
+    # FR-8.2): the check's activity, and where the student stands on it. The check is an ordinary
+    # activity (`GET /api/activities/{id}`, without its answer). Passing it hides the segment: it
+    # keeps its position and is done, but the page skips it (`shown` is false). Null for every
+    # other segment.
+    skip_check_activity_id: int | None = None
+    skip_check: SkipCheckState | None = None
+    # False for support this student doesn't need, or a segment they skipped by passing its check:
+    # it stays in the list, so positions never shift, and is done, but the page skips it and
+    # doesn't count it.
     shown: bool = True
     # The student has done it, so they can move past it (FR-2.7): an activity answered at least
     # once, or every checkpoint of a video passed. Always true for every other kind.

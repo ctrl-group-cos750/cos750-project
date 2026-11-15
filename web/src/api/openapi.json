@@ -186,7 +186,7 @@
           "activities"
         ],
         "summary": "Get Activity",
-        "description": "The activity to render. `ActivityOut` has no `solution`, so the answer never reaches the\nbrowser (FR-5.3, NFR-S2). `solved` says whether this student has already answered it\ncorrectly, so the page stops offering hints after a refresh too (#158), and `lastAttempt`\nholds this student's latest answer and the result for it, as marked now, so coming back to an\nactivity shows it (#171; withheld on a mastery check item, as when answered). 403 while the\nactivity's module is locked or its review path is closed, 404 if it doesn't exist or is no\nlonger part of the course.",
+        "description": "The activity to render. `ActivityOut` has no `solution`, so the answer never reaches the\nbrowser (FR-5.3, NFR-S2). `solved` says whether this student has already answered it\ncorrectly, so the page stops offering hints after a refresh too (#158), and `lastAttempt`\nholds this student's latest answer and the result for it, as marked now, so coming back to an\nactivity shows it (#171; withheld on a mastery check item, as when answered, until every\nmodule 6 item is answered, then shown with its feedback: review of 13 Nov). 403 while the\nactivity's module is locked or its review path is closed, 404 if it doesn't exist or is no\nlonger part of the course.",
         "operationId": "get_activity_api_activities__activity_id__get",
         "parameters": [
           {
@@ -381,7 +381,7 @@
           "activities"
         ],
         "summary": "Reveal Hint",
-        "description": "Reveal this student's next hint level, one at a time, and record it (FR-4.4, FR-4.5).\n\nNo body. Each call returns the next level (1, then 2, …); once every level has been shown,\nor once the student has answered correctly, it is 409. When `nextCountsAsSupport` is true,\nwarn the student before calling again: a correct answer after hint 3 or 4 counts as \"met\nwith support\" (ID document §7.4).\n\nA module 6 mastery item gives hints 1 and 2 only (#144): asking for a third is 409, and the\nsecond says `limitReached`. Once the item is answered it is 409 too, with a message that\ndoesn't say whether the answer was right.\n\n403 and 404 as for GET. 429 with `Retry-After` past 30 reveals a minute from one student. Two\nrequests sent at once reveal two levels in turn, never the same level twice.",
+        "description": "Reveal this student's next hint level, one at a time, and record it (FR-4.4, FR-4.5).\n\nNo body. Each call returns the next level (1, then 2, …); once every level has been shown,\nor once the student has answered correctly, it is 409. When `nextCountsAsSupport` is true,\nwarn the student before calling again: a correct answer after hint 3 or 4 counts as \"met\nwith support\" (ID document §7.4).\n\nA module 6 mastery item gives hints 1 and 2 only (#144): asking for a third is 409, and the\nsecond says `limitReached`; once the item is answered it is 409 too, with a message that\ndoesn't say whether the answer was right. A fresh item on a review path gives hints 1 to 3\nonly, the same way: hint 4 is the worked answer, and the item decides the result (review of\n13 Nov).\n\n403 and 404 as for GET. 429 with `Retry-After` past 30 reveals a minute from one student. Two\nrequests sent at once reveal two levels in turn, never the same level twice.",
         "operationId": "reveal_hint_api_activities__activity_id__hints_post",
         "parameters": [
           {
@@ -777,7 +777,7 @@
           "mastery"
         ],
         "summary": "Get Report",
-        "description": "The logged-in student's mastery report: each objective's result, whether they are ready\nfor the lecture, and the review path's progress for each objective module 6 marked \"not yet\"\n(FR-7.3 to FR-7.5).\n\nWorked out from their attempts on every request (app/services/mastery.py), so it always follows\nthe current rules (FR-7.6). Nothing a client sends can set a result: they change only through\nattempts. Only ever the student's own.",
+        "description": "The logged-in student's mastery report: each objective's result, whether they are ready\nfor the lecture, and the review path's progress for each objective module 6 marked \"not yet\"\n(FR-7.3 to FR-7.5).\n\nWorked out from their attempts on every request (app/services/mastery.py), so it always follows\nthe current rules (FR-7.6). Nothing a client sends can set a result: they change only through\nattempts. Only ever the student's own.\n\nOnce every module 6 item is answered, each objective lists its items with the student's\nanswer marked and why (`answers`; review of 13 Nov, High 9). Before that it is empty, as the\nresults are withheld until the end of the check (#144).",
         "operationId": "get_report_api_me_report_get",
         "parameters": [
           {
@@ -827,7 +827,7 @@
           "mastery"
         ],
         "summary": "Get Review Path",
-        "description": "The objective's review path: its steps in order, and which the student has answered\n(FR-7.5). 404 if the objective has no path; 403 until module 6 marks it \"not yet\", so the\nfresh items stay unseen until the student needs them. Staff may always open it, to preview.",
+        "description": "The objective's review path: its steps in order, and which the student has answered\n(FR-7.5). 404 if the objective has no path; 403 until module 6 marks it \"not yet\", so the\nfresh items stay unseen until the student needs them. A fresh item is `locked` until the\npath's practice is done (review of 13 Nov). Staff may always open it, to preview.",
         "operationId": "get_review_path_api_me_review__objective_id__get",
         "parameters": [
           {
@@ -888,7 +888,7 @@
           "skills"
         ],
         "summary": "Get Skills",
-        "description": "The logged-in student's skill profile and module medals (FR-9.7, FR-9.8; #214).\n\nFor each learning objective: how many of its practice items they have answered correctly, of\nhow many, and its mastery result once the mastery check (or a review path) has decided it.\nFor each module with activities to mark: its medal once complete, and the medal the answers so\nfar are heading for. Worked out from attempts on each request (app/services/skills.py), so it\nfollows the current content and rules. Only ever the student's own.",
+        "description": "The logged-in student's skill profile and module medals (FR-9.7, FR-9.8; #214).\n\nFor each learning objective: how many of its practice items they have answered correctly, of\nhow many, where to work on it next (`improve`), and its mastery result once the mastery check (or a review path) has decided it.\nFor each module with activities to mark: its medal once complete, and the medal the answers so\nfar are heading for. Worked out from attempts on each request (app/services/skills.py), so it\nfollows the current content and rules. Only ever the student's own.",
         "operationId": "get_skills_api_me_skills_get",
         "parameters": [
           {
@@ -1637,6 +1637,60 @@
           },
           "409": {
             "description": "The mastery check, or a module not worked through to the end yet (one only tested out of is not)."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/quests": {
+      "get": {
+        "tags": [
+          "quests"
+        ],
+        "summary": "List Quests",
+        "description": "The bonus quests offered to the logged-in student: those they may open now (they have\nreached the quest's segment at the end of its module, or finished the module), in module\norder, each with whether they have finished it. Only ever the student's own (NFR-S2).",
+        "operationId": "list_quests_api_quests_get",
+        "parameters": [
+          {
+            "name": "__Host-session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "  Host-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QuestOut"
+                  },
+                  "title": "Response List Quests Api Quests Get"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -4023,9 +4077,33 @@
             "title": "Masterycheck",
             "default": false
           },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "practice",
+              "diagnostic",
+              "retrieval",
+              "mastery",
+              "review",
+              "bonus",
+              "test_out"
+            ],
+            "title": "Purpose",
+            "default": "practice"
+          },
           "answered": {
             "type": "boolean",
             "title": "Answered",
+            "default": false
+          },
+          "answeredEarlierVersion": {
+            "type": "boolean",
+            "title": "Answeredearlierversion",
+            "default": false
+          },
+          "reviewCheck": {
+            "type": "boolean",
+            "title": "Reviewcheck",
             "default": false
           },
           "lastAttempt": {
@@ -4123,6 +4201,11 @@
             "type": "integer",
             "title": "Points",
             "default": 0
+          },
+          "afterWrongFirst": {
+            "type": "boolean",
+            "title": "Afterwrongfirst",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -4432,6 +4515,7 @@
               {
                 "type": "string",
                 "enum": [
+                  "practised",
                   "bronze",
                   "gold"
                 ]
@@ -4486,7 +4570,7 @@
           "seen"
         ],
         "title": "EarnedBadgeOut",
-        "description": "A badge the student holds. `badge` is a catalogue id (web/src/components/achievements.ts);\n`ref` tells repeatable badges apart (the bonus quest's id), \"\" otherwise. `seen` is false until\nthe app has announced it; an upgrade from bronze to gold makes it unseen again."
+        "description": "A badge the student holds. `badge` is a catalogue id (web/src/components/achievements.ts);\n`ref` tells repeatable badges apart (the bonus quest's id), \"\" otherwise. An objective badge's\n`tier` is its level: practised (secure in the modules' practice), bronze (met with support, on\na review path) or gold (met independently); it only ever goes up. `seen` is false until\nthe app has announced it; going up a level makes it unseen again."
       },
       "EditorActivityIn": {
         "properties": {
@@ -5686,7 +5770,70 @@
           "nextCountsAsSupport"
         ],
         "title": "HintOut",
-        "description": "The hint just revealed. `next_counts_as_support` is true when the *next* hint would be level\n3 or 4: show the \"this counts as met with support\" warning before asking for it (ID doc §7.4)."
+        "description": "The hint just revealed. `next_counts_as_support` is true when the *next* hint would be level\n3 or 4: warn before asking for it (ID doc §7.4). On an item that decides an objective an\nanswer after it counts as \"met with support\"; on practice it earns fewer points, and after\nhint 4, the worked answer, none (FR-9.2)."
+      },
+      "ImproveOut": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "practise",
+              "revisit",
+              "review",
+              "check",
+              "restart"
+            ],
+            "title": "Kind"
+          },
+          "moduleId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moduleid"
+          },
+          "segment": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segment"
+          },
+          "objectiveId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objectiveid"
+          },
+          "locked": {
+            "type": "boolean",
+            "title": "Locked",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "moduleId",
+          "segment",
+          "objectiveId"
+        ],
+        "title": "ImproveOut",
+        "description": "Where the student can work on an objective (#214): `practise` in a module (at `segment`,\n0-based, when they can open it there), `revisit` a module (secure in practice, or met with\nsupport), its `review` path once module 6 has said \"not yet\" (FR-7.5), or the mastery `check`\n(module 6) once practice this round can no longer make it secure: too many first answers\nweren't on your own, and only a first attempt counts (FR-9.6); or `restart` that module once\nit is finished, which gives its questions a new first answer for the profile. Never module 6 to practise. `locked`: the\nmodule isn't open to the student yet (the mastery check, before modules 1 to 5 are done), so\nthe profile says where it will be shown rather than linking to a locked page."
       },
       "Insights": {
         "properties": {
@@ -5768,6 +5915,54 @@
           "password"
         ],
         "title": "LoginIn"
+      },
+      "MasteryAnswerOut": {
+        "properties": {
+          "activityId": {
+            "type": "integer",
+            "title": "Activityid"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "correct": {
+            "type": "boolean",
+            "title": "Correct"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "feedback": {
+            "type": "string",
+            "title": "Feedback"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          },
+          "hintLevel": {
+            "type": "integer",
+            "title": "Hintlevel"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "activityId",
+          "title",
+          "correct",
+          "score",
+          "feedback",
+          "notes",
+          "hintLevel"
+        ],
+        "title": "MasteryAnswerOut",
+        "description": "One mastery check item and the student's answer to it, on the report once the check is\nfinished (review of 13 Nov, High 9): whether it was right, and why. Before then the results\nstay withheld (#144), so there are none."
       },
       "MasteryReportOut": {
         "properties": {
@@ -5982,7 +6177,7 @@
                 "enum": [
                   "gold",
                   "silver",
-                  "bronze"
+                  "finished"
                 ]
               },
               {
@@ -5998,7 +6193,7 @@
                 "enum": [
                   "gold",
                   "silver",
-                  "bronze"
+                  "finished"
                 ]
               },
               {
@@ -6029,7 +6224,7 @@
           "objectives"
         ],
         "title": "ModuleMedalOut",
-        "description": "A module's medal (FR-9.8): `medal` once the module is complete (gold, every activity right\nfirst time without hint 3 or 4; silver, every activity right without them; bronze, finished),\nand `headingFor`, what the answers so far are on course for. Never counts time or speed.\n`objectives` are the learning objectives its activities practise."
+        "description": "A module's medal (FR-9.8): `medal` once the module is complete (gold, every activity right\nat the first attempt without a hint; silver, right at the first attempt without hint 3 or 4;\nfinished, the module finished with at least one right at the first attempt without hint 3 or\n4: not \"bronze\", which is an objective badge's level),\nand `headingFor`, what the answers so far are on course for. Never counts time or speed.\n`objectives` are the learning objectives its activities practise. `answered` and `total` count\nthe same activities: on a finished module, those it was judged on (the ones answered before it\nwas finished), so `answered` is never more than `total`."
       },
       "ModuleOut": {
         "properties": {
@@ -6228,6 +6423,13 @@
                 "type": "null"
               }
             ]
+          },
+          "answers": {
+            "items": {
+              "$ref": "#/components/schemas/MasteryAnswerOut"
+            },
+            "type": "array",
+            "title": "Answers"
           }
         },
         "additionalProperties": false,
@@ -6242,7 +6444,7 @@
           "review"
         ],
         "title": "ObjectiveReportOut",
-        "description": "One objective on the mastery report (FR-7.2, FR-7.3). `answered` of `total` is how many of\nits module 6 items the student has answered; the result stays `not_attempted` until all are.\n`review` is there once module 6 marks it \"not yet\", which opens its review path."
+        "description": "One objective on the mastery report (FR-7.2, FR-7.3). `answered` of `total` is how many of\nits module 6 items the student has answered; the result stays `not_attempted` until all are.\n`review` is there once module 6 marks it \"not yet\", which opens its review path. `answers`\nare its module 6 items with the student's result on each, once the whole check is answered\n(empty before)."
       },
       "PartResult": {
         "properties": {
@@ -6327,6 +6529,46 @@
         ],
         "title": "PositionIn",
         "description": "Request body for ``POST /api/modules/{moduleId}/position`` (FR-2.5).\n\nThe client sends the zero-based position of the segment the student just\nreached. The server keeps the furthest one, and refuses a position more than one past it,\nso a module can't be finished by jumping to its end.\n\n``ge=0`` rejects negative values at the API boundary: a negative position stored in\n``ModuleProgress.current_segment_position`` would cause ``segments[-1]`` (undefined\nin JavaScript) on resume, crashing the ModulePage render."
+      },
+      "QuestOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "moduleId": {
+            "type": "integer",
+            "title": "Moduleid"
+          },
+          "moduleNumber": {
+            "type": "integer",
+            "title": "Modulenumber"
+          },
+          "moduleTitle": {
+            "type": "string",
+            "title": "Moduletitle"
+          },
+          "completed": {
+            "type": "boolean",
+            "title": "Completed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "moduleId",
+          "moduleNumber",
+          "moduleTitle",
+          "completed"
+        ],
+        "title": "QuestOut",
+        "description": "One bonus quest offered to the student: an optional extra challenge after a module they\nhave completed. The quest is an ordinary activity, so it is opened, hinted and answered\nthrough ``/api/activities/{id}``; ``id`` is that activity's id. ``completed`` is true once\nthey have answered it correctly without hint 3 or 4, which is what earns its points and\nbadge."
       },
       "QuickCheckAnswerIn": {
         "properties": {
@@ -6801,6 +7043,11 @@
           "answered": {
             "type": "boolean",
             "title": "Answered"
+          },
+          "locked": {
+            "type": "boolean",
+            "title": "Locked",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -6928,6 +7175,33 @@
             ],
             "title": "Supportfor"
           },
+          "skipCheckActivityId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skipcheckactivityid"
+          },
+          "skipCheck": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "not_taken",
+                  "passed",
+                  "not_passed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skipcheck"
+          },
           "shown": {
             "type": "boolean",
             "title": "Shown",
@@ -7016,6 +7290,23 @@
               }
             ],
             "title": "Result"
+          },
+          "improve": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImproveOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "modules": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Modules"
           }
         },
         "additionalProperties": false,
@@ -7028,10 +7319,12 @@
           "onYourOwn",
           "total",
           "level",
-          "result"
+          "result",
+          "improve",
+          "modules"
         ],
         "title": "SkillOut",
-        "description": "One objective on the skill profile (FR-9.7). `level` is practice progress in three coarse\nsteps (not started, practising, secure: every practice item answered and at least 80% right\nwithout hint 3 or 4); the counts are the evidence behind it, of `total` practice items.\n`result` is the mastery result once the mastery check (or a review path) has decided it."
+        "description": "One objective on the skill profile (FR-9.7). `level` is practice progress in three coarse\nsteps (not started, practising, secure: every practice item answered and at least 80% right\nwithout hint 3 or 4); the counts are the evidence behind it, of `total` practice items.\n`result` is the mastery result once the mastery check (or a review path) has decided it;\n`improve`, where to work on it next (none once met on your own). `modules` are the modules, in\ncourse order, whose segments hold its practice questions: where its badge's first level,\nPractised, is earned."
       },
       "SkillsOut": {
         "properties": {

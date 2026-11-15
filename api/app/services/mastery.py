@@ -10,6 +10,9 @@ mastery items for that objective only. Once every fresh item is answered, they d
 by the same rule, and the module 6 result no longer does. The path opens only for a "not yet"
 objective, so its fresh items stay unseen until then (`review_open`), and there is one path per
 objective: a student still "not yet" after it is told to bring that objective to the lecture.
+The fresh items open once the path's practice is done (app/services/access.py) and give hints 1
+to 3 only (app/routers/activities.py): hint 4 is the worked answer, and an answer copied from it
+on every path made a student "ready" without answering anything themselves (review of 13 Nov).
 
 The objective's rule (`pass_fraction` or `max_wrong` on the Objective, from the criterion in
 Table 1) is counted over the parts of those attempts: an option for multiple choice, a step of a
@@ -17,7 +20,8 @@ trace table, a pair in a matching item, a line or blank in code. The result is t
 
 - **met independently** if the rule is met counting only answers given before hint level 3 or 4
   (an answer given after them counts as wrong here),
-- **met with support** if it is only met when those answers count too,
+- **met with support** if it is only met when those answers count too, except an answer given
+  after hint 4, the worked answer, which counts as wrong here as well (`WORKED_LEVEL`),
 - **not yet** if it isn't met either way,
 - **not attempted** until every one of the objective's items has been answered.
 
@@ -26,6 +30,22 @@ points or badges are given for its items, until the student has answered **every
 (`check_finished`). Until then each objective reads "not attempted", so neither the report nor a
 badge gives away whether an earlier answer was right. The attempt response says nothing about it
 either (app/routers/activities.py), and each item takes one answer only.
+
+**A replaced item.** When a mastery item is taken out and a new one put in its place
+(`REPLACES`), a student who answered the old one before the change keeps that answer: it stands in
+for the new item until they answer the new one themselves, and then theirs counts instead. So a
+student who had finished the check stays finished, with the same results, the same review paths
+open and the same answers in the report (review of #223, Must fix 1: retiring 612 for 630 made
+every finished student "not attempted"). Without it, nobody had answered the new item, so nobody
+had finished. Only a student still part-way through the check can answer the new item: once the
+check is finished, the old answer uses up the new item's one answer too (`check_answered`), so
+nobody who has seen their results gets a second go at it. `REPLACES` doesn't chain: an item that
+later replaces 630 would need 612 mapped to it as well.
+
+**An item graded whole** (`WHOLE_ITEMS`) counts as one part, right only when every part of it is:
+630 asks the student to build one model of one situation, and objective 3's criterion counts
+situations ("at least 3 of 4 situations modelled correctly"), so its four pairs counted
+separately outweighed the other three situations together (review of #223, Must fix 3).
 
 Everything here is worked out from attempts, so a changed rule or item is applied by running it
 again (FR-7.6): `recompute` after each mastery attempt, `recompute_all` on every seed. The report
@@ -55,7 +75,21 @@ State = Literal["not_attempted", "met_independently", "met_with_support", "not_y
 
 MASTERY_MODULE = 6  # module 6 is the mastery check (FR-7.1)
 SUPPORT_LEVEL = rewards.SUPPORT_LEVEL  # hint 3 or 4 makes a correct answer "with support"
+# Hint 4 is the worked answer. An answer given after it is the hint's, not the student's: it counts
+# as wrong, even towards "met with support". Module 6 stops at hint 2 and a review path's fresh
+# items at hint 3 (app/routers/activities.py), so only an answer stored before those limits can
+# have it (review of 13 Nov, Critical 1).
+WORKED_LEVEL = 4
 MET: tuple[State, ...] = ("met_independently", "met_with_support")
+
+# A mastery item that replaced a retired one: the new item's id and the id it replaced. The old
+# item's first answer stands in for the new one until the student answers the new one (see the
+# module docstring). 630 builds the house-building model that 612 asked the student to recognise;
+# 631 is objective 7's first fix-the-bug item with a real BFS bug, where 621's only fault broke the
+# course's alphabetical convention (review of #223, Must fix 1 and Should fix 6).
+REPLACES: dict[int, int] = {630: 612, 631: 621}
+# Mastery items graded as one part, right only when all of it is (see the module docstring).
+WHOLE_ITEMS: frozenset[int] = frozenset({630})
 
 # The rewards service names the results more briefly (app/services/rewards.py).
 _REWARD_NAMES: dict[State, rewards.Mastery] = {
@@ -76,6 +110,13 @@ def in_check(activity: Activity) -> bool:
     """Whether this is one of module 6's mastery items: one answer each, no right or wrong shown
     and hints up to level 2 only, until the check is finished (#144)."""
     return activity.purpose == "mastery" and activity.module_id == MASTERY_MODULE
+
+
+def on_review_path(activity: Activity) -> bool:
+    """Whether this is a fresh item on a review path: it decides the objective's result there, so
+    its hints stop at `REVIEW_HINT_LIMIT` and it opens once the path's practice is done (review of
+    13 Nov, Critical 1)."""
+    return activity.purpose == "mastery" and activity.module_id is None
 
 
 def _counted() -> ColumnElement[bool]:
@@ -118,13 +159,16 @@ def decide(rule: Rule, answers: Sequence[Answer | None]) -> State:
     unaided = sum(sum(a.parts) for a in given if a.hint_level < SUPPORT_LEVEL)
     if rule.met(unaided, total):
         return "met_independently"
-    if rule.met(sum(sum(a.parts) for a in given), total):
+    if rule.met(sum(sum(a.parts) for a in given if a.hint_level < WORKED_LEVEL), total):
         return "met_with_support"
     return "not_yet"
 
 
-def _parts(attempt: Attempt) -> tuple[bool, ...]:
-    """The graded parts the checker stored in `detail`; the whole answer if it stored none."""
+def _parts(attempt: Attempt, item_id: int | None = None) -> tuple[bool, ...]:
+    """The graded parts the checker stored in `detail`; the whole answer if it stored none, or if
+    the item is graded whole (`WHOLE_ITEMS`)."""
+    if item_id in WHOLE_ITEMS:
+        return (attempt.correct,)
     parts: list[dict[str, Any]] = attempt.detail.get("parts") or []
     return tuple(bool(p.get("correct")) for p in parts) or (attempt.correct,)
 
@@ -166,7 +210,8 @@ class Outcome:
 
 def _tally(rule: Rule, items: Sequence[Activity], first: dict[int, Attempt]) -> Tally:
     answers = [
-        Answer(a.id, _parts(a), a.hint_level) if (a := first.get(i.id)) else None for i in items
+        Answer(a.id, _parts(a, i.id), a.hint_level) if (a := first.get(i.id)) else None
+        for i in items
     ]
     given = tuple(a.attempt_id for a in answers if a is not None)
     return Tally(decide(rule, answers), len(given), len(items), given)
@@ -197,29 +242,61 @@ def _check_items(session: Session) -> Sequence[Activity]:
 
 
 def _first_attempts(session: Session, user_id: int, ids: Sequence[int]) -> dict[int, Attempt]:
-    """This student's first attempt at each of these activities, by activity id."""
+    """This student's first attempt at each of these activities, by activity id. A replaced item's
+    first answer stands in for its replacement while the replacement has none (`REPLACES`)."""
+    replaced = {REPLACES[i]: i for i in ids if i in REPLACES}
     first_ids = (
         select(func.min(Attempt.id))
-        .where(Attempt.user_id == user_id, Attempt.activity_id.in_(ids))
+        .where(Attempt.user_id == user_id, Attempt.activity_id.in_([*ids, *replaced]))
         .group_by(Attempt.activity_id)
     )
-    return {
+    found = {
         a.activity_id: a for a in session.scalars(select(Attempt).where(Attempt.id.in_(first_ids)))
     }
+    for old, new in replaced.items():
+        if new not in found and old in found:
+            found[new] = found[old]
+        found.pop(old, None)
+    return found
+
+
+def stood_in(session: Session, attempt_ids: Sequence[int]) -> dict[int, int]:
+    """Of these attempts, the ones at a replaced item, mapped to the item that replaced it: the
+    report lists such an answer under the new item (`REPLACES`)."""
+    replaced_by = {old: new for new, old in REPLACES.items()}
+    rows = session.execute(
+        select(Attempt.id, Attempt.activity_id).where(
+            Attempt.id.in_(attempt_ids), Attempt.activity_id.in_(replaced_by)
+        )
+    ).all()
+    return {attempt_id: replaced_by[activity_id] for attempt_id, activity_id in rows}
 
 
 def check_finished(session: Session, user_id: int) -> bool:
     """Whether this student has answered every module 6 item: the check is over, and its results
-    can be shown (#144)."""
+    can be shown (#144). An answer to a replaced item counts for its replacement (`REPLACES`)."""
     items = [i.id for i in _check_items(session)]
-    answered = set(
-        session.scalars(
-            select(Attempt.activity_id).where(
-                Attempt.user_id == user_id, Attempt.activity_id.in_(items)
-            )
+    return bool(items) and set(_first_attempts(session, user_id, items)) >= set(items)
+
+
+def check_answered(session: Session, user_id: int, activity_id: int) -> bool:
+    """Whether this student's one answer to a module 6 item is used up (#144): they have an
+    attempt at it, or they finished the check with an answer to the item it replaced
+    (`REPLACES`). That answer stands in for the new item, so once the results are out the new item
+    is answered as far as the one-answer rule goes, and a second answer can't overwrite them
+    (review of #223, new finding 1). A student part-way through can still answer the new item,
+    and their own answer then counts instead (see the module docstring)."""
+    ids = [activity_id]
+    if activity_id in REPLACES and check_finished(session, user_id):
+        ids.append(REPLACES[activity_id])
+    return (
+        session.scalar(
+            select(Attempt.id)
+            .where(Attempt.user_id == user_id, Attempt.activity_id.in_(ids))
+            .limit(1)
         )
+        is not None
     )
-    return bool(items) and answered >= set(items)
 
 
 def evaluate(session: Session, user_id: int) -> list[Outcome]:

@@ -1,0 +1,51 @@
+/* A small picture of each page background (#214), drawn with the same colours as
+ * styles/backgrounds.css, so it follows the theme. Decorative: its radio's label says the name. */
+.swatch {
+  display: inline-block;
+  flex: none;
+  width: 3.5rem;
+  height: 2.25rem;
+  overflow: hidden;
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-sm);
+  background: var(--background);
+}
+
+.small {
+  width: 2.25rem;
+  height: 1.5rem;
+}
+
+.glow {
+  background:
+    radial-gradient(90% 110% at 0% 10%, var(--bg-glow-blue), transparent 70%),
+    radial-gradient(90% 110% at 100% 100%, var(--bg-glow-gold), transparent 70%),
+    radial-gradient(60% 80% at 100% 0%, var(--bg-glow-blue-faint), transparent 70%),
+    var(--background);
+}
+
+.doodles {
+  position: relative;
+  background:
+    radial-gradient(90% 110% at 0% 10%, var(--bg-glow-soft-blue), transparent 70%),
+    radial-gradient(90% 110% at 100% 100%, var(--bg-glow-soft-gold), transparent 70%),
+    var(--background);
+}
+
+/* The wallpaper at a third of its size, a little stronger so it shows in the small picture. */
+.doodles::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: var(--color-text-muted);
+  opacity: 0.45;
+  mask-image: url('../assets/doodles.svg');
+  mask-repeat: repeat;
+  mask-size: 120px 120px;
+}
+
+@media (forced-colors: active) {
+  .swatch {
+    forced-color-adjust: auto;
+  }
+}

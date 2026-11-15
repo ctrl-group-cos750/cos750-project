@@ -30,8 +30,8 @@ from app.schemas.activities import FixTheBugSolution, ParsonsSolution
 from app.schemas.graphs import GraphEdge, GraphScenarioOut
 from app.seed import ActivityFixture, FixtureFile, ReviewPathFixture, read_fixtures
 from app.services.bfs import run_bfs
-from app.services.checking import check_activity
-from app.services.mastery import MASTERY_MODULE, Rule
+from app.services.checking import IMPORT_NOT_FIRST, check_activity
+from app.services.mastery import MASTERY_MODULE, REPLACES, WHOLE_ITEMS, Rule
 
 CONTENT: FixtureFile = read_fixtures()
 ACTIVITIES = {a.id: a for a in CONTENT.activities}
@@ -158,7 +158,10 @@ def passes_hidden(code: str) -> bool:
 
 
 def parts(a: ActivityFixture) -> int:
-    """How many parts the checker grades, which the mastery rule counts (app/services/mastery.py)."""
+    """How many parts the mastery rule counts (app/services/mastery.py): the checker's parts, or
+    one for an item graded whole."""
+    if a.id in WHOLE_ITEMS:
+        return 1
     match a.kind:
         case "multiple_choice":
             return 1
@@ -217,8 +220,17 @@ def test_module_6_opens_with_what_the_check_is_then_only_mastery_items() -> None
 
 
 def test_activity_ids_are_in_their_ranges() -> None:
-    # 601-624, then objective 8's 626-629 (#70): 625 was already a module 6 retrieval item.
-    assert [a.id for a in CHECK] == [*range(601, 625), *range(626, 630)]
+    # 601-624, then objective 8's 626-629 (#70): 625 was already a module 6 retrieval item. 630
+    # took 612's place: objective 3's model is built, not chosen (review 13 Nov, High 10). 631 took
+    # 621's: a real BFS bug, not a break of the course's alphabetical convention (#223 review).
+    assert [a.id for a in CHECK] == [
+        *range(601, 612),
+        630,
+        *range(613, 621),
+        631,
+        *range(622, 625),
+        *range(626, 630),
+    ]
     for o, path in PATHS.items():
         base = 1000 + 100 * o
         assert all(base < s.id < base + 100 for s in path.segments)
@@ -245,12 +257,50 @@ def test_each_objective_has_enough_parts_for_its_rule(where: str, objective: int
         assert Rule(pass_fraction=o.pass_fraction).met(total - 1, total)
 
 
+def test_objective_3_counts_situations() -> None:
+    """ "At least 3 of 4 situations modelled correctly": 630's four pairs made it 4 of objective
+    3's 7 parts, so getting 630 right alone came close to the rule (#223 review, Must fix 3). Each
+    situation is one part now, and 630 is right only when its whole model is."""
+    items = items_of("module 6", 3)
+    assert [parts(a) for a in items] == [1, 1, 1, 1]
+    assert 630 in WHOLE_ITEMS
+
+
+def test_630_states_which_way_a_must_be_finished_before_arrow_points() -> None:
+    """Nothing in modules 1 to 6 teaches which way a "must be finished before" edge points, and a
+    dependency arrow from the walls to the foundations is as defensible as the other way round
+    (#223 review, Must fix 3). The prompt says it without saying the graph has arrows, so whether
+    it is directed is still the student's to work out (#223 re-review); hint 2 is about the
+    situation, not about the direction, which "does it work both ways?" gave away."""
+    item = ACTIVITIES[630]
+    prompt = item.config["prompt"]
+    assert (
+        "if a link points from one job to another, it means the first job must be finished before"
+        " the second" in prompt
+    )
+    assert "arrow" not in prompt.lower()
+    assert "direct" not in prompt.lower()
+    hint_2 = item.hints[1].body.lower()
+    for word in ("arrow", "way", "direct", "point"):
+        assert word not in hint_2, word
+
+
+def test_a_replacement_takes_a_retired_items_place() -> None:
+    """A replacement (REPLACES) is a module 6 item for the same objective as the item it replaced
+    had, and the replaced item is gone from the fixtures (its answers stand in for the new one)."""
+    for new, old in REPLACES.items():
+        assert new in {a.id for a in CHECK}
+        assert old not in ACTIVITIES
+    assert ACTIVITIES[630].objective_id == 3  # as 612's
+    assert ACTIVITIES[631].objective_id == 7  # as 621's
+
+
 def test_the_kinds_follow_table_1() -> None:
     kinds = {o: sorted({a.kind for a in items_of("module 6", o)}) for o in OBJECTIVES}
     assert kinds == {
         1: ["matching", "multiple_choice"],
         2: ["matching"],
-        3: ["multiple_choice"],
+        3: ["matching", "multiple_choice"],  # 630 builds the model (review 13 Nov, High 10)
         4: ["multiple_choice"],
         5: ["trace"],
         6: ["fill_in", "parsons"],
@@ -489,7 +539,7 @@ def test_the_reference_bfs_passes_every_hidden_test() -> None:
 
 def conventional(order: list[int], text: dict[int, str]) -> bool:
     """The import comes first, and the order gets the vertex straight after it leaves the queue:
-    the two orders that run but are marked wrong on purpose (see test_module_4.py)."""
+    the worked example's order. The others that run are accepted too (see test_module_4.py)."""
     lines = [text[i].strip() for i in order]
     after_dequeue = lines[next(n for n, t in enumerate(lines) if ".popleft()" in t) + 1]
     return lines[0].startswith("from ") and after_dequeue.startswith("order.append(")
@@ -498,11 +548,21 @@ def conventional(order: list[int], text: dict[int, str]) -> bool:
 ORDERED = [a for a in EVERY if a.kind in ("parsons", "fix_the_bug")]
 
 
+def test_order_append_after_the_neighbour_loop_is_a_correct_bfs_and_accepted() -> None:
+    """Review of 13 Nov, High 5: on 619, order.append(u) after the neighbour loop gives the right
+    order on every hidden test, and was marked wrong. Objective 6 needs every part right."""
+    parsons = ACTIVITIES[619]
+    order = [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 8, 13]
+    assert passes_hidden(lines_text(parsons, order))
+    result = check_activity(parsons.kind, parsons.config, parsons.solution, {"order": order})
+    assert result.correct
+
+
 @pytest.mark.parametrize("a", ORDERED, ids=lambda a: str(a.id))
 def test_an_ordered_item_accepts_exactly_the_working_orders(a: ActivityFixture) -> None:
     """Every order of the answer's lines Python can run is tried on the hidden tests: each the
-    checker accepts passes, and each that passes is accepted, but for the two conventions above
-    (FR-5.4, FR-5.5, #145). Objectives 6 and 7 need every part right, so a working order marked
+    checker accepts passes, and each that passes is accepted, order.append after the neighbour loop
+    and the import last included (FR-5.4, FR-5.5, #145; review of 13 Nov, High 5). Objectives 6 and 7 need every part right, so a working order marked
     wrong would decide the result. Distractors and corrections are covered by the tests below."""
     every = {x["id"]: x["text"] for x in a.config["lines"] + a.config.get("corrections", [])}
     text = {i: every[i] for i in first_order(a)}
@@ -512,11 +572,32 @@ def test_an_ordered_item_accepts_exactly_the_working_orders(a: ActivityFixture) 
             working.append(order)
         if check_activity(a.kind, a.config, a.solution, {"order": order}).correct:
             accepted.append(order)
-    assert accepted == [order for order in working if conventional(order, text)]
-    assert len(accepted) == 12
+    assert accepted == working
     assert len(working) == 48
+    assert sum(not conventional(order, text) for order in accepted) == 36
     shown = [x["id"] for x in a.config["lines"]]
     assert not check_activity(a.kind, a.config, a.solution, {"order": shown}).correct
+
+
+@pytest.mark.parametrize("a", ORDERED, ids=lambda a: str(a.id))
+def test_a_working_order_with_the_import_last_passes_and_says_where_imports_go(
+    a: ActivityFixture,
+) -> None:
+    """Re-review of #221: refusing the import after the function made a program that runs fail
+    objectives 6 and 7, with only "in the wrong place" on the import. It is accepted, and the
+    right answer's feedback says imports go at the top; with the import first, it says nothing
+    of the kind."""
+    every = {x["id"]: x["text"] for x in a.config["lines"] + a.config.get("corrections", [])}
+    first = first_order(a)
+    assert every[first[0]].startswith("from ")
+    last = [*first[1:], first[0]]
+    assert passes_hidden(lines_text(a, last))
+    moved = check_activity(a.kind, a.config, a.solution, {"order": last})
+    assert moved.correct
+    assert moved.feedback.endswith(IMPORT_NOT_FIRST)
+    right = check_activity(a.kind, a.config, a.solution, {"order": first})
+    assert right.correct
+    assert IMPORT_NOT_FIRST not in right.feedback
 
 
 # A correction that is harmless once the real bug is fixed: the program runs, but the line it
@@ -741,3 +822,16 @@ def test_the_places_letters_are_not_their_initials(a: ActivityFixture) -> None:
         if letter in {w[0].upper() for w in name.removeprefix("the ").split()}
     ]
     assert len(initials) <= 1, initials  # one by chance (606's shed tap is S), not a pattern
+
+
+def test_the_introduction_says_what_the_check_is() -> None:
+    """Segment 601 didn't say how many questions there are, how long they take or that the student
+    can stop and resume, and it promised "met with support (if you used hint 3 or 4)", which the
+    check, whose hints stop at 2, can't give (review 13 Nov; ID document §7.5)."""
+    module = next(m for m in CONTENT.modules if m.id == 6)
+    intro = next(s for s in module.segments if s.id == 601).body
+    assert f"There are {len(CHECK)} questions" in intro
+    assert f"about {module.estimated_minutes} minutes" in intro
+    assert "carry on later" in intro
+    assert "Hints 1 and 2" in intro
+    assert "if you used hint 3 or 4" not in intro

@@ -6,7 +6,8 @@ export type EarnedBadge = {
   badge: string
   /** Tells repeatable badges apart (the bonus quest's id); "" otherwise. */
   ref: string
-  tier: 'bronze' | 'gold' | null
+  /** An objective badge's level (#214): practised, then bronze or gold. Only ever goes up. */
+  tier: 'practised' | 'bronze' | 'gold' | null
   awardedAt: string
   upgradedAt: string | null
   /** False until the app has announced it. */

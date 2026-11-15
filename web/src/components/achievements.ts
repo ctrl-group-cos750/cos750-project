@@ -94,7 +94,7 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     kind: 'objective',
     glyph: 'bfs-builder',
     objective: 6,
-    description: 'You put BFS together in Python, with a queue and a visited set.',
+    description: 'You put BFS together in Python, with a queue and a found set.',
   },
   {
     id: 'lo7',

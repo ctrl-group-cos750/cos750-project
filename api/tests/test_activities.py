@@ -188,6 +188,25 @@ def test_multiple_choice_attempt_gives_the_reason_a_wrong_answer_is_wrong(
     assert right.json()["correct"] is True
 
 
+def test_a_right_answer_after_a_wrong_first_one_says_so(client: TestClient, db: Session) -> None:
+    """The companion's "Right this time" comes from the API, so it holds after a reload or a later
+    visit, not only in the tab that saw the wrong answer (#222 re-review, nit 4)."""
+    wrong, right = {"submitted": {"selected": "c"}}, {"submitted": {"selected": "a"}}
+    first_wrong = make_activity(db, **CHOICE)
+    first_right = make_activity(db, **CHOICE)
+    log_in(client)
+    url = "/api/activities/{}/attempts"
+    assert client.post(url.format(first_wrong), json=wrong).json()["afterWrongFirst"] is False
+    assert client.post(url.format(first_wrong), json=right).json()["afterWrongFirst"] is True
+    # Coming back to it shows the same.
+    last = client.get(f"/api/activities/{first_wrong}").json()["lastAttempt"]["result"]
+    assert last["afterWrongFirst"] is True
+    # A first answer that was right: a later answer is never "after a wrong first one".
+    assert client.post(url.format(first_right), json=right).json()["afterWrongFirst"] is False
+    assert client.post(url.format(first_right), json=wrong).json()["afterWrongFirst"] is False
+    assert client.post(url.format(first_right), json=right).json()["afterWrongFirst"] is False
+
+
 def test_hints_come_one_level_at_a_time_and_then_run_out(client: TestClient, db: Session) -> None:
     activity_id = make_choice_with_hints(db)
     log_in(client)
@@ -240,8 +259,8 @@ def test_coming_back_shows_the_latest_answer_and_its_result(
     assert last["submitted"] == {"selected": "a"}
     # Exactly what the student was shown for it, but for the points it earned: those are said
     # once, when it is answered, so coming back doesn't celebrate them again (#214).
-    assert right["points"] == 10
-    assert last["result"] == right | {"points": 0}
+    assert right["points"] == 0  # right only after a wrong first attempt (FR-9.1)
+    assert last["result"] == right
     assert last["result"] != wrong
 
 

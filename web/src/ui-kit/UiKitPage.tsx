@@ -122,7 +122,7 @@ export function UiKitPage() {
           ))}
           <div className={styles.typeRow}>
             <code className={styles.muted}>--font-mono</code>
-            <pre className={styles.code}>{'queue.append(start)\nvisited = {start}'}</pre>
+            <pre className={styles.code}>{'queue.append(start)\nfound = {start}'}</pre>
           </div>
         </Card>
       </section>
@@ -229,11 +229,12 @@ export function UiKitPage() {
       <section id="badges" className={styles.section}>
         <h2>Badges</h2>
         <p>
-          Private badges (FR-9.3). Objective badges are hexagons with two tiers: bronze when the
-          objective was met with support, gold (an inner outline and a star) when it was later met
-          independently. Milestones are medals, quests are shields, and the hidden badge is a
-          diamond that shows &ldquo;?&rdquo; until it is found. Locked badges are dashed, faded and
-          carry a padlock. Every state differs in shape, not only colour.
+          Private badges (FR-9.3). Objective badges are hexagons with three levels: practised (an
+          outline) when the objective is secure in the modules, bronze when it was met with support
+          in the mastery check, gold (an inner outline and a star) when it was met independently.
+          Milestones are medals, quests are shields, and the hidden badge is a diamond that shows
+          &ldquo;?&rdquo; until it is found. Locked badges are dashed, faded and carry a padlock.
+          Every state differs in shape, not only colour.
         </p>
         <ul className={styles.badges}>
           {ACHIEVEMENTS.map((achievement) => (
@@ -243,6 +244,7 @@ export function UiKitPage() {
                   <>
                     <AchievementBadge achievement={achievement} state="gold" />
                     <AchievementBadge achievement={achievement} state="bronze" size={40} />
+                    <AchievementBadge achievement={achievement} state="practised" size={40} />
                   </>
                 ) : (
                   <AchievementBadge achievement={achievement} state="earned" />

@@ -160,6 +160,22 @@ describe('ModulePage — goals', () => {
       renderApp('/modules/1')
       expect(await goals()).not.toHaveAttribute('open')
     })
+
+    it('stays closed once the student closes it, until opened again (#214)', async () => {
+      screenIsPhone(false)
+      setupModuleApi(twoSegmentDetail)
+      const { unmount } = renderApp('/modules/1')
+      const box = (await goals())!
+      expect(box).toHaveAttribute('open')
+      await userEvent.click(within(box).getByText('By the end of this module you can:'))
+      await waitFor(() =>
+        expect(localStorage.getItem(`ctrl-academy.${ada.id}.minimised.moduleGoals`)).toBe('yes'),
+      )
+      unmount()
+      renderApp('/modules/1')
+      expect(await goals()).not.toHaveAttribute('open')
+      localStorage.clear()
+    })
   })
 })
 
@@ -404,14 +420,14 @@ describe('ModulePage — navigation and position saving', () => {
       ],
     })
     renderApp('/modules/1')
-    expect(await screen.findByText('Segment 3 of 4')).toBeInTheDocument()
+    expect(await screen.findByText('Step 3 of 4')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Practice: BFS step by step' })).toBeInTheDocument()
   })
 
   it('opens a complete module with everything done where the student left it', async () => {
     setupModuleApi({ ...allKindsDetail, status: 'complete', currentSegmentPosition: 3 })
     renderApp('/modules/1')
-    expect(await screen.findByText('Segment 4 of 4')).toBeInTheDocument()
+    expect(await screen.findByText('Step 4 of 4')).toBeInTheDocument()
   })
 
   it('opens an in-progress module at a segment the student passed without doing it', async () => {
@@ -427,7 +443,7 @@ describe('ModulePage — navigation and position saving', () => {
       ],
     })
     renderApp('/modules/1')
-    expect(await screen.findByText('Segment 3 of 4')).toBeInTheDocument()
+    expect(await screen.findByText('Step 3 of 4')).toBeInTheDocument()
   })
 
   it('says why it opened at a skipped activity', async () => {
@@ -461,7 +477,7 @@ describe('ModulePage — navigation and position saving', () => {
       ],
     })
     renderApp('/modules/1')
-    expect(await screen.findByText('Segment 4 of 4')).toBeInTheDocument()
+    expect(await screen.findByText('Step 4 of 4')).toBeInTheDocument()
     expect(screen.queryByText(/You moved past this activity earlier/)).toBeNull()
   })
 
@@ -480,7 +496,7 @@ describe('ModulePage — navigation and position saving', () => {
     renderApp('/modules/1')
     const next = await screen.findByRole('button', { name: 'Next →' })
     expect(next).toHaveAccessibleDescription(
-      'Not yet right. Try again: after one more answer you can move on, though it earns no points then, and the hints can help.',
+      'Not yet right. Try again, and the hints can help: it earns no points now that the first answer was wrong, and after one more answer you can move on.',
     )
   })
 
@@ -502,7 +518,7 @@ describe('ModulePage — navigation and position saving', () => {
     // Said plainly: moving on earns nothing for it (#215 review).
     expect(
       screen.getByText(
-        'You can move on: this one is marked to look at again. Moving on earns no points for it; answer it right later and it does.',
+        'You can move on: this one is marked to look at again. It earns no points or medal now that the first answer was wrong; answering it right later still helps you learn it.',
       ),
     ).toBeInTheDocument()
   })
@@ -563,7 +579,7 @@ describe('ModulePage — navigation and position saving', () => {
   it('offers no quick check once taken, and says when the module was tested out (#214)', async () => {
     setupModuleApi({ ...allKindsDetail, status: 'tested_out', quickCheck: 'passed' })
     renderApp('/modules/1')
-    expect(await screen.findByText(/You tested out of this module/)).toBeInTheDocument()
+    expect(await screen.findByText(/You passed this module’s quick check/)).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Take the quick check' })).toBeNull()
   })
 
@@ -580,7 +596,7 @@ describe('ModulePage — navigation and position saving', () => {
       ],
     })
     renderApp('/modules/1')
-    expect(await screen.findByText('Segment 3 of 4')).toBeInTheDocument()
+    expect(await screen.findByText('Step 3 of 4')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Next →' })).toHaveAttribute('aria-disabled', 'true')
   })
 
@@ -727,6 +743,40 @@ describe('ModulePage — refused and switched', () => {
     expect(api.callsTo('GET /api/modules/6')).toHaveLength(1)
   })
 
+  it('says how to open the locked mastery check when opened by its address (#214)', async () => {
+    const modules = [0, 1, 2, 3, 4, 5, 6].map((number) => ({
+      id: number + 1,
+      number,
+      slug: `m${number}`,
+      title: `Module ${number}`,
+      goals: [],
+      estimatedMinutes: 10,
+      status: number === 6 ? 'locked' : number === 2 ? 'complete' : 'open',
+      segmentCount: 3,
+      currentSegmentPosition: 0,
+    }))
+    fakeApi({
+      user: ada,
+      overrides: {
+        'GET /api/modules': () => Response.json(modules),
+        'GET /api/modules/:id': () =>
+          Response.json({ detail: 'The mastery check opens once …' }, { status: 403 }),
+      },
+    })
+    renderApp('/modules/7')
+    expect(
+      await screen.findByRole('heading', { name: 'Module 6 isn’t open yet' }),
+    ).toBeInTheDocument()
+    const note = await screen.findByText(/Still to do/)
+    expect(note).toHaveTextContent(
+      'Opens once each of modules 1 to 5 is finished or you passed its quick check. Still to do: module 1, module 3, module 4, module 5.',
+    )
+    expect(within(note).getByRole('link', { name: 'module 3' })).toHaveAttribute(
+      'href',
+      '/modules/4',
+    )
+  })
+
   it('does not retry any refusal, such as too many requests (429)', async () => {
     const api = fakeApi({
       user: ada,
@@ -785,11 +835,11 @@ describe('ModulePage — refused and switched', () => {
         </MemoryRouter>
       </QueryClientProvider>,
     )
-    expect(await screen.findByText('Segment 1 of 2')).toBeInTheDocument()
+    expect(await screen.findByText('Step 1 of 2')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('link', { name: 'Bad address' }))
     expect(await screen.findByRole('heading', { name: 'There’s no such module' })).toBeVisible()
     await userEvent.click(screen.getByRole('link', { name: 'Module one' }))
-    expect(await screen.findByText('Segment 1 of 2')).toBeInTheDocument()
+    expect(await screen.findByText('Step 1 of 2')).toBeInTheDocument()
   })
 
   it('says there is no such module on a 404', async () => {
@@ -824,13 +874,13 @@ describe('ModulePage — refused and switched', () => {
         </MemoryRouter>
       </QueryClientProvider>,
     )
-    expect(await screen.findByText('Segment 4 of 4')).toBeInTheDocument()
+    expect(await screen.findByText('Step 4 of 4')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: '← Previous' }))
-    expect(await screen.findByText('Segment 3 of 4')).toBeInTheDocument()
+    expect(await screen.findByText('Step 3 of 4')).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('link', { name: 'Open the second module' }))
     expect(await screen.findByRole('heading', { name: /Second module/ })).toBeInTheDocument()
-    expect(screen.getByText('Segment 1 of 4')).toBeInTheDocument()
+    expect(screen.getByText('Step 1 of 4')).toBeInTheDocument()
   })
 })
 
@@ -993,13 +1043,13 @@ describe('ModulePage — activity segment', () => {
     renderApp('/modules/1')
     // The answer options, not the activity's own title: #161 hides that title inside a segment.
     await screen.findByLabelText('D')
-    expect(screen.getByText('Segment 3 of 4')).toBeInTheDocument()
+    expect(screen.getByText('Step 3 of 4')).toBeInTheDocument()
     await userEvent.click(screen.getByLabelText('D'))
     await userEvent.click(screen.getByRole('button', { name: 'Check answer' }))
     expect(await screen.findByText('Not quite: D joined the queue last.')).toBeInTheDocument()
     // Give the refetch time to land, then check the page didn't move.
     await new Promise((resolve) => setTimeout(resolve, 50))
-    expect(screen.getByText('Segment 3 of 4')).toBeInTheDocument()
+    expect(screen.getByText('Step 3 of 4')).toBeInTheDocument()
     expect(screen.getByText('Not quite: D joined the queue last.')).toBeInTheDocument()
   })
 
@@ -1092,7 +1142,7 @@ describe('ModulePage — blocked Next', () => {
     renderApp('/modules/1')
 
     // The page opens on the segment that was passed without being done (#136 review) ...
-    expect(await screen.findByText('Segment 3 of 4')).toBeInTheDocument()
+    expect(await screen.findByText('Step 3 of 4')).toBeInTheDocument()
     const next = await screen.findByRole('button', { name: 'Next →' })
     // ... and doesn't block moving on from it.
     expect(next).not.toHaveAttribute('aria-disabled')
@@ -1244,12 +1294,12 @@ describe('ModulePage — support segments', () => {
     renderApp('/modules/1')
 
     expect(await screen.findByRole('heading', { name: 'Base practice' })).toBeInTheDocument()
-    expect(screen.getByText('Segment 2 of 3')).toBeInTheDocument()
+    expect(screen.getByText('Step 2 of 3')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Next →' }))
 
     expect(await screen.findByRole('heading', { name: 'Closing' })).toBeInTheDocument()
     expect(api.callsTo('POST /api/modules/1/position')[0].body).toEqual({ segmentPosition: 4 })
-    expect(screen.getByText('Segment 3 of 3')).toBeInTheDocument()
+    expect(screen.getByText('Step 3 of 3')).toBeInTheDocument()
     expect(screen.queryByText(/another way/i)).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: '← Previous' }))
     expect(await screen.findByRole('heading', { name: 'Base practice' })).toBeInTheDocument()
@@ -1259,7 +1309,7 @@ describe('ModulePage — support segments', () => {
     const api = setupModuleApi(supportDetail(true))
     renderApp('/modules/1')
 
-    expect(await screen.findByText('Segment 2 of 5')).toBeInTheDocument()
+    expect(await screen.findByText('Step 2 of 5')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Next →' }))
 
     expect(
@@ -1280,7 +1330,7 @@ describe('ModulePage — support segments', () => {
     renderApp('/modules/1')
 
     expect(await screen.findByRole('button', { name: 'Finish module' })).toBeInTheDocument()
-    expect(screen.getByText('Segment 2 of 2')).toBeInTheDocument()
+    expect(screen.getByText('Step 2 of 2')).toBeInTheDocument()
   })
 
   it('never opens on a hidden segment', async () => {

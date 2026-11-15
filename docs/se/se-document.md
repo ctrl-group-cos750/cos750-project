@@ -112,8 +112,8 @@ learning outcomes. The Product Owner's duties are shared instead:
 |---|---|---|
 | Sprint 0 | 22 Oct – 1 Nov | Foundation. Spec issued 22 Oct, group registered 23 Oct, topic chosen (graphs + BFS), repository and branch flow, CI, hosting on staging and production, database layer with migrations, backups, staging login. |
 | Sprint 1 | 2 – 8 Nov | **A complete path through the app.** A student can register, open a lesson, answer a checkpoint question in a video, step through BFS on a predefined graph, arrange and complete BFS in a code activity, take the mastery check, and be sent to the review path for any objective marked "not yet", all with placeholder content, deployed to staging. |
-| Sprint 2 | 9 – 15 Nov | **Real content and the full feature set.** The ID team's content, questions and scaffolds loaded; all activity kinds, hints, points and badges; narrated videos (recorded, and on staging on 15 Nov); end-to-end tests; accessibility pass; an expert review against usability heuristics (12–13 Nov) and a content audit (13 Nov, #214). The team pilot planned for 10–11 Nov (§14.7) was not run (#38). |
-| Release | 12 – 16 Nov | Feature freeze planned for **Thu 12 Nov**. `staging` → `master` (production) **Fri 13 Nov**. The freeze slipped: review fixes, the skill radar, badge levels, the study companion and refresher skipping (#221–#224) merged into `staging` on 14 Nov and the narrated videos went onto staging on 15 Nov, after the production release. SE and ID documents submitted before **08:00 on Mon 16 Nov**. Presentation and demo on 16 or 17 Nov. |
+| Sprint 2 | 9 – 15 Nov | **Real content and the full feature set.** The ID team's content, questions and scaffolds loaded; all activity kinds, hints, points and badges; narrated videos; end-to-end tests; accessibility pass; an expert review against usability heuristics (12–13 Nov) and a content audit (13 Nov, #214). The team pilot planned for 10–11 Nov (§14.7) was not run (#38). |
+| Release | 12 – 16 Nov | Feature freeze planned for **Thu 12 Nov**. `staging` → `master` (production) **Fri 13 Nov**. SE and ID documents submitted before **08:00 on Mon 16 Nov**. Presentation and demo on 16 or 17 Nov. |
 
 ## Artefacts
 
@@ -141,7 +141,7 @@ learning outcomes. The Product Owner's duties are shared instead:
 | Daily stand-up | Asynchronous, a short message in the team's Discord #general channel every day: done since last time, doing next, blocked by. | Dated record of progress and blockers. |
 | Weekly check-in | Thursday team call at 19:00, mid-sprint. What is done so far is shown on staging; progress against the sprint goal, blockers, and dependencies between the ID and SE work; the sprint backlog is adjusted if the goal is at risk. | Updated sprint backlog; decisions noted in Discord. |
 | Sprint review | Sunday, asynchronous. Each engineer posts what they merged with its staging link; team members, including the ID members, check each item on staging and accept or reject it against its acceptance criteria on the board by Monday morning. | Accepted items; feedback added to the backlog. |
-| Retrospective | Sunday to Monday, a Discord thread: what went well, what to change, one concrete action for the next sprint. | Sprint 0's notes are in `docs/se/sprints/`; later retrospectives are Discord threads and the meeting record (Appendix B). |
+| Retrospective | Sunday to Monday, a Discord thread: what went well, what to change, one concrete action for the next sprint. | Retro notes kept with the sprint (`docs/se/sprints/`). |
 | Sprint planning | Monday morning. The Scrum Master proposes the sprint goal and the items from the top of the backlog that fit; the team confirms or changes them in Discord before work starts. | Sprint goal and sprint backlog on the board. |
 
 Sprints run from Monday to Sunday. The plan was a single meeting, the Thursday call, with the events at the sprint boundary asynchronous, because seven students with different timetables can't easily meet twice a week during exams. In practice the team also met by call on Sunday evenings at the sprint boundary, for review and planning, and two Thursday calls were skipped. Appendix B lists every meeting with its attendance. Discord keeps a dated record of all of them.
@@ -168,7 +168,7 @@ These are what make a working increment at the end of every week possible. Detai
 | Backlog, sprints, estimates, burn-up | GitHub Project board: <https://github.com/orgs/ctrl-group-cos750/projects/1> |
 | Daily stand-ups | Discord #general channel; the record from 2 to 12 November is Appendix A; the last days of Sprint 2 are covered by the 15 November meeting (Appendix B) |
 | Team meetings and attendance | Appendix B: each meeting with its evidence (Discord events and notes, an audio recording), confirmed by the team |
-| Reviews, retros and planning | `docs/se/sprints/sprint-0.md` (Sprint 0); Sprints 1 and 2: Discord threads and the meeting record (Appendix B) |
+| Reviews, retros and planning | `docs/se/sprints/` in the repository: one record per sprint |
 | Code review and Definition of Done | Merged PRs and their reviews on GitHub |
 | CI and continuous delivery | GitHub Actions history; Coolify deployment log |
 
@@ -195,7 +195,7 @@ These are what make a working increment at the end of every week possible. Detai
 - Native mobile apps and offline use.
 
 ## Success criteria (engineering)
-- A new student can complete all seven modules and receive a mastery report on a deployed site. Production holds the 13 November release; later work, including the narrated videos, is on staging.
+- A new student can complete all seven modules and receive a mastery report on the deployed production site.
 - A student with a "not yet" objective is sent to that objective's review path, and can reach "ready for the lecture" after it.
 - Every code activity is checked on the server by comparison with the solution, so no student-written code runs anywhere and a malformed answer can at worst be marked wrong.
 - The ID team can export the pilot's attempts and results as CSV without help from an engineer.
@@ -218,7 +218,7 @@ The requirements were not written in one sitting; they were gathered from four s
 
 1. **The examination specification** [1]: the topic constraints, the target learner, and the one hard functional requirement, an assessment that gives struggling students extra scaffolding (FR-7).
 2. **The ID document** [5]: the seven modules, the learning objectives and their success criteria, the activity types, the hint ladder and the three mastery results. The traceability table in §6 maps each functional requirement to the part of the ID document it delivers.
-3. **Team decisions**, made at meetings and on the team's Discord server: the topic, languages, the split into software engineering and instructional design, and the Thursday call at the initial meeting on 25 October; the Scrum Master, the methodology, the tech stack, the code runner, video format, gamification and accounts on 1 November. They are recorded in §15.3, in Sprint 0's record (`docs/se/sprints/`) and in the meeting record (Appendix B).
+3. **Team decisions**, made at meetings and on the team's Discord server: the topic, languages, the split into software engineering and instructional design, and the Thursday call at the initial meeting on 25 October; the Scrum Master, the methodology, the tech stack, the code runner, video format, gamification and accounts on 1 November. They are recorded in §15.3 and in the sprint records (`docs/se/sprints/`).
 4. **The COS750 lectures**: L11 for the lifecycle [3], L05 for motivation [4], L06 for interaction design [10] (§11.2), L09 and L10 for what kind of software this is and how it would fit the university's systems [11], [13] (§11.3), and the course's treatment of assessment and accessibility.
 
 Each requirement becomes one or more user stories on the board, with acceptance criteria and the requirement IDs they cover (§2.4). When a requirement changes, the change is made in this document through a reviewed PR, so its history is in the repository.
@@ -1130,8 +1130,8 @@ and auto-fixes first.
 
 ## Deployment
 
-- Coolify uses the Docker Compose build pack. A merge into `staging` deploys staging.ctrlacademy.co.za automatically; production (ctrlacademy.co.za) is deployed by hand after a `staging` → `master` release PR. The last release was 13 November (#218), so production is behind staging and has none of the work merged since, nor the narrated videos, which are uploaded to each site separately. Each environment has its own database and its own `POSTGRES_PASSWORD`.
-- Traefik's gzip compression must be off for the app in Coolify: compressed MP4s lose their range requests, so seeking in a video fails. It was turned off on staging on 15 November.
+- Coolify uses the Docker Compose build pack. A merge into `staging` deploys staging.ctrlacademy.co.za automatically; production (ctrlacademy.co.za) is deployed by hand after a `staging` → `master` release PR. The release was 13 November (#218). Videos are not in the fixtures: they are uploaded to each site through the staff portal. Each environment has its own database and its own `POSTGRES_PASSWORD`.
+- Traefik's gzip compression must be off for the app in Coolify: compressed MP4s lose their range requests, so seeking in a video fails. It is off on both sites.
 - The API container applies pending migrations and then runs the seed before serving, so schema and content changes reach each environment with its deploy. A fixture that breaks a rule stops the container, but CI catches it first (NFR-M5).
 - Postgres is backed up nightly by a Coolify scheduled task (`pg_dump`, kept for 14 days on the database volume, not yet copied off the server).
 - Videos are stored in a `media` volume, written by the API when staff upload them (FR-3.6) and served by nginx from the web container at `/media/`, outside git and outside the image.
@@ -1371,9 +1371,9 @@ No pilot findings are reported, because the pilot has not run (#38, #76). A roun
 | A student submission escapes the sandbox or exhausts the server | **Retired** | High | Removed at the source: the code runner was dropped and code activities now run no student-written code at all (decision §15.3, NFR-S7). Previously mitigated by a network-less, limited container; the pentest record is under §14. |
 | Coolify doesn't honour the `internal` network, giving a service internet access | **Happened** | High | Found on staging (#25) while the runner existed: Coolify added its own network, and the runner reached the internet and the database. Then fixed with `network_mode: none` and a Unix socket; now moot, as the runner has been removed. The lesson stands for any future service that must be network-isolated on Coolify. |
 | Content arrives late: seven modules, about 180 minutes of activities, hints and tests | **Happened in part** | High | Engineers build against placeholder fixtures from Sprint 1; content is a tracked backlog item per module; the demo path needs modules 0, 3 and 6 first. |
-| Narrated videos not recorded in time | **Happened** | Medium | The videos were recorded from slides with a voice-over and reached staging on 15 November, the day before submission; production has none. Every video segment shows its narration as text, so the lessons worked without them (#149). |
-| Video gating behaves differently across browsers | Medium | Low | The player enforces checkpoints itself from `timeupdate` and `seeking` events, with unit tests of the gate (`checkpointGate.test.ts`, `NarratedVideoPlayer.test.tsx`). `video-checkpoint.spec.ts` checks the gate in Chromium, Firefox and WebKit: the video stops at its checkpoint, resumes once it is answered, and a passed checkpoint doesn't stop the student again. The server also requires every checkpoint answered before the segment counts as done (FR-2.7). **Happened on 15 Nov, in the infrastructure:** Traefik's gzip removed range requests from the MP4s, so seeking failed on the deployed site; the browser tests run against the end-to-end stack, not Traefik, so they missed it. Gzip is off on staging (§13.4). |
-| Too much scope for two sprints | **Happened** | High | Backlog ordered so the specification's hard requirement (assessment with scaffolding) and the demo path are built first; bonus quests and badges come last. The freeze slipped to 14 November, the pilot was not run (#38), and staging, not production, carries the final build. |
+| Narrated videos not recorded in time | **Happened in part** | Medium | The videos were recorded from slides with a voice-over late in Sprint 2. Every video segment also shows its narration as text, so the lessons worked before the videos were in (#149). |
+| Video gating behaves differently across browsers | Medium | Low | The player enforces checkpoints itself from `timeupdate` and `seeking` events, with unit tests of the gate (`checkpointGate.test.ts`, `NarratedVideoPlayer.test.tsx`). `video-checkpoint.spec.ts` checks the gate in Chromium, Firefox and WebKit: the video stops at its checkpoint, resumes once it is answered, and a passed checkpoint doesn't stop the student again. The server also requires every checkpoint answered before the segment counts as done (FR-2.7). **Happened, in the infrastructure:** Traefik's gzip removed range requests from the MP4s, so seeking failed on the deployed site; the browser tests run against the end-to-end stack, not Traefik, so they missed it. Gzip is now off (§13.4). |
+| Too much scope for two sprints | **Happened** | High | Backlog ordered so the specification's hard requirement (assessment with scaffolding) and the demo path are built first; bonus quests and badges come last. The pilot was not run (#38). |
 
 Table: Risk register.
 
@@ -1412,13 +1412,11 @@ What the app does not yet do, or does only in part, against the requirements abo
 | Practice **Check** | No ungraded check: every submission is graded and recorded. | FR‑5.2 | Not scheduled |
 | Review-path results | A review path's fresh items still show right or wrong at once, unlike module 6's. | FR‑7.5 | Follow-up, no card yet |
 | Visualiser | Predictions are checked in the browser and logged as events, but not graded, so they give no evidence for an objective. The visualiser is reached only from a link in module 3. | FR‑6.4 | Not scheduled |
-| Videos | Seven narrated videos (modules 1 to 5, 23 checkpoints) are on staging since 15 November; production has none, because videos are uploaded to each site and are not in the fixtures. The recordings use a five-building campus, the lessons a seven-building one. Module 6 has no video. | FR‑3, NFR‑A4 | Import to production with FR-3.7 |
-| Production | Production runs the 13 November release: none of the work merged into `staging` since (#221–#224), no videos, and Traefik's gzip still on. | §13.4 | Next release |
+| Videos | Seven narrated videos (modules 1 to 5, 23 checkpoints). Module 6 has no video. Videos are not in the fixtures: a new site needs them uploaded through the staff portal (FR-3.6, FR-3.7). | FR‑3 | — |
 | Pilot | The team pilot was not run; an expert heuristic review and the 13 November content audit stood in for it. | NFR‑U4 | #38 |
 | Content | The evidence-based content is mostly in (#150: subgoal labels, "why" questions after worked examples, misconception items, the matrix and running time); no "why" question follows a level-4 hint yet. Two component kits are in use (§11). | FR‑4.2, NFR‑U2 | ID team: the "why" question after hint 4 and the timing re-plan; the kits not scheduled |
 | Tests | No timing test for NFR-P1 to NFR-P3, which are met by design (no execution, small graphs) but not measured. | NFR‑P | Not scheduled |
 | Results and rewards under older rules | Rules tightened on 13 and 14 November 2026 are not applied to what students had already earned. Trace answers stored before the impossible-queue rule keep their marks and the results they earned (FR-6.6). Points and badges earned before the evidence rule (FR-9.6), or before review-path fresh items stopped at hint 3, stay: a student can hold a badge such as Ready for the Lecture that their report no longer supports. The report shows today's result. | FR‑6.6, FR‑9.6 | By decision: nothing earned is taken back |
-| Sprint records | Only Sprint 0 has a written record in `docs/se/sprints/`; the reviews and retrospectives of Sprints 1 and 2 are in Discord and the meeting record (Appendix B). | §2.7 | — |
 
 Table: Known limitations of the build on `staging`.
 

@@ -54,9 +54,9 @@ Table: Decisions made in Sprint 0.
 
 ## Review
 
-TODO: Confirm at the meeting that the delivered items above are accepted.
+Held at the meeting on 1 November. The delivered items above were accepted, and the Sprint 1 board was agreed.
 
-## Retrospective (draft for the team to change)
+## Retrospective
 
 **What went well**
 - The big decisions were made early, at the meeting on 25 October, so the documents and the setup had a clear direction.
@@ -70,5 +70,3 @@ TODO: Confirm at the meeting that the delivered items above are accepted.
 
 **One action for Sprint 1**
 - Every Sprint 1 item has an owner by Monday morning, and everyone posts a short daily stand-up in Discord.
-
-TODO: Change or confirm the retrospective at the meeting.

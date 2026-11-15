@@ -908,7 +908,7 @@ Table: Generative AI prompts, Mohtashim Hussain.
 
 ### Simphiwe Nhlapo
 
-To be added by Simphiwe Nhlapo (#74).
+No generative AI was used.
 
 ### Joshua Wereley
 

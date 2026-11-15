@@ -43,7 +43,7 @@ Table: Sprint 0 timeline.
 | 1 Nov | Tech stack as built; JWT in an httpOnly cookie; Argon2 password hashing | SE document §5 |
 | 1 Nov | Student code runs on our server in an isolated runner container | SE document §4, NFR-S7 |
 | 1 Nov | Narrated videos without a presenter; private points and badges instead of a leaderboard; email and password accounts | SE document §15.3 |
-| 1 Nov | Pilot by team members on 10–11 November; 90% coverage enforced on the code that decides results | SE document §14 |
+| 1 Nov | Team members work through each increment on staging and note what goes wrong; 90% coverage enforced on the code that decides results | SE document §14 |
 
 Table: Decisions made in Sprint 0.
 

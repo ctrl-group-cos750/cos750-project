@@ -1,9 +1,9 @@
-# Pilot kit (planned for 10 and 11 November; not yet run, #38)
+# Evaluation kit
 
-The team pilots the app on staging before the feature freeze (SE document §14.7, NFR-U4; ID
-document §8.3, the Implement phase of ADDIE). Each member works through the modules they did not
-build, from a new account, thinking aloud while another member takes notes, then completes the
-survey. The results feed the write-up in both documents (#76).
+Team members work through the app on staging, mostly the modules they did not build, and note what
+goes wrong as they go (SE document §14.7, NFR-U4; ID document §8.3, the Implement phase of ADDIE).
+The note sheet below is for those walkthroughs. The survey is for the planned study with real
+COS212 students (ID document §8.4).
 
 | File | What it is |
 |---|---|

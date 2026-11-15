@@ -27,10 +27,10 @@ From an engineering standpoint, the system is a web application composed of:
 - Answers, mastery and points are decided **on the server**; the browser only reports what the student did.
 - Code activities are checked by **comparing the student's answer with the solution**, so no student-written code is ever executed on the server (decision §15.3).
 - Deterministic, inspectable BFS step generation, so animations, predictions and trace tables all agree with what the lessons teach.
-- Every attempt and hint is **logged**, so the ID team's pilot and evaluation have the data they need.
+- Every attempt and hint is **logged**, so the ID team's evaluation has the data it needs.
 
 ## Primary user & session shape
-The primary role is **Student**. Team members also have a **staff** flag, which opens the staff portal (§9.6): editing the course content (FR-11), uploading the narrated videos and placing their checkpoint questions (FR-3.6), the pilot's figures and the evaluation export (FR-10), and the lists of accounts and of team members.
+The primary role is **Student**. Team members also have a **staff** flag, which opens the staff portal (§9.6): editing the course content (FR-11), uploading the narrated videos and placing their checkpoint questions (FR-3.6), the evaluation figures (the staff portal's pilot page) and the evaluation export (FR-10), and the lists of accounts and of team members.
 
 A typical session: register or log in → module 0 (warm-up and diagnostic, designed to pick the refreshers this student needs) → modules 1 to 5 (narrated segments, activities and code tasks, with hints on demand) → module 6 (mastery check) → mastery report per objective → review path for any objective marked "not yet". Progress is saved after every segment, so the student can stop and return. The diagnostic picks the refreshers: a right first answer to a diagnostic question, before hint 3, skips the refresher after it (FR-8.1).
 
@@ -75,8 +75,8 @@ four properties of this project:
    prototyping inside it, testing early versions of lessons with peers (ID document §4.1). Scrum
    gives those prototypes a fixed rhythm: each sprint's increment on staging is the version the ID
    team tests, and its sprint review is where their formative evaluation feeds back into our
-   backlog. ADDIE's Develop and Implement phases run inside Sprints 1 and 2, and the pilot session
-   with peers is a backlog item like any other.
+   backlog. ADDIE's Develop and Implement phases run inside Sprints 1 and 2, and the team's
+   walkthroughs of each increment are backlog items like any other.
 
 **Methodologies we did not choose:**
 
@@ -112,7 +112,7 @@ learning outcomes. The Product Owner's duties are shared instead:
 |---|---|---|
 | Sprint 0 | 22 Oct – 1 Nov | Foundation. Spec issued 22 Oct, group registered 23 Oct, topic chosen (graphs + BFS), repository and branch flow, CI, hosting on staging and production, database layer with migrations, backups, staging login. |
 | Sprint 1 | 2 – 8 Nov | **A complete path through the app.** A student can register, open a lesson, answer a checkpoint question in a video, step through BFS on a predefined graph, arrange and complete BFS in a code activity, take the mastery check, and be sent to the review path for any objective marked "not yet", all with placeholder content, deployed to staging. |
-| Sprint 2 | 9 – 15 Nov | **Real content and the full feature set.** The ID team's content, questions and scaffolds loaded; all activity kinds, hints, points and badges; narrated videos; end-to-end tests; accessibility pass; an expert review against usability heuristics (12–13 Nov) and a content audit (13 Nov, #214). The team pilot planned for 10–11 Nov (§14.7) was not run (#38). |
+| Sprint 2 | 9 – 15 Nov | **Real content and the full feature set.** The ID team's content, questions and scaffolds loaded; all activity kinds, hints, points and badges; narrated videos; end-to-end tests; accessibility pass; an expert review against usability heuristics (12–13 Nov) and a content audit (13 Nov, #214). Team members' walkthroughs on staging throughout (§14.7). |
 | Release | 12 – 16 Nov | Feature freeze planned for **Thu 12 Nov**. `staging` → `master` (production) **Fri 13 Nov**. SE and ID documents submitted before **08:00 on Mon 16 Nov**. Presentation and demo on 16 or 17 Nov. |
 
 ## Artefacts
@@ -184,7 +184,7 @@ These are what make a working increment at the end of every week possible. Detai
 7. The mastery check, a per-objective report, and a review path for objectives marked "not yet".
 8. The module 0 diagnostic that picks refreshers, a quick check to test out of a module, and optional bonus quests.
 9. Private points and badges.
-10. An event log and CSV export for the ID team's pilot and evaluation.
+10. An event log and CSV export for the ID team's evaluation.
 11. Seed content: the ID team's modules, activities and graph scenarios, loaded from version-controlled fixtures into an empty database.
 12. A content editor in the staff portal, where team members change that content in the database (FR-11).
 
@@ -198,14 +198,14 @@ These are what make a working increment at the end of every week possible. Detai
 - A new student can complete all seven modules and receive a mastery report on the deployed production site.
 - A student with a "not yet" objective is sent to that objective's review path, and can reach "ready for the lecture" after it.
 - Every code activity is checked on the server by comparison with the solution, so no student-written code runs anywhere and a malformed answer can at worst be marked wrong.
-- The ID team can export the pilot's attempts and results as CSV without help from an engineer.
+- The ID team can export attempts and results as CSV without help from an engineer.
 
 ## Stakeholders
 
 | Stakeholder | Interest | How they shape the system |
 |---|---|---|
 | COS212 lecturer (the client) | An app that prepares students for the graphs and BFS lecture | Commissioned the app through the examination specification [1], which fixes the topic area, the zero-prior-knowledge assumption and the requirement for an assessment with extra scaffolding |
-| COS212 students (the users) | Arrive at the lecture understanding graphs and BFS; know what to revise | Described by the learner profile in the ID document [5] (§2); represented in testing by an expert heuristic review and the 13 November content audit; a pilot with students is future work (§15.4) |
+| COS212 students (the users) | Arrive at the lecture understanding graphs and BFS; know what to revise | Described by the learner profile in the ID document [5] (§2); represented in testing by the team's walkthroughs (§14.7), an expert heuristic review and the 13 November content audit; a study with real students is future work (§15.4) |
 | Instructional designers (Joshua Wereley, Simphiwe Nhlapo, Mohtashim Hussain, Jacobus Hoogenboezem) | Their learning design is delivered faithfully | Own the ID document, the content fixtures and the content items on the backlog; accept content work at sprint review |
 | Software engineers (Matthew Els, Ayanda Juqu, Reece Schmidt) | A system that can be built, tested and demonstrated by 16 November | Own this document and the platform items on the backlog |
 | COS750 examination panel and peer groups | A working prototype and documents that justify it | Assess the documents, the presentation and the live demo |
@@ -437,8 +437,8 @@ Table: Points rules, stored on the server and tunable without a code change.
 
 ## Evaluation data (FR-10)
 - **FR-10.1** Log every event (segment viewed, video started and finished, video checkpoint reached, visualiser prediction made, attempt, hint requested, module completed, module restarted, quick check taken, result changed) with the user and time.
-- **FR-10.2** Staff can download the log, attempts and objective results as CSV, for the ID team's pilot and evaluation. A pilot page in the staff portal shows the same data as counts: per activity, how many students tried it, answered wrongly and needed hint 3 or 4 (seen before they first answered it correctly); per video, how many started it, passed each checkpoint and finished it.
-- **FR-10.3** The export identifies students by a pseudonym (a keyed hash of their account ID, `app/services/pseudonym.py`), not by email, display name or the account ID that the staff portal's addresses use. The same student has the same pseudonym in every file, so the files can be joined; it is keyed on `PILOT_PSEUDONYM_KEY`, apart from the login key, so changing `SECRET_KEY` doesn't rename everyone (unset, it falls back to `SECRET_KEY` with a warning). The staff portal doesn't show it, which would put a name to every row; to join the pilot survey, a team member runs `python -m app.pilot_name <email>` on the server (docs/pilot/README.md). Rows are ordered by time, or by pseudonym, never by account ID.
+- **FR-10.2** Staff can download the log, attempts and objective results as CSV, for the ID team's evaluation. A pilot page in the staff portal shows the same data as counts: per activity, how many students tried it, answered wrongly and needed hint 3 or 4 (seen before they first answered it correctly); per video, how many started it, passed each checkpoint and finished it.
+- **FR-10.3** The export identifies students by a pseudonym (a keyed hash of their account ID, `app/services/pseudonym.py`), not by email, display name or the account ID that the staff portal's addresses use. The same student has the same pseudonym in every file, so the files can be joined; it is keyed on `PILOT_PSEUDONYM_KEY`, apart from the login key, so changing `SECRET_KEY` doesn't rename everyone (unset, it falls back to `SECRET_KEY` with a warning). The staff portal doesn't show it, which would put a name to every row; to join a survey to the export, a team member runs `python -m app.pilot_name <email>` on the server (docs/pilot/README.md). Rows are ordered by time, or by pseudonym, never by account ID.
 - **FR-10.4** A "Before the lecture" page in the staff portal shows the lecturer, from real students who have answered the mastery check: how many are ready, each objective's results across the class, and on each multiple-choice mastery question the wrong option most students chose at their first answer, with the content's feedback for it (ID document §8, Just-in-Time Teaching). Counts only, no names.
 
 ## Content editing (FR-11)
@@ -465,7 +465,7 @@ Section and table numbers refer to the ID document [5].
 | FR-8 Diagnostic and fading | Warm-up and refreshers (module 0); fading support and bonus quests (§5.2) |
 | FR-9 Points and badges | Motivation and gamification (§7.1, §7.2) |
 | FR-10 Evaluation data | ADDIE Implement and Evaluate phases (§4.2, Table 2); evaluation (§8) |
-| FR-11 Content editing | ADDIE as a repeating cycle: pilot findings go straight back into the Develop phase (§4.1, §8.6) |
+| FR-11 Content editing | ADDIE as a repeating cycle: walkthrough findings go straight back into the Develop phase (§4.1, §8.6) |
 
 Table: Which part of the ID document each functional requirement delivers.
 
@@ -483,7 +483,7 @@ Table: Which part of the ID document each functional requirement delivers.
 - **NFR-U1** Laptop and desktop are the primary devices, because the code activities in modules 2, 4 and 5 need a keyboard and a wide screen: lines of code that move with the arrow keys, and results beside the code. Every other module also works on a tablet and a phone (from 360 px wide).
 - **NFR-U2** Clear, consistent controls for video, BFS stepping, activities and hints across all modules.
 - **NFR-U3** Every answer gets visible feedback within the activity; errors from the system are written for students, never as stack traces.
-- **NFR-U4** Before the feature freeze, team members pilot every module they did not build, and the defects they find are fixed or recorded (§14.7). **Status: not met.** The pilot was not run (#38); an expert heuristic review (12–13 Nov) and the 13 Nov content audit (#214) stood in for it (§15.5).
+- **NFR-U4** Before release, team members work through every module they did not build, and the defects they find are fixed or recorded (§14.7).
 
 ## Security & Authentication
 - **NFR-S1** Passwords stored only as salted hashes (Argon2, via pwdlib). A new password has at least 8 characters, a lowercase and an uppercase letter, a number and a symbol (a space counts), and doesn't contain the student's name or the first part of their email. The register page lists these rules and ticks each one off as the student types; the API checks the same rules (`api/app/passwords.py`, `web/src/auth/passwordRules.ts`).
@@ -618,7 +618,7 @@ Base path: `/api`. JSON over HTTPS. Auth via the session cookie set by `/api/aut
 |---|---|---|---|
 | GET | `/api/activities/{activity_id}` | user | The activity to show, with `lastAttempt` (this student's latest answer and the result for it, as marked now, withheld on a mastery check item; #171): kind, title and config, never the solution, and `solved` (this student has answered it correctly, so no more hints are offered); on a module 6 mastery item, `masteryCheck` and `answered` instead, never whether the answer was right (#144). 403 while every module it belongs to is locked (FR-2.1), for an item on a review path that isn't open yet (FR-7.5), for a support item this student isn't shown (FR-8.4), for a quick check question, which is only answered in the quick check (FR-8.2), for a bonus quest before its module is complete (`quest_closed`), and for a review path's fresh item before its practice is done (`practice_first`); staff are let through. The response also has `purpose`, `reviewCheck` and `answeredEarlierVersion`. 404 if it no longer is part of the course (taken out of use, FR-11.6), except for staff. The same applies to its attempts and hints. |
 | GET | `/api/activities/{activity_id}/hints` | user | The hint levels this student has already seen, so a reload shows them again. 403 and 404 as for the activity. |
-| POST | `/api/activities/{activity_id}/hints` | user | Reveal the next hint level and record it. Returns the hint, whether there are more, and whether the next one counts as support (FR-7.2). 409 once every level is shown, or once the student has answered correctly: a hint then helps with nothing and would count in the pilot's hint use. On a module 6 mastery item level 2 is the last (`limitReached`), and a third request, or one after the item is answered, is 409 (#144); on a review path's fresh item level 3 is the last. 403 and 404 as for the activity; 429 past 30 reveals a minute. |
+| POST | `/api/activities/{activity_id}/hints` | user | Reveal the next hint level and record it. Returns the hint, whether there are more, and whether the next one counts as support (FR-7.2). 409 once every level is shown, or once the student has answered correctly: a hint then helps with nothing and would count in the hint-use figures. On a module 6 mastery item level 2 is the last (`limitReached`), and a third request, or one after the item is answered, is 409 (#144); on a review path's fresh item level 3 is the last. 403 and 404 as for the activity; 429 past 30 reveals a minute. |
 | POST | `/api/activities/{activity_id}/attempts` | user | Submit an answer. The server checks it (a code activity is compared against its stored solution), records the attempt, updates results and points, and returns the outcome. 403 and 404 as for the activity. 422 for a submission in the wrong shape for the kind, a blank one, or one naming something the activity doesn't have; 413 past 32 kB; 429 past 60 answers a minute. None of these is recorded. A module 6 mastery item takes one answer only (409 after it), and its response is `withheld`: `correct` and `score` are null and `parts` is empty (#144). The one-answer 409 is checked last, under the student's lock, so a refused submission never uses up the answer. |
 
 The ungraded **Check** of FR-5.2 has no endpoint yet: every submission is graded and recorded (§15.5).
@@ -947,7 +947,7 @@ Figure: The mastery report with one objective not yet met (FR-7).
 
 ## Interaction design
 
-The COS750 UX lecture (L06) [10] defines user experience by ISO 9241-210 as "a person's perceptions and responses that result from the use or anticipated use of a product, system or service" (slide 2), and lists the standard's parts: part 11 on usability and part 20 on accessibility (slide 10). We take usability as ISO 9241-11 defines it [17]: the effectiveness, efficiency and satisfaction with which specified users achieve specified goals in a specified context of use. Here the user is a COS212 student before the graphs lecture, and the task is to reach "ready for the lecture". The pilot (§14.7) and the evaluation data (FR-10) measure the three. Effectiveness: how many students answer each activity, pass each video's checkpoints and reach a result on the mastery check (the attempts, events and objective results). Efficiency: the time per module and per segment, from the `segment_viewed` and `module_completed` events in the log, checked against the survey. Satisfaction: the SUS and the survey answers. Accessibility follows WCAG 2.2 AA [7] (NFR-A).
+The COS750 UX lecture (L06) [10] defines user experience by ISO 9241-210 as "a person's perceptions and responses that result from the use or anticipated use of a product, system or service" (slide 2), and lists the standard's parts: part 11 on usability and part 20 on accessibility (slide 10). We take usability as ISO 9241-11 defines it [17]: the effectiveness, efficiency and satisfaction with which specified users achieve specified goals in a specified context of use. Here the user is a COS212 student before the graphs lecture, and the task is to reach "ready for the lecture". The team walkthroughs (§14.7) and the evaluation data (FR-10) measure the three. Effectiveness: how many students answer each activity, pass each video's checkpoints and reach a result on the mastery check (the attempts, events and objective results). Efficiency: the time per module and per segment, from the `segment_viewed` and `module_completed` events in the log, checked against the survey. Satisfaction: the SUS and the survey answers. Accessibility follows WCAG 2.2 AA [7] (NFR-A).
 
 **Who the users are.** L06 sorts users into casual, novice, knowledgeable intermittent and expert (slide 56), and separates experience of the domain and the technology from the expertise the designer expects (slide 55). Our students are **novices** in the domain: the specification assumes no prior knowledge of graphs and BFS [1]. They are experienced with the technology: by their second year they use a browser and ClickUP in every module. So the app keeps its controls ordinary (links, buttons, a video player, a list of choices) and puts the effort into the content.
 
@@ -1033,7 +1033,7 @@ cos750-project/
 │  ├─ gen-api.sh                regenerates the frontend's API types (NFR-M2)
 │  ├─ load-test.py              the load test (§14.5)
 │  ├─ security-probe.py         attacks a deployed copy (§14.6)
-│  ├─ pilot-analysis.py         summarises the pilot's survey and event export
+│  ├─ pilot-analysis.py         summarises the evaluation survey and the event export
 │  └─ apply-branch-rules.sh
 ├─ api/
 │  ├─ Dockerfile                runs migrations and the seed, then Uvicorn
@@ -1085,7 +1085,7 @@ cos750-project/
    ├─ id/id-document.md         the ID document
    ├─ build/                    builds both into PDFs (npm run pdf)
    ├─ brand/README.md           brand and UI guide: logo, colour, type, components, writing
-   ├─ pilot/                    the pilot kit: survey and think-aloud sheet (§14.7)
+   ├─ pilot/                    the evaluation kit: a survey and a note sheet (§14.7)
    ├─ spec/, references/, course-material/
    └─ deploy/coolify.md
 ```
@@ -1152,7 +1152,7 @@ Testing follows the Definition of Done (§2.4): no item is done until it has tes
 | End-to-end | The student's path in a real browser against the full stack (`e2e/`, #35): register, log out and in, refused passwords, every demo account's stage; module 0 on screen; a code activity answered wrong then right; a video that stops at its checkpoint, with feedback and the hint ladder; the mastery check with all seven activity kinds, then the report and a review path that makes the student ready; nothing that counts down or expires | Playwright in Chromium, Firefox and WebKit, against the compose stack over HTTPS | In CI on the `staging` → `master` pull request only, to save Actions minutes; locally before a PR into `staging` (`e2e/README.md`) |
 | Accessibility | Lint rules on every component (jsx-a11y, warnings fail the build); colour contrast of the design tokens (`contrast.test.ts`); axe-core WCAG 2.2 A and AA checks (every rule axe has for 2.0, 2.1 and 2.2) in the light and the dark theme on every page, staff pages included, and on each activity kind unanswered, wrong with hints, and right; module 0 with the keyboard only, and a visible focus indicator on every control; modules 0, 1, 3 and 6 at 360 px with every activity answered | oxlint jsx-a11y and Vitest; Playwright with axe-core (`accessibility.spec.ts`, `keyboard.spec.ts`, `mobile.spec.ts`) | Lint and contrast on every PR; the browser checks with the end-to-end tests |
 | Exploratory | The item's acceptance criteria tried by hand on staging, by someone other than its author | Staging | Every item, before it is accepted (DoD) |
-| Pilot | A usability and defect walkthrough of modules 0 to 6 by team members (§14.7) | Staging, think-aloud notes, the event export, a short survey | Planned for 10–11 Nov; not run (#38). An expert review (12–13 Nov) and the 13 Nov audit (#214) took its place |
+| Team walkthroughs | A usability and defect check: each team member works through the modules on staging and notes what goes wrong (§14.7) | Staging; notes in Discord and on the board | Throughout Sprint 2 |
 
 Table: Test levels.
 
@@ -1166,7 +1166,7 @@ Every backlog item carries acceptance criteria taken from its requirements (FR-x
 
 ## Defects
 
-Defects found in review, exploratory testing or the pilot are filed as issues labelled `bug`, with steps to reproduce; severity is judged at triage, not labelled (nine `bug` issues, all closed):
+Defects found in review, exploratory testing or the team walkthroughs are filed as issues labelled `bug`, with steps to reproduce; severity is judged at triage, not labelled (nine `bug` issues, all closed):
 
 - **Blocker:** breaks the demo path or loses a student's data. Fixed before anything else.
 - **Major:** wrong result, feedback or mastery decision. Fixed in the current sprint.
@@ -1176,7 +1176,7 @@ Every fix comes with a test that fails without it, so the defect can't return.
 
 ## Load testing
 
-`scripts/load-test.py` loads a deployed copy with simulated users, each sending requests back to back over one connection: a ramp (more users every 15 seconds), a burst (requests released at one instant), sustained load, and a burst of logins. Staging shares its server with other applications, so load tests run only when nobody is testing or presenting, never during the pilot or the demo.
+`scripts/load-test.py` loads a deployed copy with simulated users, each sending requests back to back over one connection: a ramp (more users every 15 seconds), a burst (requests released at one instant), sustained load, and a burst of logins. Staging shares its server with other applications, so load tests run only when nobody is testing or presenting, never during a walkthrough or the demo.
 
 **First run, 2 November (staging, before the fix).** Most of the time a request takes is the trip to the server: Cloudflare answers from Johannesburg in 5 ms, and a request through to our API takes about 190 ms.
 
@@ -1338,30 +1338,31 @@ The fourth round is why the runner was removed rather than patched further. The 
 
 **For later features.** Every free-text field a student sends (answers, feedback) adds `NoHiddenCharacters` or strips NUL before it is stored: Postgres refuses NUL in `text` and `jsonb` alike.
 
-**Accepted risks.** Without email verification, anyone can register with an email address that isn't theirs, and registering reveals that an address already has an account. The staging gate's team password is weak and shared, which is acceptable because staging holds no real student data. Each deploy makes staging unavailable for about a minute while containers are replaced, so nobody merges during the pilot or the demo.
+**Accepted risks.** Without email verification, anyone can register with an email address that isn't theirs, and registering reveals that an address already has an account. The staging gate's team password is weak and shared, which is acceptable because staging holds no real student data. Each deploy makes staging unavailable for about a minute while containers are replaced, so nobody merges during a walkthrough or the demo.
 
 **A stolen database** holds emails, display names and Argon2id password hashes (64 MiB, 3 passes). It holds no sessions and not the signing key, so it gives no way in by itself. A strong password costs years to crack per account, but a common one such as `password1` fell in under a second to an eight-word list. Write access to the database, or the `SECRET_KEY` from the server's environment, would let someone become any user; both exist only on the server and in Coolify. A leak would also be a POPIA breach, because emails are personal information (NFR-S8).
 
-## Pilot
+## Team walkthroughs
 
-The team pilot planned for 10 and 11 November (#38) was not run before submission: the last week's time went into the content, the 13 November release and the videos. In its place the app had an expert review against usability heuristics (12–13 November) and a content audit on 13 November (#214, fixed in #215; ID document [5], §8.2). The plan below stands for when it runs. Each member works through the modules they did not build, from a new account, thinking aloud while another member takes notes. Afterwards each completes a short survey: the System Usability Scale (SUS), the clarity of feedback and hints, and the time per module. The survey, the note-taker's sheet and the schedule are in `docs/pilot/`. The ID team uses the event export (FR-10) and the survey for the Implement and Evaluate phases of ADDIE (ID document [5], §8); defects go onto the board labelled `bug` (§14.4).
+Through Sprint 2, each team member works through the app on staging from a student account, mostly the modules they did not build, and jots down what goes wrong as they go: defects, dead ends, unclear feedback or hints, and how long things take. Each note is posted in the team's Discord or filed on the board (labelled `bug` for a defect, §14.4) and fixed in a pull request; a content note is often fixed the same day in the staff portal (FR-11). This is the Implement and Evaluate phases of ADDIE in the ID document [5] (§8.3), and the reason content editing moved into the portal (decision 9, §15.3).
 
-**What the pilot is.** It is a **usability and defect walkthrough**, not a test of whether the app teaches. In ADDIE's terms it is formative evaluation, as the ID document's §8.1 puts it, and in L06's terms it checks the dialogue characteristics of §11.2 with real use. It can find usability problems, defects, unclear feedback, dead ends and timing.
+Examples of what the walkthroughs found and what changed: dark-mode text that was hard to read; an activity with no way on once it was finished, and a module that could be completed without its activities (#129, #130, FR-2.7); progress that said nothing about time (#131, FR-2.6); a student's answer gone when they came back to a question (#171, #195, FR-2.5). Notes on the course as a whole, that it felt "like doing a test", fed the audit of 13 November (#214) and the motivation features it added (FR-9.7 to FR-9.10).
 
-**What it cannot show.**
+**What the walkthroughs are.** A **usability and defect check**, not a test of whether the app teaches. In ADDIE's terms they are formative evaluation, as the ID document's §8.1 puts it, and in L06's terms they check the dialogue characteristics of §11.2 with real use.
 
-- *Learning.* The participants are at most the seven team members. They already know graphs and BFS, and they know the design. Their mastery results say nothing about a student who starts with no knowledge, so neither document reports them as learning. For that the ID document plans a separate, delayed post-test without hints, with real COS212 students (ID document §8.5). It would report Cohen's *d* beside Hake's normalised gain, because the gain is unstable on the few items each objective has, and the ID document states the Kirkpatrick level of every measure: the pilot's survey and think-aloud notes are level 1 (reaction), the post-test and a planned spaced retrieval quiz one to three days later level 2 (learning) (ID document §8.4, §8.8).
-- *A usability score to compare.* Seven SUS responses are too few for a stable score. SUS itself is reliable over large samples [16], but we report each participant's score and the mean only as a rough signal, and do not compare it with published norms.
-- *Every problem.* Small think-aloud rounds find many problems when they are repeated, with fixes in between [14]; one round with people who know the design will miss the problems only novices have. Studies of algorithm-visualisation tools that measured usability alone are called shallow by the review that surveyed them [15]. So the pilot's findings decide what to fix, not whether the app works.
+**What they cannot show.**
 
-No pilot findings are reported, because the pilot has not run (#38, #76). A round with 5 to 8 real novices, such as first-year students before COS212, in repeated think-aloud rounds with fixes between them, is future work (§15.4).
+- *Learning.* The team already knows graphs and BFS and knows the design. Its results say nothing about a student who starts with no knowledge. For that the ID document plans a separate, delayed post-test without hints, with real COS212 students (ID document §8.5). It would report Cohen's *d* beside Hake's normalised gain, because the gain is unstable on the few items each objective has, and the ID document states the Kirkpatrick level of every measure (ID document §8.4, §8.8).
+- *Every problem.* Small think-aloud rounds find many problems when they are repeated, with fixes in between [14]; people who know the design miss the problems only novices have. Studies of algorithm-visualisation tools that measured usability alone are called shallow by the review that surveyed them [15]. So the walkthroughs decide what to fix, not whether the app works.
+
+A round with 5 to 8 real novices, such as first-year students before COS212, in repeated think-aloud rounds with fixes between them and the System Usability Scale [16], is future work (§15.4).
 
 # Assumptions, Risks, Decisions and Future Work
 
 ## Assumptions
 - The ID team delivers the content for each module in time for the sprint that builds it, as fixture files or by editing it in the staff portal (FR-11); engineers load placeholders until then.
 - Graphs stay small (up to about 50 vertices), so precomputing every BFS step per request and drawing with SVG are both fine.
-- Pilot and demo users are COS750 classmates and the panel, so a few dozen accounts and a handful of students at once.
+- Demo users are COS750 classmates and the panel, so a few dozen accounts and a handful of students at once.
 - Students use a laptop or desktop for the code modules (NFR-U1).
 
 ## Risks
@@ -1373,7 +1374,7 @@ No pilot findings are reported, because the pilot has not run (#38, #76). A roun
 | Content arrives late: seven modules, about 180 minutes of activities, hints and tests | **Happened in part** | High | Engineers build against placeholder fixtures from Sprint 1; content is a tracked backlog item per module; the demo path needs modules 0, 3 and 6 first. |
 | Narrated videos not recorded in time | **Happened in part** | Medium | The videos were recorded from slides with a voice-over late in Sprint 2. Every video segment also shows its narration as text, so the lessons worked before the videos were in (#149). |
 | Video gating behaves differently across browsers | Medium | Low | The player enforces checkpoints itself from `timeupdate` and `seeking` events, with unit tests of the gate (`checkpointGate.test.ts`, `NarratedVideoPlayer.test.tsx`). `video-checkpoint.spec.ts` checks the gate in Chromium, Firefox and WebKit: the video stops at its checkpoint, resumes once it is answered, and a passed checkpoint doesn't stop the student again. The server also requires every checkpoint answered before the segment counts as done (FR-2.7). **Happened, in the infrastructure:** Traefik's gzip removed range requests from the MP4s, so seeking failed on the deployed site; the browser tests run against the end-to-end stack, not Traefik, so they missed it. Gzip is now off (§13.4). |
-| Too much scope for two sprints | **Happened** | High | Backlog ordered so the specification's hard requirement (assessment with scaffolding) and the demo path are built first; bonus quests and badges come last. The pilot was not run (#38). |
+| Too much scope for two sprints | **Happened** | High | Backlog ordered so the specification's hard requirement (assessment with scaffolding) and the demo path are built first; bonus quests and badges come last. |
 
 Table: Risk register.
 
@@ -1387,7 +1388,7 @@ Table: Risk register.
 6. **Code activities** → **no code execution; checked by comparison** (FR-5, NFR-S7). The student orders shuffled lines (Parsons) or fills in tokens from a given set, and the server compares the result with the solution. This **supersedes the 1 November decision** to run student Python in an isolated code runner: pentesting on staging (§14) found the in-process grader could be forged to fake a pass, and the residual risk of executing arbitrary code on a shared personal server outweighed what a freeform editor added, so on 3 November the team dropped freeform code writing and removed the runner. Running Python in the browser (Pyodide) was considered and rejected for the same era, as every test would then be visible in the browser; comparison-based activities avoid both problems. The ID document's objectives 6 and 7 are unchanged — Parsons performance is an established proxy for code-writing ability (ID document §5) ; objective 7 uses the fix-the-bug and choose-tests activities (FR-5.5).
 7. **Gamification** → **private points and badges, no public leaderboard** (FR-9). The initial meeting on 25 October included leaderboards; on 1 November the team replaced them with private points, because public ranking discourages students who are motivated by avoiding failure [4].
 8. **Accounts** → **email and password**, JWT in an httpOnly cookie (FR-1, §5).
-9. **Content** → **in the database, seeded from fixture files in the repository, and edited by staff in the portal** (FR-11, NFR-M5). Until 8 November content was fixtures only, with no authoring interface. At the team meeting on 8 November the team agreed that staff, the ID team above all, edit content in the portal as they already do videos (FR-3.6), so that pilot findings can be fixed the same day without a pull request. The seed never overwrites a staff edit, and every edit is held to the same rules as a fixture in CI.
+9. **Content** → **in the database, seeded from fixture files in the repository, and edited by staff in the portal** (FR-11, NFR-M5). Until 8 November content was fixtures only, with no authoring interface. At the team meeting on 8 November the team agreed that staff, the ID team above all, edit content in the portal as they already do videos (FR-3.6), so that walkthrough findings can be fixed the same day without a pull request. The seed never overwrites a staff edit, and every edit is held to the same rules as a fixture in CI.
 10. **BFS neighbour order** → **alphabetical by label**, matching the lessons (FR-6.5).
 
 ## Future work
@@ -1397,7 +1398,7 @@ Table: Risk register.
 - If freeform code writing is reintroduced (for example to assess objective 6 by writing rather than ordering), run it in a stronger sandbox than the removed in-process runner — gVisor or a per-submission microVM — and move the grading decision out of the process that runs the student's code. The removed runner is preserved at git tag `archive/code-runner`.
 - Joining ClickUP: an LTI 1.3 launch, grade passback of "ready for the lecture", and xAPI statements from the event log (§11.3).
 - The learning-design gaps the review of 13 November found (generative prediction in the visualiser, diagnostic routing, stepped worked examples, review paths that adapt to the error, a reflection step, a spaced hint-free post-test, a lecturer view of results beyond multiple choice, recorded videos) are listed with their research reasons in the ID document's "Left out, and future work". A *Found* column in the trace table, which would test the key idea of BFS directly, needs a change to the trace checker (FR-6.6).
-- A usability round with 5 to 8 real novices, in repeated think-aloud rounds with fixes between them (§14.7), and the ID document's delayed post-test with real COS212 students.
+- A usability round with 5 to 8 real novices, in repeated think-aloud rounds with fixes between them and the System Usability Scale (§14.7), and the ID document's delayed post-test with real COS212 students.
 
 ## Known limitations
 
@@ -1413,7 +1414,6 @@ What the app does not yet do, or does only in part, against the requirements abo
 | Review-path results | A review path's fresh items still show right or wrong at once, unlike module 6's. | FR‑7.5 | Follow-up, no card yet |
 | Visualiser | Predictions are checked in the browser and logged as events, but not graded, so they give no evidence for an objective. The visualiser is reached only from a link in module 3. | FR‑6.4 | Not scheduled |
 | Videos | Seven narrated videos (modules 1 to 5, 23 checkpoints). Module 6 has no video. Videos are not in the fixtures: a new site needs them uploaded through the staff portal (FR-3.6, FR-3.7). | FR‑3 | — |
-| Pilot | The team pilot was not run; an expert heuristic review and the 13 November content audit stood in for it. | NFR‑U4 | #38 |
 | Content | The evidence-based content is mostly in (#150: subgoal labels, "why" questions after worked examples, misconception items, the matrix and running time); no "why" question follows a level-4 hint yet. Two component kits are in use (§11). | FR‑4.2, NFR‑U2 | ID team: the "why" question after hint 4 and the timing re-plan; the kits not scheduled |
 | Tests | No timing test for NFR-P1 to NFR-P3, which are met by design (no execution, small graphs) but not measured. | NFR‑P | Not scheduled |
 | Results and rewards under older rules | Rules tightened on 13 and 14 November 2026 are not applied to what students had already earned. Trace answers stored before the impossible-queue rule keep their marks and the results they earned (FR-6.6). Points and badges earned before the evidence rule (FR-9.6), or before review-path fresh items stopped at hint 3, stay: a student can hold a badge such as Ready for the Lecture that their report no longer supports. The report shows today's result. | FR‑6.6, FR‑9.6 | By decision: nothing earned is taken back |

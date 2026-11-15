@@ -12,6 +12,7 @@
 | 11 Nov | Content: modules 0, 4 and 6; retrieval questions for modules 2 to 6; the staff content editor; activities and videos inside their segments, and a segment that must be done before moving on; course progress in minutes; module locks on activities, hints and videos; module completion rewards; the trace table, fix-the-bug and choose-tests screens; a content pass so mastery items can't be gamed | PRs #125, #128 – #135, #157, #160 – #170 |
 | 12 Nov | Support segments for a struggling student, with content for modules 1 to 4; review paths that teach again; the mastery check with one answer per item and two hints at most; graph answers drawn as graphs; evidence-based content; module 5's content; end-to-end and accessibility tests in Chromium, Firefox and WebKit; the content authoring guide | PRs #175 – #186, #189 |
 | 12 Nov | Weekly call skipped by agreement; updates posted in Discord instead | Appendix A, Appendix B |
+| 9–13 Nov | Team members work through the modules on staging and note what goes wrong; notes fixed in the PRs above | Discord; ID document §8.3 |
 | 12–13 Nov | Expert review of the interface against usability heuristics | ID document §8.2 |
 | 13 Nov | Content audit (issue #214) and its fixes: learner choice with open modules and the quick check, the skill profile, medals and the success moment | PR #215 |
 | 13 Nov | Objective 8 assessed; the course's real length shown (about 180 minutes); follow-through marking in trace tables; the lecturer's "Before the lecture" page; restarting a module; the closing transfer task and two bonus quests; the demo script | PRs #195 – #213 |
@@ -39,7 +40,6 @@ Table: Decisions made in Sprint 2.
 
 ## Not finished
 
-- The team pilot (issue #38) and its write-up (issue #76).
 - The items in the SE document's known limitations (§15.5).
 
 ## Review
@@ -56,9 +56,9 @@ Compiled from the sprint's record: the board, the pull requests and the team's D
 - The app was tested end to end in three browsers before release.
 
 **What to change**
-- The pilot planned for 10 and 11 November was not run: the time went into content and fixes. A pilot needs its own protected time in the plan.
+- Walkthrough notes were spread across Discord messages and issues. One shared place for them would have made them easier to track and to report.
 - The course was planned at 75 minutes and written at about 180. Timing content as it is written would have caught this earlier.
 - The narrated videos were recorded last, from slides rather than the narration scripts, so their wording differs from the lessons in places.
 
 **Action for the next round**
-- Run the pilot with real novices before adding features, and time each module as it is written.
+- Test with real novices before adding features, and time each module as it is written.

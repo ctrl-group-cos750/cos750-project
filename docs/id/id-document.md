@@ -40,7 +40,7 @@ Our design rests on the following choices. Each is explained in the section show
 -	Learning theories: the module’s behaviourist, cognitivist, constructivist, social cognitive and transformative views [47, 48], and the research on active learning, cognitive load, scaffolding and retrieval (Section 5).
 -	Motivation: the ARCS model, flow, and Malone and Lepper’s taxonomy, supported by private points and badges [37, 41, 51] (Sections 7.1 and 7.2).
 -	Inclusion: Universal Design for Learning and WCAG 2.2 level AA [31, 45], with Kolb’s learning cycle as a check on each module [50] (Section 6).
--	Evaluation: an expert review against usability heuristics so far, and a planned pilot, usage logs and surveys that feed back into the design (Section 8).
+-	Evaluation: team members' walkthroughs of the application, an expert review against usability heuristics and the usage logs, which feed back into the design, and a planned study with real COS212 students (Section 8).
 
 ## Structure of this document
 
@@ -170,8 +170,8 @@ Table 2 shows how each phase applies to this project. The software engineering s
 | Analyse | Study the learners, their prior knowledge and the differences between them (Section 2). Check what CS2023 lists for graphs and BFS. | Learner profile | 22 October – 1 November 2026 (Sprint 0) |
 | Design | Write the objectives, success criteria, assessments and lesson plan. Choose the motivation and gamification design. | Objectives, assessment plan and storyboards | 22 October – 12 November 2026 (Sprints 0 to 2; the storyboards came last, alongside the content: Section 4.7) |
 | Develop | Build the lessons, tasks, hints and feedback messages. Write the code activities (Parsons, fill-in, fix the bug, choose tests) and their solutions. | Working prototype | 2 – 15 November 2026 (Sprints 1 and 2) |
-| Implement | Release the prototype: to staging after each sprint, and to production on 13 November. A pilot with team members on staging was planned for 10–11 November and has not been run (Section 8.3). | Releases on staging and production | 2 – 13 November 2026 (Sprints 1 and 2) |
-| Evaluate | Review each increment, run an expert review against usability heuristics, and audit the content. Update the design. Finish this document. | Expert review findings and fixes (Section 8.2) | 9 – 16 November 2026 (expert review and the 13 November content audit; the pilot and its survey are still to run) |
+| Implement | Release the prototype to staging after each sprint, where each team member works through it and notes what goes wrong (Section 8.3), and to production on 13 November. | Releases on staging and production; walkthrough notes | 2 – 13 November 2026 (Sprints 1 and 2) |
+| Evaluate | Review each increment through the walkthroughs, run an expert review against usability heuristics, and audit the content. Update the design. Finish this document. | Walkthrough and expert review findings, and their fixes (Sections 8.2, 8.3) | 9 – 16 November 2026 (walkthroughs through Sprint 2; the expert review and the 13 November content audit) |
 
 Table: The ADDIE phases applied to the COS212 application.
 
@@ -271,7 +271,7 @@ The lecture lists eight instructional design models, among others [58, p. 20]. T
 
 Table: Instructional design models compared with ADDIE [58].
 
-Section 4.1 says we use ADDIE as a repeating cycle with rapid prototyping inside it. That is close to SAM. The platform was built in one-week sprints and reviewed on staging after each one (SE document §2.1), which is SAM's iterative development. The content arrived later, in Sprint 2, and has been through one review so far: an expert review and content audit on 13 November, followed by rewrites (#214, #215). The application was released to production the same day, SAM's gold release, without the beta a pilot would have given. So our platform followed SAM, while our content has had only one design–build–review cycle before the deadline. We kept the ADDIE names because they are the lecture's main model and they structure this document. Smith and Ragan's three phases (analysis, strategy, evaluation) [58, p. 22] fold into the same steps and add nothing we need.
+Section 4.1 says we use ADDIE as a repeating cycle with rapid prototyping inside it. That is close to SAM. The platform was built in one-week sprints and reviewed on staging after each one (SE document §2.1), which is SAM's iterative development. The content arrived later, in Sprint 2. It was reviewed through the team's walkthroughs, then in an expert review and content audit on 13 November, followed by rewrites (#214, #215), and released to production the same day, SAM's gold release. So our platform followed SAM, while our content has had only one design–build–review cycle before the deadline. We kept the ADDIE names because they are the lecture's main model and they structure this document. Smith and Ragan's three phases (analysis, strategy, evaluation) [58, p. 22] fold into the same steps and add nothing we need.
 
 ## Storyboards
 
@@ -510,13 +510,13 @@ Team members testing staging said the course felt "like doing a test, with no mo
 - **A success moment** on a right answer: the item's explanation first, a drawn tick, a short calm line and a word on progress, and the points earned. Satisfaction in ARCS terms; specific feedback rather than a bare "Correct".
 - **Confetti**: a short burst for a right answer and a fuller one for a finished module or being ready for the lecture. None in the mastery check, where results are withheld, and none under reduced motion.
 
-Both the confetti and the encouraging comments can be switched off on the profile page, and the "⋯" menu beside the success moment turns off the confetti, the encouraging comments, or points and badges, because the same reward that pleases one student patronises another (autonomy [43]). None of these counts speed, and none is shown to anyone else. Whether they change the ARCS ratings is a question for the pilot (Section 8).
+Both the confetti and the encouraging comments can be switched off on the profile page, and the "⋯" menu beside the success moment turns off the confetti, the encouraging comments, or points and badges, because the same reward that pleases one student patronises another (autonomy [43]). None of these counts speed, and none is shown to anyone else. Whether they change the ARCS ratings is a question for the study with real students (Section 8).
 
 A team member testing staging asked for a small helper character, so there is an optional **study companion** (#214): five original 2D characters themed on the course, Inka the octopus (whose arms are edges) by default. The characters were drawn with Claude Code as hand-written SVG paths, then reviewed in the pull request (§10). Pedagogical agents have a small positive effect on learning, g = .19, larger for school pupils than for university students and with on-screen text rather than narration [79]; 2D agents did better than 3D ones [80]; and their effect on motivation is small, g = 0.20, mostly where the agent shows facial expressions [81]. That is a modest case, so the companion is opt-in (asked once per student on each device, after the first answer; the question is read out to screen readers, and counts as "no" only after a choice or once it has been seen and ignored), off with one press, and kept small: flat, three expressions, no idle movement, text only. It plays the mentor role, information and support together, which raised learners' self-efficacy more than an expert-only agent [82]. Each line is task or process feedback that adds to the result rather than repeating it (after a right answer, how it was reached and what to try next; on a near miss, what to check; otherwise which hint helps next, saying that an answer after hint 3 or 4 counts for less), never praise of the person, and it says less to a student on a run of right answers. The companion is itself decoration, and could be a seductive detail [77]; that is why it is opt-in, sits only beside feedback the student asked for, never beside a question or in the reading, has no idle movement and never repeats the explanation. It speaks only at a feedback moment the student asked for and never interrupts a question, because interruptions raise errors and annoyance, more so under load [83], and people do best when they decide when to attend [84]. It is never in the mastery check, nor on a review path's fresh questions, which decide an objective too.
 
 The page background is a soft glow of the brand's blue and a warm honey in the corners by default (#214): pleasant colours in learning materials improved learners' affect in a meta-analysis of emotional design [76]. That meta-analysis studied colour within the learning material, and ours is kept off the material, so we take only its finding on affect. A student who finds it distracting can choose a plain page, or a wallpaper of doodles from the course, in the profile or the header. Decoration that has nothing to do with the content is a seductive detail and can draw attention from learning [77].
 
-This decoration sits beside the coherence principle in "Cognitive load and multimedia design", which leaves out decoration that does not teach. We read that principle as being about what is in the material: the text, graphs, code and feedback a student reads and works on. Decoration is allowed around the reading but never in it: the glows sit at the edges of the page, and the doodles are a faint, still wallpaper behind the whole page, never on top of anything, and the cards of lessons, activities and the quick check are solid, so they don't show through the reading; nothing decorative is placed in a lesson's text, a question, a graph or a hint; the companion appears only beside feedback, once the student has answered and asked for it; and each of the three can be turned off. Hints and feedback are on solid panels. Some text on the lesson, quick check and profile pages, such as headings and lines between cards, sits straight on the background rather than on a card; the glow is weakest there, and the contrast of that text is checked against the strongest part of the glow and doodles, light and dark (`web/src/styles/contrast.test.ts`). Whether a student finds the glow or the companion distracting is one of the questions for the pilot (Section 8).
+This decoration sits beside the coherence principle in "Cognitive load and multimedia design", which leaves out decoration that does not teach. We read that principle as being about what is in the material: the text, graphs, code and feedback a student reads and works on. Decoration is allowed around the reading but never in it: the glows sit at the edges of the page, and the doodles are a faint, still wallpaper behind the whole page, never on top of anything, and the cards of lessons, activities and the quick check are solid, so they don't show through the reading; nothing decorative is placed in a lesson's text, a question, a graph or a hint; the companion appears only beside feedback, once the student has answered and asked for it; and each of the three can be turned off. Hints and feedback are on solid panels. Some text on the lesson, quick check and profile pages, such as headings and lines between cards, sits straight on the background rather than on a card; the glow is weakest there, and the contrast of that text is checked against the strongest part of the glow and doodles, light and dark (`web/src/styles/contrast.test.ts`). Whether a student finds the glow or the companion distracting is one of the questions for the study with real students (Section 8).
 
 We leave out a public leaderboard. A classroom study found that a course with leaderboards and badges led to lower motivation and lower exam scores than the same course without them [35]. Public ranking also discourages students who are motivated by avoiding failure [41], and these are often the students who most need the application. Points and badges are therefore private to each student.
 
@@ -646,7 +646,7 @@ We use the first two levels of Kirkpatrick’s model: reaction (did students fin
 
 The same data serves the lecturer before the lecture. Just-in-Time Teaching has students work on short web exercises before class, and the lecturer reads their answers to decide where the class starts [68]. The staff portal's "Before the lecture" page does this from the mastery check: how many students are ready, each objective's results across the class, and on each mastery question the wrong option most students chose first, with the content's explanation of why it is wrong. A lecture that opens with the misconception most of the class holds builds on where the students are, which is the reason the application exists.
 
-The lecture divides ADDIE's Evaluate phase into formative evaluation, done while the material is being built so that it can still change, and summative evaluation, done at the end to improve the next presentation [58, p. 31]. The expert review (Section 8.2) and the planned team pilot (Section 8.3) are formative evaluation. A study with real COS212 students, with a separate post-test (Section 8.5), would be summative evaluation. Table 20 gives the Kirkpatrick level of each measure.
+The lecture divides ADDIE's Evaluate phase into formative evaluation, done while the material is being built so that it can still change, and summative evaluation, done at the end to improve the next presentation [58, p. 31]. The expert review (Section 8.2) and the team walkthroughs (Section 8.3) are formative evaluation. A study with real COS212 students, with a separate post-test (Section 8.5), would be summative evaluation. Table 20 gives the Kirkpatrick level of each measure.
 
 ## Formative evaluation so far
 
@@ -672,38 +672,31 @@ Three kinds of formative evaluation have run while the application was built, an
 
 Table: The expert review's findings by heuristic.
 
-An expert review finds problems a designer can see; it cannot show whether a novice learns, which is what the pilot and, later, a study with real students are for. The pilot planned for 10 and 11 November has not been run (#38).
+An expert review finds problems a designer can see; it cannot show whether a novice learns, which is what a study with real students is for (Section 8.5).
 
-## Pilot
+## Team walkthroughs
 
-The pilot belongs to the Implement phase of ADDIE (Table 2). It was planned for 10 and 11 November, with team members on staging (SE document §14.7), and it has not been run (#38): the team's time in the last week went into the content, the 13 November release and the videos. So this section is a plan, and no pilot results are reported. When it runs, each member works through the modules they did not build, from a new account, and thinks aloud while another member takes notes. Afterwards each member completes a short survey with:
+The team walkthroughs are the Implement phase of ADDIE (Table 2). Through Sprint 2 each team member worked through the application on staging from a student account, mostly the modules they did not build, and jotted down what went wrong as they went: defects, dead ends, feedback or hints that were unclear, and how long things took. The notes were posted in the team's Discord or filed on the board, and each was fixed in a pull request, or, for content, straight away in the staff portal (SE document FR-11). For example, dark-mode text that was hard to read (8 November); an activity with no way on once it was finished, and a module that could be completed without its activities (10 November, #129, #130); progress that said nothing about time (#131); and a student's answer that was gone when they came back to a question (#171, #195). Notes on the course as a whole fed the audit of 13 November: walkthroughs found that it felt "like doing a test, with no motivating boosts", which led to the skill profile, medals and the success moment (Section 7.2, #214).
 
-- The System Usability Scale (SUS), ten standard questions that give a usability score from 0 to 100 [30].
-- Questions on the clarity of the feedback and hints, and the time each module took.
-- A short set of ARCS questions based on Keller’s Instructional Materials Motivation Survey [38]: eight statements, two for each part of the model, adapted from the IMMS. They are reported as ratings per part, not as an IMMS score, because a short adaptation is not the validated 36-item survey.
-- Two open questions: “What helped you most?” and “What confused you?”
-
-The survey, the note-taker's think-aloud sheet and the pilot schedule are in the repository, in `docs/pilot/`.
-
-The pilot is a usability walkthrough, not a test of learning. Its participants are at most the seven team members. All of them already know graphs and BFS, and they know the design, so their results cannot show whether a novice learns (Section 8.7). Seven SUS responses are also too few for a stable score. We report each participant's SUS score and the mean as a rough signal of usability problems, and we do not compare it with published SUS norms. What the pilot can give is a list of usability problems, defects, unclear feedback and timing, which is what formative evaluation needs.
+The walkthroughs are a usability and defect check, not a test of learning. The team already knows graphs and BFS and knows the design, so the walkthroughs cannot show whether a novice learns (Section 8.7). What they give is what formative evaluation needs while the material can still change: a list of problems, each fixed before release.
 
 ## Instruments
 
 | Question | Instrument | What it tells us | Kirkpatrick level |
 |---|---|---|---|
 | 1. Learning | Mastery results for each objective (module 6 and the review path) | How many students reach each state for each objective. | 2, learning (performance with help available, straight after instruction) |
-| 1. Learning | Pre-test and separate, delayed post-test without hints, with real COS212 students (planned after the pilot) | The learning gain for each objective (Section 8.5). | 2, learning |
+| 1. Learning | Pre-test and separate, delayed post-test without hints, with real COS212 students (planned) | The learning gain for each objective (Section 8.5). | 2, learning |
 | 1. Learning | Spaced retrieval quiz one to three days later (planned, Section 8.8) | What students still know before the lecture. | 2, learning |
-| 2. Usability | SUS score and think-aloud notes | How easy the application is to use, and where students get stuck. | 1, reaction |
-| 3. Motivation | ARCS survey questions | Ratings for attention, relevance, confidence and satisfaction. | 1, reaction |
+| 2. Usability | Team walkthrough notes; with real students, the System Usability Scale (SUS) [30] and think-aloud notes | How easy the application is to use, and where students get stuck. | 1, reaction |
+| 3. Motivation | With real students, eight ARCS statements adapted from Keller's Instructional Materials Motivation Survey [38], reported per part rather than as an IMMS score | Ratings for attention, relevance, confidence and satisfaction. | 1, reaction |
 | 4. Trouble spots | Event and attempt export (SE document, FR-10) | Time per module, hint level used per activity, wrong answers per step, and where students stop. | None: behaviour inside the application, used to improve it, not to judge it |
-| 4. Trouble spots | Open survey questions | Students’ own words on what helped and what confused them. | 1, reaction |
+| 4. Trouble spots | With real students, two open questions: "What helped you most?" and "What confused you?" | Students’ own words on what helped and what confused them. | 1, reaction |
 
 Table: Evaluation questions and the instruments that answer them.
 
 ## Analysis
 
-For each activity we count how often hint level 3 or 4 was used and how many attempts were wrong. For each module we compare the real time with the planned time in Table 4 and with our estimate of the content as written (Section 4.4). We report the SUS score and the ARCS ratings, and group the open answers and think-aloud notes by theme.
+For each activity we count how often hint level 3 or 4 was used and how many attempts were wrong. For each module we compare the real time with the planned time in Table 4 and with our estimate of the content as written (Section 4.4). In the study with real students we report the SUS score and the ARCS ratings, and group the open answers and think-aloud notes by theme. The survey and note sheet are in the repository, in `docs/pilot/`.
 
 When the application is tested with real COS212 students, we will use a pre-test and a separate post-test. Both have items parallel to the mastery check, one or more per objective, with no hints. The pre-test is given before module 0. The post-test is given at least a day after the student finishes, and ideally one to seven days later, so that it measures what was retained, not what was just practised [18]. The mastery check is not the post-test: it comes straight after instruction and allows hint levels 1 and 2 (#144), and a "Not yet" leads to a review path with the full hint ladder, so its results measure performance with some help, minutes after teaching. It stays the application's own check of readiness (Section 7.3).
 
@@ -728,7 +721,7 @@ The results feed back into the Design and Develop phases, which makes ADDIE a re
 
 ## Limitations and ethics
 
-Team members are not the target learners. They already know graphs and BFS, and they know the design. The pilot can therefore show usability problems, unclear feedback, defects and timing, but not whether the application teaches a student who starts with no knowledge. The SE document reports the same limitation (§14.7). A study with real COS212 students, using the pre-test and post-test above, is needed to measure learning.
+Team members are not the target learners. They already know graphs and BFS, and they know the design. The walkthroughs can therefore show usability problems, unclear feedback, defects and timing, but not whether the application teaches a student who starts with no knowledge. The SE document reports the same limitation (§14.7). A study with real COS212 students, using the pre-test and post-test above, is needed to measure learning.
 
 Taking part is voluntary, and a participant can stop at any time. The data export identifies students by a pseudonym only, not by name, email or account ID (SE document, FR-10.3). A study with real COS212 students would first need the faculty’s research ethics approval.
 
@@ -749,7 +742,7 @@ The examination specification asks the ID document to reflect on its instruction
 | Points and badges | Visible progress and satisfaction (ARCS). | Rewards can crowd out interest in the topic [35]. | Points are private, tied to learning, reduced after hint level 3 or 4, and there is no leaderboard. |
 | UDL instead of learning-style matching | Every student gets every representation; no reliance on a disputed theory [42]. | Each idea needs several representations, which takes more production time. | Short videos with transcripts, and reuse of the same campus graph across modules. |
 | Python for code tasks | Light syntax, so effort goes to the algorithm, not the language. | The COS212 lectures and practicals may use another language. | The logic is taught on diagrams and traces first, before any code. |
-| An expert review, and a team-member pilot that has not run | Fast feedback on usability and defects before the deadline. | Cannot show whether a true beginner learns, and no one outside the team has timed the course (Section 8.7). | A planned pre-test and post-test study with real COS212 students. |
+| Team walkthroughs and an expert review | Fast feedback on usability and defects, fixed before release. | Cannot show whether a true beginner learns, and no one outside the team has timed the course (Section 8.7). | A planned pre-test and post-test study with real COS212 students. |
 
 Table: Our main instructional choices and their trade-offs.
 
@@ -759,10 +752,10 @@ Applying the module's frameworks to the design (Sections 4.5 to 4.8, 5.5, 6.1, 7
 - **What is built lagged what is designed.** Trace tables reached staging on 11 November (SE document FR-6.6) and module 5 on 12 November (#189), and the narrated videos were recorded last (#37), from the recording member's own slides rather than the narration scripts, so some of their wording differs from the lessons.
 - **Two CS2023 topics are only half covered.** The adjacency matrix (AL-Foundational 8.a) and BFS's running time are taught only briefly: one short text segment each, with no practice item yet (Section 1.2).
 - **Results are close to right or wrong.** Three states per objective are better than one mark, but they do not yet use the lecture's differentiated descriptors or report which misconception a student holds (Section 7.3).
-- **The evaluation can show less than we first claimed.** The team pilot has not run, and even when it does it is a usability walkthrough, and learning needs a separate, delayed post-test with real students (Section 8).
+- **The evaluation can show less than we first claimed.** The team walkthroughs are a usability check, and learning needs a separate, delayed post-test with real students (Section 8).
 - **Our process is close to SAM.** We named ADDIE, but the platform was built in short design–build–review cycles. The content has had only one such cycle so far (Section 4.6).
 
-If the pilot or a study with students shows that our choices do not work as intended, the first thing we would change is the review path: if students still score "Not yet" after it, the review segment needs a different representation of the idea, not only a new worked example.
+If a study with students shows that our choices do not work as intended, the first thing we would change is the review path: if students still score "Not yet" after it, the review segment needs a different representation of the idea, not only a new worked example.
 
 ## Left out, and future work
 
@@ -865,7 +858,7 @@ Table: Generative AI prompts, Reece Schmidt.
 
 ## Instructional design
 
-Each instructional designer records their own use, in the same format as above. This covers this document and everything made for the app: questions, hints, feedback, narration scripts, images and the pilot instruments.
+Each instructional designer records their own use, in the same format as above. This covers this document and everything made for the app: questions, hints, feedback, narration scripts, images and the evaluation instruments.
 
 ### Jacobus Hoogenboezem
 
@@ -875,7 +868,7 @@ Each instructional designer records their own use, in the same format as above. 
 
 - **Course content:** a sentence for each right answer saying why it is right (#158, #167); the optional bonus quests after modules 3 and 4, and module 5's closing transfer task (#87, #196); and a reason for each wrong token in fill-in activities (#119).
 - **The learning flow, from problems he found while testing the app:** activities shown inside their segments, with a way to move on (#129); a segment must be done before a student moves past it (FR-2.7, #130, #143); course progress shown in minutes (#131); and a student's last answer shown again when they come back (#171, #195).
-- **Presentation and evaluation:** the demo script, with each step named by its instructional decision (#82, #197), and the pilot kit (`docs/pilot/`): the plan and schedule, the survey and the think-aloud note sheet (#75).
+- **Presentation and evaluation:** the demo script, with each step named by its instructional decision (#82, #197), and the evaluation kit (`docs/pilot/`): a plan, a survey and a note sheet (#75).
 - **Engineering items he took on:** the seeded demo accounts (#34, #121); module locks, concurrent answers, and module completion rewards (#137, #138, #141); and drafting reviews of team members' pull requests, which he read, edited and posted.
 
 **How its output was checked:** the design decisions were his; the assistant set out the options and drafted what he chose. For example, he decided that a practice item is done once it is answered correctly or answered after its last hint (#143), that module points need at least one right answer (#166), that the module 1 badge keeps its 25 points (#141), and that there are two bonus quests, after modules 3 and 4, with the transfer task at the end of module 5 (#87). Every change went through a pull request reviewed by a software engineer, and passed the automated content tests and `python -m app.seed --check`. He also tried each change on staging with the demo accounts before review.

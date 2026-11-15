@@ -16,7 +16,7 @@
 | 6 Nov | Private points, badges, the badge shelf and opting out | PR #101 |
 | 7 Nov | 90% coverage enforced on the code that decides results; trace tables checked step by step against the engine; frontend API types generated from the OpenAPI schema; matching, fix-the-bug and choose-tests activities | PRs #99, #103, #104, #112 |
 | 8 Nov | The content model; the mastery check and report; the review path; the evaluation event log and CSV exports; the module map, module page and progress tracking; the account menu and profile; prediction in the visualiser; the code activity screens; three more demo accounts; module 3's content | PRs #105 – #110, #113 – #118, #122, #123 |
-| 8 Nov | The pilot kit and the ID team's generative AI record | PR #124 |
+| 8 Nov | The evaluation kit (a survey and a note sheet) and the ID team's generative AI record | PR #124 |
 | 8 Nov | **Sprint 1 review and Sprint 2 planning** | Appendix B |
 
 Table: Sprint 1 timeline.

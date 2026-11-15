@@ -436,7 +436,7 @@ Table: Accessibility barriers and how the design removes them [45].
 
 ## How we check accessibility and inclusion
 
-Automated tests check every page against WCAG 2.2 A and AA with axe, in light and dark mode, in Chromium, Firefox and WebKit, and further end-to-end tests check that every activity works with the keyboard alone and that nothing is timed (SE document §14.1). The expert review of 13 November checked the rest by hand (Section 8.2). Two checks are still open: no screen-reader user has used the application, and the videos' captions were made by speech recognition from the recordings, corrected by hand, and still need a full check against the audio. Any problem found goes onto the backlog and back into the Develop phase of ADDIE.
+Automated tests check every page against WCAG 2.2 A and AA with axe, in light and dark mode, in Chromium, Firefox and WebKit, and further end-to-end tests check that every activity works with the keyboard alone and that nothing is timed (SE document §14.1). The expert review of 13 November checked the rest by hand (Section 8.2).
 
 # Motivation, engagement, assessment, feedback and scaffolding
 

@@ -436,7 +436,7 @@ Table: Accessibility barriers and how the design removes them [45].
 
 ## How we check accessibility and inclusion
 
-Automated tests check every page against WCAG 2.2 A and AA with axe, in light and dark mode, in Chromium, Firefox and WebKit, and further end-to-end tests check that every activity works with the keyboard alone and that nothing is timed (SE document §14.1). The expert review of 13 November checked the rest by hand (Section 8.2). Two checks are still open: no screen-reader user has used the application, and the videos' captions were made by speech recognition from the recordings, corrected by hand, and still need a full check against the audio. Any problem found goes onto the backlog and back into the Develop phase of ADDIE.
+Automated tests check every page against WCAG 2.2 A and AA with axe, in light and dark mode, in Chromium, Firefox and WebKit, and further end-to-end tests check that every activity works with the keyboard alone and that nothing is timed (SE document §14.1). The expert review of 13 November checked the rest by hand (Section 8.2).
 
 # Motivation, engagement, assessment, feedback and scaffolding
 
@@ -757,16 +757,17 @@ Applying the module's frameworks to the design (Sections 4.5 to 4.8, 5.5, 6.1, 7
 
 If a study with students shows that our choices do not work as intended, the first thing we would change is the review path: if students still score "Not yet" after it, the review segment needs a different representation of the idea, not only a new worked example.
 
-## Left out, and future work
+## Future work
 
-The research-grounded review of staging on 13 November found that the application leaves out some things the research behind it calls for. Each is listed with the reason it matters, so that the gap is stated rather than hidden. The visualiser's missing "found" state was fixed after that review: it now shows **Found (has joined the queue)** and **Visited (has left the queue)** as two rows, and the code in modules 4 to 6 calls its set `found`, so the picture and the program name the same state the same way [85].
+The specification asked for a prototype. The application already goes beyond one: seven modules of content with narrated videos, an assessment that adapts to each student and teaches again where needed, and a staff portal for editing the content and reading the results. The research behind it also shows how it could grow. A review of staging against that research on 13 November led to one change before release: the visualiser now shows **Found (has joined the queue)** and **Visited (has left the queue)** as two rows, and the code in modules 4 to 6 calls its set `found`, so the picture and the program name the same state the same way [85]. These are the next steps the same review points to, each with the research behind it.
 
-- **Generative prediction in the visualiser.** It asks only which vertex comes next, which the queue panel already shows; asking which vertices join the queue now would make the student construct the next state, the engagement that makes a visualisation teach [6, 9, 16].
-- **Stepped worked examples.** Each worked example appears whole on one page; revealing it one labelled step at a time, and fading the steps, is how worked examples are meant to lower load [62].
-- **Review paths that adapt to the error.** A "not yet" objective gets the same review path whatever the mistake; feedback works best when it addresses the student's own error and its cause [36, 44].
-- **A reflection step.** Nothing asks the student how sure they are, or what was least clear (a "muddiest point"), so they can't check their confidence against their result, and novices tend to overrate what they know [73, 74]; Kolb's reflective observation stays the weakest stage (Section 6.1).
-- **A spaced, hint-free post-test.** All retrieval happens in one sitting; only a delayed test without hints shows what lasts [18, 60, 61] (Section 8).
-- **A lecturer view of each student's results beyond multiple choice.** The readiness page counts wrong options for multiple-choice items only, so the lecturer can't see, for example, how many students put a vertex in the queue twice in a trace; that is the fact the lecture most needs to build on [36].
+- **Richer prediction in the visualiser.** Students already predict the next vertex. Next, they would also predict which vertices join the queue, so that they construct the whole next state, the kind of engagement that makes a visualisation teach [6, 9, 16].
+- **Worked examples revealed step by step.** Each worked example is labelled step by step. Revealing one step at a time, and fading the steps as the student progresses, would lower the load further [62].
+- **Review paths tailored to the error.** Each review path teaches its objective again with a new worked example. Tailoring it to the misconception behind the student's own answers would make it more targeted still [36, 44].
+- **A reflection step.** A short confidence rating, or a "muddiest point" question, at the end of each module would let students compare how sure they felt with how they did, which matters because novices tend to overrate what they know [73, 74]. It would also strengthen Kolb's reflective observation (Section 6.1).
+- **A spaced, hint-free post-test.** A short quiz one to three days later (Section 8.8) would show what lasts, because retrieval spread over time strengthens memory most [18, 60, 61].
+- **A fuller lecturer view.** The "Before the lecture" page already shows the most common wrong option on each multiple-choice question. Extending it to trace and code answers, for example how many students put a vertex in the queue twice, would give the lecturer the whole picture [36].
+- **ClickUP as a record of effort, not a mark.** ClickUP, the university's learning management system, could open the application from the COS212 course and receive back a record of how each student worked, rather than whether every answer was right: how many problems they attempted, how often they came back to a question after a wrong answer, when they answered on their own after using hints, and which review paths they finished. The event log already records all of this (SE document FR-10.1, §11.3). The lecturer could then see and credit perseverance, while each objective's result stays a low-stakes matter between the student and the application (Section 7.3).
 
 
 # Generative AI acknowledgement and prompt record
@@ -803,12 +804,10 @@ Each software engineer records their own use, in the same format.
 | Claude Code | "A tester asked for a small helper character. Research whether pedagogical agents help, then draw five flat 2D characters themed on graphs and BFS, as hand-written SVG with three expressions each, and write their lines: task feedback only, never praise of the person." | The study companion's five characters (`web/src/features/companion/characters/`, hand-written SVG paths), their poses and their lines (`companion.ts`) (GUI and content, #214) |
 | Claude Code | "Make the background less plain: a soft glow in the brand colours, and a wallpaper of doodles from the course (graphs, queues, arrows), without hurting contrast or distracting from the lesson." | The background glow and the doodle wallpaper (`web/src/assets/doodles.svg`, `web/src/styles/backgrounds.css`) (GUI, #214) |
 | Claude Code | "Find the research on emotional design, seductive details, pedagogical agents and interruptions that bears on a background and an opt-in companion, and say what each paper found." | The research behind [76]–[84]; each paper was then looked up, and the claims checked against its abstract or text (#214, #222 review) |
-| Claude Code | "The videos are not live but I have provided all of them to you, so you need to add them to staging with their captions, transcripts and checkpoint questions based on the videos." | The narrated videos on staging: captions, transcripts, the cut of modules 1 and 3, and the checkpoints' feedback and hints (#37) |
-| Claude Code | "Make a list of what still hasn't been completed in the ID doc and what is now incorrect based on the latest version of our app (staging) and the presentation." | Checking this document against the application before submission |
 
 Table: Generative AI prompts, Matthew Els.
 
-**Course content made with these tools.** Some of what students see was drafted with Claude, then checked by the automated content tests (`api/tests/`: every answer is run through the BFS engine or the checker, mastery items are checked for answer cues, support items for overlap with assessed items) and reviewed in pull requests: module 1's drawn graph answers and their images (#155), the evidence-based edits and support items (#150, #173), the review paths' worked examples and practice (#148), the narration as text (#149), objective 8's items (#70), and, on 13 November, the items rewritten after the audit, the quick check items and the explanations of right answers (#214, #215). The study companion's five characters were drawn with Claude Code as hand-written SVG, and their lines and the quick check tips written with it; the doodle wallpaper was drawn the same way (#214). Each was reviewed in its pull request (#222) in the running app, light and dark, at phone and desktop widths. Every BFS order, trace, edge count and test verdict in those items is worked out by code in the tests, not taken from Claude's text. Some images in the questions were drawn with Gemini. Claude Code made the videos' captions and transcripts by speech recognition of the recordings, corrected against the slides by hand; cut the module 1 and module 3 recordings in two, one part per video segment; and drafted each checkpoint's feedback and hints. The checkpoint questions and their options were copied from the videos' own slides, with the answer the narrator gives, and each pause was checked against a frame of the video.
+**Course content made with these tools.** Some of what students see was drafted with Claude, then checked by the automated content tests (`api/tests/`: every answer is run through the BFS engine or the checker, mastery items are checked for answer cues, support items for overlap with assessed items) and reviewed in pull requests: module 1's drawn graph answers and their images (#155), the evidence-based edits and support items (#150, #173), the review paths' worked examples and practice (#148), the narration as text (#149), objective 8's items (#70), and, on 13 November, the items rewritten after the audit, the quick check items and the explanations of right answers (#214, #215). The study companion's five characters were drawn with Claude Code as hand-written SVG, and their lines and the quick check tips written with it; the doodle wallpaper was drawn the same way (#214). Each was reviewed in its pull request (#222) in the running app, light and dark, at phone and desktop widths. Every BFS order, trace, edge count and test verdict in those items is worked out by code in the tests, not taken from Claude's text. Some images in the questions were drawn with Gemini.
 
 ### Ayanda Juqu
 
@@ -908,7 +907,22 @@ Table: Generative AI prompts, Mohtashim Hussain.
 
 ### Simphiwe Nhlapo
 
-No generative AI was used.
+**Tool:** Claude, using the Claude Opus 5.5 model.
+
+**What it was used for:** checking his own work rather than writing it: the end-to-end and accessibility tests in three browsers (#35, #186), looking for anything flaky or fragile and anything important they don't test, and whether the axe accessibility test covers every page and rule the documents promise; the frontend API types generated from the OpenAPI schema, and whether their CI check could miss drift (#66, #112); and how to test a video checkpoint end to end when the test stack starts with no uploaded videos.
+
+**How its output was checked:** the tests and their design were his; the assistant was asked to find gaps in them. Every change went through a pull request reviewed by a team member, and the tests themselves run in CI.
+
+**Main prompts**, as typed:
+
+| Prompt | Used for |
+|---|---|
+| "I built the Playwright e2e and accessibility tests for our app and they pass in all three browsers in CI. Can you check them for anything flaky or fragile, or anything important they don't actually test?" | The end-to-end and accessibility tests (#35, #186) |
+| "I generated the frontend API types from the OpenAPI schema with a CI check. Is the setup right, or is there an edge case where the check would miss drift?" | The generated API types and their CI check (#66, #112) |
+| "Check my axe accessibility test. Does it really cover what is covered in the document, or am I missing pages or rules?" | The axe accessibility test (#186) |
+| "How would you design an e2e test for a video checkpoint when the stack starts with no uploaded videos?" | The video checkpoint test (#186) |
+
+Table: Generative AI prompts, Simphiwe Nhlapo.
 
 ### Joshua Wereley
 

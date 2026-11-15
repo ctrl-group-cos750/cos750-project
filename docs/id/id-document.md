@@ -908,7 +908,22 @@ Table: Generative AI prompts, Mohtashim Hussain.
 
 ### Simphiwe Nhlapo
 
-No generative AI was used.
+**Tool:** Claude, using the Claude Opus 5.5 model.
+
+**What it was used for:** checking his own work rather than writing it: the end-to-end and accessibility tests in three browsers (#35, #186), looking for anything flaky or fragile and anything important they don't test, and whether the axe accessibility test covers every page and rule the documents promise; the frontend API types generated from the OpenAPI schema, and whether their CI check could miss drift (#66, #112); and how to test a video checkpoint end to end when the test stack starts with no uploaded videos.
+
+**How its output was checked:** the tests and their design were his; the assistant was asked to find gaps in them. Every change went through a pull request reviewed by a team member, and the tests themselves run in CI.
+
+**Main prompts**, as typed:
+
+| Prompt | Used for |
+|---|---|
+| "I built the Playwright e2e and accessibility tests for our app and they pass in all three browsers in CI. Can you check them for anything flaky or fragile, or anything important they don't actually test?" | The end-to-end and accessibility tests (#35, #186) |
+| "I generated the frontend API types from the OpenAPI schema with a CI check. Is the setup right, or is there an edge case where the check would miss drift?" | The generated API types and their CI check (#66, #112) |
+| "Check my axe accessibility test. Does it really cover what is covered in the document, or am I missing pages or rules?" | The axe accessibility test (#186) |
+| "How would you design an e2e test for a video checkpoint when the stack starts with no uploaded videos?" | The video checkpoint test (#186) |
+
+Table: Generative AI prompts, Simphiwe Nhlapo.
 
 ### Joshua Wereley
 

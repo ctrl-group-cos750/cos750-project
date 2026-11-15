@@ -2,7 +2,7 @@
 
 **Dates:** 22 October – 1 November 2026
 **Goal:** choose the topic and the way of working, and have a repository, hosting and documents that the whole team can build on from Sprint 1.
-**Status:** draft review and retrospective, for the team to confirm at the meeting on 1 November 2026 (19:00).
+**Status:** review and retrospective, presented at the Sprint 0 review on 1 November 2026 (19:00).
 
 ## What happened
 
@@ -43,7 +43,7 @@ Table: Sprint 0 timeline.
 | 1 Nov | Tech stack as built; JWT in an httpOnly cookie; Argon2 password hashing | SE document §5 |
 | 1 Nov | Student code runs on our server in an isolated runner container | SE document §4, NFR-S7 |
 | 1 Nov | Narrated videos without a presenter; private points and badges instead of a leaderboard; email and password accounts | SE document §15.3 |
-| 1 Nov | Pilot by team members on 10–11 November; 90% coverage enforced on the code that decides results | SE document §14 |
+| 1 Nov | Team members work through each increment on staging and note what goes wrong; 90% coverage enforced on the code that decides results | SE document §14 |
 
 Table: Decisions made in Sprint 0.
 
@@ -54,9 +54,9 @@ Table: Decisions made in Sprint 0.
 
 ## Review
 
-TODO: Confirm at the meeting that the delivered items above are accepted.
+Held at the meeting on 1 November. The delivered items above were accepted, and the Sprint 1 board was agreed.
 
-## Retrospective (draft for the team to change)
+## Retrospective
 
 **What went well**
 - The big decisions were made early, at the meeting on 25 October, so the documents and the setup had a clear direction.
@@ -70,5 +70,3 @@ TODO: Confirm at the meeting that the delivered items above are accepted.
 
 **One action for Sprint 1**
 - Every Sprint 1 item has an owner by Monday morning, and everyone posts a short daily stand-up in Discord.
-
-TODO: Change or confirm the retrospective at the meeting.

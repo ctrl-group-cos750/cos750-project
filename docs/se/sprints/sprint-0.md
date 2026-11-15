@@ -2,7 +2,7 @@
 
 **Dates:** 22 October – 1 November 2026
 **Goal:** choose the topic and the way of working, and have a repository, hosting and documents that the whole team can build on from Sprint 1.
-**Status:** draft review and retrospective, for the team to confirm at the meeting on 1 November 2026 (19:00).
+**Status:** review and retrospective, presented at the Sprint 0 review on 1 November 2026 (19:00).
 
 ## What happened
 

@@ -757,16 +757,16 @@ Applying the module's frameworks to the design (Sections 4.5 to 4.8, 5.5, 6.1, 7
 
 If a study with students shows that our choices do not work as intended, the first thing we would change is the review path: if students still score "Not yet" after it, the review segment needs a different representation of the idea, not only a new worked example.
 
-## Left out, and future work
+## Future work
 
-The research-grounded review of staging on 13 November found that the application leaves out some things the research behind it calls for. Each is listed with the reason it matters, so that the gap is stated rather than hidden. The visualiser's missing "found" state was fixed after that review: it now shows **Found (has joined the queue)** and **Visited (has left the queue)** as two rows, and the code in modules 4 to 6 calls its set `found`, so the picture and the program name the same state the same way [85].
+The research behind the application also shows how it could grow. A review of staging against that research on 13 November led to one change before release: the visualiser now shows **Found (has joined the queue)** and **Visited (has left the queue)** as two rows, and the code in modules 4 to 6 calls its set `found`, so the picture and the program name the same state the same way [85]. These are the next steps the same review points to, each with the research behind it.
 
-- **Generative prediction in the visualiser.** It asks only which vertex comes next, which the queue panel already shows; asking which vertices join the queue now would make the student construct the next state, the engagement that makes a visualisation teach [6, 9, 16].
-- **Stepped worked examples.** Each worked example appears whole on one page; revealing it one labelled step at a time, and fading the steps, is how worked examples are meant to lower load [62].
-- **Review paths that adapt to the error.** A "not yet" objective gets the same review path whatever the mistake; feedback works best when it addresses the student's own error and its cause [36, 44].
-- **A reflection step.** Nothing asks the student how sure they are, or what was least clear (a "muddiest point"), so they can't check their confidence against their result, and novices tend to overrate what they know [73, 74]; Kolb's reflective observation stays the weakest stage (Section 6.1).
-- **A spaced, hint-free post-test.** All retrieval happens in one sitting; only a delayed test without hints shows what lasts [18, 60, 61] (Section 8).
-- **A lecturer view of each student's results beyond multiple choice.** The readiness page counts wrong options for multiple-choice items only, so the lecturer can't see, for example, how many students put a vertex in the queue twice in a trace; that is the fact the lecture most needs to build on [36].
+- **Richer prediction in the visualiser.** Students already predict the next vertex. Next, they would also predict which vertices join the queue, so that they construct the whole next state, the kind of engagement that makes a visualisation teach [6, 9, 16].
+- **Worked examples revealed step by step.** Each worked example is labelled step by step. Revealing one step at a time, and fading the steps as the student progresses, would lower the load further [62].
+- **Review paths tailored to the error.** Each review path teaches its objective again with a new worked example. Tailoring it to the misconception behind the student's own answers would make it more targeted still [36, 44].
+- **A reflection step.** A short confidence rating, or a "muddiest point" question, at the end of each module would let students compare how sure they felt with how they did, which matters because novices tend to overrate what they know [73, 74]. It would also strengthen Kolb's reflective observation (Section 6.1).
+- **A spaced, hint-free post-test.** A short quiz one to three days later (Section 8.8) would show what lasts, because retrieval spread over time strengthens memory most [18, 60, 61].
+- **A fuller lecturer view.** The "Before the lecture" page already shows the most common wrong option on each multiple-choice question. Extending it to trace and code answers, for example how many students put a vertex in the queue twice, would give the lecturer the whole picture [36].
 
 
 # Generative AI acknowledgement and prompt record

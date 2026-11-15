@@ -209,6 +209,48 @@ function builtInfo(path) {
   }
 }
 
+/** Runs in the page before printing. Chromium honours "keep with next" between a heading and the
+ * block after it, but not along a chain (heading, a one-line lead-in, then a table or wireframe that
+ * can't split), so a heading could end a page alone. Each heading is wrapped with what follows it
+ * up to and including its first substantial block, and the wrapper is never split: a heading moves
+ * to the next page with that content rather than ending a page by itself. Short paragraphs (a
+ * lead-in such as "Tool: …" or a sentence ending in a colon) and a subheading straight after it
+ * are pulled in along the way, and a caption stays with its table or figure. Only a block taller
+ * than most of a page, or a table, list or paragraph taller than a third of one, is left out of
+ * the wrapper; the wrapper then keeps to its first lines. */
+function keepHeadingsWithContent() {
+  const SHORT = 260 // characters: a lead-in, not a paragraph worth reading on its own
+  const PAGE = 255 * (96 / 25.4) // the height of an A4 page's text area (style.css @page), in CSS px
+  const isHeading = (el) => /^H[1-4]$/.test(el?.tagName ?? '')
+  const isCaption = (el) => el?.tagName === 'P' && el.classList.contains('caption')
+  const isShort = (el) => el.tagName === 'P' && el.textContent.trim().length < SHORT
+  for (const heading of [...document.querySelectorAll('main h1, main h2, main h3, main h4')]) {
+    if (heading.parentElement?.classList.contains('keep')) continue
+    const group = []
+    let next = heading
+    let tooTall = false
+    while (next) {
+      const height = isHeading(next) ? 0 : next.getBoundingClientRect().height
+      // Tables (whose header row repeats), lists and paragraphs split cleanly, so a tall one is not
+      // held whole; a diagram, wireframe or figure can't split, so it is, up to most of a page.
+      const limit = { TABLE: 0.3, UL: 0.3, OL: 0.3, P: 0.3, DIV: 0.3 }[next.tagName] ?? 0.8
+      if (height > limit * PAGE) {
+        tooTall = true
+        break
+      }
+      group.push(next)
+      if (isCaption(next.nextElementSibling)) group.push((next = next.nextElementSibling))
+      const done = !isHeading(next) && !isShort(next)
+      next = next.nextElementSibling
+      if (done) break
+    }
+    const wrap = document.createElement('div')
+    wrap.className = tooTall ? 'keep keep-with-next' : 'keep'
+    heading.before(wrap)
+    for (const el of group) wrap.append(el)
+  }
+}
+
 async function build(browser, doc, team, logo) {
   const md = markdown()
   const env = { counters: [0, 0, 0], toc: [], todos: [] }
@@ -226,7 +268,9 @@ async function build(browser, doc, team, logo) {
   const htmlPath = join(outDir, `${doc.file}.html`)
   await writeFile(htmlPath, html)
 
-  const tab = await browser.newPage()
+  // Lay the page out at the printed text width (A4 less the 20 mm side margins in style.css), so
+  // the heights keepHeadingsWithContent measures are the heights that print.
+  const tab = await browser.newPage({ viewport: { width: Math.round(170 * (96 / 25.4)), height: 1000 } })
   try {
     await tab.goto(pathToFileURL(htmlPath).href)
     if (await tab.locator('pre.mermaid').count()) {
@@ -248,6 +292,7 @@ async function build(browser, doc, team, logo) {
       })
     }
     await tab.evaluate(() => document.fonts.ready)
+    await tab.evaluate(keepHeadingsWithContent)
     await tab.pdf({
       path: join(outDir, `${doc.file}.pdf`),
       preferCSSPageSize: true,

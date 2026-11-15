@@ -159,6 +159,10 @@ h1 {
 main {
   break-before: page;
 }
+/* Every top-level section starts on a new page. */
+main .keep:has(> h1) {
+  break-before: page;
+}
 /* The first heading keeps its top margin: without it Chromium repeats the heading's text in the
    PDF outline. */
 h2 {
@@ -332,4 +336,27 @@ p.todo {
 img {
   max-width: 100%;
   height: auto;
+}
+
+/* A heading and its first content, grouped by the builder (keepHeadingsWithContent): never split,
+   so a heading never ends a page by itself. */
+.keep {
+  break-inside: avoid;
+}
+.keep-with-next {
+  break-after: avoid;
+}
+/* A lead-in sentence stays with the table, list or block it introduces. */
+p:has(+ table),
+p:has(+ pre),
+p:has(+ figure),
+p:has(+ ul),
+p:has(+ ol) {
+  break-after: avoid;
+}
+/* A long list after a heading splits, but its first two items stay with the heading. */
+.keep-with-next + ul > li:first-child,
+.keep-with-next + ol > li:first-child {
+  break-inside: avoid;
+  break-after: avoid;
 }

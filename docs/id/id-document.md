@@ -845,7 +845,24 @@ Table: Generative AI prompts, Ayanda Juqu.
 
 ### Reece Schmidt
 
-To be added by Reece Schmidt (#74): the tool and the main prompts, or a statement that none was used.
+**Tool:** Kiro, an AI coding assistant, using the Claude Opus 5.5 model.
+
+**What it was used for:** checking his own work rather than writing it: reviewing the BFS engine for bugs and vulnerabilities and its step emission against the misconceptions in Section 2.5 (#91); looking for edge cases in the trace-table checker (#104); checking the configuration of the 90% coverage gate on the code that decides results (#103); checking that module 0's diagnostic questions match the objectives (#134); and a git command.
+
+**How its output was checked:** the code was his; the assistant was asked to find problems in it. Every change went through a pull request reviewed by a team member and passed the project's automated checks, including the coverage gate itself.
+
+**Main prompts**, as typed:
+
+| Prompt | Used for |
+|---|---|
+| "I wrote a bfs engine can you check it for any bugs or vulnerabilities I may have missed" | The BFS engine and its steps endpoint (#91) |
+| "Check how I did the step emission, does the logic hold up against the bfs misconceptions in the id doc or did I miss something or leave out something" | The engine's steps, against the misconceptions in Section 2.5 (#91) |
+| "my trace table checker compares the students rows to the engine, see if there are any edge cases I'm not handling" | The trace-table checker (#104) |
+| "I added a 90% coverage gate on the result code, is the config right" | The coverage gate on the result-deciding code (#103) |
+| "Please check these module 0 diagnostic questions, do they actually match the objectives or is anything unclear" | Module 0's diagnostic warm-up and refreshers (#134) |
+| "what git command do I use to revert a branch" | Git |
+
+Table: Generative AI prompts, Reece Schmidt.
 
 ## Instructional design
 

@@ -142,7 +142,6 @@ function contents(toc, md) {
 
 function page(doc, team, body, toc, logo, built, md) {
   const header = `${team.group} · ${doc.short} · ${doc.version}`
-  const footer = `Built from ${built.ref}`
   return `<!doctype html>
 <html lang="en-ZA">
 <head>
@@ -151,7 +150,7 @@ function page(doc, team, body, toc, logo, built, md) {
 ${fontLinks()}
 <link rel="stylesheet" href="style.css">
 <style>
-  @page { @top-left { content: ${cssString(header)} } @bottom-left { content: ${cssString(footer)} } }
+  @page { @top-left { content: ${cssString(header)} } }
   @page :first { @top-left { content: none } @bottom-left { content: none } @bottom-right { content: none } }
 </style>
 </head>

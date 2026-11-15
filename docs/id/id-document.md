@@ -898,7 +898,21 @@ Table: Generative AI prompts, Jacobus Hoogenboezem.
 
 ### Mohtashim Hussain
 
-To be added by Mohtashim Hussain (#74).
+**Tool:** Claude, using the Claude Opus 5.5 model.
+
+**What it was used for:** checking the content he designed for modules 1, 2 and 3 (#118, #126, #127) for flaws and for results that didn't come out as expected, and asking how a page looks in light mode while he worked in dark mode.
+
+**How its output was checked:** the module design and its content were his; the assistant was asked to find problems in them. Each module went through a pull request reviewed by a team member and passed the automated content tests, which work out every answer by code.
+
+**Main prompts**, as typed:
+
+| Prompt | Used for |
+|---|---|
+| "I have designed Module 3 (Meet BFS), have a look and identify any flaws in my results." | Module 3, Meet BFS (#118) |
+| "I have made Module 1 and Module 2, look at it and check for any abnormalities in outcome." | Module 1, What is a graph? (#126) and module 2, A graph in Python (#127) |
+| "I just the suggestion from you that how it looks in light mode currently its in dark mode?" | Checking how a page looks in light mode |
+
+Table: Generative AI prompts, Mohtashim Hussain.
 
 ### Simphiwe Nhlapo
 

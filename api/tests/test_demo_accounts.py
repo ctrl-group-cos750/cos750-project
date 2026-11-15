@@ -74,8 +74,17 @@ def log_in(client: TestClient, email: str) -> None:
 # --- The committed accounts, against the committed content --------------------------------------
 
 
-def test_the_committed_demo_accounts_are_the_five_stages() -> None:
-    assert [a.key for a in read_demo_accounts()] == ["new", "mid", "not-yet", "ready", "bronze"]
+def test_the_committed_demo_accounts_are_the_eight_stages() -> None:
+    assert [a.key for a in read_demo_accounts()] == [
+        "new",
+        "mid",
+        "not-yet",
+        "ready",
+        "bronze",
+        "explorer",
+        "struggling",
+        "mixed",
+    ]
 
 
 def test_each_committed_account_reaches_its_stage(db: Session) -> None:

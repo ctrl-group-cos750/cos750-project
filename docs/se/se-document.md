@@ -1552,7 +1552,7 @@ Matthew: the weekly call skipped by agreement, with updates on Discord instead; 
 
 The team met by voice call in the General voice channel of its Discord server, at 19:00 South African time, on Thursdays (the weekly check-in, §2.5) and on Sundays at the sprint boundary. The first table below lists each meeting, and the second who attended it.
 
-Attendance was not taken during the first four calls, so it was compiled afterwards from what each meeting left behind: RSVPs to the Discord event, messages in the voice channel's chat, the notes posted after the meeting, and an audio recording that has one track per member. Where no record names a member, attendance is the Scrum Master's account. That list was posted in #general on 13 November for every member to check and correct. Attendance at the final meeting on 15 November is taken during the call.
+Attendance was not taken during the first four calls, so it was compiled afterwards from what each meeting left behind: RSVPs to the Discord event, messages in the voice channel's chat, the notes posted after the meeting, and an audio recording that has one track per member. Where no record names a member, attendance is the Scrum Master's account. That list was posted in #general on 13 November for every member to check and correct. Attendance at the final meeting on 15 November was taken during the call.
 
 | Date | Meeting | Purpose | Evidence |
 |---|---|---|---|
@@ -1562,21 +1562,21 @@ Attendance was not taken during the first four calls, so it was compiled afterwa
 | Thu 5 Nov | Weekly check-in | Mid-sprint progress and blockers | Audio recording of the call |
 | Sun 8 Nov | Sprint 1 review and Sprint 2 planning | Review of Sprint 1, work for Sprint 2 | Confirmed by the team |
 | Thu 12 Nov | Skipped | By agreement, so the time went to the documents and the remaining items; updates were posted in #general instead (Appendix A) | Message in #general |
-| Sun 15 Nov | Final meeting before the demo (planned, 19:00) | Release check, a walkthrough of both documents, the presentation and a timed demo rehearsal, Sprint 2 review and retrospective, the plan for Monday | Discord event with RSVPs and agenda |
+| Sun 15 Nov | Final meeting before the demo | Release check, a walkthrough of both documents, the presentation and a timed demo rehearsal, Sprint 2 review and retrospective, the plan for Monday | Discord event with RSVPs and agenda |
 
 Table: Team meetings, 22 October to 15 November.
 
 | Member | 25 Oct | 1 Nov | 5 Nov | 8 Nov | 15 Nov |
 |---|---|---|---|---|---|
-| Matthew Els | ✓ | ✓ | ✓ | ✓ |  |
-| Jacobus Hoogenboezem | ✓ | ✓ | ✓ | ✓ |  |
-| Mohtashim Hussain | ✓ | ✓ | ✓ | ✓ |  |
-| Ayanda Juqu | ✓ | ✓ | ✓ | ✓ |  |
-| Simphiwe Nhlapo |  | ✓ | ✓ |  |  |
-| Reece Schmidt | ✓ |  |  | ✓ |  |
-| Joshua Wereley | ✓ | ✓ | ✓ | ✓ |  |
+| Matthew Els | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Jacobus Hoogenboezem | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Mohtashim Hussain | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Ayanda Juqu | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Simphiwe Nhlapo |  | ✓ | ✓ |  | ✓ |
+| Reece Schmidt | ✓ |  |  | ✓ | ✓ |
+| Joshua Wereley | ✓ | ✓ | ✓ | ✓ | ✓ |
 
-Table: Members who attended each meeting. Six of the seven attended each of the first four calls. The 15 November column is filled in after that call. Simphiwe joined the team's server on 28 October, after the initial meeting.
+Table: Members who attended each meeting. Six of the seven attended each of the first four calls, and all seven the last. Simphiwe joined the team's server on 28 October, after the initial meeting.
 
 *End of the Software Engineering document. Instructional-design content is in the separate ID document, as the examination specification requires.*
 

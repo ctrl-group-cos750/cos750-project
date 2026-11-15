@@ -213,7 +213,14 @@ function builtInfo(path) {
 async function build(browser, doc, team, logo) {
   const md = markdown()
   const env = { counters: [0, 0, 0], toc: [], todos: [] }
-  const body = md.render(doc.body, env)
+  // The HTML is written to out/, so an image path relative to the Markdown file (images/x.png)
+  // would point into out/. Point it at the document's own folder instead.
+  const body = md
+    .render(doc.body, env)
+    .replace(
+      /<img src="(?![a-z]+:|\/)([^"]+)"/g,
+      (_, src) => `<img src="${pathToFileURL(join(dirname(doc.path), src)).href}"`,
+    )
 
   const built = builtInfo(doc.path)
   const html = page(doc, team, body, env.toc, logo, built, md)

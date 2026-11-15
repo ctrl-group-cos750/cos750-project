@@ -1,7 +1,7 @@
 # Pilot kit (10 and 11 November)
 
 The team pilots the app on staging before the feature freeze (SE document §14.5, NFR-U4; ID
-document §8.2, the Implement phase of ADDIE). Each member works through the modules they did not
+document §8.3, the Implement phase of ADDIE). Each member works through the modules they did not
 build, from a new account, thinking aloud while another member takes notes, then completes the
 survey. The results feed the write-up in both documents (#76).
 
@@ -15,7 +15,7 @@ survey. The results feed the write-up in both documents (#76).
 - [ ] Every module a participant will pilot has content on staging. A module with no segments
       can't be completed, so the modules after it stay locked (#122).
 - [ ] Students can answer activities on staging (the activity pages, #106 and #114).
-- [ ] The app records time per module. ID document §8.4 compares it with the planned time, but on
+- [ ] The app records time per module. ID document §8.5 compares it with the planned time, but on
       8 November nothing did: the API accepts `segment_viewed` events (#110), but the module page
       doesn't send them, no `module_completed` event is logged, and module progress keeps only
       when a module was completed, not when it was started. Until it does, the survey's time
@@ -101,7 +101,7 @@ for modules 1 to 4 on the way to module 5, so his session is still close to full
   against the minutes the app shows, each item's first-time success, attempts and use of hints
   3 and 4, the mastery items' difficulty and discrimination, and how many participants ended in
   each state per objective. Paste its tables into the write-up.
-- The analysis follows ID document §8.4; the write-up is #76.
+- The analysis follows ID document §8.5; the write-up is #76.
 - Points are not in the export and the analysis doesn't use them. If they are ever compared, note
   that since 13 November 2026 (PR #212) module 0, the diagnostic warm-up, no longer earns its 25
   points: a pilot participant who finished it before then has 25 more than a student who finishes

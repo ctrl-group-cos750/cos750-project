@@ -327,3 +327,9 @@ p.todo {
   text-indent: -8mm;
   margin-bottom: 1.8mm;
 }
+
+/* Figures fit the text column. */
+img {
+  max-width: 100%;
+  height: auto;
+}

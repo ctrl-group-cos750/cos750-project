@@ -465,7 +465,7 @@ Section and table numbers refer to the ID document [5].
 | FR-8 Diagnostic and fading | Warm-up and refreshers (module 0); fading support and bonus quests (§5.2) |
 | FR-9 Points and badges | Motivation and gamification (§7.1, §7.2) |
 | FR-10 Evaluation data | ADDIE Implement and Evaluate phases (§4.2, Table 2); evaluation (§8) |
-| FR-11 Content editing | ADDIE as a repeating cycle: pilot findings go straight back into the Develop phase (§4.1, §8.5) |
+| FR-11 Content editing | ADDIE as a repeating cycle: pilot findings go straight back into the Develop phase (§4.1, §8.6) |
 
 Table: Which part of the ID document each functional requirement delivers.
 
@@ -1333,7 +1333,7 @@ Before the feature freeze, on 10 and 11 November, team members pilot the app on 
 
 **What it cannot show.**
 
-- *Learning.* The participants are at most the seven team members. They already know graphs and BFS, and they know the design. Their mastery results say nothing about a student who starts with no knowledge, so neither document reports them as learning. For that the ID document plans a separate, delayed post-test without hints, with real COS212 students (ID document §8.4). It would report Cohen's *d* beside Hake's normalised gain, because the gain is unstable on the few items each objective has, and the ID document states the Kirkpatrick level of every measure: the pilot's survey and think-aloud notes are level 1 (reaction), the post-test and a planned spaced retrieval quiz one to three days later level 2 (learning) (ID document §8.3, §8.7).
+- *Learning.* The participants are at most the seven team members. They already know graphs and BFS, and they know the design. Their mastery results say nothing about a student who starts with no knowledge, so neither document reports them as learning. For that the ID document plans a separate, delayed post-test without hints, with real COS212 students (ID document §8.5). It would report Cohen's *d* beside Hake's normalised gain, because the gain is unstable on the few items each objective has, and the ID document states the Kirkpatrick level of every measure: the pilot's survey and think-aloud notes are level 1 (reaction), the post-test and a planned spaced retrieval quiz one to three days later level 2 (learning) (ID document §8.4, §8.8).
 - *A usability score to compare.* Seven SUS responses are too few for a stable score. SUS itself is reliable over large samples [16], but we report each participant's score and the mean only as a rough signal, and do not compare it with published norms.
 - *Every problem.* Small think-aloud rounds find many problems when they are repeated, with fixes in between [14]; one round with people who know the design will miss the problems only novices have. Studies of algorithm-visualisation tools that measured usability alone are called shallow by the review that surveyed them [15]. So the pilot's findings decide what to fix, not whether the app works.
 

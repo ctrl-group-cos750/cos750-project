@@ -820,7 +820,28 @@ Table: Generative AI prompts, Matthew Els.
 
 ### Ayanda Juqu
 
-To be added by Ayanda Juqu (#74): the tool and the main prompts, or a statement that none was used.
+**Tool:** Kiro, an AI coding assistant.
+
+**What it was used for:**
+
+- **Designing features before building them:** she had the assistant question her on scope, count and placement ("grill-me") before designing the module map with resume (FR-2, #115) and the retrieval questions that open modules 2 to 6 (#68, #125).
+- **Fixing bugs:** module cards that did not open and a "Finish module" button that did nothing (#115).
+- **Tests:** a test that retrieval questions are never placed in a module's segment list (#125).
+- **Course content:** choosing which two BFS bugs module 5's fix-the-bug items use (#189).
+
+**How its output was checked:** the design decisions were hers; the assistant's questions were used to settle scope before any code was written. Every change went through a pull request reviewed by a team member and passed the project's automated checks.
+
+**Main prompts**, as typed:
+
+| Prompt | Used for |
+|---|---|
+| "grill-me so we can design this feature: As a student, I want to see the modules and pick up where I left off, so that I can work through the course in short sittings." | The module map, module page and progress tracking (FR-2, #115) |
+| "finish module does nothing and clicking a module card doesn't open it, only Continue does. fix it" | Fixing the module map and module page (#115) |
+| "grill-me so we can design the retrieval-questions feature: As a student, I want a quick recall question when I start a module… question me on scope, count, and placement before designing." | Retrieval questions for modules 2 to 6 (#68, #125) |
+| "add a test that asserts none are in the segments array" | A test that retrieval questions stay out of a module's segments (#125) |
+| "help me choose between the visited-too-late bug and the appends-unreachable bug (vs the pop()/popleft() or missing-{start} ones)" | The two faulty BFS versions in module 5 (#189) |
+
+Table: Generative AI prompts, Ayanda Juqu.
 
 ### Reece Schmidt
 

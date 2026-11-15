@@ -1,6 +1,6 @@
-# Pilot kit (10 and 11 November)
+# Pilot kit (planned for 10 and 11 November; not yet run, #38)
 
-The team pilots the app on staging before the feature freeze (SE document §14.5, NFR-U4; ID
+The team pilots the app on staging before the feature freeze (SE document §14.7, NFR-U4; ID
 document §8.3, the Implement phase of ADDIE). Each member works through the modules they did not
 build, from a new account, thinking aloud while another member takes notes, then completes the
 survey. The results feed the write-up in both documents (#76).
